@@ -1,4 +1,4 @@
-set Dir [file dirname [Path]]
+set Dir [file dirname [info library]]
 
 proc DemoExplorerAux {scriptDir scriptFile} {
 
