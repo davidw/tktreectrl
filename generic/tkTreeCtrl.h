@@ -81,8 +81,10 @@ struct TreeCtrl
 	int showRoot; /* boolean: Draw the unique root item */
 	int showRootButton; /* boolean: Draw expand/collapse button for root item */
 	int showHeader; /* boolean: show column titles */
+	Tcl_Obj *indentObj; /* pixels: offset of child relative to parent */
 	int indent; /* pixels: offset of child relative to parent */
 	char *selectMode; /* -selectmode: used by scripts only */
+	Tcl_Obj *itemHeightObj; /* -itemheight: Fixed height for all items (unless overridden) */
 	int itemHeight; /* -itemheight: Fixed height for all items (unless overridden) */
 	int width; /* -width */
 	int height; /* -height */
@@ -303,6 +305,7 @@ extern int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_, TreeItemCo
 extern TreeItemColumn TreeItem_FindColumn(TreeCtrl *tree, TreeItem item, int columnIndex);
 extern int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItemColumn *columnPtr, int *indexPtr);
 extern void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_);
+extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex, int beforeIndex);
 
 typedef struct StyleDrawArgs StyleDrawArgs;
 struct StyleDrawArgs
