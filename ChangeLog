@@ -1,0 +1,7 @@
+2003-11-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.h: 
+	* generic/tkTreeCtrl.c: whitespace police
+
+	* ChangeLog: created
+
