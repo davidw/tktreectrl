@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.1 2003/01/02 21:49:09 krischan Exp $}
+  $Id: treectrl.man,v 1.2 2003/01/04 13:14:51 krischan Exp $}
 ][manpage_begin treectrl n 1.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -106,8 +106,13 @@ Specifies the image to be used as the button to the left of an closed item
 in any of the forms acceptable to [fun Tk_GetImage].
 
 [tkoption_def -columnproxy columnProxy ColumnProxy]
-Specifies [lb]???[rb]
+If this option specifies a non empty value,
+it should be a screen distance
 in any of the forms acceptable to [fun Tk_GetPixels].
+Then a 1 pixel thick vertical line will be drawn
+at the specified screen distance from the left edge of the treectrl widget,
+which reaches from top to bottom and uses an inverting color
+(i.e black on lighter background, white on darker background).
 
 [tkoption_def -doublebuffer doubleBuffer DoubleBuffer]
 Specifies if double-buffering should be used to improve displaying.
@@ -129,7 +134,7 @@ not request any size at all.
 [tkoption_def -indent indent Indent]
 Specifies the amount of indentation
 in any of the forms acceptable to [fun Tk_GetPixels].
-The default is 200 pixel.
+The default is 19 pixel.
 Indentation is the screen distance an item is displayed more to
 the right than its father.
 
@@ -310,8 +315,9 @@ by [arg option].
 command.
 
 [call [arg pathName] [cmd collapse] [opt [option -recurse]] \
-     [opt "[arg itemDesc] [arg ...]"]]
-Switches off the [strong open] state of the item(s) described by [arg itemDesc].
+     [opt [arg {itemDesc ...}]]]
+Switches off the [strong open] state of the item(s)
+described by [arg itemDesc].
 If the item has descendants, they are no longer displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
@@ -328,7 +334,7 @@ a [strong <Collapse-before>] event before the item state is changed,
 and a [strong <Collapse-after>] event after the item state was changed.
 
 [call [arg pathName] [cmd column] [arg option] [arg column] \
-     [opt "[arg arg] [arg ...]"]]
+     [opt [arg {arg ...}]]]
 This command is used to manipulate the columns of the treectrl widget
 (see section [sectref COLUMNS] below).
 The exact behavior of the command depends on the [arg option] argument
@@ -351,8 +357,7 @@ for the column specified by [arg column],
 [cmd {column configure}] widget command.
 
 [call [arg pathName] [cmd {column configure}] [arg column] \
-     [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies options associated with the column specified by [arg column]
 instead of modifying options for the overall treectrl widget.
@@ -366,7 +371,8 @@ the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) for [arg column];
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The specified column is created, if it not already exists
 and if at least one [arg option]-[arg value] pair is specified.
@@ -411,7 +417,7 @@ The return value of this command is 1 if the comparison evaulated to true,
 0 otherwise.
 
 [call [arg pathName] [cmd configure] [opt [arg option]] \
-     [opt "[arg value] [arg option] [arg value] [arg ...]"]]
+     [opt [arg {value option value ...}]]]
 Query or modify the configuration options of the widget.
 If no [arg option] is specified, returns a list describing all of
 the available options for [arg pathName] (see [fun Tk_ConfigureInfo] for
@@ -431,8 +437,7 @@ for the space used to display the items inside the columns,
 i.e. the space of the treectrl widget without
 the surrounding borders and the column headers.
 
-[call [arg pathName] [cmd debug] [arg option] \
-     [opt "[arg arg] [arg arg] [arg  ...]"]]
+[call [arg pathName] [cmd debug] [arg option] [opt [arg {arg arg ...}]]]
 This command is used to facilitate debugging of the treectrl widget.
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd debug] argument.
@@ -446,8 +451,7 @@ named [arg option].
 [cmd {debug configure}] widget command.
 
 [call [arg pathName] [cmd {debug configure}] [arg element] \
-     [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies debugging options
 instead of modifying options for the overall treectrl widget.
@@ -460,7 +464,8 @@ the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given debugging option(s) to have the given value(s);
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The following debugging options are supported:
 [list_begin opt]
@@ -514,7 +519,7 @@ the number of steps you must go upward to reach to root item.
 If no [arg itemDesc] is specified, the maximum depth of all
 items in the treectrl widget is returned instead.
 
-[call [arg pathName] [cmd dragimage] [arg option] [opt "[arg arg] [arg ...]"]]
+[call [arg pathName] [cmd dragimage] [arg option] [opt [arg {arg ...}]]]
 This command is used to manipulate the dragimage,
 one or more dotted lines around rectangular regions of the treectrl widget.
 The exact behavior of the command depends on the [arg option] argument
@@ -545,7 +550,7 @@ Removes all shapes (if there are any) from the dragimage.
 This command does not modify the dragimage offset.
 
 [call [arg pathName] [cmd {dragimage configure}] [opt [arg option]] \
-     [opt [arg value]] [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies the dragimage options
 instead of modifying options for the overall treectrl widget.
@@ -558,7 +563,8 @@ to the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given dragimage option(s) to have the given value(s);
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The following dragimage options are supported:
 
@@ -571,7 +577,7 @@ This option should not be modified by means of the
 instead use the [cmd {dragimage visible}] widget command.
 [list_end]
 
-[call [arg pathName] [cmd {dragimage offset}] [opt "[arg x] [arg y]"]]
+[call [arg pathName] [cmd {dragimage offset}] [opt [arg {x y}]]]
 Returns a list containing the x and y offsets of the dragimage,
 if no additional arguments are specified.
 The dragimage offset is the screen distance, the image is displayed
@@ -589,7 +595,7 @@ Returns 1 if the dragimage is currently visible,
 [list_end]
 
 [call [arg pathName] [cmd element] [arg option] [opt [arg element]] \
-     [opt "[arg arg] [arg arg] [arg ...]"]]
+     [opt [arg {arg arg ...}]]]
 This command is used to manipulate elements (see [sectref ELEMENTS] below).
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd element] argument.
@@ -603,8 +609,7 @@ associated with the element given by [arg element].
 [cmd {element configure}] widget command.
 
 [call [arg pathName] [cmd {element configure}] [arg element] \
-     [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies options associated with the element given by [arg element]
 instead of modifying options for the overall treectrl widget.
@@ -621,7 +626,7 @@ in this case the command returns an empty string.
 See [sectref ELEMENTS] below for details on the options available for elements.
 
 [call [arg pathName] [cmd {element create}] [arg element] [arg type] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg {option value ...}]]]
 Create a new elememt in [arg pathName] of type [arg type]
 with name [arg element].
 The exact format of the arguments after [arg type] depends on [arg type],
@@ -630,7 +635,7 @@ See the subsections on individual element types below for more
 on the syntax of this command.
 This command returns the name for the new element.
 
-[call [arg pathName] [cmd {element delete}] [opt "[arg element] [arg ...]"]]
+[call [arg pathName] [cmd {element delete}] [opt [arg {element ...}]]]
 Deletes each of the named elements and returns an empty string.
 If an element is deleted while it is still configured
 as an element of one or more styles
@@ -646,7 +651,7 @@ such as [strong rect] or [strong text].
 [list_end]
 
 [call [arg pathName] [cmd expand] [opt [option -recurse]] \
-     [opt "[arg itemDesc] [arg ...]"]]
+     [opt [arg {itemDesc ...}]]]
 Switches on the [strong open] state of the item(s) described by [arg itemDesc].
 If the item has descendants, they are now displayed.
 If the item is configured to have a button,
@@ -668,14 +673,16 @@ Returns a list containing some diagnostics about what
 is displayed at the given windows coordinates [strong x] and [strong y].
 The resulting list may be empty,
 if nothing is displayed at the given coordinates,
-otherwise the first list element is [strong header] or [strong item].[nl]
+otherwise the first list element is [strong header] or [strong item].
+[nl]
 
 If the coordinates are in the header area
 and thus the first element of the result is [strong header],
 the number of the column or the string [strong tail]
 is the second element in the resulting list;
 if the x coordinate is near the left or right end of the header,
-a third element [strong left] or [strong right] is added respectively.[nl]
+a third element [strong left] or [strong right] is added respectively.
+[nl]
 
 If the coordinates are below the header area
 and thus the first element of the result is [strong item],
@@ -701,7 +708,7 @@ This command returns a decimal string giving the numerical id
 of the item specified by [arg itemDesc]
 (see [sectref {ITEM DESCRIPTION}] below).
 
-[call [arg pathName] [cmd item] [arg option] [opt "[arg arg] [arg ...]"]]
+[call [arg pathName] [cmd item] [arg option] [opt [arg {arg ...}]]]
 This command is used to manipulate items.
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd item] argument.
@@ -763,7 +770,7 @@ Returns a list with six elements in the form
 [strong neededHeight] [emph neededHeight].
 
 [call [arg pathName] [cmd {item element}] [arg command] [arg itemDesc] \
-     [arg column] [arg element] [opt "[arg arg] [arg ...]"]]
+     [arg column] [arg element] [opt [arg {arg ...}]]]
 This command is used to manipulate elements of the item.
 The exact behavior of the command depends on the [arg command] argument
 that follows the [cmd element] argument.
@@ -790,7 +797,7 @@ specified element (see [sectref ELEMENTS] below)
 
 [call [arg pathName] [cmd {item element configure}] [arg itemDesc] \
      [arg column] [arg element] [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies options associated with
 [arg element] inside [arg column] of the item described by [arg itemDesc]
@@ -873,17 +880,27 @@ from the children list of its father, so that it will become an orphan.
 Returns a list of two integers, which corresponds to the row and column
 of the item described by [arg itemDesc].
 
-[call [arg pathName] [cmd {item sort}] [arg itemDesc] \
-     [opt "[arg option] [arg ...]"]]
+[call [arg pathName] [cmd {item sort}] [arg itemDesc] [opt [arg {option ...}]]]
 Sorts the children of the item described by [arg itemDesc],
 and redisplays the tree with the items in the new order.
+[nl]
+
 The range of items which should be sorted can be restricted
 by means of the [option -first] and/or [option -last] options,
-which should describe children of the item described by [arg itemDesc].
+which should be children of the item described by [arg itemDesc];
+the order between these two limiting items doesn't matter.
+[nl]
+
 The sort column can be specified by means of the [option -column] option;
 this option can be used repeatedly to define a multi column sort.
 The sorting is always done by looking at the [arg text]
-of the first text element of the sorting column(s).[nl]
+of the first text element of the sorting column(s).
+[nl]
+
+If the [option -notreally] option is specified,
+no rearranging of the items is done;
+instead the sorted items are returned as result of the command.
+[nl]
 
 By default ASCII sorting is used with the result returned in increasing order.
 The order can be modified by means of the [option -increasing] (the default)
@@ -898,15 +915,15 @@ Use string comparison with ASCII collation order. This is the default.
 
 [opt_def [option -command] [arg command]]
 Use [arg command] as a comparison command.
-To compare two elements, evaluate a Tcl script consisting of
-[arg command] with the two elements appended as additional
+To compare two items, evaluate a Tcl script consisting of
+[arg command] with the numerical ids of the two items appended as additional
 arguments.  The script should return an integer less than,
-equal to, or greater than zero if the first element is to
+equal to, or greater than zero if the first item is to
 be considered less than, equal to, or greater than the second,
 respectively.
 
 [opt_def [option -dictionary]]
-Use dictionary-style comparison.  This is the same as [option -ascii]
+Use dictionary-style comparison. This is the same as [option -ascii]
 except (a) case is ignored except as a tie-breaker and (b) if two
 strings contain embedded numbers, the numbers compare as integers,
 not characters.  For example, in [option -dictionary] mode, [strong bigBoy]
@@ -916,15 +933,12 @@ sorts between [strong x9y] and [strong x11y].
 [opt_def [option -integer]]
 Convert to integers and use integer comparison.
 
-[opt_def [option -notreally]]
-Does no real comparison; instead just turn the items upside-down.
-
 [opt_def [option -real]]
 Convert to floating-point values and use floating comparison.
 [list_end]
 
 [call [arg pathName] [cmd {item state get}] [arg itemDesc] \
-     [opt "[arg stateName] [arg ...]"]]
+     [opt [arg {stateName ...}]]]
 If no [arg stateName] is specified, returns a list containing
 the names of all (predefined and user defined) states
 which are currently switched on for the item described by [arg itemDesc].
@@ -945,7 +959,7 @@ in the range betwen [arg itemDesc] and [arg lastItem].
 then all items will get the new state.
 
 [call [arg pathName] [cmd {item style}] [arg command] [arg itemDesc] \
-     [opt "[arg arg] [arg ...]"]]
+     [opt [arg {arg ...}]]]
 This command is used to manipulate the style of the item.
 The exact behavior of the command depends on the [arg command] argument
 that follows the [cmd style] argument.
@@ -966,7 +980,7 @@ Replaces elements in the style of the item described by [arg itemDesc]
 in [arg column] based on the from-to pairs in [arg map].
 
 [call [arg pathName] [cmd {item style set}] [arg itemDesc] [opt [arg column]] \
-     [opt [arg style]] [opt "[arg column] [arg style] [arg ...]"]]
+     [opt [arg style]] [opt [arg {column style ...}]]]
 If no [arg column] is specified, returns a list containing the names of the
 styles set for all columns of the item described by [arg itemDesc].
 If no [arg style] argument is specified,
@@ -978,7 +992,7 @@ then the style(s) of item in [arg column] will be set to [arg style].
 [list_end]
 
 [call [arg pathName] [cmd {item text}] [arg itemDesc] [arg column] \
-     [opt [arg text]] [opt "[arg column] [arg text] [arg ...]"]]
+     [opt [arg text]] [opt [arg {column text ...}]]]
 If no [arg text] argument is specified,
 returns the text of the item described by [arg itemDesc] in [arg column].
 If there are one or more [arg text] arguments specified,
@@ -995,7 +1009,7 @@ So if the state of one of the ancestors is currently not opened,
 the item may be considered visible although it is not displayed on the screen.
 [list_end]
 
-[call [arg pathName] [cmd marquee] [arg option] [opt "[arg arg] [arg ...]"]]
+[call [arg pathName] [cmd marquee] [arg option] [opt [arg {arg ...}]]]
 This command is used to manipulate the marquee,
 a rectangular region of the treectrl widget
 optionally marked with a surrounding dotted line.
@@ -1010,7 +1024,7 @@ that follows the [cmd marquee] argument.
 The following forms of the command are supported:
 
 [list_begin definitions]
-[call [arg pathName] [cmd {marquee anchor}] [opt "[arg x] [arg y]"]]
+[call [arg pathName] [cmd {marquee anchor}] [opt [arg {x y}]]]
 Returns a list containing the x and y coordinates of the anchor,
 if no additional arguments are specified.
 If two coordinates are specified,
@@ -1023,7 +1037,7 @@ named [arg option].
 [cmd {marquee configure}] widget command.
 
 [call [arg pathName] [cmd {marquee configure}] [opt [arg option]] \
-     [opt [arg value]] [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies the marquee options
 instead of modifying options for the overall treectrl widget.
@@ -1036,7 +1050,8 @@ the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given marquee option(s) to have the given value(s);
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The following marquee options are supported:
 
@@ -1050,8 +1065,7 @@ This option should not be modified by means of the
 instead use the [cmd {marquee visible}] widget command.
 [list_end]
 
-[call [arg pathName] [cmd {marquee coords}] \
-     [opt "[arg x1] [arg y1] [arg x2] [arg y2]"]]
+[call [arg pathName] [cmd {marquee coords}] [opt [arg {x1 y1 x2 y2}]]]
 Returns a list containing the x and y coordinates of the anchor
 followed by the x and y coordinates of the corner,
 if no additional arguments are specified.
@@ -1059,7 +1073,7 @@ If four coordinates are specified,
 sets the anchor to the given coordinates [arg x1] and [arg y1]
 and the corner to the coordinates [arg x2] and [arg y2].
 
-[call [arg pathName] [cmd {marquee corner}] [opt "[arg x] [arg y]"]]
+[call [arg pathName] [cmd {marquee corner}] [opt [arg {x y}]]]
 Returns a list containing the x and y coordinates of the corner,
 if no additional arguments are specified.
 If two coordinates are specified,
@@ -1085,14 +1099,15 @@ Returns 1 if the dotted line surrounding the marquee is currently visible,
 0 otherwise.
 [list_end]
 
-[call [arg pathName] [cmd notify] [arg option] [opt "[arg arg] [arg ...]"]]
+[call [arg pathName] [cmd notify] [arg option] [opt [arg {arg ...}]]]
 This command is used to manipulate the event mechanism of a treectrl widget,
 which stands in parallel to Tk's event mechanism.
 It has two major advantages:
 arbitrary new events can be defined
 together with arbitrary details,
 and before the event is triggered
-the called Tcl command underlys a customizable percent substitution.[nl]
+the called Tcl command underlys a customizable percent substitution.
+[nl]
 
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd notify] argument.
@@ -1110,7 +1125,7 @@ it operates on any object in a treectl rather than entire widgets,
 and it works also for non X11 event pattern.
 If all arguments are specified then a new binding is created, replacing
 any existing binding for the same [arg pattern] and [arg object]
-(if the first character of [arg script] is ``+'' then [arg script]
+(if the first character of [arg script] is [strong +] then [arg script]
 augments an existing binding rather than replacing it).
 In this case the return value is an empty string.
 If [arg script] is omitted then the command returns the [arg script]
@@ -1124,7 +1139,7 @@ to which a pattern-script combination is bound yet, is returned.
 
 [call [arg pathName] [cmd {notify configure}] [arg window] \
      [arg pattern] [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies event options defined for [arg pattern] in [arg window]
 instead of modifying options for the overall treectrl widget.
@@ -1135,7 +1150,8 @@ If [arg option] is specified with no [arg value],
 then the command does nothing.
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) for the layout;
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The following event options are supported:
 [list_begin opt]
@@ -1161,7 +1177,8 @@ The event with the pattern [arg pattern] is generated,
 if it is configured as active.
 If there are details defined for the event,
 [arg pattern] must describe an [arg eventName]-[arg detail] pair,
-otherwise pattern should be a simple event name.[nl]
+otherwise pattern should be a simple event name.
+[nl]
 
 The optional [arg charMap] is a list of [arg key]-[arg value] pairs
 as in the form returned by [cmd {array get}];
@@ -1178,7 +1195,8 @@ will be replaced with its corresponding [arg value].
 Installs a new detail [arg detail] 
 for the event with the name [arg eventName].
 A detail create by this command is called dynamic,
-whereas details created by the treectrl widget itself are called static.[nl]
+whereas details created by the treectrl widget itself are called static.
+[nl]
 
 The optional [arg percentsCommand] will be called
 before the event is triggered
@@ -1271,7 +1289,7 @@ or predefined by the treectrl widget itself ([strong static]).
 [call [arg pathName] [cmd {state names}]]
 Returns a list containing the names of all user defined states.
 
-[call [arg pathName] [cmd {state undefine}] [opt "[arg stateName] [arg ...]"]]
+[call [arg pathName] [cmd {state undefine}] [opt [arg {stateName ...}]]]
 Every [arg stateName] must be the name of a user defined state.
 Removes this state from the list of user defined states.
 [list_end]
@@ -1347,7 +1365,7 @@ A [strong <Selection>] event is generated.
 [list_end]
 
 [call [arg pathName] [cmd style] [arg option] [opt [arg element]] \
-     [opt "[arg arg] [arg arg] [arg ...]"]]
+     [opt [arg {arg arg ...}]]]
 This command is used to manipulate styles, which could be considered
 as a geometry manager for the elements of one item.
 The exact behavior of the command depends on the [arg option] argument
@@ -1362,7 +1380,7 @@ associated with the style given by [arg style].
 [cmd {style configure}] widget command.
 
 [call [arg pathName] [cmd {style configure}] [arg style] [opt [arg option]] \
-     [opt [arg value]] [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies options associated with the style given by [arg style]
 instead of modifying options for the overall treectrl widget.
@@ -1375,7 +1393,8 @@ the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) in [arg style];
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The options of a style have effect on all elements managed by the style.
 The following options are supported:
@@ -1389,7 +1408,7 @@ or [strong vertical] or an abbreviation of one of these.
 [list_end]
 
 [call [arg pathName] [cmd {style create}] [arg style] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg {option value ...}]]]
 Create a new style in [arg pathName] with name [arg style].
 After [arg style] there may be any number of [arg option]-[arg value]
 pairs, each of which sets one of the configuration options
@@ -1398,7 +1417,7 @@ used in [cmd {style configure}] widget commands to change the styles's
 configuration.
 Returns the name of the new style.
 
-[call [arg pathName] [cmd {style delete}] [opt "[arg style] [arg ...]"]]
+[call [arg pathName] [cmd {style delete}] [opt [arg {style ...}]]]
 Deletes each of the named styles and returns an empty string.
 If a style is deleted while it is still used to display
 one or more items,
@@ -1412,14 +1431,14 @@ created by the widget command [cmd {element create}].
 Duplicate names in [arg elementList] are ignored.
 An element which was specified in a former call of this command
 for [arg style] but is not included in [arg elementList],
-will be deleted from the elements layed out by [arg style].[nl]
+will be deleted from the elements layed out by [arg style].
+[nl]
 
 If the [arg elementList] argument is not specified, a list is returned
 containing the currently defined elements of [arg style].
 
 [call [arg pathName] [cmd {style layout}] [arg style] [arg element] \
-     [opt [arg option]] [opt [arg value]] \
-     [opt "[arg option] [arg value] [arg ...]"]]
+     [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies options used by [arg style] for laying out [arg element]
 instead of modifying options for the overall treectrl widget.
@@ -1430,7 +1449,8 @@ If [arg option] is specified with no [arg value], then the command returns
 the value of the named option.
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) for the layout;
-in this case the command returns an empty string.[nl]
+in this case the command returns an empty string.
+[nl]
 
 The options of a layout have effect on exactly the one element [arg element]
 managed by [arg style].
@@ -1488,7 +1508,7 @@ Returns a list containing the names of all existing styles.
 [list_end]
 
 [call [arg pathName] [cmd toggle] [opt [option -recurse]] \
-     [opt "[arg itemDesc] [arg ...]"]]
+     [opt [arg {itemDesc ...}]]]
 Changes the [strong open] state of the item(s) described by [arg itemDesc].
 If the state is currently switched off,
 this command does the same as the [cmd expand] widget command,
@@ -2015,10 +2035,10 @@ If [strong visible] is specified and the last item is currently not visible,
 i.e. one of its father nodes is collapsed,
 the last visible item is specified instead.
 
-[lst_item "[strong nearest] [arg x] [arg y]"]
+[lst_item "[strong nearest] [arg {x y}]"]
 Indicates the item nearest to the point given by [arg x] and [arg y].
 
-[lst_item "[strong rnc] [arg row] [arg column]"]
+[lst_item "[strong rnc] [arg {row column}]"]
 Indicates the item in the given [arg row] and [arg column].
 You can memorize [strong rnc] as abbreviation of "row 'n' column".
 
