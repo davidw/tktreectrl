@@ -489,22 +489,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			int recurse = 0;
 			TreeItem item;
 
-			if (objc < 2)
-			{
-				Tcl_WrongNumArgs(interp, 2, objv, "options ?item...?");
-				goto error;
-			}
 			if (objc == 2)
 				break;
 			s = Tcl_GetString(objv[2]);
 			if (!strcmp(s, "-recurse"))
 			{
 				recurse = 1;
-				if (objc < 3)
-				{
-					Tcl_WrongNumArgs(interp, 2, objv, "options ?item...?");
-					goto error;
-				}
+				if (objc == 3)
+					break;
 			}
 			for (i = 2 + recurse; i < objc; i++)
 			{
@@ -594,6 +586,11 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{
 			TreeItem item;
 
+			if (objc < 2 || objc > 3)
+			{
+				Tcl_WrongNumArgs(interp, 2, objv, "?item?");
+				goto error;
+			}
 			if (objc == 3)
 			{
 				if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
@@ -786,12 +783,22 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		case COMMAND_NUMCOLUMNS:
 		{
+			if (objc != 2)
+			{
+				Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
+				goto error;
+			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->columnCount));
 			break;
 		}
 
 		case COMMAND_NUMITEMS:
 		{
+			if (objc != 2)
+			{
+				Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
+				goto error;
+			}
 			Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
 			break;
 		}
@@ -802,6 +809,12 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			Tcl_HashSearch search;
 			Tcl_Obj *listObj;
 			TreeItem item;
+
+			if (objc != 2)
+			{
+				Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
+				goto error;
+			}
 
 			/* Pretty slow. Could keep a hash table of orphans */
 			listObj = Tcl_NewListObj(0, NULL);
@@ -1618,8 +1631,11 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 			Tcl_Obj *listObj;
 			int i;
 
-			if (tree->stateNames == NULL)
-				break;
+			if (objc != 3)
+			{
+				Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
+				return TCL_ERROR;
+			}
 			listObj = Tcl_NewListObj(0, NULL);
 			for (i = STATE_USER - 1; i < 32; i++)
 			{
@@ -1634,35 +1650,33 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		case COMMAND_UNDEFINE:
 		{
 			char *string;
-			int i, length;
+			int i, j, length;
 
-			if (objc != 4)
+			for (j = 3; j < objc; j++)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "stateName");
-				return TCL_ERROR;
+				string = Tcl_GetStringFromObj(objv[j], &length);
+				for (i = 0; i < 32; i++)
+				{
+					if (tree->stateNames[i] == NULL)
+						continue;
+					if (strcmp(tree->stateNames[i], string) == 0)
+						break;
+				}
+				if (i < STATE_USER - 1)
+				{
+					FormatResult(interp, "state \"%s\" cannot be undefined",
+						string);
+					return TCL_ERROR;
+				}
+				if (i == 32)
+				{
+					FormatResult(interp, "unknown state \"%s\"", string);
+					return TCL_ERROR;
+				}
+				TreeStyle_UndefineState(tree, 1L << i);
+				ckfree(tree->stateNames[i]);
+				tree->stateNames[i] = NULL;
 			}
-			string = Tcl_GetStringFromObj(objv[3], &length);
-			for (i = 0; i < 32; i++)
-			{
-				if (tree->stateNames[i] == NULL)
-					continue;
-				if (strcmp(tree->stateNames[i], string) == 0)
-					break;
-			}
-			if (i < STATE_USER - 1)
-			{
-				FormatResult(interp, "state \"%s\" cannot be undefined",
-					string);
-				return TCL_ERROR;
-			}
-			if (i == 32)
-			{
-				FormatResult(interp, "unknown state \"%s\"", string);
-				return TCL_ERROR;
-			}
-			TreeStyle_UndefineState(tree, 1L << i);
-			ckfree(tree->stateNames[i]);
-			tree->stateNames[i] = NULL;
 			break;
 		}
 	}
@@ -1732,15 +1746,6 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 			{
 				if (TreeItem_FromObj(tree, objv[4], &itemLast, IFO_ALLOK) != TCL_OK)
 					return TCL_ERROR;
-				if (TreeItem_RootAncestor(tree, itemFirst) !=
-					TreeItem_RootAncestor(tree, itemLast))
-				{
-					FormatResult(interp,
-						"item %d and item %d don't share a common ancestor",
-						TreeItem_GetID(tree, itemFirst),
-						TreeItem_GetID(tree, itemLast));
-					return TCL_ERROR;
-				}
 			}
 			if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL))
 			{
@@ -1770,6 +1775,15 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 			}
 			else
 			{
+				if (TreeItem_RootAncestor(tree, itemFirst) !=
+					TreeItem_RootAncestor(tree, itemLast))
+				{
+					FormatResult(interp,
+						"item %d and item %d don't share a common ancestor",
+						TreeItem_GetID(tree, itemFirst),
+						TreeItem_GetID(tree, itemLast));
+					return TCL_ERROR;
+				}
 				TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
 				TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
 				if (indexFirst > indexLast)
@@ -1851,15 +1865,6 @@ doneADD:
 			{
 				if (TreeItem_FromObj(tree, objv[4], &itemLast, IFO_ALLOK) != TCL_OK)
 					return TCL_ERROR;
-				if (TreeItem_RootAncestor(tree, itemFirst) !=
-					TreeItem_RootAncestor(tree, itemLast))
-				{
-					FormatResult(interp,
-						"item %d and item %d don't share a common ancestor",
-						TreeItem_GetID(tree, itemFirst),
-						TreeItem_GetID(tree, itemLast));
-					return TCL_ERROR;
-				}
 			}
 			if ((objc == 3) || (itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL))
 			{
@@ -1889,6 +1894,15 @@ doneADD:
 			}
 			else
 			{
+				if (TreeItem_RootAncestor(tree, itemFirst) !=
+					TreeItem_RootAncestor(tree, itemLast))
+				{
+					FormatResult(interp,
+						"item %d and item %d don't share a common ancestor",
+						TreeItem_GetID(tree, itemFirst),
+						TreeItem_GetID(tree, itemLast));
+					return TCL_ERROR;
+				}
 				TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
 				TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
 				if (indexFirst > indexLast)
