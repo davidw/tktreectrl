@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.19 2003/01/04 13:14:51 krischan Exp $
+'\"   $Id: treectrl.n,v 1.20 2003/01/04 17:09:43 krischan Exp $
 .so man.macros
 .TH "treectrl" n 1.0 treectrl "Tk Commands"
 .BS
@@ -1363,14 +1363,16 @@ If a \fIstateName\fR is specified,
 .TP
 \fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?\fR
 Every element of \fIstateDescList\fR
-must describe a user defined state (see \fBSTATES\fR below).
-Every state with an leading \fB!\fR will be switched off for the
+must describe a user defined state (see \fBSTATES\fR below),
+with the particularity that the state name may have also a leading \fB~\fR.
+Every state with a leading \fB!\fR will be switched off for the
 item described by \fIitemDesc\fR,
-every state without leading \fB!\fR will be switched on.
-If \fIlastItem\fR is specified, the state change will be made for all items
+every state with a leading \fB~\fR will be toggled, and
+every state without leading \fB!\fR or \fB~\fR will be switched on.
+If \fIlastItem\fR is specified, the state changes will be made for all items
 in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
 \fIItemDesc\fR may be the string \fBall\fR,
-then all items will get the new state.
+then the state changes are made for all items of the treectrl widget.
 .TP
 \fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
 This command is used to manipulate the style of the item.

@@ -3,11 +3,11 @@
   See the file &quot;license.terms&quot; for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.html,v 1.2 2003/01/04 13:14:51 krischan Exp $ --><html><head><title>treectrl - Tk Commands </title></head>
+  $Id: treectrl.html,v 1.3 2003/01/04 17:09:43 krischan Exp $ --><html><head><title>treectrl - Tk Commands </title></head>
 <! -- Generated from treectrl.man by tcllib/doctools/mpexpand with fmt.html -->
 <! -- Copyright (c) 2003 krischan -->
 <! -- All rights reserved -->
-<! -- CVS: $Id: treectrl.html,v 1.2 2003/01/04 13:14:51 krischan Exp $ treectrl.n -->
+<! -- CVS: $Id: treectrl.html,v 1.3 2003/01/04 17:09:43 krischan Exp $ treectrl.n -->
 
 <h1> treectrl(n) 1.0 treectrl &quot;Tk Commands&quot;</h1>
 <a name="name"><h2>NAME</h2>
@@ -1323,14 +1323,16 @@ If a <i class='arg'>stateName</i> is specified,
 <dt><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?<dd>
 
 Every element of <i class='arg'>stateDescList</i>
-must describe a user defined state (see <a href="#states">STATES</a> below).
-Every state with an leading <strong>!</strong> will be switched off for the
+must describe a user defined state (see <a href="#states">STATES</a> below),
+with the particularity that the state name may have also a leading <strong>~</strong>.
+Every state with a leading <strong>!</strong> will be switched off for the
 item described by <i class='arg'>itemDesc</i>,
-every state without leading <strong>!</strong> will be switched on.
-If <i class='arg'>lastItem</i> is specified, the state change will be made for all items
+every state with a leading <strong>~</strong> will be toggled, and
+every state without leading <strong>!</strong> or <strong>~</strong> will be switched on.
+If <i class='arg'>lastItem</i> is specified, the state changes will be made for all items
 in the range betwen <i class='arg'>itemDesc</i> and <i class='arg'>lastItem</i>.
 <i class='arg'>ItemDesc</i> may be the string <strong>all</strong>,
-then all items will get the new state.
+then the state changes are made for all items of the treectrl widget.
 
 <br><br>
 <dt><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?<dd>
