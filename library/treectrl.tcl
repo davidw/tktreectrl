@@ -440,6 +440,7 @@ proc ::TreeCtrl::Release1 {w x y} {
 	normal {
 	    AutoScanCancel $w
 	    $w activate [$w index [list nearest $x $y]]
+set Priv(prev) ""
 	}
 	resize {
 	    if {[$w cget -columnproxy] ne ""} {
@@ -533,6 +534,54 @@ proc ::TreeCtrl::Motion {w el} {
 		set i [$w index "$i prev visible"]
 	    }
 	    set Priv(prev) $el
+	}
+    }
+}
+
+# Different version that uses single "selection modify" call
+proc ::TreeCtrl::Motion {w el} {
+    variable Priv
+    if {$el eq $Priv(prev)} {
+	return
+    }
+    switch [$w cget -selectmode] {
+	browse {
+	    $w selection modify $el all
+	    set Priv(prev) $el
+	}
+	extended {
+	    set i $Priv(prev)
+	    set select {}
+	    set deselect {}
+	    if {$i eq ""} {
+		set i $el
+		lappend select $el
+		set hack [$w compare $el == anchor]
+	    }
+	    if {[$w selection includes anchor] || $hack} {
+		set deselect [concat $deselect [$w range $i $el]]
+		set select [concat $select [$w range anchor $el]]
+	    } else {
+		set deselect [concat $deselect [$w range $i $el]]
+		set deselect [concat $deselect [$w range anchor $el]]
+	    }
+	    if {![info exists Priv(selection)]} {
+		set Priv(selection) [$w selection get]
+	    }
+	    while {[$w compare $i < $el] && [$w compare $i < anchor]} {
+		if {[lsearch $Priv(selection) $i] >= 0} {
+		    lappend select $i
+		}
+		set i [$w index "$i next visible"]
+	    }
+	    while {[$w compare $i > $el] && [$w compare $i > anchor]} {
+		if {[lsearch $Priv(selection) $i] >= 0} {
+		    lappend select $i
+		}
+		set i [$w index "$i prev visible"]
+	    }
+	    set Priv(prev) $el
+	    $w selection modify $select $deselect
 	}
     }
 }
