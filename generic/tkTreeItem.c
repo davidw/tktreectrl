@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.23 2004/11/29 20:31:37 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.24 2004/11/30 19:13:18 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -631,12 +631,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 	"above", "below", "bottom", "child",
 	"firstchild", "lastchild", "left", "leftmost", "next", "nextsibling",
 	"parent", "prev", "prevsibling", "right", "rightmost", "sibling",
-	"top", "visible", (char *) NULL };
+	"top", "visible", (char *) NULL
+    };
     enum modEnum {
-	MOD_ABOVE, MOD_BELOW, MOD_BOTTOM, MOD_CHILD, MOD_FIRSTCHILD,
-	MOD_LASTCHILD, MOD_LEFT, MOD_LEFTMOST, MOD_NEXT, MOD_NEXTSIBLING,
-	MOD_PARENT, MOD_PREV, MOD_PREVSIBLING, MOD_RIGHT, MOD_RIGHTMOST,
-	MOD_SIBLING, MOD_TOP, MOD_VISIBLE
+	TMOD_ABOVE, TMOD_BELOW, TMOD_BOTTOM, TMOD_CHILD, TMOD_FIRSTCHILD,
+	TMOD_LASTCHILD, TMOD_LEFT, TMOD_LEFTMOST, TMOD_NEXT, TMOD_NEXTSIBLING,
+	TMOD_PARENT, TMOD_PREV, TMOD_PREVSIBLING, TMOD_RIGHT, TMOD_RIGHTMOST,
+	TMOD_SIBLING, TMOD_TOP, TMOD_VISIBLE
     };
     static int modArgs[] = {
 	1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1
@@ -678,7 +679,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 	    {
 		item = (Item *) tree->root;
 		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == MOD_VISIBLE) {
+			    modifiers) == TMOD_VISIBLE) {
 		    if (!item->isVisible)
 			item = NULL;
 		    else if (!tree->showRoot)
@@ -694,7 +695,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		    item = item->lastChild;
 		}
 		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == MOD_VISIBLE) {
+			    modifiers) == TMOD_VISIBLE) {
 		    if (!((Item *) tree->root)->isVisible)
 			item = NULL; /* nothing is visible */
 		    else if (item == (Item *) tree->root && !tree->showRoot)
@@ -789,28 +790,28 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 	if (objc - listIndex < modArgs[index])
 	    goto baditem;
 	if (IndexFromList(listIndex + modArgs[index], objc, objv,
-		    modifiers) == MOD_VISIBLE)
+		    modifiers) == TMOD_VISIBLE)
 	    nextIsVisible = TRUE;
 	switch ((enum modEnum) index) {
-	    case MOD_ABOVE:
+	    case TMOD_ABOVE:
 	    {
 		item = (Item *) Tree_ItemAbove(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_BELOW:
+	    case TMOD_BELOW:
 	    {
 		item = (Item *) Tree_ItemBelow(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_BOTTOM:
+	    case TMOD_BOTTOM:
 	    {
 		item = (Item *) Tree_ItemBottom(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_CHILD:
+	    case TMOD_CHILD:
 	    {
 		int n;
 
@@ -831,7 +832,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_FIRSTCHILD:
+	    case TMOD_FIRSTCHILD:
 	    {
 		item = item->firstChild;
 		if (nextIsVisible) {
@@ -841,7 +842,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_LASTCHILD:
+	    case TMOD_LASTCHILD:
 	    {
 		item = item->lastChild;
 		if (nextIsVisible) {
@@ -851,19 +852,19 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_LEFT:
+	    case TMOD_LEFT:
 	    {
 		item = (Item *) Tree_ItemLeft(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_LEFTMOST:
+	    case TMOD_LEFTMOST:
 	    {
 		item = (Item *) Tree_ItemLeftMost(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_NEXT:
+	    case TMOD_NEXT:
 	    {
 		if (nextIsVisible)
 		    item = (Item *) TreeItem_NextVisible(tree, (TreeItem) item);
@@ -871,7 +872,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		    item = (Item *) TreeItem_Next(tree, (TreeItem) item);
 		break;
 	    }
-	    case MOD_NEXTSIBLING:
+	    case TMOD_NEXTSIBLING:
 	    {
 		item = item->nextSibling;
 		if (nextIsVisible) {
@@ -881,13 +882,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_PARENT:
+	    case TMOD_PARENT:
 	    {
 		item = item->parent;
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_PREV:
+	    case TMOD_PREV:
 	    {
 		if (nextIsVisible)
 		    item = (Item *) TreeItem_PrevVisible(tree, (TreeItem) item);
@@ -895,7 +896,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		    item = (Item *) TreeItem_Prev(tree, (TreeItem) item);
 		break;
 	    }
-	    case MOD_PREVSIBLING:
+	    case TMOD_PREVSIBLING:
 	    {
 		item = item->prevSibling;
 		if (nextIsVisible) {
@@ -905,19 +906,19 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_RIGHT:
+	    case TMOD_RIGHT:
 	    {
 		item = (Item *) Tree_ItemRight(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_RIGHTMOST:
+	    case TMOD_RIGHTMOST:
 	    {
 		item = (Item *) Tree_ItemRightMost(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_SIBLING:
+	    case TMOD_SIBLING:
 	    {
 		int n;
 
@@ -940,13 +941,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
-	    case MOD_TOP:
+	    case TMOD_TOP:
 	    {
 		item = (Item *) Tree_ItemTop(tree, (TreeItem) item);
 		nextIsVisible = FALSE;
 		break;
 	    }
-	    case MOD_VISIBLE:
+	    case TMOD_VISIBLE:
 	    {
 		goto baditem;
 	    }
