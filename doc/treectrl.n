@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.20 2003/01/04 17:09:43 krischan Exp $
+'\"   $Id: treectrl.n,v 1.21 2003/01/06 23:03:19 krischan Exp $
 .so man.macros
 .TH "treectrl" n 1.0 treectrl "Tk Commands"
 .BS
@@ -420,8 +420,11 @@ it should be a screen distance
 in any of the forms acceptable to \fBTk_GetPixels\fR.
 Then a 1 pixel thick vertical line will be drawn
 at the specified screen distance from the left edge of the treectrl widget,
-which reaches from top to bottom and uses an inverting color
+which reaches from top to bottom of the treectrl widget
+and uses an inverting color
 (i.e black on lighter background, white on darker background).
+This line can be used to give the user a visual feedback
+during column resizing.
 .LP
 .nf
 .ta 6c
@@ -1311,8 +1314,10 @@ the order between these two limiting items doesn't matter.
 .sp
 The sort column can be specified by means of the \fB-column\fR option;
 this option can be used repeatedly to define a multi column sort.
-The sorting is always done by looking at the \fItext\fR
-of the first text element of the sorting column(s).
+The sorting is done by looking at the \fItext\fR
+of the element specified by the \fB-element\fR option,
+which must be a text element defined in the style of the sorting column,
+by default the first text element is used.
 .sp
 If the \fB-notreally\fR option is specified,
 no rearranging of the items is done;

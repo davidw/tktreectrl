@@ -3,11 +3,11 @@
   See the file &quot;license.terms&quot; for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.html,v 1.3 2003/01/04 17:09:43 krischan Exp $ --><html><head><title>treectrl - Tk Commands </title></head>
+  $Id: treectrl.html,v 1.4 2003/01/06 23:03:13 krischan Exp $ --><html><head><title>treectrl - Tk Commands </title></head>
 <! -- Generated from treectrl.man by tcllib/doctools/mpexpand with fmt.html -->
 <! -- Copyright (c) 2003 krischan -->
 <! -- All rights reserved -->
-<! -- CVS: $Id: treectrl.html,v 1.3 2003/01/04 17:09:43 krischan Exp $ treectrl.n -->
+<! -- CVS: $Id: treectrl.html,v 1.4 2003/01/06 23:03:13 krischan Exp $ treectrl.n -->
 
 <h1> treectrl(n) 1.0 treectrl &quot;Tk Commands&quot;</h1>
 <a name="name"><h2>NAME</h2>
@@ -276,8 +276,11 @@ it should be a screen distance
 in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
 Then a 1 pixel thick vertical line will be drawn
 at the specified screen distance from the left edge of the treectrl widget,
-which reaches from top to bottom and uses an inverting color
+which reaches from top to bottom of the treectrl widget
+and uses an inverting color
 (i.e black on lighter background, white on darker background).
+This line can be used to give the user a visual feedback
+during column resizing.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-doublebuffer</strong><br>
@@ -1261,8 +1264,10 @@ the order between these two limiting items doesn't matter.
 
 The sort column can be specified by means of the <strong>-column</strong> option;
 this option can be used repeatedly to define a multi column sort.
-The sorting is always done by looking at the <i class='arg'>text</i>
-of the first text element of the sorting column(s).
+The sorting is done by looking at the <i class='arg'>text</i>
+of the element specified by the <strong>-element</strong> option,
+which must be a text element defined in the style of the sorting column,
+by default the first text element is used.
 <br><br>
 
 If the <strong>-notreally</strong> option is specified,

@@ -265,6 +265,16 @@ T item XXX
 	T item rnc I
 
 	T item sort I $option $value ...
+		-first I (default firstchild)
+		-last I (default lastchild)
+		-command $cmd
+		-dictionary
+		-integer
+		-real
+		-increasing
+		-decreasing
+		-column C (default 0)
+		-element E (default first "text")
 
 	T item state get I
 	T item state get I $state
