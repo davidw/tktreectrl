@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.16 2004/08/13 20:28:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.17 2004/10/12 03:54:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2392,6 +2392,108 @@ void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem)
 	{
 		Tree_InvalidateItemDInfo(tree, item, NULL);
 	}
+}
+
+typedef struct Iterate
+{
+	TreeCtrl *tree;
+	TreeItem item;
+	TreeItemColumn column;
+	int columnIndex;
+	Style *style;
+	ElementType *elemTypePtr;
+	ElementLink *eLink;
+	Tcl_HashSearch search;
+	Tcl_HashEntry *hPtr;
+} Iterate;
+
+static int IterateItem(Iterate *iter)
+{
+	int i;
+
+	while (iter->column != NULL)
+	{
+		iter->style = (Style *) TreeItemColumn_GetStyle(iter->tree, iter->column);
+		if (iter->style != NULL)
+		{
+			for (i = 0; i < iter->style->numElements; i++)
+			{
+				iter->eLink = &iter->style->elements[i];
+				if (iter->eLink->elem->typePtr == iter->elemTypePtr)
+					return 1;
+			}
+		}
+		iter->column = TreeItemColumn_GetNext(iter->tree, iter->column);
+		iter->columnIndex++;
+	}
+	return 0;
+}
+
+TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr)
+{
+	Iterate *iter;
+
+	iter = (Iterate *) ckalloc(sizeof(Iterate));
+	iter->tree = tree;
+	iter->elemTypePtr = elemTypePtr;
+	iter->hPtr = Tcl_FirstHashEntry(&tree->itemHash, &iter->search);
+	while (iter->hPtr != NULL)
+	{
+		iter->item = (TreeItem) Tcl_GetHashValue(iter->hPtr);
+		iter->column = TreeItem_GetFirstColumn(tree, iter->item);
+		iter->columnIndex = 0;
+		if (IterateItem(iter))
+			return (TreeIterate) iter;
+		iter->hPtr = Tcl_NextHashEntry(&iter->search);
+	}
+	ckfree((char *) iter);
+	return NULL;
+}
+
+TreeIterate Tree_ElementIterateNext(TreeIterate iter_)
+{
+	Iterate *iter = (Iterate *) iter_;
+
+	iter->column = TreeItemColumn_GetNext(iter->tree, iter->column);
+	iter->columnIndex++;
+	if (IterateItem(iter))
+		return iter_;
+	iter->hPtr = Tcl_NextHashEntry(&iter->search);
+	while (iter->hPtr != NULL)
+	{
+		iter->item = (TreeItem) Tcl_GetHashValue(iter->hPtr);
+		iter->column = TreeItem_GetFirstColumn(iter->tree, iter->item);
+		iter->columnIndex = 0;
+		if (IterateItem(iter))
+			return iter_;
+		iter->hPtr = Tcl_NextHashEntry(&iter->search);
+	}
+	ckfree((char *) iter);
+	return NULL;
+}
+
+void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
+{
+	Iterate *iter = (Iterate *) iter_;
+
+	if (mask & CS_LAYOUT)
+	{
+		iter->eLink->neededWidth = iter->eLink->neededHeight = -1;
+		iter->style->neededWidth = iter->style->neededHeight = -1;
+		Tree_InvalidateColumnWidth(iter->tree, iter->columnIndex);
+		TreeItemColumn_InvalidateSize(iter->tree, iter->column);
+		TreeItem_InvalidateHeight(iter->tree, iter->item);
+		Tree_DInfoChanged(iter->tree, DINFO_REDO_RANGES);
+	}
+	if (mask & CS_DISPLAY)
+		Tree_InvalidateItemDInfo(iter->tree, iter->item, NULL);
+}
+
+Element *Tree_ElementIterateGet(TreeIterate iter_)
+{
+	Iterate *iter = (Iterate *) iter_;
+
+	return iter->eLink->elem;
 }
 
 void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT)
