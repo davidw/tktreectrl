@@ -1,4 +1,6 @@
-#!../TclTk-8.4.7/bin/wish84.exe
+#!../TclTk-8.4.9/bin/wish84.exe
+
+set VERSION 1.1
 
 package require Tk 8.4
 
@@ -44,43 +46,74 @@ if {[catch {
     proc dbwin s {puts -nonewline $s}
 }
 
-set code [catch {package require treectrl 1.1}]
+# This gets called if 'package require' won't work during development.
+proc LoadSharedLibrary {} {
 
-# Return TRUE if we are running from the development directory
-proc IsDevelopment {} {
-    return [file exists [Path .. generic]]
-}
-
-# When using configure/make, the "make demo" Makefile target sets the value of
-# the TREECTRL_LIBRARY environment variable which is used by tcl_findLibrary to
-# find our treectrl.tcl file. When *not* using configure/make, we set the value
-# of TREECTRL_LIBRARY and load the shared library manually. Note that
-# tcl_findLibrary is called by the Treectrl_Init() routine in C.
-if {$code && [IsDevelopment]} {
-    set ::env(TREECTRL_LIBRARY) [Path .. library]
     switch -- $::thisPlatform {
 	macintosh {
-	    load [Path .. treectrl.shlb]
+	    set pattern treectrl*.shlb
 	}
 	macosx {
-	    load [Path .. build treectrl.dylib]
+	    set pattern treectrl*.dylib
 	}
 	unix {
-
-	    # Try to load libtreectrl*.so on Unix
-	    load [glob -directory [Path ..] libtreectrl*[info sharedlibextension]]
+	    set pattern libtreectrl*[info sharedlibextension]*
 	}
-	default {
-
-	    # Windows build
-	    load [glob -directory [Path .. Build] treectrl*[info sharedlibextension]]
+	windows {
+	    set pattern treectrl*[info sharedlibextension]
 	}
     }
 
-} else {
-    lappend ::auto_path [Path ..]
-    package require treectrl 1.1
+    set SHLIB [glob -nocomplain -directory [Path ..] $pattern]
+    if {[llength $SHLIB] != 1} {
+	return 0
+    }
+
+    # When using configure/make, the "make demo" Makefile target sets the value of
+    # the TREECTRL_LIBRARY environment variable which is used by tcl_findLibrary to
+    # find our treectrl.tcl file. When *not* using configure/make, we set the value
+    # of TREECTRL_LIBRARY and load the shared library manually. Note that
+    # tcl_findLibrary is called by the Treectrl_Init() routine in C.
+    set ::env(TREECTRL_LIBRARY) [Path .. library]
+
+    load $SHLIB
+
+    return 1
 }
+
+# See if treectrl is already loaded for some reason
+if {[llength [info commands treectrl]]} {
+    puts "demo.tcl: using previously-loaded treectrl package v[package provide treectrl]"
+    if {$VERSION ne [package provide treectrl]} {
+	puts "demo.tcl: WARNING: expected v$VERSION"
+    }
+
+# For 'package require' to work with the development version, make sure the
+# TCLLIBPATH and TREECTRL_LIBRARY environment variables are set by your
+# Makefile/Jamfile/IDE etc.
+} elseif {![catch {package require treectrl $VERSION} err]} {
+    puts "demo.tcl: 'package require' succeeded"
+
+} else {
+    puts "demo.tcl: 'package require' failed: >>> $err <<<"
+
+    if {[LoadSharedLibrary]} {
+	puts "demo.tcl: loaded treectrl library by hand"
+
+    } else {
+	error "demo.tcl: can't load treectrl package"
+    }
+}
+
+# Display path of shared library that was loaded
+foreach list [info loaded] {
+    set file [lindex $list 0]
+    set pkg [lindex $list 1]
+    if {$pkg ne "Treectrl"} continue
+    puts "demo.tcl: using '$file'"
+    break
+}
+puts "demo.tcl: TREECTRL_LIBRARY=$env(TREECTRL_LIBRARY)"
 
 # Demo sources
 foreach file {
@@ -110,7 +143,12 @@ proc MakeMenuBar {} {
     . configure -menu $m
     set m2 [menu $m.mFile -tearoff no]
     if {$::tcl_platform(platform) ne "unix"} {
-	console eval {.console conf -height 8}
+	console eval {
+	    wm title . "TkTreeCtrl Console"
+	    .console configure -font {Courier 9} -height 8
+	    ::tk::ConsolePrompt
+	    wm geometry . +0-100
+	}
 	$m2 add command -label "Console" -command {
 	    if {[console eval {winfo ismapped .}]} {
 		console hide
@@ -119,14 +157,174 @@ proc MakeMenuBar {} {
 	    }
 	}
     }
+    $m2 add command -label "Event Browser" -command ToggleEventsWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
     $m2 add command -label Quit -command exit
     $m add cascade -label File -menu $m2
     return
 }
 
+proc MakeEventsWindow {} {
+    set w [toplevel .events]
+    wm withdraw $w
+#    wm transient $w .
+    wm title $w "TkTreeCtrl Events"
+
+    set m [menu $w.menubar]
+    $w configure -menu $m
+    set m1 [menu $m.m1 -tearoff 0]
+    $m1 add cascade -label "Static" -menu [menu $m1.m1 -tearoff 0]
+    $m1 add cascade -label "Dynamic" -menu [menu $m1.m2 -tearoff 0]
+    $m1 add command -label "Rebuild Menus" -command "RebuildEventsMenus $w.f.t $m"
+    $m add cascade -label "Events" -menu $m1
+
+    TreePlusScrollbarsInAFrame $w.f 1 1
+    pack $w.f -expand yes -fill both
+
+    set T $w.f.t
+
+    $T configure -showheader no -showroot no -showrootlines no -height 300 \
+	-font {Courier 8}
+
+    $T column create
+
+    $T element create e1 text -fill [list $::SystemHighlightText {selected focus}]
+    $T element create e2 text -fill [list $::SystemHighlightText {selected focus}]
+    $T element create e3 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
+	-showfocus yes
+    $T element create e4 rect -fill blue -width 100 -height 2
+
+    set S [$T style create s1]
+    $T style elements $S {e3 e1}
+    $T style layout $S e3 -union [list e1] -ipadx 1 -ipady {0 1}
+
+    set S [$T style create s2]
+    $T style elements $S {e3 e1 e2}
+    $T style layout $S e2 -padx {12 0}
+    $T style layout $S e3 -union [list e1 e2] -ipadx 1 -ipady {0 1}
+
+    set S [$T style create s3]
+    $T style elements $S {e4}
+
+    $T configure -defaultstyle s1
+
+    RebuildEventsMenus $T $m
+
+    wm protocol $w WM_DELETE_WINDOW "ToggleEventsWindow"
+    switch -- $::thisPlatform {
+	macintosh -
+	macosx {
+	    wm geometry $w -40+40
+	}
+	default {
+	    wm geometry $w -0+0
+	}
+    }
+
+    return
+}
+proc RebuildEventsMenus {T m} {
+    foreach event [lsort -dictionary [.f2.f1.t notify eventnames]] {
+	set details [lsort -dictionary [.f2.f1.t notify detailnames $event]]
+	foreach detail $details {
+	    set pattern <$event-$detail>
+	    lappend patterns $pattern [.f2.f1.t notify linkage $pattern]
+	}
+	if {![llength $details]} {
+	    set pattern <$event>
+	    lappend patterns $pattern [.f2.f1.t notify linkage $pattern]
+	}
+    }
+
+    $m.m1.m1 delete 0 end
+    $m.m1.m2 delete 0 end
+    set menu(static) $m.m1.m1
+    set menu(dynamic) $m.m1.m2
+    foreach {pattern linkage} $patterns {
+	if {![info exists ::EventTrack($pattern)]} {
+	    set ::EventTrack($pattern) 1
+	}
+	$menu($linkage) add checkbutton -label $pattern \
+	    -variable EventTrack($pattern) \
+	    -command [list ToggleEvent $T $pattern]
+    }
+
+    set ::Events {}
+    set ::EventsId ""
+    foreach {pattern linkage} $patterns {
+	.f2.f1.t notify bind $T $pattern {
+	    lappend Events %?
+	    if {$EventsId eq ""} {
+		set EventsId [after idle [list RecordEvents %W]]
+	    }
+	}
+    }
+    return
+}
+proc RecordEvents {T} {
+    set ::EventsId ""
+    set events $::Events
+    set ::Events {}
+    if {![winfo ismapped .events]} return
+    if {[$T item numchildren root] > 2000} {
+	set N [expr {[$T item numchildren root] - 2000}]
+	$T item delete "root firstchild" "root child $N"
+    }
+    if {0 && [$T numitems] > 1} {
+	set I [$T item create]
+	$T item style set $I 0 s3
+	$T item lastchild root $I
+    }
+    set collapse 0
+    if {[llength $events] > 50} {
+	set collapse 1
+    }
+    foreach list $events {
+	RecordEvent $T $list $collapse
+    }
+    $T see "last visible"
+    return
+}
+proc RecordEvent {T list collapse} {
+    set I [$T item create]
+    if {$collapse} {
+	$T item collapse $I
+    }
+    array set map $list
+    $T item text $I 0 $map(P)
+    $T item lastchild root $I
+    foreach {char value} $list {
+	if {[string first $char "TWPed"] != -1} continue
+	set I2 [$T item create]
+	$T item style set $I2 0 s2
+	$T item element configure $I2 0 e1 -text $char
+	$T item element configure $I2 0 e2 -text $value
+	$T item lastchild $I $I2
+	$T item configure $I -button yes
+    }
+    return
+}
+proc ToggleEventsWindow {} {
+    set w .events
+    if {![winfo exists $w]} {
+	MakeEventsWindow
+    }
+    if {[winfo ismapped $w]} {
+	wm withdraw $w
+    } else {
+	wm deiconify $w
+    }
+    return
+}
+proc ToggleEvent {T pattern} {
+    .f2.f1.t notify configure $T $pattern -active $::EventTrack($pattern)
+    return    
+}
+
 proc MakeSourceWindow {} {
     set w [toplevel .source]
+    wm withdraw $w
+#    wm transient $w .
     set f [frame $w.f -borderwidth 0]
     switch -- $::thisPlatform {
 	macintosh -
@@ -151,14 +349,21 @@ proc MakeSourceWindow {} {
     grid configure $f.sh -row 1 -column 0 -sticky we
     grid configure $f.sv -row 0 -column 1 -sticky ns
 
-    wm protocol $w WM_DELETE_WINDOW "wm withdraw $w"
-    wm geom $w -0+0
-    wm withdraw $w
+    wm protocol $w WM_DELETE_WINDOW "ToggleSourceWindow"
+    switch -- $::thisPlatform {
+	macintosh -
+	macosx {
+	    wm geometry $w -40+40
+	}
+	default {
+	    wm geometry $w -0+0
+	}
+    }
 
     return
 }
 proc ShowSource {file} {
-    wm title .source "Demo Source: $file"
+    wm title .source "TkTreeCtrl Source: $file"
     set path [Path $file]
     set t .source.f.t
     set chan [open $path]
@@ -275,6 +480,14 @@ proc MakeMainWindow {} {
     grid rowconfigure .f2 0 -weight 1
     grid configure .f2.f1 -row 0 -column 0 -sticky news -pady 0
 
+    # Label to display result of "T identify"
+    label .f2.l1 -anchor w
+    grid rowconfigure .f2 1 -weight 0
+    grid configure .f2.l1 -row 1 -column 0 -sticky we
+    bind .f2.f1.t <Motion> {
+	.f2.l1 configure -text "%W identify %x %y == \"[%W identify %x %y]\""
+    }
+
     .pw2 add .pw1 -width 200
     .pw2 add .f2 -width 450
 
@@ -287,24 +500,21 @@ proc MakeMainWindow {} {
     # <Collapse-after> called after an item is closed
     # <Expand-before> called before an item is opened
     # <Expand-after> called after an item is opened
-    # <Selection> called when items are added to or removed from the selection
     # <Scroll-x> called when horizontal scroll position changes
     # <Scroll-y> called when vertical scroll position changes
+    # <Selection> called when items are added to or removed from the selection
     #
     # The application programmer can define custom events to be
-    # generated by the "T notify generate" command. The following events
+    # generated by the "notify generate" command. The following events
     # are generated by the example bindings.
 
-    .f2.f1.t notify install event Header
-    .f2.f1.t notify install detail Header invoke
+    .f2.f1.t notify install <Header-invoke>
 
-    .f2.f1.t notify install event Drag
-    .f2.f1.t notify install detail Drag begin
-    .f2.f1.t notify install detail Drag end
-    .f2.f1.t notify install detail Drag receive
+    .f2.f1.t notify install <Drag-begin>
+    .f2.f1.t notify install <Drag-end>
+    .f2.f1.t notify install <Drag-receive>
 
-    .f2.f1.t notify install event Edit
-    .f2.f1.t notify install detail Edit accept
+    .f2.f1.t notify install <Edit-accept>
     ###
 
     return
@@ -379,6 +589,8 @@ proc MakeListPopup {} {
 	-command {.f2.f1.t configure -showheader $Popup(showheader)}
     $m2 add checkbutton -label "Lines" -variable Popup(showlines) \
 	-command {.f2.f1.t configure -showlines $Popup(showlines)}
+    $m2 add checkbutton -label "Root Lines" -variable Popup(showrootlines) \
+	-command {.f2.f1.t configure -showrootlines $Popup(showrootlines)}
     $m2 add checkbutton -label "Root" -variable Popup(showroot) \
 	-command {.f2.f1.t configure -showroot $Popup(showroot)}
     $m2 add checkbutton -label "Root Button" -variable Popup(showrootbutton) \
@@ -461,6 +673,7 @@ bind .f2.f1.t <ButtonPress-3> {
 	set Popup(debug,$option) [%W debug cget -$option]
     }
     set Popup(bgimg) [%W cget -backgroundimage]
+    if {$Popup(bgimg) eq ""} { set Popup(bgimg) none }
     set Popup(bgmode) [%W cget -backgroundmode]
     set Popup(doublebuffer) [%W cget -doublebuffer]
     set Popup(linestyle) [%W cget -linestyle]
@@ -469,6 +682,7 @@ bind .f2.f1.t <ButtonPress-3> {
     set Popup(showbuttons) [%W cget -showbuttons]
     set Popup(showheader) [%W cget -showheader]
     set Popup(showlines) [%W cget -showlines]
+    set Popup(showrootlines) [%W cget -showrootlines]
     set Popup(showroot) [%W cget -showroot]
     set Popup(showrootbutton) [%W cget -showrootbutton]
     set m %W.mTree.mVisible
@@ -769,7 +983,8 @@ proc DemoClear {} {
 	-yscrollincrement 0 -itemheight 0 -showheader yes \
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-openbuttonimage "" -closedbuttonimage "" -backgroundmode row \
-	-treecolumn 0 -indent 19 -defaultstyle {} -backgroundimage ""
+	-treecolumn 0 -indent 19 -defaultstyle {} -backgroundimage "" \
+	-showrootlines yes
 
     # Restore default bindings to the demo list
     bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]
