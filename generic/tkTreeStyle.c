@@ -309,7 +309,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->uPadY[PAD_TOP_LEFT]     = 0;
 		layout->uPadY[PAD_BOTTOM_RIGHT] = 0;
 
-		/* Count all non-union, non-detach squeezeable items */
+		/* Count all non-union, non-detach squeezeable elements */
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 		if (eLink1->flags & ELF_SQUEEZE_X)
@@ -742,7 +742,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	{
 		eLink1 = &eLinks1[i];
 
-		/* Count all non-union, non-detach squeezeable items */
+		/* Count all non-union, non-detach squeezeable elements */
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 		if (eLink1->flags & ELF_SQUEEZE_Y)
@@ -1144,7 +1144,7 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if (eLink1->onion != NULL)
 			continue;
 
-		/* -detached items are positioned by themselves */
+		/* -detached elements are positioned by themselves */
 		if (eLink1->flags & ELF_DETACH)
 			continue;
 
@@ -1185,8 +1185,11 @@ static void Style_DoLayout2(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	int state = drawArgs->state;
 	int i;
 
-	if (style->neededWidth == -1) panic("Style_DoLayout2: style.neededWidth == -1");
-	if (style->minWidth > drawArgs->width) panic("Style_DoLayout2: style.minWidth %d > drawArgs.width %d", style->minWidth, drawArgs->width);
+	if (style->neededWidth == -1)
+		panic("Style_DoLayout2: style.neededWidth == -1");
+	if (style->minWidth > drawArgs->width)
+		panic("Style_DoLayout2: style.minWidth %d > drawArgs.width %d",
+			style->minWidth, drawArgs->width);
 
 	Style_DoLayoutH(drawArgs, layouts);
 
@@ -1405,7 +1408,7 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 				layout->useHeight = 0;
 		}
 
-		/* -detached items are positioned by themselves */
+		/* -detached elements are positioned by themselves */
 		if (eLink1->flags & ELF_DETACH)
 			continue;
 
@@ -3862,7 +3865,8 @@ void TreeStyle_UndefineState(TreeCtrl *tree, int state)
 					if (eMask & CS_LAYOUT)
 						eLink->neededWidth = eLink->neededHeight = -1;
 					cMask |= eMask;
-					if (eLink->elem->master == NULL)
+					/* Instance element */
+					if (eLink->elem->master != NULL)
 						(*args.elem->typePtr->undefProc)(&args);
 				}
 				if (cMask & CS_LAYOUT)
