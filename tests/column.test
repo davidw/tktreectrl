@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.4 2004/07/26 17:33:14 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.5 2005/03/29 20:40:24 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -18,7 +18,7 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 }
 
 package require Tk
-package_require treectrl
+package require treectrl
 
 test column-0.1 {some needed preparations} -body {
     pack [treectrl .t]
@@ -34,7 +34,7 @@ test column-1.1 {missing args} -body {
 
 test column-1.2 {unknown command} -body {
     .t column foo
-} -returnCodes error -result {bad command "foo": must be bbox, cget, configure, create, delete, index, move, neededwidth, or width}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test column-1.3 {configure: no column exists with numerical index} -body {
     .t column configure 0
@@ -92,11 +92,11 @@ test column-3.2 {column configure: invalid column} -body {
 
 test column-3.3 {column configure: list all options} -body {
     .t column configure column1
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpad {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepadx {} {} 6 6} {-imagepady {} {} 0 0} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpadx {} {} 6 6} {-textpady {} {} 0 0} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} *} -match glob
 
 test column-3.4 {column configure: tail column} -body {
     .t column configure tail
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpad {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepadx {} {} 6 6} {-imagepady {} {} 0 0} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} tail} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpadx {} {} 6 6} {-textpady {} {} 0 0} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} *} -match glob
 
 test column-3.5 {column configure: invalid -arrow} -body {
     .t column configure column1 -arrow straight

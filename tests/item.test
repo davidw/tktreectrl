@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.8 2004/07/30 21:22:55 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.9 2005/03/29 20:41:08 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -18,7 +18,7 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 }
 
 package require Tk
-package_require treectrl
+package require treectrl
 
 test item-0.1 {some needed preparations} -body {
     pack [treectrl .t]
@@ -30,7 +30,7 @@ test item-1.1 {item: missing command} -body {
 
 test item-2.2 {item: invalid command} -body {
     .t item foo
-} -returnCodes error -result {bad command "foo": must be ancestors, children, create, delete, firstchild, lastchild, nextsibling, numchildren, parent, prevsibling, remove, bbox, cget, complex, configure, dump, element, index, isancestor, isopen, rnc, sort, state, style, or text}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 # Before continuing to test the item descriptions and their modifiers,
 # lets create some items with this hierarchy:
@@ -210,7 +210,7 @@ test item-14.1 {item element: missing command} -body {
 
 test item-14.2 {item element: invalid command} -body {
     .t item element foo 8 0 eText
-} -returnCodes error -result {bad command "foo": must be actual, cget, or configure}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test item-14.3 {item element actual: missing arg} -body {
     .t item element actual 8 0 eText
@@ -247,11 +247,11 @@ test item-15.1 {item style: missing args} -body {
 
 test item-15.2 {item style: invalid command} -body {
     .t item style foo bar
-} -returnCodes error -result {bad command "foo": must be elements, map, or set}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test item-15.3 {item style: invalid command} -body {
     .t item style foo bar
-} -returnCodes error -result {bad command "foo": must be elements, map, or set}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test item-15.4 {item style elements: missing args} -body {
     .t item style elements 8
@@ -333,7 +333,7 @@ test item-16.1 {item state: missing args} -body {
 
 test item-16.2 {item state: unknown command} -body {
     .t item state foo bar
-} -returnCodes error -result {bad command "foo": must be get or set}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test item-16.3 {item state get: unknown item} -body {
     .t item state get 999
@@ -439,7 +439,7 @@ test item-17.3 {item sort: is all allowed?} -body {
 
 test item-17.4 {item sort: invalid option} -body {
     .t item sort root -foo
-} -returnCodes error -result {bad option "-foo": must be -ascii, -column, -command, -decreasing, -dictionary, -element, -first, -increasing, -integer, -last, -notreally, or -real}
+} -returnCodes error -result {bad option "-foo": must be *} -match glob
 
 test item-17.5 {item sort: missing arg to an option} -body {
     .t item sort root -first
