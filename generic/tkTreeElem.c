@@ -1863,7 +1863,7 @@ static void DisplayImage(ElementArgs *args)
 	if ((match != MATCH_EXACT) && (masterX != NULL))
 	{
 		Tk_Image imageM = PerStateImage_ForState(tree, &masterX->image, state, &matchM);
-		if ((image == NULL) || (matchM > match))
+		if (matchM > match)
 			image = imageM;
 	}
 
@@ -1899,7 +1899,7 @@ static void LayoutImage(ElementArgs *args)
 	if ((match != MATCH_EXACT) && (masterX != NULL))
 	{
 		Tk_Image image2 = PerStateImage_ForState(tree, &masterX->image, state, &match2);
-		if ((image == NULL) || (match2 > match))
+		if (match2 > match)
 			image = image2;
 	}
 
@@ -1933,7 +1933,7 @@ static int StateProcImage(ElementArgs *args)
 	if ((match != MATCH_EXACT) && (masterX != NULL))
 	{
 		Tk_Image image = PerStateImage_ForState(tree, &masterX->image, args->states.state1, &match2);
-		if ((image1 == NULL) || (match2 > match))
+		if (match2 > match)
 			image1 = image;
 	}
 
@@ -1941,8 +1941,8 @@ static int StateProcImage(ElementArgs *args)
 	if ((match != MATCH_EXACT) && (masterX != NULL))
 	{
 		Tk_Image image = PerStateImage_ForState(tree, &masterX->image, args->states.state2, &match2);
-		if ((image1 == NULL) || (match2 > match))
-			image1 = image;
+		if (match2 > match)
+			image2 = image;
 	}
 
 	if (image1 != image2)
