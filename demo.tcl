@@ -1,7 +1,19 @@
 #! D:/Programming/Tcl-8.4.1/bin/wish84.exe
 
+set thisPlatform $::tcl_platform(platform)
+switch -- $thisPlatform {
+	unix {
+		if {[package vcompare [info tclversion] 8.3] == 1} {
+			if {[string equal [tk windowingsystem] "aqua"]} {
+				set thisPlatform "macosx"
+			}
+		}
+	}
+}
+
 # Get full pathname to this file
 set ScriptDir [file normalize [file dirname [info script]]]
+cd $ScriptDir
 
 # Command to create a full pathname in this file's directory
 proc Path {args} {
@@ -37,13 +49,24 @@ if {[catch {
 	proc dbwin s {puts -nonewline $s}
 }
 
-# Try to load libtreectrl*.so on Unix
-set lib [glob -nocomplain libtreectrl*[info sharedlibextension]]
-if {$lib ne ""} {
-	load $lib
-} else {
-	# My own windows build
-	load Build/treectrl[info sharedlibextension]
+switch -- $::thisPlatform {
+	macintosh {
+		load treectrl.shlb
+	}
+	macosx {
+		load build/treectrl.dylib
+	}
+	unix {
+
+		# Try to load libtreectrl*.so on Unix
+		set lib [glob -nocomplain libtreectrl*[info sharedlibextension]]
+		load $lib
+	}
+	default {
+
+		# Windows build
+		load Build/treectrl[info sharedlibextension]
+	}
 }
 
 # Default TreeCtrl bindings
@@ -87,10 +110,17 @@ proc MakeMenuBar {} {
 proc MakeSourceWindow {} {
 	set w [toplevel .source]
 	set f [frame $w.f -borderwidth 0]
-	if {$::tcl_platform(platform) eq "unix"} {
-		set font {Courier 16}
-	} else {
-		set font {Courier 9}
+	switch -- $::thisPlatform {
+		macintosh -
+		macosx {
+			set font {Geneva 9}
+		}
+		unix {
+			set font {Courier 16}
+		}
+		default {
+			set font {Courier 9}
+		}
 	}
 	text $f.t -font $font -tabs [font measure $font 1234] -wrap none \
 		-yscrollcommand "$f.sv set" -xscrollcommand "$f.sh set"
@@ -135,12 +165,21 @@ MakeMenuBar
 
 proc TreePlusScrollbarsInAFrame {f h v} {
 	frame $f -borderwidth 1 -relief sunken
-	if {$::tcl_platform(platform) eq "unix"} {
-		set font {Helvetica 16}
-	} else {
-		# There is a bug on my Win98 box with Tk_MeasureChars() and
-		# MS Sans Serif 8.
-		set font {{MS Sans} 8}
+	switch -- $::thisPlatform {
+		macintosh {
+			set font {Geneva 9}
+		}
+		macosx {
+			set font {{Lucida Grande} 11}
+		}
+		unix {
+			set font {Helvetica 16}
+		}
+		default {
+			# There is a bug on my Win98 box with Tk_MeasureChars() and
+			# MS Sans Serif 8.
+			set font {{MS Sans} 8}
+		}
 	}
 	treectrl $f.t -highlightthickness 0 -borderwidth 0 -font $font
 	$f.t configure -xscrollincrement 20
@@ -895,7 +934,7 @@ proc compare {i1 i2} {
 }
 
 # A little screen magnifier for X11
-if {$::tcl_platform(platform) eq "unix"} {
+if {$::thisPlatform eq "unix"} {
 
 set Loupe(zoom) 3
 set Loupe(x) 0

@@ -11,12 +11,20 @@ proc DemoIMovie {} {
 
 	InitPics imovie-*
 
-	if {$::tcl_platform(platform) eq "unix"} {
-		set font1 {Helvetica 12}
-		set font2 {Helvetica 14}
-	} else {
-		set font1 {Helvetica 8}
-		set font2 {Helvetica 10}
+	switch -- $::thisPlatform {
+		macintosh -
+		macosx {
+			set font1 {Geneva 9}
+			set font2 {Geneva 10}
+		}
+		unix {
+			set font1 {Helvetica 12}
+			set font2 {Helvetica 14}
+		}
+		default {
+			set font1 {Helvetica 8}
+			set font2 {Helvetica 10}
+		}
 	}
 
 	$T element create elemTime text -font [list $font1]
