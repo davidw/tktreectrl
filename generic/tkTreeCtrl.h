@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.16 2004/08/11 00:31:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.17 2004/08/13 20:25:13 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -34,6 +34,7 @@
 #endif
 
 #define INCREMENTS
+#define SELECTION_VISIBLE
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -346,6 +347,7 @@ extern void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	int x1, int y1, int x2, int y2, Tcl_Obj *listObj);
 extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
+extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 extern TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item);
@@ -389,12 +391,12 @@ extern int TreeElement_IsType(TreeCtrl *tree, TreeElement elem_, CONST char *typ
 extern int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr);
 extern Tcl_Obj *TreeStyle_ToObj(TreeStyle style_);
 extern Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_);
-extern void TreeStyle_SetText(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *textObj);
+extern void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *textObj);
 extern int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index);
 extern TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle master);
 extern int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj);
 extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
-extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
+extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
 extern void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_);
 extern TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_);
 extern char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y);
