@@ -2355,6 +2355,9 @@ static int A_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 				offset = tree->inset + tree->xOrigin;
 				offset += (int) (count * visWidth * 0.9);
 				index = Increment_FindX(tree, offset);
+				if ((count > 0) && (index ==
+					Increment_FindX(tree, tree->inset + tree->xOrigin)))
+					index++;
 				break;
 			case TK_SCROLL_UNITS:
 				offset = tree->inset + tree->xOrigin;
@@ -2440,6 +2443,9 @@ static int A_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 				offset = topInset + tree->yOrigin;
 				offset += (int) (count * visHeight * 0.9);
 				index = Increment_FindY(tree, offset);
+				if ((count > 0) && (index ==
+					Increment_FindY(tree, topInset + tree->yOrigin)))
+					index++;
 				break;
 			case TK_SCROLL_UNITS:
 				offset = topInset + tree->yOrigin;

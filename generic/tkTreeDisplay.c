@@ -1069,7 +1069,8 @@ int B_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 				offset = tree->inset + tree->xOrigin;
 				offset += (int) (count * visWidth * 0.9);
 				index = Increment_FindX(tree, offset);
-				if (index == Increment_FindX(tree, tree->inset + tree->xOrigin))
+				if ((count > 0) && (index ==
+					Increment_FindX(tree, tree->inset + tree->xOrigin)))
 					index++;
 				break;
 			case TK_SCROLL_UNITS:
@@ -1155,7 +1156,8 @@ int B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 				offset = topInset + tree->yOrigin;
 				offset += (int) (count * visHeight * 0.9);
 				index = Increment_FindY(tree, offset);
-				if (index == Increment_FindY(tree, topInset + tree->yOrigin))
+				if ((count > 0) && (index ==
+					Increment_FindY(tree, topInset + tree->yOrigin)))
 					index++;
 				break;
 			case TK_SCROLL_UNITS:
@@ -2577,6 +2579,17 @@ if (tree->debug.enable && tree->debug.display && 0)
 		}
 		dInfo->flags &= ~DINFO_CHECK_COLUMN_WIDTH;
 	}
+	if (dInfo->headerHeight != Tree_HeaderHeight(tree))
+	{
+		dInfo->headerHeight = Tree_HeaderHeight(tree);
+		dInfo->flags |=
+			DINFO_OUT_OF_DATE |
+			DINFO_SET_ORIGIN_Y |
+			DINFO_UPDATE_SCROLLBAR_Y |
+			DINFO_DRAW_HEADER;
+		if (tree->vertical && (tree->wrapMode == TREE_WRAP_WINDOW))
+			dInfo->flags |= DINFO_REDO_RANGES;
+	}
 	Range_RedoIfNeeded(tree);
 #ifdef INCREMENTS
 	Increment_RedoIfNeeded(tree);
@@ -2609,15 +2622,6 @@ if (tree->debug.enable && tree->debug.display && 0)
 			DINFO_SET_ORIGIN_Y |
 			DINFO_UPDATE_SCROLLBAR_Y |
 			DINFO_OUT_OF_DATE;
-	}
-	if (dInfo->headerHeight != Tree_HeaderHeight(tree))
-	{
-		dInfo->headerHeight = Tree_HeaderHeight(tree);
-		dInfo->flags |=
-			DINFO_OUT_OF_DATE |
-			DINFO_SET_ORIGIN_Y |
-			DINFO_UPDATE_SCROLLBAR_Y |
-			DINFO_DRAW_HEADER;
 	}
 	if (dInfo->flags & DINFO_SET_ORIGIN_X)
 	{
