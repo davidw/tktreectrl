@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.17 2004/10/12 03:54:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.18 2005/03/29 21:09:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2646,7 +2646,7 @@ int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj
 			style->name, masterElem->name);
 		return TCL_ERROR;
 	}
-\
+
 	args.tree = tree;
 	args.elem = eLink->elem;
 	args.state = state;
