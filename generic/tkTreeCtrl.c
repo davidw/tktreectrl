@@ -327,7 +327,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		"column", "compare", "configure", "contentbox", "debug", "depth", "dragimage",
 		"element", "expand", "identify", "index", "item",
 		"marquee", "notify", "numcolumns", "numitems", "orphans",
-		"range", "see", "selection", "state", "style",
+		"range", "scan", "see", "selection", "state", "style",
 		"toggle", "xview", "yview", (char *) NULL };
 	enum {
 		COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
@@ -336,8 +336,8 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
 		COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
 		COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS, COMMAND_ORPHANS, COMMAND_RANGE,
-		COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE, COMMAND_STYLE,
-		COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
+		COMMAND_SCAN, COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE,
+		COMMAND_STYLE, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
 	};
 	Tcl_Obj *resultObjPtr;
 	int index;
@@ -869,6 +869,62 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				item = TreeItem_Next(tree, item);
 			}
 			Tcl_SetObjResult(interp, listObj);
+			break;
+		}
+
+		case COMMAND_SCAN:
+		{
+			static CONST char *optionName[] = { "dragto", "mark",
+				(char *) NULL };
+			int x, y, gain = 10, xOrigin, yOrigin;
+
+			if (objc < 3)
+			{
+				Tcl_WrongNumArgs(interp, 2, objv, "option ?arg arg...?");
+				goto error;
+			}
+			if (Tcl_GetIndexFromObj(interp, objv[2], optionName, "option",
+				2, &index) != TCL_OK)
+				goto error;
+			switch (index)
+			{
+				/* T scan dragto x y ?gain? */
+				case 0:
+					if ((objc < 5) || (objc > 6))
+					{
+						Tcl_WrongNumArgs(interp, 3, objv, "x y ?gain?");
+						goto error;
+					}
+					if ((Tcl_GetIntFromObj(interp, objv[3], &x) != TCL_OK) ||
+						(Tcl_GetIntFromObj(interp, objv[4], &y) != TCL_OK))
+						goto error;
+					if (objc == 6)
+					{
+						if (Tcl_GetIntFromObj(interp, objv[5], &gain) != TCL_OK)
+							goto error;
+					}
+					xOrigin = tree->scanXOrigin - gain * (x - tree->scanX);
+					yOrigin = tree->scanYOrigin - gain * (y - tree->scanY);
+					Tree_SetOriginX(tree, xOrigin);
+					Tree_SetOriginY(tree, yOrigin);
+					break;
+
+				/* T scan mark x y ?gain? */
+				case 1:
+					if (objc != 5)
+					{
+						Tcl_WrongNumArgs(interp, 3, objv, "x y");
+						goto error;
+					}
+					if ((Tcl_GetIntFromObj(interp, objv[3], &x) != TCL_OK) ||
+						(Tcl_GetIntFromObj(interp, objv[4], &y) != TCL_OK))
+						goto error;
+					tree->scanX = x;
+					tree->scanY = y;
+					tree->scanXOrigin = tree->xOrigin;
+					tree->scanYOrigin = tree->yOrigin;
+					break;
+			}
 			break;
 		}
 

@@ -194,6 +194,11 @@ struct TreeCtrl
 	} columnProxy;
 
 	char *stateNames[32]; /* Names of static and dynamic item states */
+
+	int scanX;
+	int scanY;
+	int scanXOrigin;
+	int scanYOrigin;
 };
 
 #define TREE_CONF_FONT 0x0001
