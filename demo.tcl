@@ -443,21 +443,9 @@ bind .f2.f1.t <ButtonPress-3> {
 	tk_popup %W.mTree %X %Y
 }
 
-bind TreeCtrlXXX <ButtonPress-1> {
-	focus %W
-	set id [%W identify %x %y]
-	dbwin "identify: $id\n"
-	if {$id ne "" && [lindex $id 0] eq "item"} {
-		foreach {where item arg1 arg2} $id {}
-		if {$arg1 eq "button"} {
-			%W toggle $item
-			return
-		} elseif {$arg1 eq "line"} {
-			%W toggle $arg2
-			return
-		}
-	}
-	TreeCtrl::ButtonPress1 %W %x %y
+# Allow "scan" bindings
+if {$::thisPlatform eq "windows"} {
+	bind .f2.f1.t <Control-ButtonPress-3> { }
 }
 
 #
@@ -745,7 +733,7 @@ proc DemoClear {} {
 		-yscrollincrement 0 -itemheight 0 -showheader yes \
 		-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 		-openbuttonimage "" -closedbuttonimage "" -backgroundmode row \
-		-treecolumn 0
+		-treecolumn 0 -indent 19
 
 	# Restore default bindings to the demo list
 	bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]
