@@ -1,3 +1,8 @@
+2005-03-18  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* Makefile.in (AR): use @AR@
+	* configure, configure.ac, tclconfig/tcl.m4: TEA 3.2 update
+
 2005-02-14  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* demos/demo.tcl: try loading treectrl before trying the
