@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.22 2004/07/30 21:22:56 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.23 2005/03/29 20:43:25 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -18,7 +18,7 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 }
 
 package require Tk
-package_require treectrl
+package require treectrl
 
 test treectrl-1.1 {Usage} -body {
     treectrl
@@ -33,14 +33,8 @@ test treectrl-1.3 {Create a tree} -body {
 } -result {.t}
 
 test treectrl-1.4 {configure: List all options} -body {
-    # Don't query the current values, because they depend on
-    # settings in the user environment, e.g. ~/.Xdefaults
-    set res {}
-    foreach optDesc [.t configure] {
-	lappend res [lrange $optDesc 0 3]
-    }
-    set res
-} -result {{-background background Background white} {-backgroundmode backgroundMode BackgroundMode row} {-bd -borderwidth} {-bg -background} {-borderwidth borderWidth BorderWidth 2} {-buttoncolor buttonColor ButtonColor #808080} {-buttonsize buttonSize ButtonSize 9} {-buttonthickness buttonThickness ButtonThickness 1} {-closedbuttonbitmap closedButtonBitmap ClosedButtonBitmap {}} {-closedbuttonimage closedButtonImage ClosedButtonImage {}} {-columnproxy columnProxy ColumnProxy {}} {-cursor cursor Cursor {}} {-doublebuffer doubleBuffer DoubleBuffer item} {-fg -foreground} {-font font Font {Helvetica -12 bold}} {-foreground foreground Foreground Black} {-height height Height 200} {-highlightbackground highlightBackground HighlightBackground #d9d9d9} {-highlightcolor highlightColor HighlightColor Black} {-highlightthickness highlightThickness HighlightThickness 1} {-indent indent Indent 19} {-itemheight itemHeight ItemHeight 0} {-linecolor lineColor LineColor #808080} {-linestyle lineStyle LineStyle dot} {-linethickness lineThickness LineThickness 1} {-openbuttonbitmap openButtonBitmap OpenButtonBitmap {}} {-openbuttonimage openButtonImage OpenButtonImage {}} {-orient orient Orient vertical} {-relief relief Relief sunken} {-scrollmargin scrollMargin ScrollMargin 0} {-selectmode selectMode SelectMode browse} {-showbuttons showButtons ShowButtons 1} {-showheader showHeader ShowHeader 1} {-showlines showLines ShowLines 1} {-showroot showRoot ShowRoot 1} {-showrootbutton showRootButton ShowRootButton 0} {-takefocus takeFocus TakeFocus {}} {-treecolumn treeColumn TreeColumn 0} {-width width Width 200} {-wrap wrap Wrap {}} {-xscrollcommand xScrollCommand ScrollCommand {}} {-xscrolldelay xScrollDelay ScrollDelay 50} {-xscrollincrement xScrollIncrement ScrollIncrement 0} {-yscrollcommand yScrollCommand ScrollCommand {}} {-yscrolldelay yScrollDelay ScrollDelay 50} {-yscrollincrement yScrollIncrement ScrollIncrement 0}}
+	.t configure
+} -result {{-background background Background white *}*} -match glob
 
 test treectrl-1.5 {configure -background with totally empty visible tree} -body {
     pack .t
@@ -388,7 +382,7 @@ test treectrl-2.21 {itemdesc root} -body {
 
 test treectrl-2.22 {bogus modifier} -body {
     .t index "0 foo"
-} -returnCodes error -result {bad modifier "foo": must be above, below, bottom, child, firstchild, lastchild, left, leftmost, next, nextsibling, parent, prev, prevsibling, right, rightmost, sibling, top, or visible}
+} -returnCodes error -result {bad modifier "foo": must be *} -match glob
 
 test treectrl-2.23 {valid modifier with too less arguments} -body {
     .t index "0 child"
@@ -530,7 +524,7 @@ test treectrl-5.1 {state: missing args} -body {
 
 test treectrl-5.2 {state: invalid command} -body {
     .t state foo
-} -returnCodes error -result {bad command "foo": must be define, linkage, names, or undefine}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test treectrl-5.3 {state names: too many args} -body {
     .t state names foo bar
@@ -626,7 +620,7 @@ test treectrl-7.1 {marquee: missing args} -body {
 
 test treectrl-7.2 {marquee: unknown command} -body {
     .t marquee foo
-} -returnCodes error -result {bad command "foo": must be anchor, cget, configure, coords, corner, or identify}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test treectrl-7.3 {marquee anchor: not yet modified} -body {
     .t marquee anchor
@@ -679,7 +673,7 @@ test treectrl-8.1 {selection: missing args} -body {
 
 test treectrl-8.2 {selection: unknown command} -body {
     .t selection foo
-} -returnCodes error -result {bad command "foo": must be add, anchor, clear, count, get, includes, or modify}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test treectrl-8.3 {selection count/get: nothing selected yet} -body {
     list [.t selection count] [.t selection get]
@@ -866,9 +860,9 @@ test treectrl-14.1 {rename and change some columns} -body {
     .t column create -tag column3
     .t column move 0 2
     .t column move 0 tail
-    .t element create eText2 text -font {{courier -12}} -text "Hello World"
+    .t element create eRect2 rect -fill blue -height 20 -width 150
     .t style create testStyle3
-    .t style elements testStyle3 eText2
+    .t style elements testStyle3 eRect2
     .t item style set 1 column1 testStyle3
 } -result {}
 
@@ -879,14 +873,18 @@ test treectrl-15.1 {identify: missing args} -body {
 test treectrl-15.2 {identify: negative coords} -body {
     .t configure -showheader 1 -showlines 1 -showbuttons 1 \
 	-borderwidth 2 -highlightthickness 1 -treecolumn 2 \
-	-itemheight 0 -linethickness 1
+	-itemheight 0 -linethickness 1 -indent 40
     .t item configure 1 -button true
     update idletasks
     .t identify -5 -5
 } -result {}
 
 test treectrl-15.3 {identify: header left} -body {
-    .t identify 4 4
+	# column 0 has width 0
+	# column 1 has width 0
+	# column 2 has width 40 + 40 + 150 = 230
+	# borders are 2 + 1 = 3
+    .t identify 3 4
 } -result {header 2 left}
 
 test treectrl-15.4 {identify: header} -body {
@@ -894,11 +892,11 @@ test treectrl-15.4 {identify: header} -body {
 } -result {header 2}
 
 test treectrl-15.5 {identify: header right} -body {
-    .t identify 190 4
-} -result {header 2}
+    .t identify 232 4
+} -result {header 2 right}
 
 test treectrl-15.6 {identify: tail left} -body {
-    .t identify 200 4
+    .t identify 233 4
 } -result {header tail left}
 
 test treectrl-15.7 {identify: tail} -body {
@@ -910,18 +908,18 @@ test treectrl-15.8 {identify: item (to the left)} -body {
 } -result {item 1}
 
 test treectrl-15.9 {identify: button} -body {
-    .t identify 120 10
+    .t identify 60 10
 } -result {item 1 button}
 
 test treectrl-15.10 {identify: over element} -body {
     .t identify 150 10
-} -result {item 1 column 2 elem eText2}
+} -result {item 1 column 2 elem eRect2}
 
 test treectrl-15.11 {identify: item (to the right)} -body {
     # first make column wider, otherwise we can't get right of the item
     .t column configure column1 -width 250
     update idletasks 
-    .t identify 210 10
+    .t identify 233 10
 } -result {item 1 column 2}
 
 test treectrl-16.1 {dragimage: missing args} -body {
@@ -930,7 +928,7 @@ test treectrl-16.1 {dragimage: missing args} -body {
 
 test treectrl-16.2 {dragimage: unknown command} -body {
     .t dragimage foo
-} -returnCodes error -result {bad command "foo": must be add, cget, clear, configure, or offset}
+} -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test treectrl-16.3 {dragimage configure} -body {
     .t dragimage configure
