@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.12 2002/12/29 13:48:34 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.13 2002/12/30 10:58:02 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -1741,15 +1741,11 @@ test tree-14.9 {column configure: invalid column} -body {
 
 test tree-14.10 {column configure: list all options} -body {
     .t column configure column1
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
-
-test tree-14.10 {column configure: list all options} -body {
-    .t column configure column1
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpade {} {} 6 6} {-arrowpadw {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadn {} {} 0 0} {-imagepads {} {} 0 0} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadn {} {} 0 0} {-textpads {} {} 0 0} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
 
 test tree-14.11 {column configure: tail column} -body {
     .t column configure tail
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} {}} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpade {} {} 6 6} {-arrowpadw {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadn {} {} 0 0} {-imagepads {} {} 0 0} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} tail} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadn {} {} 0 0} {-textpads {} {} 0 0} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
 
 test tree-14.12 {column configure: invalid -arrow} -body {
     .t column configure column1 -arrow straight
@@ -1967,15 +1963,12 @@ test tree-14.58 {column configure: -tag} -body {
 } -result {column2}
 
 test tree-14.59 {column cget: -tag of tail} -body {
-    # I think this should return tail...
     .t column cget tail -tag
-} -result {}
+} -result {tail}
 
 test tree-14.60 {column configure/cget: -tag of tail} -body {
-    # I think this should be forbidden...
     .t column configure tail -tag head
-    .t column cget tail -tag
-} -result {head}
+} -returnCodes error -result {can't change tag of tail column}
 
 test tree-14.61 {column cget: specify tail by its tag} -body {
     .t column cget head -tag
@@ -2220,11 +2213,11 @@ test tree-17.6 {notify install: unknown command} -body {
 
 test tree-17.7 {notify install event: missing args} -body {
     .t notify install event
-} -returnCodes error -result {wrong # args: should be ".t notify install event name"}
+} -returnCodes error -result {wrong # args: should be ".t notify install event name ?percentsCommand?"}
 
 test tree-17.8 {notify install event: too much args} -body {
-    .t notify install event foo bar
-} -returnCodes error -result {wrong # args: should be ".t notify install event name"}
+    .t notify install event foo bar baz
+} -returnCodes error -result {wrong # args: should be ".t notify install event name ?percentsCommand?"}
 
 test tree-17.9 {notify install event} -body {
     .t notify install event Greetings
@@ -2352,7 +2345,7 @@ test tree-17.38 {notify bind without pattern} -body {
 
 test tree-17.39 {notify configure: missing args} -body {
     .t notify configure
-} -returnCodes error -result {wrong # args: should be ".t notify configure window pattern ?option? ?value? ?option value ...?"}
+} -returnCodes error -result {wrong # args: should be ".t notify configure object pattern ?option? ?value? ?option value ...?"}
 
 test tree-17.40 {notify configure: unknown event} -body {
     .t notify configure .t <Hello>
@@ -2362,13 +2355,11 @@ test tree-17.41 {notify configure: unknown event with detail} -body {
     .t notify configure .t <Hello-World>
 } -returnCodes error -result {unknown event "Hello"}
 
-# disabled since it generates a segfault.
-test tree-17.42 {notify configure: unbound event} -constraints knownBug -body {
+test tree-17.42 {notify configure: unbound event} -body {
     .t notify configure .t <Scroll>
 } -result {}
 
-# disabled since it generates a segfault.
-test tree-17.43 {notify configure: unbound event with details} -constraints knownBug -body {
+test tree-17.43 {notify configure: unbound event with details} -body {
     .t notify configure .t <Scroll-x>
 } -result {}
 
@@ -2390,9 +2381,8 @@ test tree-17.47 {notify generate: invalid event} -body {
 } -returnCodes error -result {missing "<" in event pattern "Greetings"}
 
 test tree-17.48 {notify generate: virtual event} -body {
-    # The error message could be better...
     .t notify generate <<Greetings>>
-} -returnCodes error -result {unknown event "<Greetings"}
+} -returnCodes error -result {unknown event "<Greetings>"}
 
 test tree-17.49 {notify generate: unknown event} -body {
     .t notify generate <Hello>
@@ -2428,24 +2418,18 @@ test tree-17.56 {notify generate: odd number of field args} -body {
     .t notify generate <Greetings-Sent> -f
 } -returnCodes error -result {wrong # args: should be ".t notify pattern ?field value ...?"}
 
-# disabled since it segfaults.
-test tree-17.57 {notify generate: huge number of field args} -constraints knownBug -body {
-    # This is mean...
+test tree-17.57 {notify generate: huge number of field args} -body {
     set command [list .t notify generate <Greetings-Sent>]
     for {set x 1} {$x < 2048} {incr x} {
 	lappend command -f $x
     }
     eval $command
-} -returnCodes error -result {cannot define more than 10 fields}
+} -output {
+}
 
-test tree-17.58 {notify generate: too much field args} -constraints knownBug -body {
+test tree-17.58 {notify generate: not so much field args} -body {
     .t notify generate <Greetings-Sent> \
 	-0 a -1 b -2 c -3 d -4 e -5 f -6 g -7 h -8 i -9 j -X x
-} -returnCodes error -result {cannot define more than 10 fields}
-
-test tree-17.59 {notify generate: max number of field args} -body {
-    .t notify generate <Greetings-Sent> \
-	-0 a -1 b -2 c -3 d -4 e -5 f -6 g -7 h -8 i -9 j
 } -output {
 }
 
