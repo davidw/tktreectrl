@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.11 2004/08/09 02:16:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.12 2004/08/13 20:25:52 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3452,6 +3452,7 @@ int TreeCtrl_RegisterElementType(Tcl_Interp *interp, ElementType *newTypePtr)
 
 TreeCtrlStubs stubs = {
 	TreeCtrl_RegisterElementType,
+	Tree_RedrawElement,
 	PerStateInfo_Free,
 	PerStateInfo_FromObj,
 	PerStateInfo_ForState,

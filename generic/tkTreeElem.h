@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.5 2004/08/09 02:17:58 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.6 2004/08/13 20:25:52 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -15,6 +15,7 @@ typedef struct ElementArgs ElementArgs;
 struct ElementArgs
 {
 	TreeCtrl *tree;
+	TreeItem item;
 	Element *elem;
 	int state;
 	struct {
@@ -136,10 +137,13 @@ struct PerStateType
 #define MATCH_PARTIAL	2
 #define MATCH_EXACT		3
 
+extern void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem);
+
 typedef struct TreeCtrlStubs TreeCtrlStubs;
 struct TreeCtrlStubs
 {
 	int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, ElementType *typePtr);
+	void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item, Element *elem);
 	void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
 	int (*PerStateInfo_FromObj)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
 	PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
