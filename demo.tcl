@@ -744,7 +744,8 @@ proc DemoClear {} {
 	$T configure -orient vertical -wrap "" -xscrollincrement 0 \
 		-yscrollincrement 0 -itemheight 0 -showheader yes \
 		-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
-		-openbuttonimage "" -closedbuttonimage "" -backgroundmode row
+		-openbuttonimage "" -closedbuttonimage "" -backgroundmode row \
+		-treecolumn 0
 
 	# Restore default bindings to the demo list
 	bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]
