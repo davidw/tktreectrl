@@ -200,16 +200,43 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			int x, y, w, h;
 			DragElem *elem;
 			StyleDrawArgs drawArgs;
+			int result = TCL_OK;
 
 			if (objc < 4)
 			{
 				Tcl_WrongNumArgs(interp, 3, objv, "item ?column? ?element ...?");
 				return TCL_ERROR;
 			}
+
 			if (TreeItem_FromObj(tree, objv[3], &item, 0) != TCL_OK)
 				return TCL_ERROR;
 
+			/* Validate all of the arguments, even if the command would exit
+			 * early without needing to check those arguments. */
+			if (objc > 4)
+			{
+				if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn, &columnIndex) != TCL_OK)
+					return TCL_ERROR;
+				if (objc > 5)
+				{
+					drawArgs.tree = tree;
+					drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
+					if (drawArgs.style != NULL)
+					{
+						if (TreeStyle_ValidateElements(&drawArgs,
+							objc - 5, objv + 5) != TCL_OK)
+							return TCL_ERROR;
+					}
+				}
+			}
+
+			if (!TreeItem_ReallyVisible(tree, item) ||
+				(tree->columnCountVis < 1))
+				return TCL_OK;
+
 			Tree_ItemBbox(tree, item, &x, &y, &w, &h);
+			if (w < 1 || h < 1)
+				return TCL_OK;
 
 			drawArgs.tree = tree;
 			drawArgs.drawable = None;
@@ -223,15 +250,15 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			{
 				if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn, &columnIndex) != TCL_OK)
 				{
-					TreeDragImage_Display(tree->dragImage);
-					return TCL_ERROR;
+					result = TCL_ERROR;
+					goto doneAdd;
 				}
+				treeColumn = Tree_FindColumn(tree, columnIndex);
+				if (!TreeColumn_Visible(treeColumn))
+					goto doneAdd;
 				drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
 				if (drawArgs.style == NULL)
-				{
-					TreeDragImage_Display(tree->dragImage);
-					break;
-				}
+					goto doneAdd;
 				totalWidth = 0;
 				treeColumn = tree->columns;
 				for (i = 0; i < columnIndex; i++)
@@ -249,8 +276,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				count = TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5, rects);
 				if (count == -1)
 				{
-					TreeDragImage_Display(tree->dragImage);
-					return TCL_ERROR;
+					result = TCL_ERROR;
+					goto doneAdd;
 				}
 				for (i = 0; i < count; i++)
 				{
@@ -268,6 +295,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				itemColumn = TreeItem_GetFirstColumn(tree, item);
 				while (itemColumn != NULL)
 				{
+					if (!TreeColumn_Visible(treeColumn))
+						goto nextColumn;
 					width = TreeColumn_UseWidth(treeColumn);
 					if (TreeColumn_Index(treeColumn) == tree->columnTree)
 						indent = TreeItem_Indent(tree, item);
@@ -282,8 +311,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						count = TreeStyle_GetElemRects(&drawArgs, 0, NULL, rects);
 						if (count == -1)
 						{
-							TreeDragImage_Display(tree->dragImage);
-							return TCL_ERROR;
+							result = TCL_ERROR;
+							goto doneAdd;
 						}
 						for (i = 0; i < count; i++)
 						{
@@ -295,6 +324,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						}
 					}
 					totalWidth += width;
+nextColumn:
 					treeColumn = TreeColumn_Next(treeColumn);
 					itemColumn = TreeItemColumn_GetNext(tree, itemColumn);
 				}
@@ -316,8 +346,9 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				if (elem->y + elem->height > dragImage->bounds[3])
 					dragImage->bounds[3] = elem->y + elem->height;
 			}
+doneAdd:
 			TreeDragImage_Display(tree->dragImage);
-			break;
+			return result;
 		}
 
 		/* T dragimage cget option */
@@ -331,7 +362,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				return TCL_ERROR;
 			}
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) dragImage,
-				optionTable, objv[4], tree->tkwin);
+				optionTable, objv[3], tree->tkwin);
 			if (resultObjPtr == NULL)
 				return TCL_ERROR;
 			Tcl_SetObjResult(interp, resultObjPtr);
