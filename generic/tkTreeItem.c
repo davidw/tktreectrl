@@ -1129,6 +1129,57 @@ void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column
 		panic("TreeItem_RemoveColumn: can't find column");
 }
 
+void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int beforeIndex)
+{
+	Item *self = (Item *) item;
+	Column *before = NULL, *move = NULL;
+	Column *prevM = NULL, *prevB = NULL;
+	Column *last = NULL, *prev, *walk;
+	int index = 0;
+
+	prev = NULL;
+	walk = self->columns;
+	while (walk != NULL)
+	{
+		if (index == columnIndex)
+		{
+			prevM = prev;
+			move = walk;
+		}
+		if (index == beforeIndex)
+		{
+			prevB = prev;
+			before = walk;
+		}
+		prev = walk;
+		if (walk->next == NULL)
+			last = walk;
+		index++;
+		walk = walk->next;
+	}
+
+	if (move == NULL)
+		return;
+
+	if (prevM == NULL)
+		self->columns = move->next;
+	else
+		prevM->next = move->next;
+	if (before == NULL)
+	{
+		last->next = move;
+		move->next = NULL;
+	}
+	else
+	{
+		if (prevB == NULL)
+			self->columns = move;
+		else
+			prevB->next = move;
+		move->next = before;
+	}
+}
+
 void TreeItem_FreeResources(TreeCtrl *tree, TreeItem item_)
 {
 	Item *self = (Item *) item_;
