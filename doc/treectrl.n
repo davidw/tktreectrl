@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.16 2003/01/02 19:34:24 krischan Exp $
+'\" $Id: treectrl.n,v 1.17 2003/01/02 19:43:21 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -1375,7 +1375,7 @@ of two values to specify padding for the two sides separately.
 It can happen that the element's space is larger than its requested dimensions.
 These options may be used to position (or stretch) the slave within its cell.
 \fIStyle\fR  is a string that contains zero or more of the characters
-\fBn\fP, \fBs\fP, \fBe\fP or \fBw\fP.
+\fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
 The string can contain other characters, but they are ignored.
 Each letter refers to a side (north, south,
 east, or west) in which direction the element will grow to.
@@ -1384,7 +1384,7 @@ east, or west) in which direction the element will grow to.
 If an elements's area is smaller than its requested dimensions, this
 option may be used to allow shrinking of the element.
 \fIStyle\fR  is a string that contains zero or more of the characters
-\fBx\fP or \fBy\fP.
+\fBx\fR or \fBy\fR.
 The string can contain other characters, but they are ignored.
 \fBx\fR shrinks the element horizontally,
 \fBy\fR shrinks it vertically.
@@ -1788,10 +1788,10 @@ Specifies the height of the rectangle.
 \fB\-open \fIopen\fR
 This option may be used to get an incomplete drawing of the outline.
 \fIOpen\fR is a string that contains zero or more of the characters
-\fBn\fP, \fBs\fP, \fBe\fP or \fBw\fP.
+\fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
 Each letter refers to a side (north, south, east, or west) that the outline
 will not be drawn. 
-The default is \fB{}\fP, which causes the outline to be drawn completely.
+The default is \fB{}\fR, which causes the outline to be drawn completely.
 .TP
 \fB\-outline \fIoutlineColor\fR
 Specifies as a per state option
