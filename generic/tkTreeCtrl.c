@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.23 2004/08/11 00:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.24 2004/08/13 20:24:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -511,6 +511,9 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		recurse = oldRecurse;
 	    }
+#ifdef SELECTION_VISIBLE
+	    Tree_DeselectHidden(tree);
+#endif
 #if 0
 	    if (tree->debug.enable)
 		Tree_Debug(tree);
@@ -1762,14 +1765,20 @@ void Tree_AddToSelection(TreeCtrl *tree, TreeItem item)
 {
     Tcl_HashEntry *hPtr;
     int isNew;
-   
+
+#ifdef SELECTION_VISIBLE
+    if (!TreeItem_ReallyVisible(tree, item))
+	panic("Tree_AddToSelection: item %d not ReallyVisible",
+		TreeItem_GetID(tree, item));
+#endif
     if (TreeItem_GetSelected(tree, item))
 	panic("Tree_AddToSelection: item %d already selected",
 		TreeItem_GetID(tree, item));
     TreeItem_ChangeState(tree, item, 0, STATE_SELECTED);
     hPtr = Tcl_CreateHashEntry(&tree->selection, (char *) item, &isNew);
     if (!isNew)
-	panic("Tree_AddToSelection: item %d already in selection hash table");
+	panic("Tree_AddToSelection: item %d already in selection hash table",
+		TreeItem_GetID(tree, item));
     tree->selectCount++;
 }
 
@@ -1783,7 +1792,8 @@ void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item)
     TreeItem_ChangeState(tree, item, STATE_SELECTED, 0);
     hPtr = Tcl_FindHashEntry(&tree->selection, (char *) item);
     if (hPtr == NULL)
-	panic("Tree_RemoveFromSelection: item %d not found in selection hash table");
+	panic("Tree_RemoveFromSelection: item %d not found in selection hash table",
+		TreeItem_GetID(tree, item));
     Tcl_DeleteHashEntry(hPtr);
     tree->selectCount--;
 }
@@ -1839,7 +1849,12 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
+#ifdef SELECTION_VISIBLE
+		    if (!TreeItem_GetSelected(tree, item) &&
+			    TreeItem_ReallyVisible(tree, item)) {
+#else
 		    if (!TreeItem_GetSelected(tree, item)) {
+#endif
 			Tree_AddToSelection(tree, item);
 			items[count++] = item;
 		    }
@@ -1876,7 +1891,12 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 	    count = 0;
 	    item = itemFirst;
 	    while (item != NULL) {
+#ifdef SELECTION_VISIBLE
+		if (!TreeItem_GetSelected(tree, item) &&
+			TreeItem_ReallyVisible(tree, item)) {
+#else
 		if (!TreeItem_GetSelected(tree, item)) {
+#endif
 		    Tree_AddToSelection(tree, item);
 		    items[count++] = item;
 		}
@@ -2085,7 +2105,18 @@ doneCLEAR:
 		count = tree->itemCount - tree->selectCount;
 		STATIC_ALLOC(newS, TreeItem, count + 1);
 		count = 0;
-
+#ifdef SELECTION_VISIBLE
+		item = tree->root;
+		if (!TreeItem_ReallyVisible(tree, item))
+		    item = TreeItem_NextVisible(tree, item);
+		while (item != NULL) {
+		    if (!TreeItem_GetSelected(tree, item)) {
+			Tree_AddToSelection(tree, item);
+			newS[count++] = item;
+		    }
+		    item = TreeItem_NextVisible(tree, item);
+		}
+#else
 		/* Include detached items */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
@@ -2096,6 +2127,7 @@ doneCLEAR:
 		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
+#endif
 		if (count) {
 		    newS[count] = NULL;
 		    TreeNotify_Selection(tree, newS, NULL);
@@ -2112,6 +2144,10 @@ doneCLEAR:
 		    item = itemS[i];
 		    if (TreeItem_GetSelected(tree, item))
 			continue;
+#ifdef SELECTION_VISIBLE
+		    if (!TreeItem_ReallyVisible(tree, item))
+			continue;
+#endif
 		    /* Add unique item to newly-selected list */
 		    for (j = 0; j < count; j++)
 			if (newS[j] == item)
@@ -2156,10 +2192,11 @@ doneCLEAR:
 		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
-		    Tree_RemoveFromSelection(tree, item);
 		    newD[count++] = item;
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
+		for (i = 0; i < count; i++)
+		    Tree_RemoveFromSelection(tree, newD[i]);
 		if (count) {
 		    newD[count] = NULL;
 		    TreeNotify_Selection(tree, NULL, newD);
@@ -2203,6 +2240,10 @@ doneCLEAR:
 		    item = itemS[i];
 		    if (TreeItem_GetSelected(tree, item))
 			continue;
+#ifdef SELECTION_VISIBLE
+		    if (!TreeItem_ReallyVisible(tree, item))
+			continue;
+#endif
 		    /* Add unique item to newly-selected list */
 		    for (j = 0; j < countS; j++)
 			if (newS[j] == item)
@@ -2256,17 +2297,22 @@ doneCLEAR:
 		    if (item == itemS[j])
 			break;
 		if (j == objcS) {
-		    Tree_RemoveFromSelection(tree, item);
 		    newD[countD++] = item;
 		}
 		hPtr = Tcl_NextHashEntry(&search);
 	    }
+	    for (i = 0; i < countD; i++)
+		Tree_RemoveFromSelection(tree, newD[i]);
 	    STATIC_ALLOC(newS, TreeItem, objcS + 1);
 	    countS = 0;
 	    for (i = 0; i < objcS; i++) {
 		item = itemS[i];
 		if (TreeItem_GetSelected(tree, item))
 		    continue;
+#ifdef SELECTION_VISIBLE
+		if (!TreeItem_ReallyVisible(tree, item))
+		    continue;
+#endif
 		/* Add unique item to newly-selected list */
 		for (j = 0; j < countS; j++)
 		    if (newS[j] == item)
@@ -2945,7 +2991,7 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 #endif
 #endif
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
-    return Tcl_PkgProvide(interp, "treectrl", "1.0");
+    return Tcl_PkgProvide(interp, "treectrl", "1.1");
 }
 
 DLLEXPORT int Treectrl_SafeInit(Tcl_Interp *interp)

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.21 2004/08/11 00:35:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.22 2004/08/13 20:26:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1138,6 +1138,7 @@ void TreeItem_AddToParent(TreeCtrl *tree, TreeItem item_)
 	TreeItem_UpdateDepth(tree, item_);
 
 	Tree_InvalidateColumnWidth(tree, -1);
+
 	if (tree->debug.enable && tree->debug.data)
 		Tree_Debug(tree);
 }
@@ -1820,7 +1821,11 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem item_)
 {
 	Item *self = (Item *) item_;
-
+#if 0
+	if (tree->updateIndex)
+		Tree_UpdateItemIndex(tree);
+	return self->indexVis != -1;
+#else
 	if (!tree->updateIndex)
 		return self->indexVis != -1;
 
@@ -1840,6 +1845,7 @@ int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem item_)
 	if (!self->parent->isVisible || !(self->parent->state & STATE_OPEN))
 		return 0;
 	return TreeItem_ReallyVisible(tree, (TreeItem) self->parent);
+#endif
 }
 
 TreeItem TreeItem_RootAncestor(TreeCtrl *tree, TreeItem item_)
@@ -1934,6 +1940,10 @@ static int Item_Configure(TreeCtrl *tree, Item *item, int objc,
 
 		tree->updateIndex = 1;
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+
+#ifdef SELECTION_VISIBLE
+		Tree_DeselectHidden(tree);
+#endif
 	}
 
 	return TCL_OK;
@@ -2001,7 +2011,7 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{
 			int result, eMask;
 
-			result = TreeStyle_ElementConfigure(tree, column->style, objv[6],
+			result = TreeStyle_ElementConfigure(tree, (TreeItem) item, column->style, objv[6],
 				objc - 7, (Tcl_Obj **) objv + 7, &eMask);
 			if (eMask != 0)
 			{
@@ -3288,7 +3298,7 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 /* Basically same as "selection clear" */
 static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
 {
-    int indexFirst, indexLast, count;
+    int i, indexFirst, indexLast, count;
     TreeItem staticItems[STATIC_SIZE], *items = staticItems;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
@@ -3299,7 +3309,6 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
 	STATIC_ALLOC(items, TreeItem, count + 1);
 	count = 0;
 
-	/* Include detached items */
 	hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 	while (hPtr != NULL) {
 	    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
@@ -3308,12 +3317,13 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
 		hPtr = Tcl_NextHashEntry(&search);
 		if (hPtr == NULL)
 		    break;
-		item = (TreeItem) Tcl_GetHashValue(hPtr);
+		item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
 	    }
-	    Tree_RemoveFromSelection(tree, item);
 	    items[count++] = item;
 	    hPtr = Tcl_NextHashEntry(&search);
 	}
+	for (i = 0; i < count; i++)
+	    Tree_RemoveFromSelection(tree, items[i]);
 	goto doneCLEAR;
     }
     if (itemFirst == itemLast) {
@@ -3353,6 +3363,46 @@ doneCLEAR:
     }
     STATIC_FREE2(items, staticItems);
 }
+
+#ifdef SELECTION_VISIBLE
+/* FIXME: optimize all calls to this routine */
+void Tree_DeselectHidden(TreeCtrl *tree)
+{
+	TreeItem staticItems[STATIC_SIZE], *items = staticItems;
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+	TreeItem item;
+	int i, count;
+
+	if (tree->selectCount < 1)
+		return;
+
+	if (tree->updateIndex)
+		Tree_UpdateItemIndex(tree);
+
+	count = tree->selectCount;
+	STATIC_ALLOC(items, TreeItem, count + 1);
+	count = 0;
+
+	hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
+	while (hPtr != NULL)
+	{
+		item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
+		if (!TreeItem_ReallyVisible(tree, item))
+			items[count++] = item;
+		hPtr = Tcl_NextHashEntry(&search);
+	}
+	for (i = 0; i < count; i++)
+		Tree_RemoveFromSelection(tree, items[i]);
+
+	if (count)
+	{
+		items[count] = NULL;
+		TreeNotify_Selection(tree, NULL, items);
+	}
+	STATIC_FREE2(items, staticItems);
+}
+#endif /* SELECTION_VISIBLE */
 
 int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
@@ -3701,9 +3751,15 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					TreeItem_OpenClose(tree, (TreeItem) item, mode, 0);
 					hPtr = Tcl_NextHashEntry(&search);
 				}
+#ifdef SELECTION_VISIBLE
+				Tree_DeselectHidden(tree);
+#endif
 				break;
 			}
 			TreeItem_OpenClose(tree, (TreeItem) item, mode, recurse);
+#ifdef SELECTION_VISIBLE
+			Tree_DeselectHidden(tree);
+#endif
 			break;
 		}
 		case COMMAND_COMPLEX:
@@ -3761,7 +3817,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						result = TCL_ERROR;
 						goto doneComplex;
 					}
-					if (TreeStyle_ElementConfigure(tree, column->style,
+					if (TreeStyle_ElementConfigure(tree, (TreeItem) item, column->style,
 						objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK)
 					{
 						result = TCL_ERROR;
@@ -3951,6 +4007,9 @@ doneComplex:
 				item2->parent = item;
 				item->numChildren++;
 				TreeItem_AddToParent(tree, (TreeItem) item2);
+#ifdef SELECTION_VISIBLE
+				Tree_DeselectHidden(tree);
+#endif
 			}
 			if (item->firstChild != NULL)
 				Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item->firstChild));
@@ -3988,6 +4047,9 @@ doneComplex:
 				item2->parent = item;
 				item->numChildren++;
 				TreeItem_AddToParent(tree, (TreeItem) item2);
+#ifdef SELECTION_VISIBLE
+				Tree_DeselectHidden(tree);
+#endif
 			}
 			if (item->lastChild != NULL)
 				Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item->lastChild));
@@ -4010,6 +4072,9 @@ doneComplex:
 				item2->parent = item->parent;
 				item->parent->numChildren++;
 				TreeItem_AddToParent(tree, (TreeItem) item2);
+#ifdef SELECTION_VISIBLE
+				Tree_DeselectHidden(tree);
+#endif
 			}
 			if (item->nextSibling != NULL)
 				Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item->nextSibling));
@@ -4043,6 +4108,9 @@ doneComplex:
 				item2->parent = item->parent;
 				item->parent->numChildren++;
 				TreeItem_AddToParent(tree, (TreeItem) item2);
+#ifdef SELECTION_VISIBLE
+				Tree_DeselectHidden(tree);
+#endif
 			}
 			if (item->prevSibling != NULL)
 				Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item->prevSibling));
@@ -4057,6 +4125,9 @@ doneComplex:
 				Tree_Debug(tree);
 			Tree_InvalidateColumnWidth(tree, -1);
 			Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#ifdef SELECTION_VISIBLE
+			Tree_DeselectHidden(tree);
+#endif
 			break;
 		}
 		case COMMAND_RNC:
@@ -4118,7 +4189,7 @@ doneComplex:
 						itemPrefix, item->id, columnIndex);
 					return TCL_ERROR;
 				}
-				TreeStyle_SetText(tree, column->style, objv[i + 1]);
+				TreeStyle_SetText(tree, (TreeItem) item, column->style, objv[i + 1]);
 				column->neededWidth = column->neededHeight = -1;
 				Tree_InvalidateColumnWidth(tree, columnIndex);
 			}
