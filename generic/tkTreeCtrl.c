@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.19 2004/07/26 17:22:26 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.20 2004/07/27 05:48:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2338,6 +2338,8 @@ static int A_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 	int totWidth = Tree_TotalWidth(tree);
 	int xIncr = tree->xScrollIncrement;
 
+	if (visWidth < 0)
+	    visWidth = 0;
 	if (totWidth <= visWidth)
 	    return TCL_OK;
 
@@ -2417,6 +2419,8 @@ static int A_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 	int totHeight = Tree_TotalHeight(tree);
 	int yIncr = tree->yScrollIncrement;
 
+	if (visHeight < 0)
+	    visHeight = 0;
 	if (totHeight <= visHeight)
 	    return TCL_OK;
 
