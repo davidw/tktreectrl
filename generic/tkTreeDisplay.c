@@ -1210,13 +1210,13 @@ TreeItem Tree_ItemUnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
 	return NULL;
 }
 
-void Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h)
+int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h)
 {
 	Range *range;
 	RItem *rItem;
 
 	if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
-		return;
+		return -1;
 	Range_RedoIfNeeded(tree);
 	rItem = (RItem *) TreeItem_GetRInfo(tree, item);
 	range = rItem->range;
@@ -1234,6 +1234,7 @@ void Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h
 		(*y) = range->offset;
 		(*h) = range->totalHeight;
 	}
+	return 0;
 }
 
 TreeItem Tree_ItemLARB(TreeCtrl *tree, TreeItem item, int vertical, int prev)

@@ -230,11 +230,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				}
 			}
 
-			if (!TreeItem_ReallyVisible(tree, item) ||
-				(tree->columnCountVis < 1))
+			if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) < 0)
 				return TCL_OK;
-
-			Tree_ItemBbox(tree, item, &x, &y, &w, &h);
 			if (w < 1 || h < 1)
 				return TCL_OK;
 

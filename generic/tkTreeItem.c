@@ -2858,10 +2858,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				TreeItem item_ = (TreeItem) item;
 				XRectangle rect;
 
-				if (!TreeItem_ReallyVisible(tree, item_)
-					|| (tree->columnCountVis < 1))
+				if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
 					return TCL_OK;
-				Tree_ItemBbox(tree, item_, &x, &y, &w, &h);
 				if (objc > 4)
 				{
 					if (TreeItem_ColumnFromObj(tree, item_, objv[4],
@@ -3598,10 +3596,8 @@ char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 	StyleDrawArgs drawArgs;
 	TreeColumn treeColumn;
 
-	if (!TreeItem_ReallyVisible(tree, item_) || (tree->columnCountVis < 1))
+	if (Tree_ItemBbox(tree, item_, &left, &top, &width, &height) < 0)
 		return NULL;
-
-	Tree_ItemBbox(tree, item_, &left, &top, &width, &height);
 #if 0
 	if (y >= Tk_Height(tree->tkwin) || y + height <= 0)
 		return NULL;
@@ -3659,10 +3655,8 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	StyleDrawArgs drawArgs;
 	TreeColumn treeColumn;
 
-	if (!TreeItem_ReallyVisible(tree, item_) || (tree->columnCountVis < 1))
+	if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
 		return;
-
-	Tree_ItemBbox(tree, item_, &x, &y, &w, &h);
 
 	drawArgs.tree = tree;
 	drawArgs.drawable = None;

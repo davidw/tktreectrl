@@ -417,7 +417,7 @@ extern int Tree_TotalWidth(TreeCtrl *tree);
 extern int Tree_TotalHeight(TreeCtrl *tree);
 extern TreeItem Tree_ItemUnderPoint(TreeCtrl *tree, int *x, int *y, int nearest);
 extern void Tree_FreeItemRInfo(TreeCtrl *tree, TreeItem item);
-extern void Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h);
+extern int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h);
 extern TreeItem Tree_ItemAbove(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemBelow(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemLeft(TreeCtrl *tree, TreeItem item);

@@ -901,12 +901,10 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
 				goto error;
-			if (!TreeItem_ReallyVisible(tree, item) ||
-				(tree->columnCountVis < 1))
-				break;
 
 			/* Canvas coords */
-			Tree_ItemBbox(tree, item, &x, &y, &w, &h);
+			if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) < 0)
+				break;
 
 			if ((C2Wx(x) > maxX) || (C2Wx(x + w) <= minX) || (w <= visWidth))
 			{
