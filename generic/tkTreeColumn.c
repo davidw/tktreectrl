@@ -6,10 +6,19 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.14 2004/07/26 17:21:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.15 2004/07/28 05:10:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
+
+#define STATIC_SIZE 20
+#define STATIC_ALLOC(P,T,C) \
+    if (C > STATIC_SIZE) \
+	P = (T *) ckalloc(sizeof(T) * (C))
+#define STATIC_FREE(P,T,C) \
+    memset((char *) P, 0xAA, sizeof(T) * (C)); \
+    if (C > STATIC_SIZE) \
+	ckfree((char *) P)
 
 typedef struct Column Column;
 
@@ -884,6 +893,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 	    TreeItem item;
+	    int numStyles;
 
 	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column before");
@@ -895,8 +905,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    if (move == before)
 		break;
-	    if ((move->next == before) || ((move->next == NULL) &&
-			(before == (Column *) tree->columnTail)))
+	    if (move->index == before->index - 1)
 		break;
 
 	    /* Move the column in every item */
@@ -906,6 +915,69 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		TreeItem_MoveColumn(tree, item, move->index, before->index);
 		hPtr = Tcl_NextHashEntry(&search);
 	    }
+
+	    /* Re-order -defaultstyle */
+	    numStyles = tree->defaultStyle.numStyles;
+	    if ((numStyles > 0) && ((before->index <numStyles) ||
+		    (move->index < numStyles))) {
+		TreeStyle style, *styles;
+		int i, j;
+		Tcl_Obj *staticObjv[STATIC_SIZE], **objv = staticObjv;
+
+		/* Case 1: move existing */
+		if ((before->index <= numStyles) && (move->index < numStyles)) {
+		    styles = tree->defaultStyle.styles;
+		    style = styles[move->index];
+		    for (i = move->index; i < numStyles - 1; i++)
+			styles[i] = styles[i + 1];
+		    j = before->index;
+		    if (move->index < before->index)
+			j--;
+		    for (i = numStyles - 1; i > j; i--)
+		        styles[i] = styles[i - 1];
+		    styles[j] = style;
+
+		/* Case 2: insert empty between existing */
+		} else if (before->index < numStyles) {
+		    numStyles++;
+		    styles = (TreeStyle *) ckalloc(numStyles * sizeof(TreeStyle));
+		    for (i = 0; i < before->index; i++)
+			styles[i] = tree->defaultStyle.styles[i];
+		    styles[i++] = NULL;
+		    for (; i < numStyles; i++)
+		        styles[i] = tree->defaultStyle.styles[i - 1];
+
+		/* Case 3: move existing past end */
+		} else {
+		    numStyles += before->index - numStyles;
+		    styles = (TreeStyle *) ckalloc(numStyles * sizeof(TreeStyle));
+		    style = tree->defaultStyle.styles[move->index];
+		    for (i = 0; i < move->index; i++)
+			styles[i] = tree->defaultStyle.styles[i];
+		    for (; i < tree->defaultStyle.numStyles - 1; i++)
+			styles[i] = tree->defaultStyle.styles[i + 1];
+		    for (; i < numStyles - 1; i++)
+			styles[i] = NULL;
+		    styles[i] = style;
+		}
+		Tcl_DecrRefCount(tree->defaultStyle.stylesObj);
+		STATIC_ALLOC(objv, Tcl_Obj *, numStyles);
+		for (i = 0; i < numStyles; i++) {
+		    if (styles[i] != NULL)
+			objv[i] = TreeStyle_ToObj(styles[i]);
+		    else
+			objv[i] = Tcl_NewObj();
+		}
+		tree->defaultStyle.stylesObj = Tcl_NewListObj(numStyles, objv);
+		Tcl_IncrRefCount(tree->defaultStyle.stylesObj);
+		STATIC_FREE(objv, Tcl_Obj *, numStyles);
+		if (styles != tree->defaultStyle.styles) {
+		    ckfree((char *) tree->defaultStyle.styles);
+		    tree->defaultStyle.styles = styles;
+		    tree->defaultStyle.numStyles = numStyles;
+		}
+	    }
+
 	    {
 		Column *prevM = NULL, *prevB = NULL;
 		Column *last = NULL, *prev, *walk;
