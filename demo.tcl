@@ -36,9 +36,13 @@ if {[catch {
 }]} {
 	proc dbwin s {puts -nonewline $s}
 }
-if {[file exists libtreectrl1.0[info sharedlibextension]} {
-	load libtreectrl1.0[info sharedlibextension]
+
+# Try to load libtreectrl*.so on Unix
+set lib [glob -nocomplain libtreectrl*[info sharedlibextension]]
+if {$lib ne ""} {
+	load $lib
 } else {
+	# My own windows build
 	load Build/treectrl[info sharedlibextension]
 }
 
