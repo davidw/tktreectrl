@@ -33,7 +33,7 @@ bind TreeCtrlFileList <ButtonRelease-1> {
 
 namespace eval TreeCtrl {}
 
-proc TreeCtrl::FileListButton1 {T x y} {
+proc ::TreeCtrl::FileListButton1 {T x y} {
     variable Priv
     focus $T
     set id [$T identify $x $y]
@@ -113,7 +113,8 @@ proc TreeCtrl::FileListButton1 {T x y} {
     }
     return
 }
-proc TreeCtrl::FileListMotion1 {T x y} {
+
+proc ::TreeCtrl::FileListMotion1 {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
@@ -128,7 +129,8 @@ proc TreeCtrl::FileListMotion1 {T x y} {
 	}
     }
 }
-proc TreeCtrl::FileListMotion {T x y} {
+
+proc ::TreeCtrl::FileListMotion {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
@@ -202,7 +204,8 @@ proc TreeCtrl::FileListMotion {T x y} {
 		set Priv(drag,motion) 1
 		# Don't generate the event if it wasn't installed
 		if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-		    $T notify generate <Drag-begin> [list T $T]
+		    $T notify generate <Drag-begin> {} \
+			"::TreeCtrl::PercentsCmd $T"
 		}
 	    }
 
@@ -257,7 +260,8 @@ proc TreeCtrl::FileListMotion {T x y} {
     }
     return
 }
-proc TreeCtrl::FileListLeave1 {T x y} {
+
+proc ::TreeCtrl::FileListLeave1 {T x y} {
     variable Priv
     # This gets called when I click the mouse on Unix, and buttonMode is unset
     if {![info exists Priv(buttonMode)]} return
@@ -268,7 +272,8 @@ proc TreeCtrl::FileListLeave1 {T x y} {
     }
     return
 }
-proc TreeCtrl::FileListRelease1 {T x y} {
+
+proc ::TreeCtrl::FileListRelease1 {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
@@ -290,11 +295,13 @@ proc TreeCtrl::FileListRelease1 {T x y} {
 		    $T selection modify {} $Priv(drop)
 		    if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
 			$T notify generate <Drag-receive> \
-			    [list T $T I $Priv(drop) l $Priv(selection)]
+			    [list I $Priv(drop) l $Priv(selection)] \
+			    "::TreeCtrl::PercentsCmd $T"
 		    }
 		}
 		if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-		    $T notify generate <Drag-end> [list T $T]
+		    $T notify generate <Drag-end> {} \
+			"::TreeCtrl::PercentsCmd $T"
 		}
 
 	    } elseif {$Priv(selectMode) eq "toggle"} {
@@ -316,7 +323,8 @@ proc TreeCtrl::FileListRelease1 {T x y} {
     set Priv(buttonMode) ""
     return
 }
-proc TreeCtrl::FileListEdit {T I S E} {
+
+proc ::TreeCtrl::FileListEdit {T I S E} {
     variable Priv
     array unset Priv editId,$T
     set lines [$T item element cget $I 0 $E -lines]
@@ -345,7 +353,8 @@ proc TreeCtrl::FileListEdit {T I S E} {
     }
     return
 }
-proc TreeCtrl::FileListEditCancel {T} {
+
+proc ::TreeCtrl::FileListEditCancel {T} {
     variable Priv
     if {[info exists Priv(editId,$T)]} {
 	after cancel $Priv(editId,$T)
@@ -356,7 +365,7 @@ proc TreeCtrl::FileListEditCancel {T} {
 
 # Same as TreeCtrl::AutoScanCheck, but calls FileListMotion and
 # FileListAutoScanCheckAux
-proc TreeCtrl::FileListAutoScanCheck {T x y} {
+proc ::TreeCtrl::FileListAutoScanCheck {T x y} {
     variable Priv
     scan [$T contentbox] "%d %d %d %d" x1 y1 x2 y2
     set margin [winfo pixels $T [$T cget -scrollmargin]]
@@ -589,8 +598,9 @@ proc ::TreeCtrl::EntryClose {T accept} {
 
     if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
 	$T notify generate <Edit-accept> \
-	    [list T $T I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
-		 E $Priv(entry,$T,element) t [$T.entry get]]
+	    [list I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
+		E $Priv(entry,$T,element) t [$T.entry get]] \
+	    "::TreeCtrl::PercentsCmd $T"
     }
 
     $T notify bind $T.entry <Scroll> {}
@@ -784,8 +794,9 @@ proc ::TreeCtrl::TextClose {T accept} {
 
     if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
 	$T notify generate <Edit-accept> \
-	    [list T $T I $Priv(text,$T,item) C $Priv(text,$T,column) \
-		 E $Priv(text,$T,element) t [$T.text get 1.0 end-1c]]
+	    [list I $Priv(text,$T,item) C $Priv(text,$T,column) \
+		E $Priv(text,$T,element) t [$T.text get 1.0 end-1c]] \
+	    "::TreeCtrl::PercentsCmd $T"
     }
 
     $T notify bind $T.text <Scroll> {}
