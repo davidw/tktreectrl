@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.3 2004/07/30 21:12:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.4 2004/08/09 02:24:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -27,6 +27,17 @@ static int EVENT_ACTIVEITEM;
 static int EVENT_SCROLL,
 	DETAIL_SCROLL_X,
 	DETAIL_SCROLL_Y;
+
+static void ExpandItem(int id, Tcl_DString *result)
+{
+#ifdef ITEM_ID_IS_STRING
+	char buf[10 + TCL_INTEGER_SPACE];
+	(void) sprintf(buf, "%s%d", itemPrefix, id);
+	Tcl_DStringAppend(result, buf, -1);
+#else /* ITEM_ID_IS_STRING */
+	QE_ExpandNumber(id, result);
+#endif /* ITEM_ID_IS_STRING */
+}
 
 /*
  * %-substitution for any event
@@ -72,7 +83,7 @@ static void Percents_Expand(QE_ExpandArgs *args)
 	switch (args->which)
 	{
 		case 'I':
-			QE_ExpandNumber(data->id, args->result);
+			ExpandItem(data->id, args->result);
 			break;
 
 		default:
@@ -91,7 +102,6 @@ static void Percents_Selection(QE_ExpandArgs *args)
 	} *data = args->clientData;
 	int *items = NULL;
 	int i = 0;
-	char string[TCL_INTEGER_SPACE];
 
 	switch (args->which)
 	{
@@ -109,8 +119,15 @@ static void Percents_Selection(QE_ExpandArgs *args)
 			Tcl_DStringStartSublist(args->result);
 			while (items[i] != -1)
 			{
+#if ITEM_ID_IS_STRING
+				char buf[10 + TCL_INTEGER_SPACE];
+				(void) sprintf(buf, "%s%d", itemPrefix, items[i]);
+				Tcl_DStringAppendElement(args->result, buf);
+#else /* ITEM_ID_IS_STRING */
+				char string[TCL_INTEGER_SPACE];
 				TclFormatInt(string, items[i]);
 				Tcl_DStringAppendElement(args->result, string);
+#endif /* ITEM_ID_IS_STRING */
 				i++;
 			}
 			Tcl_DStringEndSublist(args->result);
@@ -133,11 +150,11 @@ static void Percents_ActiveItem(QE_ExpandArgs *args)
 	switch (args->which)
 	{
 		case 'c':
-			QE_ExpandNumber(data->current, args->result);
+			ExpandItem(data->current, args->result);
 			break;
 
 		case 'p':
-			QE_ExpandNumber(data->prev, args->result);
+			ExpandItem(data->prev, args->result);
 			break;
 
 		default:
