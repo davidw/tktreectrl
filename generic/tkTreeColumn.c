@@ -3,10 +3,11 @@
  *
  *	This module implements treectrl widget's columns.
  *
+ * Copyright (c) 2002-2004 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.15 2004/07/28 05:10:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.16 2004/07/30 20:55:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

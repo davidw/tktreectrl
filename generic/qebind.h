@@ -1,6 +1,12 @@
-/* File: qebind.c */
-
-/* Purpose: public interface to quasi-event package */
+/* 
+ * qebind.h --
+ *
+ *	This module is the header for quasi-events.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: qebind.h,v 1.2 2004/07/30 20:54:46 treectrl Exp $
+ */
 
 #ifndef INCLUDED_QEBIND_H
 #define INCLUDED_QEBIND_H
