@@ -157,13 +157,14 @@ if (tree->debug.enable && tree->debug.display)
 		else if (TreeColumn_FixedWidth(tree->columnVis) != -1)
 			fixedWidth = TreeColumn_FixedWidth(tree->columns);
 
-		/* Single item column, possible minimum width */
-		else if (TreeColumn_MinWidth(tree->columnVis) != -1)
+		else
+		{
+			/* Single item column, possible minimum width */
 			minWidth = TreeColumn_MinWidth(tree->columns);
 
-		/* Single item column, each item is a multiple of this width */
-		else
+			/* Single item column, each item is a multiple of this width */
 			stepWidth = TreeColumn_StepWidth(tree->columnVis);
+		}
 	}
 
 	/* Speed up ReallyVisible() and get itemVisCount */
@@ -221,21 +222,23 @@ if (tree->debug.enable && tree->debug.display)
 					else
 					{
 						TreeItemColumn itemColumn =
-							TreeItem_GetFirstColumn(tree, item);
+							TreeItem_FindColumn(tree, item,
+								TreeColumn_Index(tree->columnVis));
 						if (itemColumn != NULL)
 						{
 							int columnWidth =
-								TreeItemColumn_NeededWidth(tree, item, itemColumn);
-							if (0 == tree->columnTree)
+								TreeItemColumn_NeededWidth(tree, item,
+									itemColumn);
+							if (tree->columnTreeVis)
 								columnWidth += TreeItem_Indent(tree, item);
 							rItem->size = MAX(columnWidth, minWidth);
 						}
 						else
 							rItem->size = MAX(0, minWidth);
 					}
+					if ((stepWidth != -1) && (rItem->size % stepWidth))
+						rItem->size += stepWidth - rItem->size % stepWidth;
 				}
-				if ((stepWidth != -1) && (rItem->size % stepWidth))
-					rItem->size += stepWidth - rItem->size % stepWidth;
 				/* Too big */
 				if (pixels + rItem->size > wrapPixels)
 					break;
@@ -304,25 +307,40 @@ int Range_TotalWidth(TreeCtrl *tree, Range *range)
 		if (dInfo->rangeFirst == dInfo->rangeLast)
 			return range->totalWidth = TreeColumn_UseWidth(tree->columnVis);
 
-		/* Single item column, want all ranges same width */
-		if (TreeColumn_WidthHack(tree->columnVis))
-			return range->totalWidth = TreeColumn_UseWidth(tree->columnVis);
-
 		/* Possible minimum column width */
 		minWidth = TreeColumn_MinWidth(tree->columnVis);
+
+		/* Single item column, each item is a multiple of this width */
+		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+
+		/* Single item column, want all ranges same width */
+		if (TreeColumn_WidthHack(tree->columnVis))
+		{
+			range->totalWidth = TreeColumn_UseWidth(tree->columnVis);
+			if ((stepWidth != -1) && (range->totalWidth % stepWidth))
+				range->totalWidth += stepWidth - range->totalWidth % stepWidth;
+			return range->totalWidth;
+		}
+
 		range->totalWidth = MAX(0, minWidth);
+		if ((stepWidth != -1) && (range->totalWidth % stepWidth))
+			range->totalWidth += stepWidth - range->totalWidth % stepWidth;
 
 		/* Max needed width of items in this range */
 		rItem = range->first;
 		while (1)
 		{
 			item = rItem->item;
-			itemColumn = TreeItem_GetFirstColumn(tree, item);
+			itemColumn = TreeItem_FindColumn(tree, item,
+				TreeColumn_Index(tree->columnVis));
 			if (itemColumn != NULL)
 			{
-				columnWidth = TreeItemColumn_NeededWidth(tree, item, itemColumn);
-				if (0 == tree->columnTree)
+				columnWidth = TreeItemColumn_NeededWidth(tree, item,
+					itemColumn);
+				if (tree->columnTreeVis)
 					columnWidth += TreeItem_Indent(tree, item);
+				if ((stepWidth != -1) && (columnWidth % stepWidth))
+					columnWidth += stepWidth - columnWidth % stepWidth;
 				if (columnWidth > range->totalWidth)
 					range->totalWidth = columnWidth;
 			}
@@ -342,11 +360,14 @@ int Range_TotalWidth(TreeCtrl *tree, Range *range)
 		else if (TreeColumn_FixedWidth(tree->columnVis) != -1)
 			fixedWidth = TreeColumn_FixedWidth(tree->columnVis);
 
-		else if (TreeColumn_MinWidth(tree->columnVis) != -1)
+		else
+		{
+			/* Single item column, possible minimum width */
 			minWidth = TreeColumn_MinWidth(tree->columnVis);
 
-		else
+			/* Single item column, each item is a multiple of this width */
 			stepWidth = TreeColumn_StepWidth(tree->columnVis);
+		}
 
 		/* Sum of widths of items in this range */
 		range->totalWidth = 0;
@@ -358,11 +379,13 @@ int Range_TotalWidth(TreeCtrl *tree, Range *range)
 				itemWidth = fixedWidth;
 			else
 			{
-				itemColumn = TreeItem_GetFirstColumn(tree, item);
+				itemColumn = TreeItem_FindColumn(tree, item,
+					TreeColumn_Index(tree->columnVis));
 				if (itemColumn != NULL)
 				{
-					columnWidth = TreeItemColumn_NeededWidth(tree, item, itemColumn);
-					if (0 == tree->columnTree)
+					columnWidth = TreeItemColumn_NeededWidth(tree, item,
+						itemColumn);
+					if (tree->columnTreeVis)
 						columnWidth += TreeItem_Indent(tree, item);
 					itemWidth = MAX(columnWidth, minWidth);
 				}
@@ -370,7 +393,7 @@ int Range_TotalWidth(TreeCtrl *tree, Range *range)
 					itemWidth = MAX(0, minWidth);
 
 				if ((stepWidth != -1) && (itemWidth % stepWidth))
-					itemWidth += stepWidth - rItem->size % stepWidth;
+					itemWidth += stepWidth - itemWidth % stepWidth;
 			}
 
 			rItem = (RItem *) TreeItem_GetRInfo(tree, item);
