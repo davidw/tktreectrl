@@ -324,8 +324,13 @@ proc TreeCtrl::FileListEdit {T I S E} {
 	# Multi-line edit
 	if {$lines ne "1"} {
 		scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
-		set padw [$T style layout $S $E -padw]
-		set pade [$T style layout $S $E -pade]
+		set padx [$T style layout $S $E -padx]
+		if {[llength $padx] == 2} {
+			set padw [lindex $padx 0]
+			set pade [lindex $padx 1]
+		} else {
+			set pade [set padw $padx]
+		}
 		TextExpanderOpen $T $I 0 $E [expr {$x2 - $x1 - $padw - $pade}]
 
 	# Single-line edit
