@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.18 2004/02/10 07:40:57 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.19 2004/07/26 17:22:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -68,6 +68,9 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
      (char *) NULL, -1, Tk_Offset(TreeCtrl, cursor),
      TK_OPTION_NULL_OK, (ClientData) NULL, 0},
+    {TK_OPTION_STRING, "-defaultstyle", "defaultStyle", "DefaultStyle",
+     (char *) NULL, Tk_Offset(TreeCtrl, defaultStyle.stylesObj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_DEFSTYLE},
     {TK_OPTION_STRING_TABLE, "-doublebuffer",
      "doubleBuffer", "DoubleBuffer",
      "item", -1, Tk_Offset(TreeCtrl, doubleBuffer),
@@ -984,13 +987,25 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    break;
 	}
     }
-    done:
+done:
     Tcl_Release((ClientData) tree);
     return result;
 
-    error:
+error:
     Tcl_Release((ClientData) tree);
     return TCL_ERROR;
+}
+
+static int ObjectIsEmpty(Tcl_Obj *obj)
+{
+    int length;
+
+    if (obj == NULL)
+	return 1;
+    if (obj->bytes != NULL)
+	return (obj->length == 0);
+    Tcl_GetStringFromObj(obj, &length);
+    return (length == 0);
 }
 
 static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
@@ -1022,6 +1037,10 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		saved.wrapMode = tree->wrapMode;
 		saved.wrapArg = tree->wrapArg;
 	    }
+	    if (mask & TREE_CONF_DEFSTYLE) {
+		saved.defaultStyle.styles = tree->defaultStyle.styles;
+		saved.defaultStyle.numStyles = tree->defaultStyle.numStyles;
+	    }
 
 	    if (mask & TREE_CONF_BUTIMG_CLOSED) {
 		tree->closedButtonImage = NULL;
@@ -1043,6 +1062,37 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		}
 	    }
 
+	    if (mask & TREE_CONF_DEFSTYLE) {
+		if (tree->defaultStyle.stylesObj == NULL) {
+		    tree->defaultStyle.styles = NULL;
+		    tree->defaultStyle.numStyles = 0;
+		} else {
+		    int i, listObjc;
+		    Tcl_Obj **listObjv;
+		    TreeStyle style;
+
+		    if ((Tcl_ListObjGetElements(interp,
+			tree->defaultStyle.stylesObj, &listObjc, &listObjv)
+			!= TCL_OK)) continue;
+		    tree->defaultStyle.styles =
+			(TreeStyle *) ckalloc(sizeof(TreeStyle) * listObjc);
+		    tree->defaultStyle.numStyles = listObjc;
+		    for (i = 0; i < listObjc; i++) {
+			if (ObjectIsEmpty(listObjv[i])) {
+			    style = NULL;
+			} else {
+			    if (TreeStyle_FromObj(tree, listObjv[i], &style) != TCL_OK) {
+				ckfree((char *) tree->defaultStyle.styles);
+				break;
+			    }
+			}
+			tree->defaultStyle.styles[i] = style;
+		    }
+		    if (i < listObjc)
+			continue;
+		}
+	    }
+
 	    /* Parse -wrap string into wrapMode and wrapArg */
 	    if (mask & TREE_CONF_WRAP) {
 		int listObjc;
@@ -1057,7 +1107,7 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 
 		    if ((Tcl_ListObjGetElements(interp, tree->wrapObj, &listObjc,
 			    &listObjv) != TCL_OK) || (listObjc > 2)) {
-			badWrap:
+badWrap:
 			FormatResult(interp, "bad wrap \"%s\"",
 				Tcl_GetString(tree->wrapObj));
 			continue;
@@ -1098,6 +1148,11 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		}
 	    }
 
+	    if (mask & TREE_CONF_DEFSTYLE) {
+		if (saved.defaultStyle.styles != NULL)
+		    ckfree((char *) saved.defaultStyle.styles);
+	    }
+
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -1111,6 +1166,11 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 
 	    if (mask & TREE_CONF_BUTIMG_OPEN) {
 		tree->openButtonImage = saved.openButtonImage;
+	    }
+
+	    if (mask & TREE_CONF_DEFSTYLE) {
+		tree->defaultStyle.styles = saved.defaultStyle.styles;
+		tree->defaultStyle.numStyles = saved.defaultStyle.numStyles;
 	    }
 
 	    if (mask & TREE_CONF_WRAP) {
@@ -1578,7 +1638,7 @@ int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int
     if (indexPtr != NULL) (*indexPtr) = i;
     return TCL_OK;
 
-    unknown:
+unknown:
     FormatResult(interp, "unknown state \"%s\"", string);
     return TCL_ERROR;
 }
@@ -1586,8 +1646,9 @@ int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int
 static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
     Tcl_Interp *interp = tree->interp;
-    static CONST char *commandName[] = { "define", "linkage", "names",
-					 "undefine", (char *) NULL };
+    static CONST char *commandName[] = {
+	"define", "linkage", "names",  "undefine", (char *) NULL
+    };
     enum {
 	COMMAND_DEFINE, COMMAND_LINKAGE, COMMAND_NAMES, COMMAND_UNDEFINE
     };
@@ -1713,8 +1774,9 @@ void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item)
 static int TreeSelectionCmd(Tcl_Interp *interp,
 	TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
-    static CONST char *commandName[] = { "add", "anchor", "clear", "count",
-					 "get", "includes", "modify", NULL };
+    static CONST char *commandName[] = {
+	"add", "anchor", "clear", "count", "get", "includes", "modify", NULL
+    };
     enum {
 	COMMAND_ADD, COMMAND_ANCHOR, COMMAND_CLEAR, COMMAND_COUNT,
 	COMMAND_GET, COMMAND_INCLUDES, COMMAND_MODIFY
@@ -1758,7 +1820,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		    items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 		count = 0;
 
-				/* Include detached items */
+		/* Include detached items */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
@@ -1808,7 +1870,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		    break;
 		item = TreeItem_Next(tree, item);
 	    }
-	    doneADD:
+doneADD:
 	    if (count) {
 		items[count] = NULL;
 		TreeNotify_Selection(tree, items, NULL);
@@ -1860,7 +1922,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		    items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 		count = 0;
 
-				/* Include detached items */
+		/* Include detached items */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
@@ -1910,7 +1972,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		    break;
 		item = TreeItem_Next(tree, item);
 	    }
-	    doneCLEAR:
+doneCLEAR:
 	    if (count) {
 		items[count] = NULL;
 		TreeNotify_Selection(tree, NULL, items);
@@ -2647,7 +2709,7 @@ int TextLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     FormatResult(interp, "%d %d", width, height);
     Tk_FreeTextLayout(layout);
 
-    done:
+done:
     Tk_FreeFont(tkfont);
     return result;
 }
