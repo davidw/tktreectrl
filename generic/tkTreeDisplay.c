@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.15 2004/10/09 22:54:44 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.16 2004/10/24 18:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2217,7 +2217,8 @@ static void ScrollHorizontalSimple(TreeCtrl *tree)
 {
 	DInfo *dInfo = (DInfo *) tree->dInfo;
 	DItem *dItem;
-	TkRegion damageRgn;
+	TkRegion rgn, damageRgn;
+	XRectangle rect;
 	int minX, minY, maxX, maxY;
 	int width, offset;
 	int x, y;
@@ -2226,11 +2227,6 @@ static void ScrollHorizontalSimple(TreeCtrl *tree)
 	maxX = Tk_Width(tree->tkwin) - tree->inset;
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
-
-/* We only scroll the content, not the whitespace */
-y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
-if (y < maxY)
-	maxY = y;
 
 	/* Horizontal scrolling */
 	if (dInfo->xOrigin != tree->xOrigin)
@@ -2263,12 +2259,7 @@ if (y < maxY)
 			dItem->oldX = dItem->x;
 		}
 
-		/* Copy */
 		damageRgn = TkCreateRegion();
-#if 1
-		{
-		TkRegion rgn;
-		XRectangle rect;
 
 		/* Offset and clip the whitespace region */
 		Tk_OffsetRegion(dInfo->wsRgn, offset, 0);
@@ -2278,10 +2269,13 @@ if (y < maxY)
 		rect.width = maxX - minX;
 		rect.height = maxY - minY;
 		TkUnionRectWithRegion(&rect, rgn, damageRgn);
-		TkIntersectRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+		TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
 		TkDestroyRegion(rgn);
-		}
-#endif
+
+		/* We only scroll the content, not the whitespace */
+		y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
+		if (y < maxY)
+			maxY = y;
 
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
@@ -2320,7 +2314,8 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 {
 	DInfo *dInfo = (DInfo *) tree->dInfo;
 	DItem *dItem;
-	TkRegion damageRgn;
+	TkRegion rgn, damageRgn;
+	XRectangle rect;
 	int minX, minY, maxX, maxY;
 	int height, offset;
 	int x, y;
@@ -2329,11 +2324,6 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 	maxX = Tk_Width(tree->tkwin) - tree->inset;
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
-
-	/* We only scroll the content, not the whitespace */
-	x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
-	if (x < maxX)
-	    maxX = x;
 
 	/* Vertical scrolling */
 	if (dInfo->yOrigin != tree->yOrigin)
@@ -2365,12 +2355,8 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 		{
 			dItem->oldY = dItem->y;
 		}
-		/* Copy */
+
 		damageRgn = TkCreateRegion();
-#if 1
-		{
-		TkRegion rgn;
-		XRectangle rect;
 
 		/* Offset and clip the whitespace region */
 		Tk_OffsetRegion(dInfo->wsRgn, 0, offset);
@@ -2380,10 +2366,13 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 		rect.width = maxX - minX;
 		rect.height = maxY - minY;
 		TkUnionRectWithRegion(&rect, rgn, damageRgn);
-		TkIntersectRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+		TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
 		TkDestroyRegion(rgn);
-		}
-#endif
+
+		/* We only scroll the content, not the whitespace */
+		x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+		if (x < maxX)
+			maxX = x;
 
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
