@@ -1,7 +1,11 @@
 2003-11-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* generic/tkTreeColumn.c: whitespace police
+
 	* generic/tkTreeCtrl.h: 
 	* generic/tkTreeCtrl.c: whitespace police
+	(TreeWorldChanged): add calls to TreeStyle_TreeChanged and
+	TreeColumn_TreeChanged to correctly display font size changes
 
 	* ChangeLog: created
 
