@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.13 2002/12/30 10:58:02 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.14 2002/12/30 17:29:54 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -2441,7 +2441,7 @@ test tree-17.60 {notify install/bind/generate: do some replacements} -body {
     .t notify generate <Percent-Test> -2 to -b be -~ not -| or
 } -output {%W: to be or not to be%}
 
-proc doMyOwnSubst {field window eventName detail} {
+proc doMyOwnSubst {field window eventName detail args} {
     return [string map {2 TO b BE ~ NOT | OR} $field]
 }
 
@@ -2455,6 +2455,19 @@ test tree-17.61 {notify install/bind/generate: my own replacements} -body {
 
 test tree-17.62 {notify install/bind/generate: standard replacements} -body {
     .t notify generate <Percent-Test> -2 to -b be -~ not -| or
+} -output {%W: TO BE OR NOT TO BE%}
+
+test tree-17.62a {notify install/bind/generate: my own replacements} -body {
+    .t notify uninstall detail Percent Test
+    .t notify uninstall event Percent
+    .t notify install event Percent doMyOwnSubst
+    .t notify bind .t <Percent> \
+	{puts -nonewline "%%W: %2 %b %| %~ %2 %b%%"}
+    .t notify generate <Percent>
+} -output {%W: TO BE OR NOT TO BE%}
+
+test tree-17.62b {notify install/bind/generate: standard replacements} -body {
+    .t notify generate <Percent> -2 to -b be -~ not -| or
 } -output {%W: TO BE OR NOT TO BE%}
 
 test tree-17.63 {notify uninstall: missing args} -body {
