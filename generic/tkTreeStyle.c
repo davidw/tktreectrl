@@ -1190,14 +1190,14 @@ static void Style_DoLayout2(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 }
 
 /* Arrange all the Elements considering drawArgs.width and drawArgs.height */
-static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[20], char *function)
+static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[20], char *file, int line)
 {
 	TreeCtrl *tree = drawArgs->tree;
 	Style *style = (Style *) drawArgs->style;
 	int state = drawArgs->state;
 	int i;
 
-	if (style->neededWidth == -1) panic("Style_DoLayout(from %s): style.neededWidth == -1", function);
+	if (style->neededWidth == -1) panic("Style_DoLayout(file %s line %d): style.neededWidth == -1", file, line);
 	if (style->minWidth > drawArgs->width) panic("Style_DoLayout: style.minWidth %d > drawArgs.width %d", style->minWidth, drawArgs->width);
 
 	Style_DoLayoutH(drawArgs, layouts);
@@ -1473,7 +1473,7 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
-	Style_DoLayout(drawArgs, layouts, __FUNCTION__);
+	Style_DoLayout(drawArgs, layouts, __FILE__, __LINE__);
 
 	args.tree = tree;
 	args.state = drawArgs->state;
@@ -3248,7 +3248,7 @@ char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y)
 		drawArgs->height = style->minHeight;
 
 	x -= drawArgs->x;
-	Style_DoLayout(drawArgs, layouts, __FUNCTION__);
+	Style_DoLayout(drawArgs, layouts, __FILE__, __LINE__);
 
 	for (i = style->numElements - 1; i >= 0; i--)
 	{
@@ -3285,7 +3285,7 @@ void TreeStyle_Identify2(StyleDrawArgs *drawArgs,
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
-	Style_DoLayout(drawArgs, layouts, __FUNCTION__);
+	Style_DoLayout(drawArgs, layouts, __FILE__, __LINE__);
 
 	for (i = style->numElements - 1; i >= 0; i--)
 	{
@@ -3469,7 +3469,7 @@ int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc,
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
-	Style_DoLayout(drawArgs, layouts, __FUNCTION__);
+	Style_DoLayout(drawArgs, layouts, __FILE__, __LINE__);
 
 	for (i = style->numElements - 1; i >= 0; i--)
 	{

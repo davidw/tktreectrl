@@ -288,10 +288,7 @@ int TreeItem_GetDepth(TreeCtrl *tree, TreeItem item_)
 	Item *item = (Item *) item_;
 #if 0
 	if (tree->updateIndex)
-	{
-		if (tree->debug.enable && tree->debug.data) dbwin("%s: ", __FUNCTION__);
 		Tree_UpdateItemIndex(tree);
-	}
 #endif
 	return item->depth;
 }
@@ -495,10 +492,7 @@ void TreeItem_ToIndex(TreeCtrl *tree, TreeItem item_, int *index, int *indexVis)
 	Item *item = (Item *) item_;
 
 	if (tree->updateIndex)
-	{
-		if (tree->debug.enable && tree->debug.data) dbwin("%s: ", __FUNCTION__);
 		Tree_UpdateItemIndex(tree);
-	}
 	if (index != NULL) (*index) = item->index;
 	if (indexVis != NULL) (*indexVis) = item->indexVis;
 }
@@ -1367,10 +1361,7 @@ int TreeItem_Indent(TreeCtrl *tree, TreeItem item_)
 		return (tree->showRoot && tree->showButtons && tree->showRootButton) ? tree->useIndent : 0;
 
 	if (tree->updateIndex)
-	{
-		if (tree->debug.enable && tree->debug.data) dbwin("%s: ", __FUNCTION__);
 		Tree_UpdateItemIndex(tree);
-	}
 
 	indent = tree->useIndent * self->depth;
 	if (tree->showRoot || tree->showButtons || tree->showLines)
