@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.11 2002/12/29 08:45:08 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.12 2002/12/29 13:48:34 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -2202,37 +2202,336 @@ test tree-17.2 {notify: unknown command} -body {
     .t notify foo
 } -returnCodes error -result {bad command "foo": must be bind, configure, detailnames, eventnames, generate, install, linkage, or uninstall}
 
-test tree-17.3 {notify bind: too much args} -body {
-    .t notify bind z y z z y
-} -returnCodes error -result {wrong # args: should be ".t notify bind ?object? ?pattern? ?script?"}
-
-test tree-17.4 {notify configure: missing args} -body {
-    .t notify configure
-} -returnCodes error -result {wrong # args: should be ".t notify configure window pattern ?option? ?value? ?option value ...?"}
-
-test tree-17.5 {notify detailnames: missing args} -body {
-    .t notify detailnames
-} -returnCodes error -result {wrong # args: should be ".t notify detailnames eventName"}
-
-test tree-17.6 {notify eventnames: too much args} -body {
+test tree-17.3 {notify eventnames: too much args} -body {
     .t notify eventnames Open
 } -returnCodes error -result {wrong # args: should be ".t notify eventnames"}
 
-test tree-17.7 {notify generate: missing args} -body {
-    .t notify generate
-} -returnCodes error -result {wrong # args: should be ".t notify generate pattern ?field value ...?"}
+test tree-17.4 {notify eventnames: nothing own installed yet} -body {
+    lsort [.t notify eventnames]
+} -result {ActiveItem Collapse Expand Scroll Selection}
 
-test tree-17.8 {notify install: missing args} -body {
+test tree-17.5 {notify install: missing args} -body {
     .t notify install
 } -returnCodes error -result {wrong # args: should be ".t notify install option arg ..."}
 
-test tree-17.9 {notify linkage: missing args} -body {
+test tree-17.6 {notify install: unknown command} -body {
+    .t notify install foo
+} -returnCodes error -result {bad option "foo": must be detail or event}
+
+test tree-17.7 {notify install event: missing args} -body {
+    .t notify install event
+} -returnCodes error -result {wrong # args: should be ".t notify install event name"}
+
+test tree-17.8 {notify install event: too much args} -body {
+    .t notify install event foo bar
+} -returnCodes error -result {wrong # args: should be ".t notify install event name"}
+
+test tree-17.9 {notify install event} -body {
+    .t notify install event Greetings
+    .t notify install event GoodBye
+} -result {}
+
+test tree-17.10 {notify eventnames: list Greetings} -body {
+    lsort [.t notify eventnames]
+} -result {ActiveItem Collapse Expand GoodBye Greetings Scroll Selection}
+
+test tree-17.11 {notify detailnames: missing args} -body {
+    .t notify detailnames
+} -returnCodes error -result {wrong # args: should be ".t notify detailnames eventName"}
+
+test tree-17.12 {notify detailnames: too many args} -body {
+    .t notify detailnames foo bar
+} -returnCodes error -result {wrong # args: should be ".t notify detailnames eventName"}
+
+test tree-17.13 {notify detailnames: unknown event} -body {
+    .t notify detailnames Hello
+} -returnCodes error -result {unknown event "Hello"}
+
+test tree-17.14 {notify detailnames: no details yet} -body {
+    .t notify detailnames Greetings
+} -result {}
+
+test tree-17.15 {notify install detail: missing args} -body {
+    .t notify install detail
+} -returnCodes error -result {wrong # args: should be ".t notify install detail event detail ?percentsCommand?"}
+
+test tree-17.16 {notify install detail: unknown event} -body {
+    .t notify install detail Hello GoodBye
+} -returnCodes error -result {unknown event "Hello"}
+
+test tree-17.17 {notify install detail} -body {
+    .t notify install detail Greetings Wrote
+    .t notify install detail Greetings Sent
+} -result {}
+
+test tree-17.18 {notify detailnames} -body {
+    lsort [.t notify detailnames Greetings]
+} -result {Sent Wrote}
+
+test tree-17.19 {notify linkage: missing args} -body {
     .t notify linkage
 } -returnCodes error -result {wrong # args: should be ".t notify linkage event ?detail?"}
 
-test tree-17.10 {notify uninstall: missing args} -body {
+test tree-17.20 {notify linkage: unknown event} -body {
+    .t notify linkage foo
+} -returnCodes error -result {unknown event "foo"}
+
+test tree-17.21 {notify linkage: standard event} -body {
+    .t notify linkage Scroll
+} -result {static}
+
+test tree-17.22 {notify linkage: self made event} -body {
+    .t notify linkage Greetings
+} -result {dynamic}
+
+test tree-17.23 {notify linkage: unknown detail} -body {
+    .t notify linkage Greetings foo
+} -returnCodes error -result {unknown detail "foo" for event "Greetings"}
+
+test tree-17.24 {notify linkage: standard event} -body {
+    .t notify linkage Scroll x
+} -result {static}
+
+test tree-17.25 {notify linkage: self made event} -body {
+    .t notify linkage Greetings Sent
+} -result {dynamic}
+
+test tree-17.26 {notify bind: too much args} -body {
+    .t notify bind z y z z y
+} -returnCodes error -result {wrong # args: should be ".t notify bind ?object? ?pattern? ?script?"}
+
+test tree-17.27 {notify bind: nothing bound yet} -body {
+    .t notify bind .t
+} -result {}
+
+test tree-17.28 {notify bind: invalid pattern} -body {
+    .t notify bind .t Greetings
+} -returnCodes error -result {missing "<" in event pattern "Greetings"}
+
+test tree-17.29 {notify bind: unknown event} -body {
+    .t notify bind .t <Hello>
+} -returnCodes error -result {unknown event "Hello"}
+
+test tree-17.30 {notify bind: unknown detail} -body {
+    .t notify bind .t <Greetings-Prepare>
+} -returnCodes error -result {unknown detail "Prepare" for event "Greetings"}
+
+test tree-17.31 {notify bind: nothing yet for simple event} -body {
+    .t notify bind .t <Greetings>
+} -result {}
+
+test tree-17.32 {notify bind: simple event} -body {
+    .t notify bind .t <GoodBye> {puts -nonewline "Bye bye"}
+} -result {}
+
+test tree-17.33 {notify bind: simple event, script added} -body {
+    .t notify bind .t <GoodBye> {+puts ""}
+} -result {}
+
+test tree-17.34 {notify bind: simple event defined} -body {
+    .t notify bind .t <GoodBye>
+} -result {puts -nonewline "Bye bye"
+puts ""}
+
+test tree-17.35 {notify bind: nothing yet for event with detail} -body {
+    .t notify bind .t <Greetings-Sent>
+} -result {}
+
+test tree-17.36 {notify bind: event with detail} -body {
+    .t notify bind .t <Greetings-Wrote> {puts -nonewline "Hello World"}
+    .t notify bind .t <Greetings-Sent>  {puts ""}
+} -result {}
+
+test tree-17.37 {notify bind: event with detail defined} -body {
+    .t notify bind .t <Greetings-Sent>
+} -result {puts ""}
+
+test tree-17.38 {notify bind without pattern} -body {
+    lsort [.t notify bind .t]
+} -result {<GoodBye> <Greetings-Sent> <Greetings-Wrote>}
+
+test tree-17.39 {notify configure: missing args} -body {
+    .t notify configure
+} -returnCodes error -result {wrong # args: should be ".t notify configure window pattern ?option? ?value? ?option value ...?"}
+
+test tree-17.40 {notify configure: unknown event} -body {
+    .t notify configure .t <Hello>
+} -returnCodes error -result {unknown event "Hello"}
+
+test tree-17.41 {notify configure: unknown event with detail} -body {
+    .t notify configure .t <Hello-World>
+} -returnCodes error -result {unknown event "Hello"}
+
+# disabled since it generates a segfault.
+test tree-17.42 {notify configure: unbound event} -constraints knownBug -body {
+    .t notify configure .t <Scroll>
+} -result {}
+
+# disabled since it generates a segfault.
+test tree-17.43 {notify configure: unbound event with details} -constraints knownBug -body {
+    .t notify configure .t <Scroll-x>
+} -result {}
+
+test tree-17.44 {notify configure: dynamic event} -body {
+    .t notify configure .t <Greetings-Sent>
+} -result {-active 1}
+
+test tree-17.45 {notify configure: dynamic event} -body {
+    .t notify configure .t <Greetings-Sent> -active 0
+    .t notify configure .t <Greetings-Sent>
+} -result {-active 0}
+
+test tree-17.46 {notify generate: missing args} -body {
+    .t notify generate
+} -returnCodes error -result {wrong # args: should be ".t notify generate pattern ?field value ...?"}
+
+test tree-17.47 {notify generate: invalid event} -body {
+    .t notify generate Greetings
+} -returnCodes error -result {missing "<" in event pattern "Greetings"}
+
+test tree-17.48 {notify generate: virtual event} -body {
+    # The error message could be better...
+    .t notify generate <<Greetings>>
+} -returnCodes error -result {unknown event "<Greetings"}
+
+test tree-17.49 {notify generate: unknown event} -body {
+    .t notify generate <Hello>
+} -returnCodes error -result {unknown event "Hello"}
+
+test tree-17.50 {notify generate: unknown detail} -body {
+    .t notify generate <Greetings-Prepare>
+} -returnCodes error -result {unknown detail "Prepare" for event "Greetings"}
+
+test tree-17.51 {notify generate: missing detail} -body {
+    .t notify generate <Greetings>
+} -returnCodes error -result {cannot generate "<Greetings>": missing detail}
+
+test tree-17.52 {notify generate: NOW!} -body {
+    .t notify generate <Greetings-Wrote>
+} -output {Hello World}
+
+test tree-17.53 {notify generate: not active} -body {
+    .t notify generate <Greetings-Sent>
+} -result {}
+
+test tree-17.54 {notify generate: and AGAIN!} -body {
+    .t notify configure .t <Greetings-Sent> -active 1
+    .t notify generate <Greetings-Sent>
+} -output {
+}
+
+test tree-17.55 {notify generate: invalid percent char} -body {
+    .t notify generate <Greetings-Sent> -foo bar
+} -returnCodes error -result {invalid percent char "-foo"}
+
+test tree-17.56 {notify generate: odd number of field args} -body {
+    .t notify generate <Greetings-Sent> -f
+} -returnCodes error -result {wrong # args: should be ".t notify pattern ?field value ...?"}
+
+# disabled since it segfaults.
+test tree-17.57 {notify generate: huge number of field args} -constraints knownBug -body {
+    # This is mean...
+    set command [list .t notify generate <Greetings-Sent>]
+    for {set x 1} {$x < 2048} {incr x} {
+	lappend command -f $x
+    }
+    eval $command
+} -returnCodes error -result {cannot define more than 10 fields}
+
+test tree-17.58 {notify generate: too much field args} -constraints knownBug -body {
+    .t notify generate <Greetings-Sent> \
+	-0 a -1 b -2 c -3 d -4 e -5 f -6 g -7 h -8 i -9 j -X x
+} -returnCodes error -result {cannot define more than 10 fields}
+
+test tree-17.59 {notify generate: max number of field args} -body {
+    .t notify generate <Greetings-Sent> \
+	-0 a -1 b -2 c -3 d -4 e -5 f -6 g -7 h -8 i -9 j
+} -output {
+}
+
+test tree-17.60 {notify install/bind/generate: do some replacements} -body {
+    .t notify install event  Percent
+    .t notify install detail Percent Test
+    .t notify bind .t <Percent-Test> \
+	{puts -nonewline "%%W: %2 %b %| %~ %2 %b%%"}
+    .t notify generate <Percent-Test> -2 to -b be -~ not -| or
+} -output {%W: to be or not to be%}
+
+proc doMyOwnSubst {field window eventName detail} {
+    return [string map {2 TO b BE ~ NOT | OR} $field]
+}
+
+test tree-17.61 {notify install/bind/generate: my own replacements} -body {
+    .t notify uninstall detail Percent Test
+    .t notify install detail Percent Test doMyOwnSubst
+    .t notify bind .t <Percent-Test> \
+	{puts -nonewline "%%W: %2 %b %| %~ %2 %b%%"}
+    .t notify generate <Percent-Test>
+} -output {%W: TO BE OR NOT TO BE%}
+
+test tree-17.62 {notify install/bind/generate: standard replacements} -body {
+    .t notify generate <Percent-Test> -2 to -b be -~ not -| or
+} -output {%W: TO BE OR NOT TO BE%}
+
+test tree-17.63 {notify uninstall: missing args} -body {
     .t notify uninstall
 } -returnCodes error -result {wrong # args: should be ".t notify uninstall option arg ..."}
+
+test tree-17.64 {notify uninstall: unknown command} -body {
+    .t notify uninstall foo
+} -returnCodes error -result {bad option "foo": must be detail or event}
+
+test tree-17.65 {notify uninstall detail: missing args} -body {
+    .t notify uninstall detail
+} -returnCodes error -result {wrong # args: should be ".t notify uninstall detail event detail"}
+
+test tree-17.66 {notify uninstall detail: too much args} -body {
+    .t notify uninstall detail foo bar baz
+} -returnCodes error -result {wrong # args: should be ".t notify uninstall detail event detail"}
+
+test tree-17.67 {notify uninstall detail: unknown event} -body {
+    .t notify uninstall detail foo bar
+} -returnCodes error -result {unknown event "foo"}
+
+test tree-17.68 {notify uninstall detail: unknown detail} -body {
+    .t notify uninstall detail Greetings GoodBye
+} -returnCodes error -result {unknown detail "GoodBye" for event "Greetings"}
+
+test tree-17.69 {notify uninstall detail} -body {
+    .t notify uninstall detail Greetings Sent
+} -result {}
+
+test tree-17.70 {notify uninstall detail: double check} -body {
+    lsearch -exact [.t notify detailnames Greetings] Sent
+} -result {-1}
+
+test tree-17.71 {notify uninstall detail: delete a static detail} -body {
+    .t notify uninstall detail Scroll x
+} -returnCodes error -result {can't uninstall static detail "x"}
+
+test tree-17.72 {notify uninstall event: missing args} -body {
+    .t notify uninstall event
+} -returnCodes error -result {wrong # args: should be ".t notify uninstall event name"}
+
+test tree-17.73 {notify uninstall event: too much args} -body {
+    .t notify uninstall event foo bar
+} -returnCodes error -result {wrong # args: should be ".t notify uninstall event name"}
+
+test tree-17.74 {notify uninstall event: unknown event} -body {
+    .t notify uninstall event foo
+} -returnCodes error -result {unknown event "foo"}
+
+test tree-17.75 {notify uninstall event} -body {
+    .t notify uninstall event Greetings
+} -result {}
+
+test tree-17.76 {notify uninstall event: double check} -body {
+    lsearch -exact [.t notify eventnames] Greetings
+} -result {-1}
+
+test tree-17.77 {notify uninstall event: delete a static event} -body {
+    .t notify uninstall event Scroll
+} -returnCodes error -result {can't uninstall static event "Scroll"}
 
 # cleanup
 image delete emptyImg
