@@ -9,46 +9,57 @@ static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_BORDER, "-background", "background", "Background",
 		"white", -1, Tk_Offset(TreeCtrl, border), 0, 
 		(ClientData) "white", TREE_CONF_REDISPLAY},
-	{TK_OPTION_STRING_TABLE, "-backgroundmode", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING_TABLE, "-backgroundmode",
+		"backgroundMode", "BackgroundMode",
 		"row", -1, Tk_Offset(TreeCtrl, backgroundMode),
 		0, (ClientData) bgModeST, TREE_CONF_REDISPLAY},
+	{TK_OPTION_SYNONYM, "-bd", (char *) NULL, (char *) NULL,
+		(char *) NULL, 0, -1, 0, (ClientData) "-borderwidth"},
+	{TK_OPTION_SYNONYM, "-bg", (char *) NULL, (char *) NULL,
+		(char *) NULL, 0, -1, 0, (ClientData) "-background"},
 	{TK_OPTION_PIXELS, "-borderwidth", "borderWidth", "BorderWidth",
 		DEF_LISTBOX_BORDER_WIDTH, -1, Tk_Offset(TreeCtrl, borderWidth),
 		0, (ClientData) NULL, TREE_CONF_RELAYOUT},
-	{TK_OPTION_COLOR, "-buttoncolor", (char *) NULL, (char *) NULL,
+	{TK_OPTION_COLOR, "-buttoncolor", "buttonColor", "ButtonColor",
 		"#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
 		0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
-	{TK_OPTION_PIXELS, "-buttonsize", (char *) NULL, (char *) NULL,
+	{TK_OPTION_PIXELS, "-buttonsize", "buttonSize", "ButtonSize",
 		"9", Tk_Offset(TreeCtrl, buttonSizeObj),
 		Tk_Offset(TreeCtrl, buttonSize),
 		0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_RELAYOUT},
-	{TK_OPTION_PIXELS, "-buttonthickness", (char *) NULL, (char *) NULL,
+	{TK_OPTION_PIXELS, "-buttonthickness",
+		"buttonThickness", "ButtonThickness",
 		"1", Tk_Offset(TreeCtrl, buttonThicknessObj),
 		Tk_Offset(TreeCtrl, buttonThickness),
 		0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
-	{TK_OPTION_BITMAP, "-closedbuttonbitmap", (char *) NULL, (char *) NULL,
+	{TK_OPTION_BITMAP, "-closedbuttonbitmap",
+		"closedButtonBitmap", "ClosedButtonBitmap",
 		(char *) NULL, -1, Tk_Offset(TreeCtrl, closedButtonBitmap),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		TREE_CONF_BUTTON | TREE_CONF_BUTBMP_CLOSED | TREE_CONF_RELAYOUT},
-	{TK_OPTION_STRING, "-closedbuttonimage", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING, "-closedbuttonimage",
+		"closedButtonImage", "ClosedButtonImage",
 		(char *) NULL, -1, Tk_Offset(TreeCtrl, closedButtonString),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		TREE_CONF_BUTTON | TREE_CONF_BUTIMG_CLOSED | TREE_CONF_RELAYOUT},
-	{TK_OPTION_PIXELS, "-columnproxy", (char *) NULL, (char *) NULL,
+	{TK_OPTION_PIXELS, "-columnproxy", "columnProxy", "ColumnProxy",
 		(char *) NULL, Tk_Offset(TreeCtrl, columnProxy.xObj),
 		Tk_Offset(TreeCtrl, columnProxy.x),
 		TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_PROXY},
-	{TK_OPTION_CURSOR, "-cursor", (char *) NULL, (char *) NULL,
+	{TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
 		(char *) NULL, -1, Tk_Offset(TreeCtrl, cursor),
 		TK_OPTION_NULL_OK, (ClientData) NULL, 0},
-	{TK_OPTION_STRING_TABLE, "-doublebuffer", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING_TABLE, "-doublebuffer",
+		"doubleBuffer", "DoubleBuffer",
 		"item", -1, Tk_Offset(TreeCtrl, doubleBuffer),
 		0, (ClientData) doubleBufferST, TREE_CONF_REDISPLAY},
+	{TK_OPTION_SYNONYM, "-fg", (char *) NULL, (char *) NULL,
+		(char *) NULL, 0, -1, 0, (ClientData) "-foreground"},
 	{TK_OPTION_FONT, "-font", "font", "Font",
 		DEF_LISTBOX_FONT, Tk_Offset(TreeCtrl, fontObj),
 		Tk_Offset(TreeCtrl, tkfont),
 		0, (ClientData) NULL, TREE_CONF_FONT | TREE_CONF_RELAYOUT},
-	{TK_OPTION_COLOR, "-foreground", (char *) NULL, (char *) NULL,
+	{TK_OPTION_COLOR, "-foreground", "foreground", "Foreground",
 		DEF_LISTBOX_FG, Tk_Offset(TreeCtrl, fgObj), Tk_Offset(TreeCtrl, fgColorPtr),
 		0, (ClientData) NULL, TREE_CONF_FG | TREE_CONF_REDISPLAY},
 	{TK_OPTION_PIXELS, "-height", "height", "Height",
@@ -65,11 +76,13 @@ static Tk_OptionSpec optionSpecs[] = {
 		"HighlightThickness", DEF_LISTBOX_HIGHLIGHT_WIDTH, -1,
 		Tk_Offset(TreeCtrl, highlightWidth),
 		0, (ClientData) NULL, 0},
-	{TK_OPTION_PIXELS, "-indent", (char *) NULL, (char *) NULL,
-		"19", -1, Tk_Offset(TreeCtrl, indent),
+	{TK_OPTION_PIXELS, "-indent", "indent", "Indent",
+		"19", Tk_Offset(TreeCtrl, indentObj),
+		Tk_Offset(TreeCtrl, indent),
 		0, (ClientData) NULL, TREE_CONF_INDENT | TREE_CONF_RELAYOUT},
 	{TK_OPTION_PIXELS, "-itemheight", "itemHeight", "ItemHeight",
-		"0", -1, Tk_Offset(TreeCtrl, itemHeight),
+		"0", Tk_Offset(TreeCtrl, itemHeightObj),
+	 	Tk_Offset(TreeCtrl, itemHeight),
 		0, (ClientData) NULL, TREE_CONF_ITEMHEIGHT | TREE_CONF_RELAYOUT},
 #if 0
 	{TK_OPTION_PIXELS, "-itempadw", (char *) NULL, (char *) NULL,
@@ -93,31 +106,33 @@ static Tk_OptionSpec optionSpecs[] = {
 		Tk_Offset(TreeCtrl, itemPad[BOTTOM]),
 		TK_CONFIG_NULL_OK, (ClientData) NULL, 0},
 #endif
-	{TK_OPTION_COLOR, "-linecolor", (char *) NULL, (char *) NULL,
+	{TK_OPTION_COLOR, "-linecolor", "lineColor", "LineColor",
 		"#808080", -1, Tk_Offset(TreeCtrl, lineColor),
 		0, (ClientData) NULL, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
-	{TK_OPTION_STRING_TABLE, "-linestyle", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING_TABLE, "-linestyle", "lineStyle", "LineStyle",
 		"dot", -1, Tk_Offset(TreeCtrl, lineStyle),
 		0, (ClientData) lineStyleST, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
-	{TK_OPTION_PIXELS, "-linethickness", (char *) NULL, (char *) NULL,
+	{TK_OPTION_PIXELS, "-linethickness", "lineThickness", "LineThickness",
 		"1", Tk_Offset(TreeCtrl, lineThicknessObj),
 		Tk_Offset(TreeCtrl, lineThickness),
 		0, (ClientData) NULL, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
-	{TK_OPTION_BITMAP, "-openbuttonbitmap", (char *) NULL, (char *) NULL,
+	{TK_OPTION_BITMAP, "-openbuttonbitmap",
+		"openButtonBitmap", "OpenButtonBitmap",
 		(char *) NULL, -1, Tk_Offset(TreeCtrl, openButtonBitmap),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		TREE_CONF_BUTTON | TREE_CONF_BUTBMP_OPEN | TREE_CONF_RELAYOUT},
-	{TK_OPTION_STRING, "-openbuttonimage", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING, "-openbuttonimage",
+		"openButtonImage", "OpenButtonImage",
 		(char *) NULL, -1, Tk_Offset(TreeCtrl, openButtonString),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		TREE_CONF_BUTTON | TREE_CONF_BUTIMG_OPEN | TREE_CONF_RELAYOUT},
-	{TK_OPTION_STRING_TABLE, "-orient", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING_TABLE, "-orient", "orient", "Orient",
 		"vertical", -1, Tk_Offset(TreeCtrl, vertical),
 		0, (ClientData) orientStringTable, TREE_CONF_RELAYOUT},
 	{TK_OPTION_RELIEF, "-relief", "relief", "Relief",
 		"sunken", -1, Tk_Offset(TreeCtrl, relief),
 		0, (ClientData) NULL, TREE_CONF_REDISPLAY},
-	{TK_OPTION_STRING, "-scrollmargin", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING, "-scrollmargin", "scrollMargin", "ScrollMargin",
 		"0", Tk_Offset(TreeCtrl, scrollMargin), -1,
 		0, (ClientData) NULL, 0},
 	{TK_OPTION_STRING, "-selectmode", "selectMode", "SelectMode",
@@ -126,7 +141,7 @@ static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_BOOLEAN, "-showbuttons", "showButtons",
 		"ShowButtons", "1", -1, Tk_Offset(TreeCtrl, showButtons),
 		0, (ClientData) NULL, TREE_CONF_RELAYOUT},
-	{TK_OPTION_BOOLEAN, "-showheader", (char *) NULL, (char *) NULL,
+	{TK_OPTION_BOOLEAN, "-showheader", "showHeader", "ShowHeader",
 		"1", -1, Tk_Offset(TreeCtrl, showHeader),
 		0, (ClientData) NULL, TREE_CONF_RELAYOUT},
 	{TK_OPTION_BOOLEAN, "-showlines", "showLines",
@@ -141,7 +156,7 @@ static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_STRING, "-takefocus", "takeFocus", "TakeFocus",
 		DEF_LISTBOX_TAKE_FOCUS, -1, Tk_Offset(TreeCtrl, takeFocus),
 		TK_OPTION_NULL_OK, 0, 0},
-	{TK_OPTION_INT, "-treecolumn", (char *) NULL, (char *) NULL,
+	{TK_OPTION_INT, "-treecolumn", "treeColumn", "TreeColumn",
 		"0", -1, Tk_Offset(TreeCtrl, columnTree),
 		0, (ClientData) NULL, TREE_CONF_RELAYOUT},
 	{TK_OPTION_PIXELS, "-width", "width", "Width",
@@ -1121,7 +1136,7 @@ badWrap:
 		Tk_3DBorderColor(tree->border)->pixel);
 
 	if (createFlag)
-		mask |= TREE_CONF_FONT;
+		mask |= TREE_CONF_FONT | TREE_CONF_RELAYOUT;
 
 	if (mask & (TREE_CONF_FONT | TREE_CONF_FG))
 	{
@@ -2767,7 +2782,7 @@ int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 	imgH = photoBlock.height;
 	pitch = photoBlock.pitch;
 
-	pixelPtr = Tcl_Alloc(imgW * 4);
+	pixelPtr = (unsigned char *) Tcl_Alloc(imgW * 4);
 	photoBlock.pixelPtr = pixelPtr;
 	photoBlock.width = imgW;
 	photoBlock.height = 1;
@@ -2812,6 +2827,7 @@ int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 }
 
 #ifndef WIN32
+#ifndef TARGET_OS_MAC
 
 int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
 {
@@ -2916,7 +2932,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	XQueryColors(display, Tk_Colormap(tkwin), xcolors, ncolors);
  
 	/* XImage -> Tk_Image */
-	pixelPtr = Tcl_Alloc(ximage->width * ximage->height * 4);
+	pixelPtr = (unsigned char *) Tcl_Alloc(ximage->width * ximage->height * 4);
 	photoBlock.pixelPtr = pixelPtr;
 	photoBlock.width = ximage->width;
 	photoBlock.height = ximage->height;
@@ -2958,6 +2974,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	return TCL_OK;
 }
 
+#endif /* not TARGET_OS_MAC */
 #endif /* not WIN32 */
 
 DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
@@ -2985,10 +3002,17 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 	/* Hack for colorizing a image (like Win98 explorer) */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
 #ifndef WIN32
+#ifndef TARGET_OS_MAC
 	/* Screen magnifier to check those dotted lines */
-    Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
+	Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
 #endif
-    Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
-    return Tcl_PkgProvide(interp, "treectrl", "1.0");
+#endif
+	Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
+	return Tcl_PkgProvide(interp, "treectrl", "1.0");
+}
+
+DLLEXPORT int Treectrl_SafeInit(Tcl_Interp *interp)
+{
+    return Treectrl_Init(interp);
 }
 
