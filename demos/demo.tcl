@@ -84,7 +84,7 @@ if {[IsDevelopment]} {
 } else {
 
 	lappend ::auto_path [Path ..]
-	package require treectrl
+	package require treectrl 1.1
 }
 
 # Demo sources
