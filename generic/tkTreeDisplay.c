@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.14 2004/08/09 02:14:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.15 2004/10/09 22:54:44 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2263,6 +2263,8 @@ if (y < maxY)
 			dItem->oldX = dItem->x;
 		}
 
+		/* Copy */
+		damageRgn = TkCreateRegion();
 #if 1
 		{
 		TkRegion rgn;
@@ -2292,10 +2294,10 @@ if (y < maxY)
 			else
 				dirtyMin = minX;
 			Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
+			TkDestroyRegion(damageRgn);
 			return;
 		}
-		/* Copy */
-		damageRgn = TkCreateRegion();
+
 		if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
 			x, minY, width, maxY - minY, offset, 0, damageRgn))
 		{
@@ -2328,10 +2330,10 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
 
-/* We only scroll the content, not the whitespace */
-x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
-if (x < maxX)
-	maxX = x;
+	/* We only scroll the content, not the whitespace */
+	x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+	if (x < maxX)
+	    maxX = x;
 
 	/* Vertical scrolling */
 	if (dInfo->yOrigin != tree->yOrigin)
@@ -2363,7 +2365,8 @@ if (x < maxX)
 		{
 			dItem->oldY = dItem->y;
 		}
-
+		/* Copy */
+		damageRgn = TkCreateRegion();
 #if 1
 		{
 		TkRegion rgn;
@@ -2393,11 +2396,10 @@ if (x < maxX)
 			else
 				dirtyMin = minY;
 			Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
+			TkDestroyRegion(damageRgn);
 			return;
 		}
 
-		/* Copy */
-		damageRgn = TkCreateRegion();
 		if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
 			minX, y, maxX - minX, height, 0, offset, damageRgn))
 		{
