@@ -17,9 +17,9 @@ proc DemoRandom {} {
 		-showroot yes -showrootbutton yes -showbuttons yes -showlines yes \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
-	$T column configure 0 -expand yes -text Item -itembackground {#e0e8f0 {}}
-	$T column configure 1 -text Parent -justify center -itembackground {gray90 {}}
-	$T column configure 2 -text Depth -justify center -itembackground {linen {}}
+	$T column configure 0 -expand yes -text Item -itembackground {#e0e8f0 {}} -tag item
+	$T column configure 1 -text Parent -justify center -itembackground {gray90 {}} -tag parent
+	$T column configure 2 -text Depth -justify center -itembackground {linen {}} -tag depth
 
 	$T element create e1 image -image {folder-open {open} folder-closed {}}
 	$T element create e2 image -image small-file
@@ -47,10 +47,13 @@ proc DemoRandom {} {
 	$T style elements s3 {e6}
 	$T style layout s3 e6 -padw 6 -pade 6 -expand ns
 
-	set ::TreeCtrl::Priv(sensitive,$T) {e5 e1 e2 e3}
+	set ::TreeCtrl::Priv(sensitive,$T) {
+		{item s1 e5 e1 e3}
+		{item s2 e5 e2 e3}
+	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
-		{0 s1 e1 e3}
-		{0 s2 e2 e3}
+		{item s1 e1 e3}
+		{item s2 e2 e3}
 	}
 
 	set clicks [clock clicks]
@@ -156,9 +159,17 @@ proc TreeCtrl::RandomButton1 {T x y} {
 				set ok 0
 				# Clicked an element
 				if {[llength $id] == 6} {
+					set column [lindex $id 3]
 					set E [lindex $id 5]
-					if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
+					foreach list $Priv(sensitive,$T) {
+						set C [lindex $list 0]
+						set S [lindex $list 1]
+						set eList [lrange $list 2 end]
+						if {$column != [$T column index $C]} continue
+						if {[$T item style set $item $C] ne $S} continue
+						if {[lsearch -exact $eList $E] == -1} continue
 						set ok 1
+						break
 					}
 				}
 				if {!$ok} {
@@ -216,7 +227,7 @@ proc TreeCtrl::RandomMotion {T x y} {
 				set Priv(drop) ""
 				$T dragimage clear
 				# For each selected item, add 2nd and 3rd elements of
-				# column zero to the dragimage
+				# column "item" to the dragimage
 				foreach I $Priv(selection) {
 					foreach list $Priv(dragimage,$T) {
 						set C [lindex $list 0]
@@ -235,38 +246,46 @@ proc TreeCtrl::RandomMotion {T x y} {
 			set id [$T identify $x $y]
 			set ok 0
 			if {($id ne "") && ([lindex $id 0] eq "item") && ([llength $id] == 6)} {
+				set item [lindex $id 1]
+				set column [lindex $id 3]
 				set E [lindex $id 5]
+				foreach list $Priv(sensitive,$T) {
+					set C [lindex $list 0]
+					set S [lindex $list 1]
+					set eList [lrange $list 2 end]
+					if {$column != [$T column index $C]} continue
+					if {[$T item style set $item $C] ne $S} continue
+					if {[lsearch -exact $eList $E] == -1} continue
+					set ok 1
+					break
+				}
 				if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
 					set ok 1
 				}
 			}
 			if {$ok} {
-				set item [lindex $id 1]
-				set column [lindex $id 3]
-				if {$column == 0} {
-					# If the item is not in the pre-drag selection
-					# (i.e. not being dragged) see if we can drop on it
-					if {[lsearch -exact $Priv(selection) $item] == -1} {
-						set drop $item
-						# We can drop if dragged item isn't an ancestor
-						foreach item2 $Priv(selection) {
-							if {[$T item isancestor $item2 $item]} {
-								set drop ""
-								break
-							}
+				# If the item is not in the pre-drag selection
+				# (i.e. not being dragged) see if we can drop on it
+				if {[lsearch -exact $Priv(selection) $item] == -1} {
+					set drop $item
+					# We can drop if dragged item isn't an ancestor
+					foreach item2 $Priv(selection) {
+						if {[$T item isancestor $item2 $item]} {
+							set drop ""
+							break
 						}
-						if {$drop ne ""} {
-							scan [$T item bbox $drop] "%d %d %d %d" x1 y1 x2 y2
-							if {$y < $y1 + 3} {
-								set cursor top_side
-								set Priv(drop,pos) prevsibling
-							} elseif {$y >= $y2 - 3} {
-								set cursor bottom_side
-								set Priv(drop,pos) nextsibling
-							} else {
-								set cursor ""
-								set Priv(drop,pos) lastchild
-							}
+					}
+					if {$drop ne ""} {
+						scan [$T item bbox $drop] "%d %d %d %d" x1 y1 x2 y2
+						if {$y < $y1 + 3} {
+							set cursor top_side
+							set Priv(drop,pos) prevsibling
+						} elseif {$y >= $y2 - 3} {
+							set cursor bottom_side
+							set Priv(drop,pos) nextsibling
+						} else {
+							set cursor ""
+							set Priv(drop,pos) lastchild
 						}
 					}
 				}
@@ -351,10 +370,10 @@ proc RandomDrop {T target source pos} {
 		$T item $pos $target $item
 
 		# Update text: parent
-		$T item element configure $item 1 e6 -text $parent
+		$T item element configure $item parent e6 -text $parent
 
 		# Update text: depth
-		$T item element configure $item 2 e6 -text [$T depth $item]
+		$T item element configure $item depth e6 -text [$T depth $item]
 
 		# Recursively update text: depth
 		set itemList [$T item firstchild $item]
@@ -363,7 +382,7 @@ proc RandomDrop {T target source pos} {
 			set item [lindex $itemList end]
 			set itemList [lrange $itemList 0 end-1]
 
-			$T item element configure $item 2 e6 -text [$T depth $item]
+			$T item element configure $item depth e6 -text [$T depth $item]
 
 			set item2 [$T item nextsibling $item]
 			if {$item2 ne ""} {
@@ -383,19 +402,19 @@ proc RandomDrop {T target source pos} {
 		set numChildren [$T item numchildren $item]
 		if {$numChildren == 0} {
 			$T item hasbutton $item no
-			$T item style map $item 0 s2 {e3 e3}
+			$T item style map $item item s2 {e3 e3}
 		} else {
-			$T item element configure $item 0 e4 -text "($numChildren)"
+			$T item element configure $item item e4 -text "($numChildren)"
 		}
 	}
 
 	# Update the target that gained some children
 	if {[$T item style set $parent 0] ne "s1"} {
 		$T item hasbutton $parent yes
-		$T item style map $parent 0 s1 {e3 e3}
+		$T item style map $parent item s1 {e3 e3}
 	}
 	set numChildren [$T item numchildren $parent]
-	$T item element configure $parent 0 e4 -text "($numChildren)"
+	$T item element configure $parent item e4 -text "($numChildren)"
 	return
 }
 

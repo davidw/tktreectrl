@@ -96,9 +96,11 @@ proc DemoExplorerDetails {} {
 	$T style layout $S txtDate -padw 6 -pade 6 -squeeze x -expand ns
 
 	set ::TreeCtrl::Priv(edit,$T) {e2}
-	set ::TreeCtrl::Priv(sensitive,$T) {e1 e2}
+	set ::TreeCtrl::Priv(sensitive,$T) {
+		{name styName e1 e2}
+	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
-		{0 styName e1 e2}
+		{name styName e1 e2}
 	}
 
 	$T notify bind $T <Edit-accept> {
@@ -232,7 +234,9 @@ proc DemoExplorerLargeIcons {} {
 	$T style layout $S elemSel -union [list elemTxt]
 
 	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
-	set ::TreeCtrl::Priv(sensitive,$T) {elemImg elemTxt}
+	set ::TreeCtrl::Priv(sensitive,$T) {
+		{0 STYLE elemImg elemTxt}
+	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
 		{0 STYLE elemImg elemTxt}
 	}
@@ -321,7 +325,9 @@ proc DemoExplorerList {} {
 	$T style layout $S elemSel -union [list elemTxt] -iexpand ns -ipadw 2 -ipade 2
 
 	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
-	set ::TreeCtrl::Priv(sensitive,$T) {elemImg elemTxt}
+	set ::TreeCtrl::Priv(sensitive,$T) {
+		{0 STYLE elemImg elemTxt}
+	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
 		{0 STYLE elemImg elemTxt}
 	}

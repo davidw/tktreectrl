@@ -55,44 +55,44 @@ proc TreeCtrl::FileListButton1 {T x y} {
 				ButtonPress1 $T $x $y
 			}
 			column {
-				# Clicked in column zero
-				if {$arg2 eq 0} {
-					set ok 0
-					# Clicked an element
-					if {[llength $id] == 6} {
-						set E [lindex $id 5]
-						if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
-							set ok 1
-						}
+				set ok 0
+				# Clicked an element
+				if {[llength $id] == 6} {
+					set E [lindex $id 5]
+					foreach list $Priv(sensitive,$T) {
+						set C [lindex $list 0]
+						set S [lindex $list 1]
+						set eList [lrange $list 2 end]
+						if {$arg2 != [$T column index $C]} continue
+						if {[$T item style set $item $C] ne $S} continue
+						if {[lsearch -exact $eList $E] == -1} continue
+						set ok 1
+						break
 					}
-					if {$ok} {
-						set Priv(drag,motion) 0
-						set Priv(drag,x) [$T canvasx $x]
-						set Priv(drag,y) [$T canvasy $y]
-						set Priv(drop) ""
-						set Priv(drag,wasSel) [$T selection includes $item]
-						set Priv(drag,E) $E
-						$T activate $item
-						if {$Priv(selectMode) eq "add"} {
-							BeginExtend $T $item
-						} elseif {$Priv(selectMode) eq "toggle"} {
-							BeginToggle $T $item
-						} elseif {![$T selection includes $item]} {
-							BeginSelect $T $item
-						}
-
-						# Changing the selection might change the list
-						if {[$T index $item] eq ""} return
-
-						# Click selected item to drag
-						if {[$T selection includes $item]} {
-							set Priv(buttonMode) drag
-						}
-					# Clicked inside item, but outside elements
-					} else {
-						set marquee 1
+				}
+				if {$ok} {
+					set Priv(drag,motion) 0
+					set Priv(drag,x) [$T canvasx $x]
+					set Priv(drag,y) [$T canvasy $y]
+					set Priv(drop) ""
+					set Priv(drag,wasSel) [$T selection includes $item]
+					set Priv(drag,E) $E
+					$T activate $item
+					if {$Priv(selectMode) eq "add"} {
+						BeginExtend $T $item
+					} elseif {$Priv(selectMode) eq "toggle"} {
+						BeginToggle $T $item
+					} elseif {![$T selection includes $item]} {
+						BeginSelect $T $item
 					}
-				# Clicked column > 0
+
+					# Changing the selection might change the list
+					if {[$T index $item] eq ""} return
+
+					# Click selected item to drag
+					if {[$T selection includes $item]} {
+						set Priv(buttonMode) drag
+					}
 				} else {
 					set marquee 1
 				}
@@ -145,14 +145,22 @@ proc TreeCtrl::FileListMotion {T x y} {
 				foreach sublist [lrange $list 1 end] {
 					set column [lindex $sublist 0]
 					set ok 0
+
+					# Check covered elements in this column
 					foreach E [lrange $sublist 1 end] {
-						if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
+						foreach sList $Priv(sensitive,$T) {
+							set sC [lindex $sList 0]
+							set sS [lindex $sList 1]
+							set sEList [lrange $sList 2 end]
+							if {$column != [$T column index $sC]} continue
+							if {[$T item style set $item $sC] ne $sS} continue
+							if {[lsearch -exact $sEList $E] == -1} continue
 							set ok 1
 							break
 						}
 					}
-					# Some elements in column zero are covered
-					if {($column == 0) && $ok} {
+					# Some sensitive elements in this column are covered
+					if {$ok} {
 
 						# Toggle selected status
 						if {$Priv(selectMode) eq "toggle"} {
@@ -167,7 +175,6 @@ proc TreeCtrl::FileListMotion {T x y} {
 							lappend select $item
 						}
 					}
-					break
 				}
 			}
 			$T selection modify $select all
@@ -197,27 +204,32 @@ proc TreeCtrl::FileListMotion {T x y} {
 			set id [$T identify $x $y]
 			set ok 0
 			if {($id ne "") && ([lindex $id 0] eq "item") && ([llength $id] == 6)} {
+				set item [lindex $id 1]
+				set column [lindex $id 3]
 				set E [lindex $id 5]
-				if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
+				foreach list $Priv(sensitive,$T) {
+					set C [lindex $list 0]
+					set S [lindex $list 1]
+					set eList [lrange $list 2 end]
+					if {$column != [$T column index $C]} continue
+					if {[$T item style set $item $C] ne $S} continue
+					if {[lsearch -exact $eList $E] == -1} continue
 					set ok 1
+					break
 				}
 			}
 			if {$ok} {
-				set item [lindex $id 1]
-				set column [lindex $id 3]
-				if {$column == 0} {
-					# If the item is not in the pre-drag selection
-					# (i.e. not being dragged) and it is a directory,
-					# see if we can drop on it
-					if {[lsearch -exact $Priv(selection) $item] == -1} {
-						if {[lindex [$T item index $item] 1] < $Priv(DirCnt,$T)} {
-							set drop $item
-							# We can drop if dragged item isn't an ancestor
-							foreach item2 $Priv(selection) {
-								if {[$T item isancestor $item2 $item]} {
-									set drop ""
-									break
-								}
+				# If the item is not in the pre-drag selection
+				# (i.e. not being dragged) and it is a directory,
+				# see if we can drop on it
+				if {[lsearch -exact $Priv(selection) $item] == -1} {
+					if {[lindex [$T item index $item] 1] < $Priv(DirCnt,$T)} {
+						set drop $item
+						# We can drop if dragged item isn't an ancestor
+						foreach item2 $Priv(selection) {
+							if {[$T item isancestor $item2 $item]} {
+								set drop ""
+								break
 							}
 						}
 					}
