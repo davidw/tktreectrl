@@ -833,7 +833,7 @@ proc ::TreeCtrl::MarqueeBegin {w x y} {
     set x [$w canvasx $x]
     set y [$w canvasy $y]
     $w marquee coords $x $y $x $y
-    $w marquee visible yes
+    $w marquee configure -visible yes
     return
 }
 
@@ -844,7 +844,7 @@ proc ::TreeCtrl::MarqueeUpdate {w x y} {
     return
 }
 proc ::TreeCtrl::MarqueeEnd {w x y} {
-    $w marquee visible no
+    $w marquee configure -visible no
     return
 }
 
