@@ -3,10 +3,11 @@
  *
  *	This module implements treectrl widgets for the Tk toolkit.
  *
+ * Copyright (c) 2002-2004 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.20 2004/07/27 05:48:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.21 2004/07/30 20:57:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -295,11 +296,7 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     Tcl_InitHashTable(&tree->imageHash, TCL_STRING_KEYS);
 
     Tree_InitColumns(tree);
-
-    tree->root = TreeItem_AllocRoot(tree);
-    tree->activeItem = tree->root; /* always non-null */
-    tree->anchorItem = tree->root; /* always non-null */
-
+    TreeItem_Init(tree);
     TreeNotify_Init(tree);
     TreeMarquee_Init(tree);
     TreeDragImage_Init(tree);
