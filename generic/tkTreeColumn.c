@@ -217,9 +217,14 @@ int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, int 
 	{
 		if (columnIndex < 0 || columnIndex >= tree->columnCount)
 		{
-			FormatResult(tree->interp,
-				"bad column index \"%d\": must be from 0 to %d",
-				columnIndex, tree->columnCount - 1);
+			if (tree->columnCount > 0)
+				FormatResult(tree->interp,
+					"bad column index \"%d\": must be from 0 to %d",
+					columnIndex, tree->columnCount - 1);
+			else
+				FormatResult(tree->interp,
+					"bad column index \"%d\": there are no columns",
+					columnIndex);
 			return TCL_ERROR;
 		}
 		(*columnPtr) = Tree_FindColumn(tree, columnIndex);
@@ -503,20 +508,17 @@ static Column *Column_Alloc(TreeCtrl *tree)
 	return column;
 }
 
-TreeColumn Tree_CreateColumn(TreeCtrl *tree, int columnIndex, int *isNew)
+TreeColumn Tree_CreateColumn(TreeCtrl *tree, int columnIndex, int *isNew_)
 {
 	Column *column = (Column *) tree->columns;
-	int i;
+	int i, isNew = FALSE;
 
-	if (isNew != NULL)
-		(*isNew) = FALSE;
 	if (column == NULL)
 	{
 		column = Column_Alloc(tree);
 		column->index = 0;
 		tree->columns = (TreeColumn) column;
-		if (isNew != NULL)
-			(*isNew) = TRUE;
+		isNew = TRUE;
 	}
 	for (i = 0; i < columnIndex; i++)
 	{
@@ -524,11 +526,14 @@ TreeColumn Tree_CreateColumn(TreeCtrl *tree, int columnIndex, int *isNew)
 		{
 			column->next = Column_Alloc(tree);
 			column->next->index = i + 1;
-			if (isNew != NULL)
-				(*isNew) = TRUE;
+			isNew = TRUE;
 		}
 		column = column->next;
 	}
+	if (isNew)
+		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+	if (isNew_ != NULL)
+		(*isNew_) = isNew;
 	return (TreeColumn) column;
 }
 
@@ -752,6 +757,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				tree->inset + Tree_HeaderHeight(tree));
 			break;
 		}
+
 		case COMMAND_CGET:
 		{
 			TreeColumn column;
@@ -782,19 +788,13 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Tcl_WrongNumArgs(interp, 3, objv, "column ?option? ?value?");
 				return TCL_ERROR;
 			}
-			if (Tcl_GetIntFromObj(NULL, objv[3], &columnIndex) == TCL_OK)
-			{
-				if (columnIndex < 0)
-					return TCL_ERROR;
-				column = (Column *) Tree_CreateColumn(tree, columnIndex, NULL);
-				if (column == NULL)
-					return TCL_ERROR;
-			}
-			else if (Tree_FindColumnByTag(tree, objv[3], (TreeColumn *) &column, 0) != TCL_OK)
-				return TCL_ERROR;
 			if (objc <= 5)
 			{
 				Tcl_Obj *resultObjPtr;
+
+				if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+					0) != TCL_OK)
+					return TCL_ERROR;
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) column,
 					columnOptionTable,
 					(objc == 4) ? (Tcl_Obj *) NULL : objv[4],
@@ -804,6 +804,23 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Tcl_SetObjResult(interp, resultObjPtr);
 				break;
 			}
+			/* If a positive index is specified, and the column doesn't exist,
+			 * then create it. */
+			if (Tcl_GetIntFromObj(NULL, objv[3], &columnIndex) == TCL_OK)
+			{
+				if (columnIndex < 0)
+				{
+					FormatResult(tree->interp,
+						"bad column index \"%d\": must be >= 0",
+						columnIndex);
+					return TCL_ERROR;
+				}
+				column = (Column *) Tree_CreateColumn(tree, columnIndex, NULL);
+				if (column == NULL)
+					return TCL_ERROR;
+			}
+			else if (Tree_FindColumnByTag(tree, objv[3], (TreeColumn *) &column, 0) != TCL_OK)
+				return TCL_ERROR;
 			return Column_Config(column, objc - 4, objv + 4);
 		}
 
@@ -837,7 +854,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			Column_Free(column);
 
 			if (columnIndex == tree->columnTree)
-				tree->columnTree = 0;
+				tree->columnTree = -1;
 
 			/* Delete all TreeItemColumns */
 			hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -935,7 +952,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Column *prevM = NULL, *prevB = NULL;
 				Column *last = NULL, *prev, *walk;
 				Column *columnTree = NULL;
-				int index, moveIndex;
+				int index;
 
 				prev = NULL;
 				walk = (Column *) tree->columns;
@@ -969,7 +986,6 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						prevB->next = move;
 					move->next = before;
 				}
-				moveIndex = move->index;
 
 				/* Renumber columns */
 				walk = (Column *) tree->columns;
@@ -980,7 +996,8 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					walk = walk->next;
 				}
 
-				tree->columnTree = columnTree->index;
+				if (columnTree != NULL)
+					tree->columnTree = columnTree->index;
 			}
 			if (move->visible)
 			{
