@@ -585,6 +585,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		case COMMAND_DEPTH:
 		{
 			TreeItem item;
+			int depth;
 
 			if (objc < 2 || objc > 3)
 			{
@@ -595,8 +596,10 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			{
 				if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
 					goto error;
-				Tcl_SetObjResult(interp,
-					Tcl_NewIntObj(TreeItem_GetDepth(tree, item) + 1));
+				depth = TreeItem_GetDepth(tree, item);
+				if (TreeItem_RootAncestor(tree, item) == tree->root)
+					depth++;
+				Tcl_SetObjResult(interp, Tcl_NewIntObj(depth));
 				break;
 			}
 			if (tree->updateIndex)
@@ -1017,8 +1020,17 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 			}
 
 			if (mask & TREE_CONF_BUTIMG_CLOSED)
-			{
 				saved.closedButtonImage = tree->closedButtonImage;
+			if (mask & TREE_CONF_BUTIMG_OPEN)
+				saved.openButtonImage = tree->openButtonImage;
+			if (mask & TREE_CONF_WRAP)
+			{
+				saved.wrapMode = tree->wrapMode;
+				saved.wrapArg = tree->wrapArg;
+			}
+
+			if (mask & TREE_CONF_BUTIMG_CLOSED)
+			{
 				tree->closedButtonImage = NULL;
 				if (tree->closedButtonString != NULL)
 				{
@@ -1031,7 +1043,6 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 
 			if (mask & TREE_CONF_BUTIMG_OPEN)
 			{
-				saved.openButtonImage = tree->openButtonImage;
 				tree->openButtonImage = NULL;
 				if (tree->openButtonString != NULL)
 				{
@@ -1047,9 +1058,6 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 			{
 				int listObjc;
 				Tcl_Obj **listObjv;
-
-				saved.wrapMode = tree->wrapMode;
-				saved.wrapArg = tree->wrapArg;
 
 				if (tree->wrapObj == NULL)
 				{
@@ -1619,25 +1627,27 @@ int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int
 	if (state == 0)
 		goto unknown;
 
-	if (op == 0)
+	if (states != NULL)
 	{
-		op2 = 1;
-		op3 = 2;
+		if (op == 0)
+		{
+			op2 = 1;
+			op3 = 2;
+		}
+		else if (op == 1)
+		{
+			op2 = 0;
+			op3 = 2;
+		}
+		else
+		{
+			op2 = 0;
+			op3 = 1;
+		}
+		states[op2] &= ~state;
+		states[op3] &= ~state;
+		states[op] |= state;
 	}
-	else if (op == 1)
-	{
-		op2 = 0;
-		op3 = 2;
-	}
-	else
-	{
-		op2 = 0;
-		op3 = 1;
-	}
-	states[op2] &= ~state;
-	states[op3] &= ~state;
-
-	states[op] |= state;
 	if (indexPtr != NULL) (*indexPtr) = i;
 	return TCL_OK;
 
@@ -1649,10 +1659,10 @@ unknown:
 static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
 	Tcl_Interp *interp = tree->interp;
-	static CONST char *commandName[] = { "define", "undefine", "names",
-		(char *) NULL };
+	static CONST char *commandName[] = { "define", "linkage", "names",
+		"undefine", (char *) NULL };
 	enum {
-		COMMAND_DEFINE, COMMAND_UNDEFINE, COMMAND_NAMES
+		COMMAND_DEFINE, COMMAND_LINKAGE, COMMAND_NAMES, COMMAND_UNDEFINE
 	};
 	int index;
 
@@ -1705,6 +1715,23 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 			break;
 		}
 
+		case COMMAND_LINKAGE:
+		{
+			int index;
+
+			if (objc != 4)
+			{
+				Tcl_WrongNumArgs(interp, 3, objv, "state");
+				return TCL_ERROR;
+			}
+			if (StateFromObj(tree, objv[3], NULL, &index,
+				SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
+				return TCL_ERROR;
+			Tcl_SetObjResult(interp, Tcl_NewStringObj(
+				(index < STATE_USER - 1) ? "static" : "dynamic", -1));
+			break;
+		}
+
 		case COMMAND_NAMES:
 		{
 			Tcl_Obj *listObj;
@@ -1728,15 +1755,14 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 
 		case COMMAND_UNDEFINE:
 		{
-			int i, index, states[3];
+			int i, index;
 
 			for (i = 3; i < objc; i++)
 			{
-				states[STATE_OP_ON] = 0;
-				if (StateFromObj(tree, objv[i], states, &index,
+				if (StateFromObj(tree, objv[i], NULL, &index,
 					SFO_NOT_STATIC | SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 					return TCL_ERROR;
-				TreeStyle_UndefineState(tree, states[STATE_OP_ON]);
+				TreeStyle_UndefineState(tree, 1L << index);
 				ckfree(tree->stateNames[index]);
 				tree->stateNames[index] = NULL;
 			}
