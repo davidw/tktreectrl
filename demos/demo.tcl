@@ -1,4 +1,4 @@
-#!../TclTk-8.4.6/bin/wish84.exe
+#!../TclTk-8.4.7/bin/wish84.exe
 
 package require Tk 8.4
 
@@ -44,14 +44,20 @@ if {[catch {
     proc dbwin s {puts -nonewline $s}
 }
 
-package require treectrl
+# package require treectrl
 
 # Return TRUE if we are running from the development directory
 proc IsDevelopment {} {
     return [file exists [Path .. generic]]
 }
 
-if {[IsDevelopment] && [catch {package require treectrl}]} {
+# When using configure/make, the "make demo" Makefile target sets the value of
+# the TREECTRL_LIBRARY environment variable which is used by tcl_findLibrary to
+# find our treectrl.tcl file. When *not* using configure/make, we set the value
+# of TREECTRL_LIBRARY and load the shared library manually. Note that
+# tcl_findLibrary is called by the Treectrl_Init() routine in C.
+if {[IsDevelopment]} {
+    set ::env(TREECTRL_LIBRARY) [Path .. library]
     switch -- $::thisPlatform {
 	macintosh {
 	    load [Path .. treectrl.shlb]
@@ -67,15 +73,9 @@ if {[IsDevelopment] && [catch {package require treectrl}]} {
 	default {
 
 	    # Windows build
-	    load [Path .. Build treectrl[info sharedlibextension]]
+	    load [glob -directory [Path .. Build] treectrl*[info sharedlibextension]]
 	}
     }
-
-    # Default TreeCtrl bindings
-    source [Path .. library treectrl.tcl]
-
-    # Other useful bindings
-    source [Path .. library filelist-bindings.tcl]
 
 } else {
     lappend ::auto_path [Path ..]
@@ -319,6 +319,20 @@ proc MakeListPopup {} {
     set m2 [menu $m.mExpand -tearoff no]
     $m add cascade -label Expand -menu $m2
 
+    set m2 [menu $m.mBgImg -tearoff no]
+    $m2 add radiobutton -label none -variable Popup(bgimg) -value none \
+        -command {.f2.f1.t configure -backgroundimage ""}
+    $m2 add radiobutton -label sky -variable Popup(bgimg) -value sky \
+        -command {.f2.f1.t configure -backgroundimage $Popup(bgimg)}
+    $m add cascade -label "Background Image" -menu $m2
+
+    set m2 [menu $m.mBgMode -tearoff no]
+    foreach value {column index row visindex} {
+        $m2 add radiobutton -label $value -variable Popup(bgmode) -value $value \
+	    -command {.f2.f1.t configure -backgroundmode $Popup(bgmode)}
+    }
+    $m add cascade -label "Background Mode" -menu $m2
+
     set m2 [menu $m.mDebug -tearoff no]
     $m2 add checkbutton -label Data -variable Popup(debug,data) \
 	-command {.f2.f1.t debug configure -data $Popup(debug,data)}
@@ -406,6 +420,8 @@ MakeMainWindow
 MakeListPopup
 MakeHeaderPopup
 
+InitPics sky
+
 bind .f2.f1.t <ButtonPress-3> {
     set id [%W identify %x %y]
     if {$id ne ""} {
@@ -444,6 +460,8 @@ bind .f2.f1.t <ButtonPress-3> {
     foreach option {data display enable} {
 	set Popup(debug,$option) [%W debug cget -$option]
     }
+    set Popup(bgimg) [%W cget -backgroundimage]
+    set Popup(bgmode) [%W cget -backgroundmode]
     set Popup(doublebuffer) [%W cget -doublebuffer]
     set Popup(linestyle) [%W cget -linestyle]
     set Popup(orient) [%W cget -orient]
@@ -490,21 +508,21 @@ proc InitDemoList {} {
     #	"Picture Catalog 2" DemoPictureCatalog2
     #	"Folder Contents (Vertical)" DemoExplorerFilesV
     foreach {label command file} [list \
-				      "Random $::RandomN Items" DemoRandom random.tcl \
-				      "Random $::RandomN Items, Button Images" DemoRandom2 random.tcl \
-				      "Outlook Express (Folders)" DemoOutlookFolders outlook-folders.tcl \
-				      "Outlook Express (Newsgroup)" DemoOutlookNewsgroup outlook-newgroup.tcl \
-				      "Explorer (Details)" DemoExplorerDetails explorer.tcl \
-				      "Explorer (List)" DemoExplorerList explorer.tcl \
-				      "Explorer (Large icons)" DemoExplorerLargeIcons explorer.tcl \
-				      "Explorer (Small icons)" DemoExplorerSmallIcons explorer.tcl \
-				      "Internet Options" DemoInternetOptions www-options.tcl \
-				      "Help Contents" DemoHelpContents help.tcl \
-				      "Layout" DemoLayout layout.tcl \
-				      "MailWasher" DemoMailWasher mailwasher.tcl \
-				      "Bitmaps" DemoBitmaps bitmaps.tcl \
-				      "iMovie" DemoIMovie imovie.tcl \
-				     ] {
+	"Random $::RandomN Items" DemoRandom random.tcl \
+	"Random $::RandomN Items, Button Images" DemoRandom2 random.tcl \
+	"Outlook Express (Folders)" DemoOutlookFolders outlook-folders.tcl \
+	"Outlook Express (Newsgroup)" DemoOutlookNewsgroup outlook-newgroup.tcl \
+	"Explorer (Details)" DemoExplorerDetails explorer.tcl \
+	"Explorer (List)" DemoExplorerList explorer.tcl \
+	"Explorer (Large icons)" DemoExplorerLargeIcons explorer.tcl \
+	"Explorer (Small icons)" DemoExplorerSmallIcons explorer.tcl \
+	"Internet Options" DemoInternetOptions www-options.tcl \
+	"Help Contents" DemoHelpContents help.tcl \
+	"Layout" DemoLayout layout.tcl \
+	"MailWasher" DemoMailWasher mailwasher.tcl \
+	"Bitmaps" DemoBitmaps bitmaps.tcl \
+	"iMovie" DemoIMovie imovie.tcl \
+	] {
 	set item [$t item create]
 	$t item lastchild root $item
 	#		$t item style set $item 0 s1
@@ -751,7 +769,7 @@ proc DemoClear {} {
 	-yscrollincrement 0 -itemheight 0 -showheader yes \
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-openbuttonimage "" -closedbuttonimage "" -backgroundmode row \
-	-treecolumn 0 -indent 19 -defaultstyle {}
+	-treecolumn 0 -indent 19 -defaultstyle {} -backgroundimage ""
 
     # Restore default bindings to the demo list
     bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]
