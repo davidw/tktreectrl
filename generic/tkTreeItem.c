@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.26 2005/02/15 00:48:51 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.27 2005/03/29 21:05:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -454,6 +454,17 @@ TreeItem TreeItem_GetNextSibling(TreeCtrl *tree, TreeItem item_)
 {
     Item *item = (Item *) item_;
     return (TreeItem) item->nextSibling;
+}
+
+TreeItem TreeItem_NextSiblingVisible(TreeCtrl *tree, TreeItem item)
+{
+    item = TreeItem_GetNextSibling(tree, item);
+    while (item != NULL) {
+	if (TreeItem_ReallyVisible(tree, item))
+	    return item;
+	item = TreeItem_GetNextSibling(tree, item);
+    }
+    return NULL;
 }
 
 TreeItem TreeItem_SetPrevSibling(TreeCtrl *tree, TreeItem item_,
@@ -1547,6 +1558,7 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
     Item *item, *parent;
     int indent, left, lineLeft, lineTop;
     int hasPrev, hasNext;
+    int hasButton;
     int i, vert = 0;
 
     indent = TreeItem_Indent(tree, item_);
@@ -1579,6 +1591,10 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
 	item = item->nextSibling;
     hasNext = (item != NULL);
 
+    /* Option: Don't connect children of root item */
+    if ((self->parent != NULL) && ISROOT(self->parent) && !tree->showRootLines)
+	hasPrev = hasNext = FALSE;
+
     /* Vertical line to parent and/or previous/next sibling */
     if (hasPrev || hasNext) {
 	int top = y, bottom = y + height;
@@ -1606,7 +1622,10 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
     }
 
     /* Horizontal line to self */
-    if (!ISROOT(self) || (tree->showRoot && tree->showButtons && tree->showRootButton)) {
+    hasButton = tree->showButtons && self->hasButton;
+    if (ISROOT(self) && !tree->showRootButton)
+	hasButton = FALSE;
+    if (hasButton || hasPrev || hasNext) {
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
 		HDotLine(tree, drawable, tree->lineGC,
@@ -1626,6 +1645,10 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
 	 parent != NULL;
 	 parent = parent->parent) {
 	lineLeft -= tree->useIndent;
+
+	/* Option: Don't connect children of root item */
+	if ((parent->parent != NULL) && ISROOT(parent->parent) && !tree->showRootLines)
+	    continue;
 
 	/* Check for ReallyVisible next sibling */
 	item = parent->nextSibling;
