@@ -5,12 +5,27 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
- * Copyright (c) 2003 ActiveState Corporation
+ * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.25 2004/10/09 22:57:44 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.26 2004/11/29 20:20:22 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
+
+/*
+ * TIP #116 altered Tk_PhotoPutBlock API to add interp arg.
+ * We need to remove that for compiling with 8.4.
+ */
+#if ((TK_MAJOR_VERSION > 8) || \
+	((TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION > 4)))
+#define TK_PHOTOPUTBLOCK	Tk_PhotoPutBlock
+#define TK_PHOTOPUTZOOMEDBLOCK	Tk_PhotoPutZoomedBlock
+#else
+#define TK_PHOTOPUTBLOCK(interp, hdl, blk, x, y, w, cr) \
+		Tk_PhotoPutBlock(hdl, blk, x, y, w, cr)
+#define TK_PHOTOPUTZOOMEDBLOCK(interp, hdl, blk, x, y, w, zx, zy, sx, sy, cr) \
+		Tk_PhotoPutZoomedBlock(hdl, blk, x, y, w, zx, zy, sx, sy, cr)
+#endif
 
 static CONST char *bgModeST[] = {
     "column", "index", "row", "visindex", (char *) NULL
@@ -2800,7 +2815,7 @@ int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 		pixelPtr[x * 4 + 3] = 0;
 	    }
 	}
-	Tk_PhotoPutBlock(photoH, &photoBlock, 0, y,
+	TK_PHOTOPUTBLOCK(interp, photoH, &photoBlock, 0, y,
 		imgW, 1, TK_PHOTO_COMPOSITE_OVERLAY);
 #if 1
 	photoPix += pitch;
@@ -2915,7 +2930,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
     }
 
     XQueryColors(display, Tk_Colormap(tkwin), xcolors, ncolors);
- 
+
     /* XImage -> Tk_Image */
     pixelPtr = (unsigned char *) Tcl_Alloc(ximage->width * ximage->height * 4);
     photoBlock.pixelPtr  = pixelPtr;
@@ -2947,7 +2962,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	}
     }
 
-    Tk_PhotoPutZoomedBlock(photoH, &photoBlock, 0, 0, w, h,
+    TK_PHOTOPUTZOOMEDBLOCK(interp, photoH, &photoBlock, 0, 0, w, h,
 	    zoom, zoom, 1, 1, TK_PHOTO_COMPOSITE_SET);
 
     Tcl_Free((char *) pixelPtr);
