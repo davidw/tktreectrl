@@ -33,6 +33,14 @@
 #define dbwin printf
 #endif /* HAVE_DBWIN_H */
 
+/*
+ * The macro below is used to modify a "char" value (e.g. by casting
+ * it to an unsigned character) so that it can be used safely with
+ * macros such as isspace.
+ */
+
+#define UCHAR(c) ((unsigned char) (c))
+
 int debug_bindings = 0;
 
 /*
@@ -77,7 +85,7 @@ typedef struct Detail {
 	struct EventInfo *event; /* Associated event */
 	QE_ExpandProc expandProc; /* Callback to expand % in scripts */
 #if ALLOW_INSTALL
-	int dynamic;
+	int dynamic; /* Created by QE_InstallCmd() */
 	char *command; /* Tcl command to expand percents, or NULL */
 #endif
 	struct Detail *next; /* List of Details for event */
@@ -91,6 +99,7 @@ typedef struct EventInfo {
 	int nextDetailId; /* Next unique Detail.code */
 #if ALLOW_INSTALL
 	int dynamic; /* Created by QE_InstallCmd() */
+	char *command; /* Tcl command to expand percents, or NULL */
 #endif
 	struct EventInfo *next; /* List of all EventInfos */
 } EventInfo;
@@ -113,6 +122,12 @@ static int ParseEventDescription(BindingTable *bindPtr, char *eventPattern,
 static int FindSequence(BindingTable *bindPtr, ClientData object,
 	char *eventString, int create, int *created, BindValue **result);
 #if ALLOW_INSTALL
+typedef struct PercentsData {
+	ClientData clientData;
+	char *command;
+	EventInfo *eventPtr;
+	Detail *detailPtr;
+} PercentsData;
 static void Percents_Install(QE_ExpandArgs *args);
 #endif
 static int DeleteBinding(BindingTable *bindPtr, BindValue *valuePtr);
@@ -130,6 +145,19 @@ int QE_BindInit(Tcl_Interp *interp)
 	return TCL_OK;
 }
 
+static int CheckName(char *name)
+{
+	char *p = name;
+
+	if (*p == '\0')
+		return TCL_ERROR;
+	while ((*p != '\0') && (*p != '-') && !isspace(UCHAR(*p)))
+		p++;
+	if (*p == '\0')
+		return TCL_OK;
+	return TCL_ERROR;
+}
+
 int QE_InstallEvent(QE_BindingTable bindingTable, char *name, QE_ExpandProc expandProc)
 {
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
@@ -137,6 +165,13 @@ int QE_InstallEvent(QE_BindingTable bindingTable, char *name, QE_ExpandProc expa
 	EventInfo *eiPtr;
 	int isNew;
 	int type;
+
+	if (CheckName(name) != TCL_OK)
+	{
+		Tcl_AppendResult(bindPtr->interp, "bad event name \"", name, "\"",
+			(char *) NULL);
+		return 0;
+	}
 
 	hPtr = Tcl_CreateHashEntry(&bindPtr->eventTableByName, name, &isNew);
 	if (!isNew)
@@ -157,6 +192,7 @@ int QE_InstallEvent(QE_BindingTable bindingTable, char *name, QE_ExpandProc expa
 	eiPtr->nextDetailId = 1;
 #ifdef ALLOW_INSTALL
 	eiPtr->dynamic = 0;
+	eiPtr->command = NULL;
 #endif
 
 	Tcl_SetHashValue(hPtr, (ClientData) eiPtr);
@@ -180,6 +216,13 @@ int QE_InstallDetail(QE_BindingTable bindingTable, char *name, int eventType, QE
 	PatternTableKey key;
 	int isNew;
 	int code;
+
+	if (CheckName(name) != TCL_OK)
+	{
+		Tcl_AppendResult(bindPtr->interp, "bad detail name \"", name, "\"",
+			(char *) NULL);
+		return 0;
+	}
 
 	/* Find the event this detail goes with */
 	eiPtr = FindEvent(bindPtr, eventType);
@@ -259,6 +302,10 @@ static void DeleteEvent(BindingTable *bindPtr, EventInfo *eiPtr)
 
 	/* Free EventInfo */
 	Tcl_Free(eiPtr->name);
+#ifdef ALLOW_INSTALL
+	if (eiPtr->command != NULL)
+		Tcl_Free(eiPtr->command);
+#endif
 	memset((char *) eiPtr, 0xAA, sizeof(EventInfo));
 	Tcl_Free((char *) eiPtr);
 }
@@ -465,6 +512,10 @@ void QE_DeleteBindingTable(QE_BindingTable bindingTable)
 
 		/* Free EventInfo */
 		Tcl_Free(eiPtr->name);
+#ifdef ALLOW_INSTALL
+		if (eiPtr->command != NULL)
+			Tcl_Free(eiPtr->command);
+#endif
 		memset((char *) eiPtr, 0xAA, sizeof(EventInfo));
 		Tcl_Free((char *) eiPtr);
 	}
@@ -893,14 +944,33 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 		/*
 		 * Call a Tcl script to expand the percents.
 		 */
-		if (dPtr && (dPtr->command != NULL))
+		if ((dPtr != NULL) && (dPtr->command != NULL))
 		{
-			ClientData oldClientData = eventPtr->clientData;
+			PercentsData data;
 
-			eventPtr->clientData = (ClientData) dPtr;
+			data.clientData = eventPtr->clientData;
+			data.command = dPtr->command;
+			data.eventPtr = eiPtr;
+			data.detailPtr = dPtr;
+			eventPtr->clientData = (ClientData) &data;
 			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
 				eventPtr, Percents_Install, &scripts);
-			eventPtr->clientData = oldClientData;
+			eventPtr->clientData = data.clientData;
+		}
+		else if (((dPtr == NULL) ||
+			((dPtr != NULL) && (dPtr->expandProc == NULL))) &&
+			(eiPtr->command != NULL))
+		{
+			PercentsData data;
+
+			data.clientData = eventPtr->clientData;
+			data.command = eiPtr->command;
+			data.eventPtr = eiPtr;
+			data.detailPtr = dPtr;
+			eventPtr->clientData = (ClientData) &data;
+			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
+				eventPtr, Percents_Install, &scripts);
+			eventPtr->clientData = data.clientData;
 		}
 		else
 #endif /* ALLOW_INSTALL */
@@ -1113,14 +1183,6 @@ int QE_BindEvent(QE_BindingTable bindingTable, QE_Event *eventPtr)
 
 	return TCL_OK;
 }
-
-/*
- * The macro below is used to modify a "char" value (e.g. by casting
- * it to an unsigned character) so that it can be used safely with
- * macros such as isspace.
- */
-
-#define UCHAR(c) ((unsigned char) (c))
 
 static char *GetField(char *p, char *copy, int size)
 {
@@ -1350,10 +1412,14 @@ void QE_ExpandEvent(QE_BindingTable bindingTable, int eventType, Tcl_DString *re
 void QE_ExpandDetail(QE_BindingTable bindingTable, int event, int detail, Tcl_DString *result)
 {
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
-	Detail *detailPtr = FindDetail(bindPtr, event, detail);
+	Detail *dPtr;
 
-	if (detailPtr != NULL)
-		QE_ExpandString((char *) detailPtr->name, result);
+	if (detail == 0)
+		return;
+
+	dPtr = FindDetail(bindPtr, event, detail);
+	if (dPtr != NULL)
+		QE_ExpandString((char *) dPtr->name, result);
 	else
 		QE_ExpandString("unknown", result);
 }
@@ -1453,7 +1519,7 @@ static void Percents_Generate(QE_ExpandArgs *args)
 	int i;
 
 	/* Reverse order to handle duplicate %-chars */
-	for (i = data->count - 1; i >= 0 ; i--)
+	for (i = data->count - 1; i >= 0; i--)
 	{
 		if (args->which == data->field[i].which)
 		{
@@ -1706,39 +1772,54 @@ static void Percents_Install(QE_ExpandArgs *args)
 {
 	BindingTable *bindPtr = (BindingTable *) args->bindingTable;
 	Tcl_Interp *interp = bindPtr->interp;
-	Detail *dPtr = (Detail *) args->clientData;
+	PercentsData *data = (PercentsData *) args->clientData;
+	EventInfo *eiPtr = data->eventPtr;
+	Detail *dPtr = data->detailPtr;
 	Tcl_DString command;
 	Tcl_SavedResult state;
 
-	if (dPtr->command != NULL)
-	{
-		Tcl_DStringInit(&command);
-		Tcl_DStringAppend(&command, dPtr->command, -1);
-		Tcl_DStringAppend(&command, " ", 1);
-		Tcl_DStringAppend(&command, &args->which, 1);
-		Tcl_DStringAppend(&command, " ", 1);
-		Tcl_DStringAppend(&command, (char *) args->object, -1);
-		Tcl_DStringAppend(&command, " ", 1);
-		Tcl_DStringAppend(&command, dPtr->event->name, -1);
-		Tcl_DStringAppend(&command, " ", 1);
+	Tcl_DStringInit(&command);
+	Tcl_DStringAppend(&command, data->command, -1);
+	Tcl_DStringAppend(&command, " ", 1);
+	Tcl_DStringAppend(&command, &args->which, 1);
+	Tcl_DStringAppend(&command, " ", 1);
+	Tcl_DStringAppend(&command, (char *) args->object, -1);
+	Tcl_DStringAppend(&command, " ", 1);
+	Tcl_DStringAppend(&command, eiPtr->name, -1);
+	Tcl_DStringAppend(&command, " ", 1);
+	if (dPtr != NULL)
 		Tcl_DStringAppend(&command, dPtr->name, -1);
-
-		Tcl_SaveResult(interp, &state);
-		if (Tcl_EvalEx(interp, Tcl_DStringValue(&command),
-			Tcl_DStringLength(&command), TCL_EVAL_GLOBAL) == TCL_OK)
+	else
+		Tcl_DStringAppend(&command, "{}", -1);
+	if ((eiPtr->expandProc == Percents_Generate) ||
+		((dPtr != NULL) && (dPtr->expandProc == Percents_Generate)))
+	{
+		GenerateData *genData = (GenerateData *) data->clientData;
+		int i;
+		for (i = 0; i < genData->count; i++)
 		{
-			QE_ExpandString(Tcl_GetStringFromObj(Tcl_GetObjResult(interp),
-				NULL), args->result);
+			GenerateField *genField = &genData->field[i];
+			Tcl_DStringAppend(&command, " ", 1);
+			Tcl_DStringAppend(&command, &genField->which, 1);
+			Tcl_DStringAppend(&command, " ", 1);
+			Tcl_DStringAppend(&command, genField->string, -1);
 		}
-		else
-		{
-			Tcl_AddErrorInfo(interp, "\n    (expanding percents)");
-			Tcl_BackgroundError(interp);
-		}
-		Tcl_RestoreResult(interp, &state);
-
-		Tcl_DStringFree(&command);
 	}
+	Tcl_SaveResult(interp, &state);
+	if (Tcl_EvalEx(interp, Tcl_DStringValue(&command),
+		Tcl_DStringLength(&command), TCL_EVAL_GLOBAL) == TCL_OK)
+	{
+		QE_ExpandString(Tcl_GetStringFromObj(Tcl_GetObjResult(interp),
+			NULL), args->result);
+	}
+	else
+	{
+		Tcl_AddErrorInfo(interp, "\n    (expanding percents)");
+		Tcl_BackgroundError(interp);
+	}
+	Tcl_RestoreResult(interp, &state);
+
+	Tcl_DStringFree(&command);
 }
 
 int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
@@ -1816,15 +1897,15 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 		case 1: /* event */
 		{
-			char *eventName;
-			int id;
+			char *eventName, *command;
+			int id, length;
 			EventInfo *eiPtr;
 			Tcl_HashEntry *hPtr;
 
-			if (objc - objOffset != 3)
+			if (objc - objOffset < 3 || objc - objOffset > 4)
 			{
 				Tcl_WrongNumArgs(bindPtr->interp, objOffset + 2, objv,
-					"name");
+					"name ?percentsCommand?");
 				return TCL_ERROR;
 			}
 
@@ -1842,6 +1923,17 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 			/* Mark as installed-by-script */
 			eiPtr->dynamic = 1;
+
+			if (objc - objOffset == 3)
+				break;
+
+			/* Set the Tcl command for this event */
+			command = Tcl_GetStringFromObj(objv[objOffset + 3], &length);
+			if (length)
+			{
+				eiPtr->command = Tcl_Alloc(length + 1);
+				(void) strcpy(eiPtr->command, command);
+			}
 			break;
 		}
 	}
