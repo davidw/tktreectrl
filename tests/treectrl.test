@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.17 2003/01/04 13:19:40 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.18 2003/01/04 17:12:33 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -583,6 +583,29 @@ test tree-5.13 {state linkage: predefined state} -body {
 test tree-5.14 {state linkage: user defined state} -body {
     .t state linkage state0
 } -result {dynamic}
+
+# This should be forbidden...
+test tree-5.15 {state define: strange state name} -constraints knownBug -body {
+    .t state define ~user
+} -returnCodes error -result {Invalid state name "~user"}
+
+test tree-5.17 {state define: strange state name} -body {
+    .t state linkage ~user
+} -returnCodes error -result {can't specify '~' for this command}
+
+test tree-5.18 {state undefine: strange state name} -body {
+    .t state undefine ~user
+} -returnCodes error -result {can't specify '~' for this command}
+
+# This should be forbidden...
+test tree-5.19 {state define: strange state name} -constraints knownBug -body {
+    .t state define !WatchIt!
+} -returnCodes error -result {Invalid state name "!WatchIt!"}
+
+# This should be forbidden...
+test tree-5.20 {state define: strange state name} -constraints knownBug -body {
+    .t state define ""
+} -returnCodes error -result {Invalid state name ""}
 
 test tree-7.0 {some prerequisites for the marquee test} -body {
     .t element create eImage image -width 202
