@@ -2314,12 +2314,14 @@ int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tc
 	return TCL_OK;
 }
 
-int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv)
+int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask)
 {
 	Style *style = (Style *) style_;
 	Element *elem;
 	ElementLink *eLink;
 	ElementArgs args;
+
+	(*eMask) = 0;
 
 	if (Element_FromObj(tree, elemObj, &elem) != TCL_OK)
 		return TCL_ERROR;
@@ -2348,7 +2350,9 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemOb
 	}
 	else
 	{
-		eLink = Style_CreateElem(tree, style, elem, NULL);
+		int isNew;
+
+		eLink = Style_CreateElem(tree, style, elem, &isNew);
 		if (eLink == NULL)
 		{
 			FormatResult(tree->interp, "style %s does not use element %s",
@@ -2358,8 +2362,13 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemOb
 
 		/* Do this before configProc(). If eLink was just allocated and an
 		 * error occurs in configProc() it won't be done */
-		eLink->neededWidth = eLink->neededHeight = -1;
-		style->neededWidth = style->neededHeight = -1;
+		(*eMask) = 0;
+		if (isNew)
+		{
+			eLink->neededWidth = eLink->neededHeight = -1;
+			style->neededWidth = style->neededHeight = -1;
+			(*eMask) = CS_DISPLAY | CS_LAYOUT;
+		}
 
 		args.tree = tree;
 		args.elem = eLink->elem;
@@ -2372,7 +2381,13 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemOb
 		args.change.flagSelf = args.config.flagSelf;
 		args.change.flagTree = 0;
 		args.change.flagMaster = 0;
-		(*elem->typePtr->changeProc)(&args);
+		(*eMask) |= (*elem->typePtr->changeProc)(&args);
+
+		if (!isNew && ((*eMask) & CS_LAYOUT))
+		{
+			eLink->neededWidth = eLink->neededHeight = -1;
+			style->neededWidth = style->neededHeight = -1;
+		}
 	}
 	return TCL_OK;
 }
