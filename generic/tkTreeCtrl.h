@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.14 2004/07/30 20:58:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.15 2004/08/09 02:11:31 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -72,10 +72,12 @@ struct TreeCtrl
     /* Configuration options */
     Tcl_Obj *fgObj;		/* -foreground */
     XColor *fgColorPtr;		/* -foreground */
+    Tcl_Obj *borderWidthObj;	/* -borderwidth */
     int borderWidth;		/* -borderwidth */
     Tk_3DBorder border;		/* -background */
     Tk_Cursor cursor;		/* Current cursor for window, or None. */
     int relief;			/* -relief */
+    Tcl_Obj *highlightWidthObj;	/* -highlightthickness */
     int highlightWidth;		/* -highlightthickness */
     XColor *highlightBgColorPtr; /* -highlightbackground */
     XColor *highlightColorPtr;	/* -highlightcolor */
@@ -105,7 +107,9 @@ struct TreeCtrl
                                     (unless overridden) */
     int itemHeight;		/* -itemheight: Fixed height for all items
                                     (unless overridden) */
+    Tcl_Obj *widthObj;		/* -width */
     int width;			/* -width */
+    Tcl_Obj *heightObj;		/* -height */
     int height;			/* -height */
     int columnTree;		/* column where buttons/lines are drawn */
 #define DOUBLEBUFFER_NONE 0
@@ -263,6 +267,9 @@ extern int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexP
 
 /* tkTreeItem.c */
 
+extern char *itemPrefix;
+extern int itemPrefixLen;
+
 #define ITEM_ALL ((TreeItem) -1)
 #define IFO_ALLOK	0x0001	/* ItemFromObj flag: "all" is acceptable */
 #define IFO_NULLOK	0x0002	/* ItemFromObj flag: can be NULL */
@@ -351,6 +358,9 @@ extern int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, T
 extern void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_);
 extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex, int beforeIndex);
 
+/* tkTreeElem.c */
+extern int TreeElement_Init(Tcl_Interp *interp);
+
 typedef struct StyleDrawArgs StyleDrawArgs;
 struct StyleDrawArgs
 {
@@ -431,6 +441,7 @@ extern void TreeColumn_SetUseWidth(TreeColumn column_, int width);
 extern Tk_Justify TreeColumn_Justify(TreeColumn column_);
 extern int TreeColumn_WidthHack(TreeColumn column_);
 extern int TreeColumn_Visible(TreeColumn column_);
+extern int TreeColumn_Squeeze(TreeColumn column_);
 extern GC TreeColumn_BackgroundGC(TreeColumn column_, int which);
 extern void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y);
 extern void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y);
@@ -542,6 +553,7 @@ extern void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr
 extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
+extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 
 
 #define PAD_TOP_LEFT     0
@@ -552,3 +564,16 @@ extern int       TreeCtrl_GetPadAmountFromObj(Tcl_Interp *interp,
 	Tk_Window tkwin, Tcl_Obj *padObj,
 	int *topLeftPtr, int *bottomRightPtr);
 extern Tcl_Obj * TreeCtrl_NewPadAmountObj(int *padAmounts);
+
+#define STATIC_SIZE 20
+#define STATIC_ALLOC(P,T,C) \
+    if (C > STATIC_SIZE) \
+	P = (T *) ckalloc(sizeof(T) * (C))
+#define STATIC_FREE(P,T,C) \
+    memset((char *) P, 0xAA, sizeof(T) * (C)); \
+    if (C > STATIC_SIZE) \
+	ckfree((char *) P)
+#define STATIC_FREE2(P,P2) \
+    if (P != P2) \
+	ckfree((char *) P)
+
