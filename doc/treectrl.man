@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.9 2004/08/13 20:22:42 treectrl Exp $}
+  $Id: treectrl.man,v 1.10 2005/01/03 21:24:29 treectrl Exp $}
 ][manpage_begin treectrl n 1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -72,6 +72,11 @@ See the [cmd option] manual entry for details on the standard options.
 
 [section {WIDGET SPECIFIC OPTIONS}]
 [list_begin tkoption]
+[tkoption_def -backgroundimage backgroundImage BackgroundImage]
+Specifies the name of an image to draw as the list background. The image is
+tiled horizontally and vertically to fill the content area of the list. If
+the image is transparent it is drawn on top of the background color(s).
+
 [tkoption_def -backgroundmode backgroundMode BackgroundMode]
 Specifies the desired mode for changing the background of individual items.
 The value should be one of [const row], [const column], [const index],
