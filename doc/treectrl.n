@@ -1,19 +1,19 @@
 '\"
-'\" Generated from treectrl.man by mpexpand with fmt.nroff
+'\" Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'nroff'
 '\"
 '\" Copyright (c) 2002-2003 Christian Krone.
 '\"
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.21 2003/01/06 23:03:19 krischan Exp $
+'\"   $Id: treectrl.n,v 1.22 2004/07/26 17:16:52 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 1.0 treectrl "Tk Commands"
+.TH "treectrl" n 1.0  "Tk Commands"
 .BS
-.SH NAME
+.SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
-package require \fBtreectrl 1.0\fR
+package require \fBtreectrl  1.0\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?\fR
 .sp
@@ -34,6 +34,8 @@ package require \fBtreectrl 1.0\fR
 \fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR\fR
 .sp
 \fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+.sp
+\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
 .sp
 \fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
 .sp
@@ -395,7 +397,7 @@ Database Name:	\fBclosedButtonBitmap\fR
 Database Class:	\fBClosedButtonBitmap\fR
 .fi
 .IP
-Specifies the bitmap to be used as the button to the left of an closed item
+Specifies the bitmap to be used as the button to the left of a closed item
 in any of the forms acceptable to \fBTk_GetPixels\fR.
 .LP
 .nf
@@ -405,7 +407,7 @@ Database Name:	\fBclosedButtonImage\fR
 Database Class:	\fBClosedButtonImage\fR
 .fi
 .IP
-Specifies the image to be used as the button to the left of an closed item
+Specifies the image to be used as the button to the left of a closed item
 in any of the forms acceptable to \fBTk_GetImage\fR.
 .LP
 .nf
@@ -425,6 +427,18 @@ and uses an inverting color
 (i.e black on lighter background, white on darker background).
 This line can be used to give the user a visual feedback
 during column resizing.
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-defaultstyle\fR
+Database Name:	\fBdefaultStyle\fR
+Database Class:	\fBDefaultStyle\fR
+.fi
+.IP
+Specifies a list of styles, one per column, to apply to each item created by
+the \fBitem create\fR command.
+Each element in the list should be a valid style name or an empty string to
+indicate no style should be applied to a specific column.
 .LP
 .nf
 .ta 6c
@@ -646,7 +660,7 @@ Database Class:	\fBWrap\fR
 .fi
 .IP
 Specifies how to arrange items inside treectrl's window.
-The value must be an emtyp string, \fBwindow\fR,
+The value must be an empty string, \fBwindow\fR,
 or a list with an integer as first element
 and either \fBitems\fR or \fBpixels\fR as second element.
 The empty string as wrap mode means that each item appears on
@@ -765,7 +779,7 @@ If the item has descendants, they are no longer displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
 widget options \fB-closedbuttonimage\fR or \fB-closedbuttonbitmap\fR,
-or a \fB+\fR sign if no image or bitmap is configured.
+or a \fI+\fR sign if no image or bitmap is configured.
 If the item is already closed, this command has no effect.
 \fIItemDesc\fR may also be the string \fBall\fR,
 in which case all items of the treectrl widget are collapsed.
@@ -814,9 +828,14 @@ If one or more \fIoption\fR-\fIvalue\fR pairs are specified, then the command
 modifies the given option(s) to have the given value(s) for \fIcolumn\fR;
 in this case the command returns an empty string.
 .sp
-The specified column is created, if it not already exists
-and if at least one \fIoption\fR-\fIvalue\fR pair is specified.
 See \fBCOLUMNS\fR below for details on the options available for columns.
+.TP
+\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
+This command creates a new column in the treectrl widget. The new column is
+placed to the right of all other columns (except the \fBtail\fR column). Any
+\fIoption\fR-\fIvalue\fR arguments configure the new column according to the
+\fBcolumn configure\fR command. The return value is the zero-based index
+of the new column.
 .TP
 \fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
 Deletes the specified \fIcolumn\fR from the treectrl widget.
@@ -1088,7 +1107,7 @@ If the item has descendants, they are now displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
 widget options \fB-openbuttonimage\fR or \fB-openbuttonbitmap\fR,
-or a \fB-\fR sign if no image or bitmap is configured.
+or a \fI-\fR sign if no image or bitmap is configured.
 If the item is already open, this command has no effect.
 \fIItemDesc\fR may also be the string \fBall\fR,
 in which case all items of the treectrl widget are expanded.
@@ -1101,7 +1120,7 @@ and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
 \fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR\fR
 Returns a list containing some diagnostics about what
-is displayed at the given windows coordinates \fBx\fR and \fBy\fR.
+is displayed at the given windows coordinates \fIx\fR and \fIy\fR.
 The resulting list may be empty,
 if nothing is displayed at the given coordinates,
 otherwise the first list element is \fBheader\fR or \fBitem\fR.
@@ -1120,7 +1139,7 @@ is the second element in the resulting list.
 If the x coordinate doesn't fall into the column
 displaying the hierarchical structure,
 the elements \fBcolumn\fR and the column number are added.
-If the x coordinate if above the column
+If the x coordinate is within the column
 displaying the hierarchical structure,
 the following elements are added to the resulting list:
 \fBline\fR and the numerical id of the item the line comes from,
@@ -1181,16 +1200,19 @@ also the state \fBfocus\fR is set.
 .TP
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?\fR
 Deletes the specified item(s).
-\fIFirst\fR must be the string \fBall\fR or an \fIitemDesc\fR,
-\fIlast\fR must be an \fIitemDesc\fR if specified.
-If \fIfirst\fR is specified as \fBall\fR, all items are deleted;
-if \fIfirst\fR is specified as \fIitemDesc\fR and \fIlast\fR isn't specified,
-the item described by \fIfirst\fR is delete.
+\fIFirst\fR and \fIlast\fR must be the string \fBall\fR or an \fIitemDesc\fR.
+If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, all items are
+deleted; if \fIfirst\fR is specified as \fIitemDesc\fR and \fIlast\fR isn't
+specified, the item described by \fIfirst\fR is deleted.
 If both \fIfirst\fR and \fIlast\fR are specified,
-the must decribe items with the same root item;
+they must decribe items with a common ancestor;
 then the range of items between \fIfirst\fR and \fIlast\fR is deleted.
+.sp
+Deleting an item deletes any child items of the deleted item recursively.
+If the current \fBactive\fR item is deleted, the root item becomes the new active item.
+If the current selection \fBanchor\fR item is deleted, the root item becomes the new anchor item.
 There is no way to delete the root item of the treectrl widget;
-in all cases the specification of the root item is ignored;
+in all cases the specification of the root item is ignored.
 .TP
 \fIpathName\fR \fBitem dump\fR \fIitemDesc\fR\fR
 Returns a list with six elements in the form
@@ -1347,9 +1369,9 @@ respectively.
 Use dictionary-style comparison. This is the same as \fB-ascii\fR
 except (a) case is ignored except as a tie-breaker and (b) if two
 strings contain embedded numbers, the numbers compare as integers,
-not characters.  For example, in \fB-dictionary\fR mode, \fBbigBoy\fR
-sorts between \fBbigbang\fR and \fBbigboy\fR, and \fBx10y\fR
-sorts between \fBx9y\fR and \fBx11y\fR.
+not characters.  For example, in \fB-dictionary\fR mode, \fIbigBoy\fR
+sorts between \fIbigbang\fR and \fIbigboy\fR, and \fIx10y\fR
+sorts between \fIx9y\fR and \fIx11y\fR.
 .TP
 \fB\fB-integer\fR\fR
 Convert to integers and use integer comparison.
@@ -1411,10 +1433,14 @@ then the style(s) of item in \fIcolumn\fR will be set to \fIstyle\fR.
 .TP
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR \fIcolumn\fR ?\fItext\fR? ?\fIcolumn text ...\fR?\fR
 If no \fItext\fR argument is specified,
-returns the text of the item described by \fIitemDesc\fR in \fIcolumn\fR.
+returns the text of the first text element in \fIcolumn\fR for the item
+described by \fIitemDesc\fR.
 If there are one or more \fItext\fR arguments specified,
 it must be \fIcolumn\fR-\fItext\fR pairs;
-then the text(s) of item in \fIcolumn\fR will be set to \fItext\fR.
+then the text(s) of item in \fIcolumn\fR will be set to \fItext\fR. Note that
+this command is provided as a convenience. Use the
+\fBitem element configure\fR command if you want to set the text of a
+specific text element.
 .TP
 \fIpathName\fR \fBitem visible\fR \fIitemDesc\fR ?\fIboolean\fR?\fR
 If \fIboolean\fR is not specified, returns 1 if the item
@@ -1649,13 +1675,14 @@ Otherwise the dynamic event is removed.
 .TP
 \fIpathName\fR \fBnumcolumns\fR\fR
 Returns a decimal string giving the number of
-columns configured in the treectrl widget.
-Since the always existant tail column is ignored by this command,
-the number can be 0 if no column is configured yet.
+columns created by the \fBcolumn create\fR widget command which haven't been
+deleted by the \fBcolumn delete\fR widget command. The \fBtail\fR column
+is not counted.
 .TP
 \fIpathName\fR \fBnumitems\fR\fR
 Returns a decimal string giving the number of
-items created in the treectrl widget.
+items created by the \fBitem create\fR widget command which haven't been
+deleted by the \fBitem delete\fR widget command.
 This number is always positive,
 since a newly created treectrl widget has already the root item,
 which cannot be deleted.
@@ -1814,7 +1841,7 @@ Create a new style in \fIpathName\fR with name \fIstyle\fR.
 After \fIstyle\fR there may be any number of \fIoption\fR-\fIvalue\fR
 pairs, each of which sets one of the configuration options
 for the style.  These same \fIoption\fR-\fIvalue\fR pairs may be
-used in \fBstyle configure\fR widget commands to change the styles's
+used in \fBstyle configure\fR widget commands to change the style's
 configuration.
 Returns the name of the new style.
 .TP
@@ -1883,12 +1910,12 @@ These options may be used to position (or stretch) the slave within its cell.
 \fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
 The string can contain other characters, but they are ignored.
 Each letter refers to a side (north, south,
-east, or west) in which direction the element will grow to.
+east, or west) in which direction the element will grow in.
 .TP
 \fB\fB-squeeze\fR\fR \fIstyle\fR
-If an elements's area is smaller than its requested dimensions, this
+If an element's area is smaller than its requested dimensions, this
 option may be used to allow shrinking of the element.
-\fIStyle\fR  is a string that contains zero or more of the characters
+\fIStyle\fR is a string that contains zero or more of the characters
 \fBx\fR or \fBy\fR.
 The string can contain other characters, but they are ignored.
 \fBx\fR shrinks the element horizontally,
@@ -1998,14 +2025,13 @@ A treectrl widget is capable of displaying multiple columns next to each
 other.
 An item can be considered as a row, which reaches over all columns.
 .PP
-Many of the widget commands for a treectrl take as one argument an
-indicator of which column of the treectrl to operate on.  These
-indicators are called \fIcolumn\fRs and may be specified
-as numerical index as given by the first \fBcolumn configure\fR
-widget command which created the column or by its name,
-which can be configured my means of the \fB-tag\fR column option.
+Columns in a treectrl may be named in either of two ways: by number or by tag.
+If a number is given it must be an integer from zero to \fIN\fR, where \fIN\fR
+is one less than the result of the \fBnumcolumns\fR widget command.
+A column may also be named by the value of its \fB-tag\fR configuration
+option.
 .PP
-There is always one special column, the tail column, which fills
+There is always one special column, the \fBtail\fR column, which fills
 all space to the right of the last ordinary column.
 This column has no number;
 it can only be specified by its tag \fBtail\fR, which cannot be modified.
@@ -2288,7 +2314,7 @@ This option may be used to get an incomplete drawing of the outline.
 \fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
 Each letter refers to a side (north, south, east, or west) that the outline
 will not be drawn.
-The default is \fB\fR, which causes the outline to be drawn completely.
+The default is the empty string, which causes the outline to be drawn completely.
 .TP
 \fB\fB-outline\fR\fR \fIoutlineColor\fR
 Specifies as a per state option
@@ -2361,10 +2387,11 @@ an ellipsis.
 \fB\fB-text\fR\fR \fIstring\fR
 \fIString\fR specifies the characters to be displayed in the text.
 Non printable characters are displayed in their escaped form
-(e.g. a new line character is displayed as the two characters \fB\n\fR).
+(e.g. a new line character is displayed as the two characters \fB\\n\fR).
 If this option is specified, any values of \fB-data\fR, \fB-datatype\fR,
 and \fB-format\fR are ignored.
-\fB-width\fR \fIsize\fR
+.TP
+\fB\fB-width\fR\fR \fIsize\fR
 Specifies the width of the area of the text.
 .TP
 \fB\fB-wrap\fR\fR \fImode\fR
@@ -2474,30 +2501,10 @@ Use the \fIn\fRth child of the item's parent.
 \fBtop\fR
 Use the item in the first row of this column.
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
-Beside of all the normal Tk events, which are generated as reaction
-of e.g. mouse movements or key presses,
-the treectrl widget generates at various places
-events created by treectrl widget:
-.TP
-\fB<ActiveItem>\fR
-Generated without detail
-whenever the active item changes.
-.TP
-\fB<Collapse>\fR
-Generated with the detail \fBafter\fR or \fBbefore\fR,
-whenever an item is collapsed.
-.TP
-\fB<Expand>\fR
-Generated with the detail \fBafter\fR or \fBbefore\fR,
-whenever an item is expanded.
-.TP
-\fB<Scroll>\fR
-Generated with the detail \fBx\fR or \fBy\fR,
-whenever the origin of the window changes.
-.TP
-\fB<Selection>\fR
-Generated without detail
-whenever the selection changes.
+Many Tk widgets communicate with the outside world via \fB-command\fR
+callbacks and/or virtual events. A treectrl widget uses
+\fIquasi-events\fR which are like virtual events but each quasi-event can
+have its own event details and set of %-substitutions.
 .PP
 By means of the \fBnotify bind\fR widget command Tcl scripts can
 be specified,
@@ -2513,71 +2520,89 @@ and the character following it,
 with information from the current event.
 The replacement depends on the character following the \fB%\fR,
 as defined in the list below.
-Unless otherwise indicated,
-Some of the substitutions are only valid for certain types of events;
-if they are used for other types of events
-the value substituted is undefined.
+.PP
+The following %-substitutions are valid for all events:
 .TP
-\fB%%\fR
-Replaced with a single percent.
+\fB%%\fR Replaced with a single %
 .TP
-\fB%c\fR
-Replaced with the number of items that are currently selected
-for a selection event,
-or with the numerical id of the item, which will become the active item
-for an activation event,
-invalid for other event types.
+\fB%d\fR The detail name
 .TP
-\fB%d\fR
-Replaced with the detail of the event,
-or with the empty string if the event has no detail.
-Valid for all event types.
+\fB%e\fR The event name
 .TP
-\fB%D\fR
-Replaced with a (possibly empty) list of item ids;
-all mentioned items will be removed from the selection.
-Valid only for selection events.
+\fB%W\fR The object argument to the \fBnotify bind\fR command
 .TP
-\fB%e\fR
-Replaced with the name of the event.
-Valid for all event types.
+\fB%T\fR The treectrl widget which generated the event
+.PP
+The following events may be generated by a treectrl widget:
 .TP
-\fB%I\fR
-Replaced with the numerical id of the item,
-which is to be collapsed or expanded.
-Valid only for collapse or expand events.
+\fB<ActiveItem>\fR
+Generated whenever the active item changes.
+.RS
 .TP
-\fB%l\fR
-Replaced with the lower bound, i.e. the first fraction
-as returned by the widget command \fBxview\fR for horizontal scrolling
-or \fByview\fR for vertical scrolling.
-Valid only for scrolling events.
+\fB%c\fR The current active item
 .TP
-\fB%p\fR
-Replaced with the numerical id of the item,
-which was  the active item upto now.
-Valid only for activation events.
+\fB%p\fR The previous active item
+.RE
 .TP
-\fB%S\fR
-Replaced with a (possibly empty) list of item ids;
-all mentioned items will be added to the selection.
-Valid only for selection events.
+\fB<Collapse-before>\fR
+Generated before an item is collapsed.
+.RS
 .TP
-\fB%T\fR
-Replaced with the path name of the treectrl widget.
-Valid for all event types.
+\fB%I\fR The item id
+.RE
 .TP
-\fB%u\fR
-Replaced with the upper bound, i.e. the second fraction
-returned by the widget command \fBxview\fR for horizontal scrolling
-or \fByview\fR for vertical scrolling.
-Valid only for scrolling events.
+\fB<Collapse-after>\fR
+Generated after an item is collapsed.
+.RS
 .TP
-\fB%W\fR
-Replaced with the name of the object the event is bound for.
-This can be a widget path (then the string starts with \fB.\fR),
-or a generic tag.
-Valid for all event types.
+\fB%I\fR The item id
+.RE
+.TP
+\fB<Expand-before>\fR
+Generated before an item is expanded.
+.RS
+.TP
+\fB%I\fR The item id
+.RE
+.TP
+\fB<Expand-after>\fR
+Generated after an item is expanded.
+.RS
+.TP
+\fB%I\fR The item id
+.RE
+.TP
+\fB<Scroll-x>\fR
+Generated whenever the view in the treectrl changes in such a way that a
+horizontal scrollbar should be redisplayed.
+.RS
+.TP
+\fB%l\fR Same as the first fraction appended to \fB-xscrollcommand\fR. Think \fIlower\fR.
+.TP
+\fB%u\fR Same as the second fraction appended to \fB-xscrollcommand\fR. Think \fIupper\fR.
+.RE
+.TP
+\fB<Scroll-y>\fR
+Generated whenever the view in the treectrl changes in such a way that a
+vertical scrollbar should be redisplayed.
+.RS
+.TP
+\fB%l\fR Same as the first fraction appended to \fB-yscrollcommand\fR. Think \fIlower\fR.
+.TP
+\fB%u\fR Same as the second fraction appended to \fB-yscrollcommand\fR. Think \fIupper\fR.
+.RE
+.TP
+\fB<Selection>\fR
+Generated whenever the selection changes. This event gives information about
+how the selection changed.
+.RS
+.TP
+\fB%c\fR Same as the \fBselection count\fR widget command
+.TP
+\fB%D\fR List of newly-deselected item ids
+.TP
+\fB%S\fR List of newly-selected item ids
+.RE
 .SH "DEFAULT BINDINGS"
 Tk automatically creates class bindings for treectrls that give them
 the following default behavior.
@@ -2627,7 +2652,7 @@ The Space and Select keys set the selection to the active item.
 .IP [11]
 Control-/ selects the entire contents of the widget.
 .IP [12]
-Control-\\ clears any selection in the widget.
+Control-\\\\ clears any selection in the widget.
 .IP [13]
 The + and - keys expand or collapse the active item,
 the Return key toggles the active item.
@@ -2636,6 +2661,6 @@ The mousewheel scrolls the view of the widget four lines up or down
 depending on the direction, the wheel was turned.
 The active cursor or the selection is not affected.
 .SH "SEE ALSO"
-listbox(n), image(n), bitmap(n), bind(n), options(n)
+bind(n), bitmap(n), image(n), listbox(n), options(n)
 .SH "KEYWORDS"
 tree, widget
