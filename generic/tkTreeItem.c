@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.24 2004/11/30 19:13:18 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.25 2005/01/03 22:01:08 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1471,6 +1471,13 @@ static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
     if (gc == None)
 	gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
     XFillRectangle(tree->display, drawable, gc, x, y, width, height);
+#ifdef BG_IMAGE
+    if (tree->backgroundImage != NULL) 
+    {
+	Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
+		x + width, y + height);
+    }
+#endif
 }
 
 void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
@@ -1650,11 +1657,16 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
     Pixmap bitmap = None;
     int imgW, imgH;
     int buttonLeft, buttonTop, w1;
+    int macoffset = 0;
 
     if (!self->hasButton)
 	return;
     if (ISROOT(self) && !tree->showRootButton)
 	return;
+
+#ifdef TARGET_OS_MAC
+    macoffset = 1;
+#endif
 
     indent = TreeItem_Indent(tree, item_);
 
@@ -1720,8 +1732,8 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
     XDrawRectangle(tree->display, drawable, tree->buttonGC,
 	    buttonLeft + w1,
 	    buttonTop + w1,
-	    tree->buttonSize - tree->buttonThickness,
-	    tree->buttonSize - tree->buttonThickness);
+	    tree->buttonSize - tree->buttonThickness + macoffset,
+	    tree->buttonSize - tree->buttonThickness + macoffset);
 
     /* Horizontal '-' */
     XFillRectangle(tree->display, drawable, tree->buttonGC,
