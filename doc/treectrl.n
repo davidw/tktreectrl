@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.7 2002/12/27 22:04:06 krischan Exp $
+'\" $Id: treectrl.n,v 1.8 2002/12/28 13:41:15 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -270,7 +270,8 @@ If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
 will also be collapsed.
 .TP
 \fIpathName \fBcolumn \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
-This command is used to manipulate the columns of the treectrl widget.
+This command is used to manipulate the columns of the treectrl widget
+(see section COLUMNS below).
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBcolumn\fR argument.
 The following forms of the command are supported:
@@ -285,7 +286,8 @@ an empty list is returned instead.
 .TP
 \fIpathName \fBcolumn cget \fIcolumn option\fR
 This command returns the current value of the option named \fIoption\fR
-for the column specified by \fIcolumn\fR.
+for the column specified by \fIcolumn\fR,
+\fIColumn\fR may also be the string \fBtail\fR to specify the tail column.
 \fIOption\fR may have any of the values accepted by the
 \fBcolumn configure\fR widget command.
 .TP
@@ -293,6 +295,7 @@ for the column specified by \fIcolumn\fR.
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with the column specified by \fIcolumn\fR
 instead of modifying options for the overall treectrl widget.
+\fIColumn\fR may also be the string \fBtail\fR to specify the tail column.
 If no \fIoption\fR is specified, the command returns a list describing
 all of the available options for \fIcolumn\fR (see \fBTk_ConfigureInfo\fR
 for information on the format of this list).
@@ -312,6 +315,23 @@ See COLUMNS below for details on the options available for columns.
 Deletes the specified \fIcolumn\fR from the treectrl widget.
 All remaining columns of the treectrl widget will get new column numbers:
 in an unchanged order, but with succesive numbers.
+.TP
+\fIpathName \fBcolumn index \fIcolumn\fR
+This command returns a decimal string giving the column number
+of the column specified by \fIcolumn\fR,
+which may also be the string \fBtail\fR to specify the tail column.
+.TP
+\fIpathName \fBcolumn move \fIcolumn\fR \fIbefore\fR
+Moves the specified \fIcolumn\fR to the left of the column
+specified by \fIbefore\fR.
+If \fIbefore\fR is the string \fBtail\fR,
+the column \fIcolumn\fR will become the last column.
+.TP
+\fIpathName \fBcolumn neededwidth \fIcolumn\fR
+This command returns a decimal string giving the needed width
+of the column specified by \fIcolumn\fR.
+The needed width is the maximum of the width of the column header
+and the width of the "widest" currently visible item.
 .TP
 \fIpathName \fBcolumn width \fIcolumn\fR
 This command returns a decimal string giving the width
@@ -339,7 +359,7 @@ sublist of the value returned if no \fIoption\fR is specified).  If
 one or more \fIoption\fR\-\fIvalue\fR pairs are specified, then the command
 modifies the given widget option(s) to have the given value(s);  in
 this case the command returns an empty string.
-\fIOption\fR may have any of the values accepted by the \fBtree\fR
+\fIOption\fR may have any of the values accepted by the \fBtreectrl\fR
 command.
 .TP
 \fIpathName \fBdepth\fR ?\fIitemDesc\fR?
@@ -778,6 +798,13 @@ Returns 1 if the dotted line surrounding the marquee is currently visible,
 0 otherwise.
 .RE
 .TP
+\fIpathName \fBnumcolumns\fR
+Returns a decimal string giving the number of
+columns configured in the treectrl widget.
+Since the always existant tail column is ignored by this command,
+the number can be 0 if no column is configured yet.
+.RE
+.TP
 \fIpathName \fBnumitems\fR
 Returns a decimal string giving the number of
 items created in the treectrl widget.
@@ -1122,6 +1149,12 @@ indicators are called \fIcolumn\fRs and may be specified
 as numerical index as given by the first \fBcolumn configure\fR
 widget command which created the column or by its name,
 which can be configured my means of the \fB-tag\fR column option.
+
+There is always one special column, the tail column, which fills
+all space to the right of the last ordinary column.
+This column can only be specified by its name \fBtail\fR, it has no number.
+It is explicitely mentioned for a widget command,
+if its \fIcolumn\fR argument can also specify the tail column.
 
 The following options are supported for columns:
 .TP
