@@ -3,10 +3,11 @@
  *
  *	This module is the header for treectrl widgets for the Tk toolkit.
  *
+ * Copyright (c) 2002-2004 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.13 2004/07/26 17:23:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.14 2004/07/30 20:58:55 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -224,6 +225,8 @@ struct TreeCtrl
 	TreeStyle *styles;
 	int numStyles;
     } defaultStyle;
+
+    Tk_OptionTable itemOptionTable;
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -269,8 +272,7 @@ extern int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, 
 extern void FormatResult(Tcl_Interp *interp, char *fmt, ...);
 extern void Tree_Debug(TreeCtrl *tree);
 
-extern TreeItem TreeItem_Alloc(TreeCtrl *tree);
-extern TreeItem TreeItem_AllocRoot(TreeCtrl *tree);
+extern int TreeItem_Init(TreeCtrl *tree);
 extern int TreeItem_Debug(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item, int mode, int recurse);
 
