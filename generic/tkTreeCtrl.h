@@ -216,6 +216,14 @@ extern void Tree_UpdateScrollbarY(TreeCtrl *tree);
 extern void Tree_AddToSelection(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item);
 
+#define STATE_OP_ON 0
+#define STATE_OP_OFF 1
+#define STATE_OP_TOGGLE 2
+#define SFO_NOT_OFF 0x0001
+#define SFO_NOT_TOGGLE 0x0002
+#define SFO_NOT_STATIC 0x0004
+extern int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
+
 /* tkTreeItem.c */
 
 #define ITEM_ALL ((TreeItem) -1)
