@@ -1208,8 +1208,12 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[20], c
 	int state = drawArgs->state;
 	int i;
 
-	if (style->neededWidth == -1) panic("Style_DoLayout(file %s line %d): style.neededWidth == -1", file, line);
-	if (style->minWidth > drawArgs->width) panic("Style_DoLayout: style.minWidth %d > drawArgs.width %d", style->minWidth, drawArgs->width);
+	if (style->neededWidth == -1)
+		panic("Style_DoLayout(file %s line %d): style.neededWidth == -1",
+			file, line);
+	if (style->minWidth > drawArgs->width)
+		panic("Style_DoLayout: style.minWidth %d > drawArgs.width %d",
+			style->minWidth, drawArgs->width);
 
 	Style_DoLayoutH(drawArgs, layouts);
 
@@ -3524,6 +3528,31 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int type, long *lv, 
 	}
 
 	return TCL_ERROR;
+}
+
+int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[])
+{
+	Style *style = (Style *) drawArgs->style;
+	Style *master = style->master ? style->master : style;
+	Element *elem;
+	ElementLink *eLink;
+	int i;
+
+	for (i = 0; i < objc; i++)
+	{
+		if (Element_FromObj(drawArgs->tree, objv[i], &elem) != TCL_OK)
+			return TCL_ERROR;
+
+		eLink = Style_FindElem(drawArgs->tree, master, elem, NULL);
+		if (eLink == NULL)
+		{
+			FormatResult(drawArgs->tree->interp,
+				"style %s does not use element %s",
+				style->name, elem->name);
+			return TCL_ERROR;
+		}
+	}
+	return TCL_OK;
 }
 
 int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc,
