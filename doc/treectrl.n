@@ -6,14 +6,14 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.25 2004/08/11 00:29:56 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.26 2004/08/13 20:22:42 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 1.0  "Tk Commands"
+.TH "treectrl" n 1.1  "Tk Commands"
 .BS
 .SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
-package require \fBtreectrl  1.0\fR
+package require \fBtreectrl  1.1\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?\fR
 .sp
