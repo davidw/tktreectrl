@@ -311,6 +311,14 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 				continue;
 			}
 
+			if (mask & COLU_CONF_IMAGE)
+				saved.image = column->image;
+			if (mask & COLU_CONF_ITEMBG)
+			{
+				saved.itemBgColor = column->itemBgColor;
+				saved.itemBgCount = column->itemBgCount;
+			}
+
 			if ((mask & COLU_CONF_TAG) && (column->tag != NULL))
 			{
 				if (column->index == -1)
@@ -343,7 +351,6 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 
 			if (mask & COLU_CONF_IMAGE)
 			{
-				saved.image = column->image;
 				column->image = NULL;
 				if (column->imageString != NULL)
 				{
@@ -357,8 +364,6 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 
 			if (mask & COLU_CONF_ITEMBG)
 			{
-				saved.itemBgColor = column->itemBgColor;
-				saved.itemBgCount = column->itemBgCount;
 				column->itemBgColor = NULL;
 				column->itemBgCount = 0;
 				if (column->itemBgObj != NULL)

@@ -293,6 +293,9 @@ typedef void (*PerStateType_FreeProc)(TreeCtrl *, PerStateData *);
 
 struct PerStateType
 {
+#ifdef DEBUG_PSI
+	char *name;
+#endif
 	int size;
 	PerStateType_FromObjProc fromObjProc;
 	PerStateType_FreeProc freeProc;
@@ -327,7 +330,8 @@ static void PerStateInfo_Free(
 	if (pInfo->data == NULL)
 		return;
 #ifdef DEBUG_PSI
-	if (pInfo->type != typePtr) panic("PerStateInfo_Free type mismatch");
+	if (pInfo->type != typePtr) panic("PerStateInfo_Free type mismatch: got %s expected %s",
+		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
 #endif
 	for (i = 0; i < pInfo->count; i++)
 	{
@@ -473,7 +477,7 @@ static Tcl_Obj *PerStateInfo_ObjForState(
 	int i;
 
 #ifdef DEBUG_PSI
-	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_ForStateObj type mismatch");
+	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_ObjForState type mismatch");
 #endif
 
 	pData = PerStateInfo_ForState(tree, typePtr, pInfo, state, match);
@@ -498,7 +502,7 @@ static void PerStateInfo_Undefine(
 	Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
 
 #ifdef DEBUG_PSI
-	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_ForState type mismatch");
+	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_Undefine type mismatch");
 #endif
 
 	for (i = 0; i < pInfo->count; i++)
@@ -637,6 +641,9 @@ static void BitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
 
 PerStateType pstBitmap =
 {
+#ifdef DEBUG_PSI
+	"Bitmap",
+#endif
 	sizeof(PerStateDataBitmap),
 	(PerStateType_FromObjProc) BitmapFromObj,
 	(PerStateType_FreeProc) BitmapFree
@@ -689,6 +696,9 @@ static void BorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
 
 PerStateType pstBorder =
 {
+#ifdef DEBUG_PSI
+	"Border",
+#endif
 	sizeof(PerStateDataBorder),
 	(PerStateType_FromObjProc) BorderFromObj,
 	(PerStateType_FreeProc) BorderFree
@@ -741,6 +751,9 @@ static void ColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
 
 PerStateType pstColor =
 {
+#ifdef DEBUG_PSI
+	"Color",
+#endif
 	sizeof(PerStateDataColor),
 	(PerStateType_FromObjProc) ColorFromObj,
 	(PerStateType_FreeProc) ColorFree
@@ -793,6 +806,9 @@ static void FontFree(TreeCtrl *tree, PerStateDataFont *pFont)
 
 PerStateType pstFont =
 {
+#ifdef DEBUG_PSI
+	"Font",
+#endif
 	sizeof(PerStateDataFont),
 	(PerStateType_FromObjProc) FontFromObj,
 	(PerStateType_FreeProc) FontFree
@@ -854,6 +870,9 @@ static void ImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
 
 PerStateType pstImage =
 {
+#ifdef DEBUG_PSI
+	"Image",
+#endif
 	sizeof(PerStateDataImage),
 	(PerStateType_FromObjProc) ImageFromObj,
 	(PerStateType_FreeProc) ImageFree
@@ -903,6 +922,9 @@ static void ReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
 
 PerStateType pstRelief =
 {
+#ifdef DEBUG_PSI
+	"Relief",
+#endif
 	sizeof(PerStateDataRelief),
 	(PerStateType_FromObjProc) ReliefFromObj,
 	(PerStateType_FreeProc) ReliefFree
@@ -1028,22 +1050,26 @@ static int ConfigBitmap(ElementArgs *args)
 			}
 
 			if (args->config.flagSelf & BITMAP_CONF_BITMAP)
-			{
 				PSTSave(&elemX->bitmap, &savedX.bitmap);
+			if (args->config.flagSelf & BITMAP_CONF_FG)
+				PSTSave(&elemX->fg, &savedX.fg);
+			if (args->config.flagSelf & BITMAP_CONF_BG)
+				PSTSave(&elemX->bg, &savedX.bg);
+
+			if (args->config.flagSelf & BITMAP_CONF_BITMAP)
+			{
 				if (PerStateInfo_FromObj(tree, &pstBitmap, &elemX->bitmap) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & BITMAP_CONF_FG)
 			{
-				PSTSave(&elemX->fg, &savedX.fg);
 				if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fg) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & BITMAP_CONF_BG)
 			{
-				PSTSave(&elemX->bg, &savedX.bg);
 				if (PerStateInfo_FromObj(tree, &pstColor, &elemX->bg) != TCL_OK)
 					continue;
 			}
@@ -1479,15 +1505,18 @@ static int ConfigBorder(ElementArgs *args)
 			}
 
 			if (args->config.flagSelf & BORDER_CONF_BG)
-			{
 				PSTSave(&elemX->border, &savedX.border);
+			if (args->config.flagSelf & BORDER_CONF_RELIEF)
+				PSTSave(&elemX->relief, &savedX.relief);
+
+			if (args->config.flagSelf & BORDER_CONF_BG)
+			{
 				if (PerStateInfo_FromObj(tree, &pstBorder, &elemX->border) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & BORDER_CONF_RELIEF)
 			{
-				PSTSave(&elemX->relief, &savedX.relief);
 				if (PerStateInfo_FromObj(tree, &pstRelief, &elemX->relief) != TCL_OK)
 					continue;
 			}
@@ -1813,8 +1842,10 @@ static int ConfigImage(ElementArgs *args)
 			}
 
 			if (args->config.flagSelf & IMAGE_CONF_IMAGE)
-			{
 				PSTSave(&elemX->image, &savedX.image);
+
+			if (args->config.flagSelf & IMAGE_CONF_IMAGE)
+			{
 				if (PerStateInfo_FromObj(tree, &pstImage, &elemX->image) != TCL_OK)
 					continue;
 			}
@@ -2127,22 +2158,26 @@ static int ConfigRect(ElementArgs *args)
 			}
 
 			if (args->config.flagSelf & RECT_CONF_FILL)
-			{
 				PSTSave(&elemX->fill, &savedX.fill);
+			if (args->config.flagSelf & RECT_CONF_OUTLINE)
+				PSTSave(&elemX->outline, &savedX.outline);
+			if (args->config.flagSelf & RECT_CONF_OPEN)
+				savedX.open = elemX->open;
+
+			if (args->config.flagSelf & RECT_CONF_FILL)
+			{
 				if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fill) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & RECT_CONF_OUTLINE)
 			{
-				PSTSave(&elemX->outline, &savedX.outline);
 				if (PerStateInfo_FromObj(tree, &pstColor, &elemX->outline) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & RECT_CONF_OPEN)
 			{
-				savedX.open = elemX->open;
 				elemX->open = 0;
 				if (elemX->openString != NULL)
 				{
@@ -2965,15 +3000,18 @@ static int ConfigText(ElementArgs *args)
 			}
 
 			if (args->config.flagSelf & TEXT_CONF_FILL)
-			{
 				PSTSave(&elemX->fill, &savedX.fill);
+			if (args->config.flagSelf & TEXT_CONF_FONT)
+				PSTSave(&elemX->font, &savedX.font);
+
+			if (args->config.flagSelf & TEXT_CONF_FILL)
+			{
 				if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fill) != TCL_OK)
 					continue;
 			}
 
 			if (args->config.flagSelf & TEXT_CONF_FONT)
 			{
-				PSTSave(&elemX->font, &savedX.font);
 				if (PerStateInfo_FromObj(tree, &pstFont, &elemX->font) != TCL_OK)
 					continue;
 			}
