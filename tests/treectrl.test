@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.1 2002/12/24 22:15:38 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.2 2002/12/24 23:27:32 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -19,8 +19,29 @@ if {[lsearch [namespace children] ::tcltest] == -1} {
 
 package require Tk
 # This works only, if tktreectrl is already installed:
-# package require treectrl
+#   package require treectrl
+# And we want to test the currently built version anyway.
 # So we better load and source it by hand:
+set thisPlatform $tcl_platform(platform)
+if {![catch {tk windowingsystem} windowingSystem] \
+	&& [string equal aqua $windowingSystem]} {
+    set thisPlatform macosx
+}
+switch -- $thisPlatform {
+    macintosh {
+	load treectrl.shlb
+    }
+    macosx {
+	load build/treectrl.dylib
+    }
+    unix {
+	load [glob libtreectrl*[info sharedlibextension]]
+    }
+    default { # Windows
+	load Build/treectrl[info sharedlibextension]
+    }
+}
+
 load   [file join . libtreectrl1.0.so]
 source [file join library treectrl.tcl]
 source [file join library filelist-bindings.tcl]
@@ -1259,6 +1280,92 @@ test tree-5.42 {item element configure/cget} -body {
 test tree-5.43 {item element configure} -body {
     .t item element configure 8 0 eText -fill
 } -result {-fill {} {} {} yellow}
+
+test tree-5.44 {item style: missing args} -body {
+    .t item style
+} -returnCodes error -result {wrong # args: should be ".t item style command item ?arg ...?"}
+
+test tree-5.45 {item style: invalid command} -body {
+    .t item style foo bar
+} -returnCodes error -result {bad command "foo": must be elements, map, or set}
+
+test tree-5.45 {item style: invalid command} -body {
+    .t item style foo bar
+} -returnCodes error -result {bad command "foo": must be elements, map, or set}
+
+test tree-5.46 {item style elements: missing args} -body {
+    .t item style elements 8
+} -returnCodes error -result {wrong # args: should be ".t item style elements item column"}
+
+test tree-5.47 {item style elements: invalid item} -body {
+    .t item style elements 999
+} -returnCodes error -result {item "999" doesn't exist}
+
+test tree-5.48 {item style elements: item without style} -body {
+    .t item style elements 1 0
+} -returnCodes error -result {item 1 doesn't have column 0}
+
+test tree-5.49 {item style elements} -body {
+    .t item style elements 8 0
+} -result {eText}
+
+test tree-5.50 {item style map: missing args} -body {
+    .t item style map 8
+} -returnCodes error -result {wrong # args: should be ".t item style map item column style map"}
+
+test tree-5.51 {item style map: invalid item} -body {
+    .t item style map 999
+} -returnCodes error -result {item "999" doesn't exist}
+
+test tree-5.52 {item style map: item with unknown style} -body {
+    .t item style map 1 0 noStyle {foo bar}
+} -returnCodes error -result {style "noStyle" doesn't exist}
+
+test tree-5.53 {item style map: odd elemented list} -body {
+    .t item style map 8 0 testStyle foo
+    .t item style elements 8 0
+} -returnCodes error -result {list must contain even number of elements}
+
+test tree-5.54 {item style map: unknown element} -body {
+    .t style create testStyle2
+    .t item style map 8 0 testStyle2 {eText foo}
+    .t item style elements 8 0
+} -returnCodes error -result {element "foo" doesn't exist}
+
+test tree-5.55 {item style map: element not in to-style} -body {
+    .t item style map 8 0 testStyle2 {eText eRect}
+} -returnCodes error -result {style testStyle2 does not use element eRect}
+
+test tree-5.56 {item style map: element not in from-style} -body {
+    # .t style elements testStyle2 {eImage eRect}
+    .t item style map 8 0 testStyle2 {eRect eBorder}
+} -returnCodes error -result {style testStyle does not use element eRect}
+
+test tree-5.57 {item style map: different element types} -body {
+    .t style elements testStyle2 {eImage eRect}
+    .t item style map 8 0 testStyle2 {eBorder eRect}
+} -returnCodes error -result {can't map element type border to rect}
+
+test tree-5.58 {item style set: invalid item} -body {
+    .t item style set foo bar
+} -returnCodes error -result {bad item description "foo"}
+
+test tree-5.59 {item style set: without args returns all styles} -body {
+    .t item style set 2
+} -result {}
+
+test tree-5.60 {item style set: without args returns style} -body {
+    .t item style set 2 0
+} -returnCodes error -result {item 2 doesn't have column 0}
+
+test tree-5.61 {item style set: without args returns style} -body {
+    .t item style set 8 0
+} -result {testStyle}
+
+test tree-5.62 {item style set} -body {
+    .t item style set 8 0 testStyle2
+    .t item style set 8
+} -result {testStyle2}
 
 # cleanup
 image delete emptyImg
