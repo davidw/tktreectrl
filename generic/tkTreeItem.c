@@ -1051,6 +1051,7 @@ static void RemoveFromParentAux(TreeCtrl *tree, Item *self, int *index)
 	else
 		self->depth = 0;
 	self->index = (*index)++;
+	self->indexVis = -1;
 	child = self->firstChild;
 	while (child != NULL)
 	{
