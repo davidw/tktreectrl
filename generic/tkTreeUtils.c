@@ -948,6 +948,7 @@ TreeCtrl_GetPadAmountFromObj(interp, tkwin, padObj, topLeftPtr, bottomRightPtr)
     int padc;			/* Number of element objects in padv. */
     Tcl_Obj **padv;		/* Pointer to the element objects of the
 				 * parsed pad amount value. */
+	int topLeft, bottomRight;
 
     if (Tcl_ListObjGetElements(interp, padObj, &padc, &padv) != TCL_OK) {
 	return TCL_ERROR;
@@ -968,18 +969,20 @@ TreeCtrl_GetPadAmountFromObj(interp, tkwin, padObj, topLeftPtr, bottomRightPtr)
 	}
 	return TCL_ERROR;
     }
-    if ((Tk_GetPixelsFromObj(interp, tkwin, padv[0], topLeftPtr)
-	     != TCL_OK) || (*topLeftPtr < 0)) {
+    if ((Tk_GetPixelsFromObj(interp, tkwin, padv[0], &topLeft)
+	     != TCL_OK) || (topLeft < 0)) {
 	goto error;
     }
     if (padc == 2) {
-	if ((Tk_GetPixelsFromObj(interp, tkwin, padv[1], bottomRightPtr)
-		!= TCL_OK) || (*bottomRightPtr < 0)) {
+	if ((Tk_GetPixelsFromObj(interp, tkwin, padv[1], &bottomRight)
+		!= TCL_OK) || (bottomRight < 0)) {
 	    goto error;
 	}
     } else {
-	*bottomRightPtr = *topLeftPtr;
+	bottomRight = topLeft;
     }
+    (*topLeftPtr) = topLeft;
+    (*bottomRightPtr) = bottomRight;
     return TCL_OK;
 }
 
