@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.7 2004/07/30 20:54:46 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.8 2004/10/12 03:49:59 treectrl Exp $
  */
 
 /*
@@ -934,7 +934,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 		{
 			if (debug_bindings)
 				dbwin("QE_BindEvent: Skipping less-specific event type=%d object='%s'\n",
-					valuePtr->type, valuePtr->object);
+					valuePtr->type, (char *) valuePtr->object);
 
 			valuePtr->specific = 0;
 			continue;
@@ -991,6 +991,15 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 
 		/* Separate each script by '\0' */
 		Tcl_DStringAppend(&scripts, "", 1);
+
+		Tcl_DStringAppend(&scripts, eiPtr->name, -1);
+		Tcl_DStringAppend(&scripts, "", 1);
+
+		Tcl_DStringAppend(&scripts, (valuePtr->detail && dPtr) ? dPtr->name : "", -1);
+		Tcl_DStringAppend(&scripts, "", 1);
+
+		Tcl_DStringAppend(&scripts, valuePtr->object, -1);
+		Tcl_DStringAppend(&scripts, "", 1);
 	}
 
 	/* Nothing to do. No need to call Tcl_DStringFree(&scripts) */
@@ -1005,8 +1014,8 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	Tcl_DStringInit(&savedResult);
     Tcl_DStringGetResult(bindPtr->interp, &savedResult);
 
-    p = Tcl_DStringValue(&scripts);
-    end = p + Tcl_DStringLength(&scripts);
+	p = Tcl_DStringValue(&scripts);
+	end = p + Tcl_DStringLength(&scripts);
 
 	while (p < end)
 	{
@@ -1016,30 +1025,41 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 
 		if (code != TCL_OK)
 		{
-#if 0
 			if (code == TCL_CONTINUE)
 			{
 				/* Nothing */
 			}
 			else if (code == TCL_BREAK)
 			{
-				break;
+				/* Nothing */
 			}
 			else
-#endif
 			{
-				Tcl_AddErrorInfo(bindPtr->interp,
-					"\n    (command bound to quasi-event)");
+				char buf[256];
+				char *eventName = p;
+				char *detailName = p + strlen(p) + 1;
+				char *object = detailName + strlen(detailName) + 1;
+
+				(void) sprintf(buf, "\n    (<%s%s%s> binding on %s)",
+					eventName, detailName[0] ? "-" : "", detailName, object);
+				Tcl_AddErrorInfo(bindPtr->interp, buf);
 				Tcl_BackgroundError(bindPtr->interp);
-				break;
 			}
 		}
+
+		/* Skip event\0detail\0object\0 */
+		p += strlen(p);
+		p++;
+		p += strlen(p);
+		p++;
+		p += strlen(p);
+		p++;
 	}
     
 	Tcl_DStringFree(&scripts);
 
 	/* Restore the interpreter result */
-    Tcl_DStringResult(bindPtr->interp, &savedResult);
+	Tcl_DStringResult(bindPtr->interp, &savedResult);
 }
 
 #else /* not 1 */
@@ -1311,7 +1331,7 @@ static int FindSequence(BindingTable *bindPtr, ClientData object,
 	int isNew;
 
 	if (debug_bindings)
-		dbwin("FindSequence object='%s' pattern='%s'...\n", object,
+		dbwin("FindSequence object='%s' pattern='%s'...\n", (char *) object,
 		eventString);
 
 	if (created) (*created) = 0;
@@ -1331,8 +1351,8 @@ static int FindSequence(BindingTable *bindPtr, ClientData object,
 		if (isNew)
 		{
 			if (debug_bindings)
-				dbwin("New BindValue for '%s' type=%d detail=%d\n", object,
-					pats.type, pats.detail);
+				dbwin("New BindValue for '%s' type=%d detail=%d\n",
+					(char *) object, pats.type, pats.detail);
 
 			valuePtr = (BindValue *) Tcl_Alloc(sizeof(BindValue));
 			valuePtr->type = pats.type;
