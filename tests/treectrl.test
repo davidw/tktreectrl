@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.2 2002/12/24 23:27:32 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.3 2002/12/26 12:30:57 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -1103,269 +1103,365 @@ test tree-4.33 {style layout: option -detach} -body {
     .t style layout testStyle eText -detach
 } -result {1}
 
-test tree-5.1 {item: missing command} -body {
+test tree-5.1 {state: missing args} -body {
+    .t state
+} -returnCodes error -result {wrong # args: should be ".t state command ?arg arg...?"}
+
+test tree-5.2 {state: invalid command} -body {
+    .t state foo
+} -returnCodes error -result {bad command "foo": must be define, undefine, or names}
+
+test tree-5.3 {state names: too many args} -body {
+    # This should generate an error?
+    .t state names foo bar
+} -result {}
+
+test tree-5.4 {state names: no states defined yet} -body {
+    .t state names
+} -result {}
+
+test tree-5.5 {state define: missing args} -body {
+    .t state define
+} -returnCodes error -result {wrong # args: should be ".t state define stateName"}
+
+test tree-5.6 {state define: overflow check} -body {
+    set msg ""
+    set ret 0
+    for {set ix 0} {$ix < 1000} {incr ix} {
+	set ret [catch {.t state define state$ix} msg]
+	if {$ret} {break}
+    }
+    list $ret $ix $msg
+} -result {1 27 {cannot define any more states}}
+
+test tree-5.7 {state names} -body {
+    .t state names
+} -result {state0 state1 state2 state3 state4 state5 state6 state7 state8 state9 state10 state11 state12 state13 state14 state15 state16 state17 state18 state19 state20 state21 state22 state23 state24 state25 state26}
+
+test tree-5.8 {state undefine: missing args} -body {
+    .t state undefine
+} -returnCodes error -result {wrong # args: should be ".t state undefine stateName"}
+
+test tree-5.9 {state undefine: too many args} -body {
+    # too bad that this doesn't work...
+    eval {.t state undefine} [lrange [.t state names] 1 end]
+} -returnCodes error -result {wrong # args: should be ".t state undefine stateName"}
+
+test tree-5.10 {state undefine: too many args} -body {
+    foreach state [lrange [.t state names] 1 end] {
+	.t state undefine $state
+    }
+    .t state names
+} -result {state0}
+
+test tree-6.1 {item: missing command} -body {
     .t item
 } -returnCodes error -result {wrong # args: should be ".t item command ?arg arg...?"}
 
-test tree-5.2 {item: invalid command} -body {
+test tree-6.2 {item: invalid command} -body {
     .t item foo
 } -returnCodes error -result {bad command "foo": must be ancestors, children, create, delete, firstchild, lastchild, nextsibling, numchildren, parent, prevsibling, remove, bbox, complex, dump, element, hasbutton, index, isancestor, isopen, rnc, sort, state, style, text, or visible}
 
-test tree-5.3 {item create: too many args} -body {
+test tree-6.3 {item create: too many args} -body {
     .t item create foo
 } -returnCodes error -result {wrong # args: should be ".t item create"}
 
-test tree-5.4 {item create} -body {
+test tree-6.4 {item create} -body {
     list [.t item create] [.t item create] [.t item create]
 } -result {9 10 11}
 
-test tree-5.5 {item delete: missing itemDesc} -body {
+test tree-6.5 {item delete: missing itemDesc} -body {
     .t item delete
 } -returnCodes error -result {wrong # args: should be ".t item delete first ?last?"}
 
-test tree-5.6 {item delete: unknown item} -body {
+test tree-6.6 {item delete: unknown item} -body {
     .t item delete 999
 } -returnCodes error -result {item "999" doesn't exist}
 
-test tree-5.7 {item delete: one item} -body {
+test tree-6.7 {item delete: one item} -body {
     .t item delete 9
 } -result {}
 
-test tree-5.8 {item delete: item range without common ancestor} -body {
+test tree-6.8 {item delete: item range without common ancestor} -body {
     .t item delete 10 11
 } -returnCodes error -result {item 10 and item 11 don't share a common ancestor}
 
-test tree-5.9 {item delete: item range without common ancestor} -body {
+test tree-6.9 {item delete: item range without common ancestor} -body {
     .t item lastchild 8 10
     .t item lastchild 8 11
     .t item delete 10 11
 } -result {}
 
-test tree-5.10 {item ancestors: no ancestor yet} -body {
+test tree-6.10 {item ancestors: no ancestor yet} -body {
     .t item create
     .t item ancestors 12
 } -result {}
 
-test tree-5.11 {item ancestors} -body {
+test tree-6.11 {item ancestors} -body {
     .t item lastchild 7 12
     .t item ancestors 12
 } -result {7 5 0}
 
-test tree-5.12 {item children: no children} -body {
+test tree-6.12 {item children: no children} -body {
     .t item children 12
 } -result {}
 
-test tree-5.13 {item children} -body {
+test tree-6.13 {item children} -body {
     .t item children 0
 } -result {1 5 8}
 
-test tree-5.14 {item firstchild: missing itemDesc} -body {
+test tree-6.14 {item firstchild: missing itemDesc} -body {
     .t item firstchild
 } -returnCodes error -result {wrong # args: should be ".t item firstchild item ?newFirstChild?"}
 
-test tree-5.15 {item firstchild: no children} -body {
+test tree-6.15 {item firstchild: no children} -body {
     .t item firstchild 12
 } -result {}
 
-test tree-5.16 {item firstchild} -body {
+test tree-6.16 {item firstchild} -body {
     .t item firstchild 1
 } -result {2}
 
-test tree-5.17 {item lastchild: no children} -body {
+test tree-6.17 {item lastchild: no children} -body {
     .t item lastchild 1
 } -result {3}
 
-test tree-5.18 {item nextsibling: no sibling} -body {
+test tree-6.18 {item nextsibling: no sibling} -body {
     .t item nextsibling 12
 } -result {}
 
-test tree-5.19 {item nextsibling: no sibling} -body {
+test tree-6.19 {item nextsibling: no sibling} -body {
     .t item nextsibling 2
 } -result {3}
 
-test tree-5.20 {item numchildren: no children} -body {
+test tree-6.20 {item numchildren: no children} -body {
     .t item numchildren 12
 } -result {0}
 
-test tree-5.21 {item numchildren} -body {
+test tree-6.21 {item numchildren} -body {
     .t item numchildren 1
 } -result {2}
 
-test tree-5.22 {item parent: no parent} -body {
+test tree-6.22 {item parent: no parent} -body {
     .t item parent root
 } -result {}
 
-test tree-5.23 {item parent} -body {
+test tree-6.23 {item parent} -body {
     .t item parent "root firstchild"
 } -result {0}
 
-test tree-5.24 {item prevsibling: missing arg} -body {
+test tree-6.24 {item prevsibling: missing arg} -body {
     .t item prevsibling
 } -returnCodes error -result {wrong # args: should be ".t item prevsibling item ?newPrevSibling?"}
 
-test tree-5.25 {item prevsibling: no prevsibling} -body {
+test tree-6.25 {item prevsibling: no prevsibling} -body {
     .t item prevsibling 1
 } -result {}
 
-test tree-5.26 {item prevsibling} -body {
+test tree-6.26 {item prevsibling} -body {
     .t item prevsibling 3
 } -result {2}
 
-test tree-5.27 {item remove: invalid item} -body {
+test tree-6.27 {item remove: invalid item} -body {
     .t item remove 999
 } -returnCodes error -result {item "999" doesn't exist}
 
-test tree-5.28 {item remove} -body {
+test tree-6.28 {item remove} -body {
     .t item remove 12
 } -result {}
 
-test tree-5.29 {item complex: missing args} -body {
+test tree-6.29 {item complex: missing args} -body {
     .t item complex 8
 } -returnCodes error -result {wrong # args: should be ".t item complex item list..."}
 
-test tree-5.30 {item complex: only allowed if column style is defined} -body {
+test tree-6.30 {item complex: only allowed if column style is defined} -body {
     .t item complex 8 {{e1 -text Hallo}}
 } -returnCodes error -result {item 8 doesn't have column 0}
 
-test tree-5.31 {item complex: invalid list} -body {
+test tree-6.31 {item complex: invalid list} -body {
     .t item style set 8 0 testStyle
     .t item complex 8 {{e1 -text}}
 } -returnCodes error -result {wrong # args: should be "element option value..."}
 
-test tree-5.32 {item complex: element name not defined in style} -body {
+test tree-6.32 {item complex: element name not defined in style} -body {
     .t item complex 8 {{e1 -text Hallo}}
 } -returnCodes error -result {element "e1" doesn't exist}
 
-test tree-5.33 {item complex: option not known in element} -body {
+test tree-6.33 {item complex: option not known in element} -body {
     .t item complex 8 {{eText -bitmap questhead}}
 } -returnCodes error -result {unknown option "-bitmap"}
 
-test tree-5.34 {item complex: invalid option value in element} -body {
+test tree-6.34 {item complex: invalid option value in element} -body {
     .t item complex 8 {{eText -fill foo}}
 } -returnCodes error -result {unknown color name "foo"}
 
-test tree-5.35 {item element: missing command} -body {
+test tree-6.35 {item element: missing command} -body {
     .t item element
 } -returnCodes error -result {wrong # args: should be ".t item element command item column element ?arg ...?"}
 
-test tree-5.36 {item element: invalid command} -body {
+test tree-6.36 {item element: invalid command} -body {
     .t item element foo 8 0 eText
 } -returnCodes error -result {bad command "foo": must be actual, cget, or configure}
 
-test tree-5.37 {item element actual: missing arg} -body {
+test tree-6.37 {item element actual: missing arg} -body {
     .t item element actual 8 0 eText
 } -returnCodes error -result {wrong # args: should be ".t item element actual item column element option"}
 
-test tree-5.38 {item element actual} -body {
+test tree-6.38 {item element actual} -body {
     .t item element actual 8 0 eText -fill
 } -result {red}
 
-test tree-5.39 {item element cget: missing arg} -body {
+test tree-6.39 {item element cget: missing arg} -body {
     .t item element cget 8 0 eText
 } -returnCodes error -result {wrong # args: should be ".t item element cget item column element option"}
 
-test tree-5.40 {item element cget} -body {
+test tree-6.40 {item element cget} -body {
     .t item element cget 8 0 eText -fill
 } -result {}
 
-test tree-5.41 {item element configure} -body {
+test tree-6.41 {item element configure} -body {
     .t item element configure 8 0 eText
 } -result {{-data {} {} {} {}} {-datatype {} {} {} {}} {-format {} {} {} {}} {-fill {} {} {} {}} {-font {} {} {} {}} {-justify {} {} {} {}} {-lines {} {} {} {}} {-text {} {} {} {}} {-width {} {} {} {}} {-wrap {} {} {} {}}}
 
-test tree-5.42 {item element configure/cget} -body {
+test tree-6.42 {item element configure/cget} -body {
     .t item element configure 8 0 eText -fill yellow
     .t item element cget 8 0 eText -fill
 } -result {yellow}
 
-test tree-5.43 {item element configure} -body {
+test tree-6.43 {item element configure} -body {
     .t item element configure 8 0 eText -fill
 } -result {-fill {} {} {} yellow}
 
-test tree-5.44 {item style: missing args} -body {
+test tree-6.44 {item style: missing args} -body {
     .t item style
 } -returnCodes error -result {wrong # args: should be ".t item style command item ?arg ...?"}
 
-test tree-5.45 {item style: invalid command} -body {
+test tree-6.45 {item style: invalid command} -body {
     .t item style foo bar
 } -returnCodes error -result {bad command "foo": must be elements, map, or set}
 
-test tree-5.45 {item style: invalid command} -body {
+test tree-6.45 {item style: invalid command} -body {
     .t item style foo bar
 } -returnCodes error -result {bad command "foo": must be elements, map, or set}
 
-test tree-5.46 {item style elements: missing args} -body {
+test tree-6.46 {item style elements: missing args} -body {
     .t item style elements 8
 } -returnCodes error -result {wrong # args: should be ".t item style elements item column"}
 
-test tree-5.47 {item style elements: invalid item} -body {
+test tree-6.47 {item style elements: invalid item} -body {
     .t item style elements 999
 } -returnCodes error -result {item "999" doesn't exist}
 
-test tree-5.48 {item style elements: item without style} -body {
+test tree-6.48 {item style elements: item without style} -body {
     .t item style elements 1 0
 } -returnCodes error -result {item 1 doesn't have column 0}
 
-test tree-5.49 {item style elements} -body {
+test tree-6.49 {item style elements} -body {
     .t item style elements 8 0
 } -result {eText}
 
-test tree-5.50 {item style map: missing args} -body {
+test tree-6.50 {item style map: missing args} -body {
     .t item style map 8
 } -returnCodes error -result {wrong # args: should be ".t item style map item column style map"}
 
-test tree-5.51 {item style map: invalid item} -body {
+test tree-6.51 {item style map: invalid item} -body {
     .t item style map 999
 } -returnCodes error -result {item "999" doesn't exist}
 
-test tree-5.52 {item style map: item with unknown style} -body {
+test tree-6.52 {item style map: item with unknown style} -body {
     .t item style map 1 0 noStyle {foo bar}
 } -returnCodes error -result {style "noStyle" doesn't exist}
 
-test tree-5.53 {item style map: odd elemented list} -body {
+test tree-6.53 {item style map: odd elemented list} -body {
     .t item style map 8 0 testStyle foo
     .t item style elements 8 0
 } -returnCodes error -result {list must contain even number of elements}
 
-test tree-5.54 {item style map: unknown element} -body {
+test tree-6.54 {item style map: unknown element} -body {
     .t style create testStyle2
     .t item style map 8 0 testStyle2 {eText foo}
     .t item style elements 8 0
 } -returnCodes error -result {element "foo" doesn't exist}
 
-test tree-5.55 {item style map: element not in to-style} -body {
+test tree-6.55 {item style map: element not in to-style} -body {
     .t item style map 8 0 testStyle2 {eText eRect}
 } -returnCodes error -result {style testStyle2 does not use element eRect}
 
-test tree-5.56 {item style map: element not in from-style} -body {
+test tree-6.56 {item style map: element not in from-style} -body {
     # .t style elements testStyle2 {eImage eRect}
     .t item style map 8 0 testStyle2 {eRect eBorder}
 } -returnCodes error -result {style testStyle does not use element eRect}
 
-test tree-5.57 {item style map: different element types} -body {
+test tree-6.57 {item style map: different element types} -body {
     .t style elements testStyle2 {eImage eRect}
     .t item style map 8 0 testStyle2 {eBorder eRect}
 } -returnCodes error -result {can't map element type border to rect}
 
-test tree-5.58 {item style set: invalid item} -body {
+test tree-6.58 {item style set: invalid item} -body {
     .t item style set foo bar
 } -returnCodes error -result {bad item description "foo"}
 
-test tree-5.59 {item style set: without args returns all styles} -body {
+test tree-6.59 {item style set: without args returns all styles} -body {
     .t item style set 2
 } -result {}
 
-test tree-5.60 {item style set: without args returns style} -body {
+test tree-6.60 {item style set: without args returns style} -body {
     .t item style set 2 0
 } -returnCodes error -result {item 2 doesn't have column 0}
 
-test tree-5.61 {item style set: without args returns style} -body {
+test tree-6.61 {item style set: without args returns style} -body {
     .t item style set 8 0
 } -result {testStyle}
 
-test tree-5.62 {item style set} -body {
+test tree-6.62 {item style set} -body {
     .t item style set 8 0 testStyle2
     .t item style set 8
 } -result {testStyle2}
+
+test tree-6.63 {item state: missing args} -body {
+    .t item state
+} -returnCodes error -result {wrong # args: should be ".t item state item ?state ...?"}
+
+test tree-6.64 {item state: unknown item} -body {
+    .t item state 999
+} -returnCodes error -result {item "999" doesn't exist}
+
+test tree-6.65 {item state: list all set states} -body {
+    .t item state 8
+} -result {open enabled}
+
+test tree-6.66 {item state: try to reset predefined state} -body {
+    .t item state 8 !open
+} -returnCodes error -result {cannot change state "!open"}
+
+test tree-6.67 {item state: unknown states} -body {
+    .t item state 8 foo bar
+} -returnCodes error -result {cannot change state "foo"}
+
+test tree-6.68 {item state: switch on states} -body {
+    .t item state 8 state0
+    .t item state 8
+} -result {open enabled state0}
+
+test tree-6.69 {item state: switch off states} -body {
+    .t item state 8 !state0
+    .t item state 8
+} -result {open enabled}
+
+test tree-6.70 {item state: reset predefined state} -body {
+    .t collapse 8
+    .t item state 8
+} -result {enabled}
+
+test tree-6.71 {item state: reset predefined state} -body {
+    .t expand 8
+    .t item state 8
+} -result {open enabled}
+
+test tree-6.72 {item state: reset predefined state} -body {
+    .t toggle 8
+    .t item state 8
+} -result {enabled}
 
 # cleanup
 image delete emptyImg
