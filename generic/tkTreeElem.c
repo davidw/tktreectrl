@@ -330,8 +330,9 @@ static void PerStateInfo_Free(
 	if (pInfo->data == NULL)
 		return;
 #ifdef DEBUG_PSI
-	if (pInfo->type != typePtr) panic("PerStateInfo_Free type mismatch: got %s expected %s",
-		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+	if (pInfo->type != typePtr)
+		panic("PerStateInfo_Free type mismatch: got %s expected %s",
+			pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
 #endif
 	for (i = 0; i < pInfo->count; i++)
 	{
@@ -429,7 +430,9 @@ static PerStateData *PerStateInfo_ForState(
 	int i;
 
 #ifdef DEBUG_PSI
-	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_ForState type mismatch");
+	if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+		panic("PerStateInfo_ForState type mismatch: got %s expected %s",
+			pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
 #endif
 
 	for (i = 0; i < pInfo->count; i++)
@@ -477,7 +480,9 @@ static Tcl_Obj *PerStateInfo_ObjForState(
 	int i;
 
 #ifdef DEBUG_PSI
-	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_ObjForState type mismatch");
+	if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+		panic("PerStateInfo_ObjForState type mismatch: got %s expected %s",
+			pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
 #endif
 
 	pData = PerStateInfo_ForState(tree, typePtr, pInfo, state, match);
@@ -502,7 +507,9 @@ static void PerStateInfo_Undefine(
 	Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
 
 #ifdef DEBUG_PSI
-	if ((pInfo->data != NULL) && (pInfo->type != typePtr)) panic("PerStateInfo_Undefine type mismatch");
+	if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+		panic("PerStateInfo_Undefine type mismatch: got %s expected %s",
+			pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
 #endif
 
 	for (i = 0; i < pInfo->count; i++)
@@ -1322,8 +1329,8 @@ static void UndefProcBitmap(ElementArgs *args)
 	TreeCtrl *tree = args->tree;
 	ElementBitmap *elemX = (ElementBitmap *) args->elem;
 
-	PerStateInfo_Undefine(tree, &pstBitmap, &elemX->fg, args->state);
-	PerStateInfo_Undefine(tree, &pstBitmap, &elemX->bg, args->state);
+	PerStateInfo_Undefine(tree, &pstColor, &elemX->fg, args->state);
+	PerStateInfo_Undefine(tree, &pstColor, &elemX->bg, args->state);
 	PerStateInfo_Undefine(tree, &pstBitmap, &elemX->bitmap, args->state);
 }
 
