@@ -1,3 +1,11 @@
+2003-12-02  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* library/filelist-bindings.tcl: whitespace police
+	added check for Priv(buttonMode) before use in bindings that may
+	not get an associated button-down event
+
+	* library/treectrl.tcl: whitespace police
+
 2003-11-26  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.c (LoupeCmd): remove extra interp arg to
