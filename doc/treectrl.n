@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.1 2002/12/24 22:18:33 krischan Exp $
+'\" $Id: treectrl.n,v 1.2 2002/12/24 23:29:13 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -310,10 +310,28 @@ Returns a list containing the numerical indexes of all ancestors
 of the item specified by \fIitemDesc\fR from its parent upto the
 root item.
 .TP
+\fIpathName \fBitem bbox \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
+Returns a list with four elements giving an approximate bounding box
+for the item described by \fIitemDesc\fR.
+If no further argument is specified, the bbox spans the area of the item
+over all columns. If a \fIcolumn\fR is specified, only the area of the item
+in this column is considered, if an additional \fIelement\fR is specified,
+the area of this \fIelement\fR in \fIcolumn\fR of the specified item is
+returned.
+.TP
 \fIpathName \fBitem children \fIitemDesc\fR
 Returns a list containing the numerical indexes of all children
 of the item specified by \fIitemDesc\fR in the correct order from
 the first child to the last child.
+.TP
+\fIpathName \fBitem complex \fIitemDesc list\fR ...
+Modifies the elements of the item described by \fIitemDesc\fR.
+For every column of the treectrl there may be specified one \fIlist\fR,
+which in turn is an odd elemented list with at least three elements:
+the name of an element followed by \fIoption\-value\fR pairs.
+Every \fIoption\fR must be known by the element's type (see ELEMENTS below).
+The corresponding \fIvalue\fR will overwrite the value of the element for this
+one column in this item.
 .TP
 \fIpathName \fBitem create\fR
 Creates a new item and returns its numerical indexes.
@@ -328,63 +346,6 @@ the item described by \fIfirst\fR is delete.
 If both \fIfirst\fR and \fIlast\fR are specified,
 the must decribe items with the same root item;
 then the range of items between \fIfirst\fR and \fIlast\fR is deleted.
-.TP
-\fIpathName \fBitem firstchild \fIparent\fR ?\fIchild\fR?
-If \fIchild\fR is not specified, returns the numerical index of the first
-child of the item described by \fIparent\fR.
-If \fIchild\fR is specified, it must described an item
-that is not an ancestor of \fIparent\fR.
-Then it will become the new first child of \fIparent\fR.
-.TP
-\fIpathName \fBitem lastchild \fIparent\fR ?\fIchild\fR?
-If \fIchild\fR is not specified, returns the numerical index of the last
-child of the item described by \fIparent\fR.
-If \fIchild\fR is specified, it must described an item
-that is not an ancestor of \fIparent\fR.
-Then it will become the new last child of \fIparent\fR.
-.TP
-\fIpathName \fBitem nextsibling \fIsibling\fR ?\fInext\fR?
-If \fInext\fR is not specified, returns the numerical index of the next
-sibling of the item described by \fIsibling\fR.
-If \fInext\fR is specified, it must described an item
-that is not an ancestor of \fIsibling\fR.
-Then it will become the new next sibling of \fIsibling\fR.
-.TP
-\fIpathName \fBitem numchildren \fIitemDesc\fR
-Returns the number of children of the item described by \fIitemDesc\fR.
-.TP
-\fIpathName \fBitem parent \fIitemDesc\fR
-Returns the numerical index of the parent of the item
-described by \fIitemDesc\fR.
-.TP
-\fIpathName \fBitem prevsibling \fIsibling\fR ?\fIprev\fR?
-If \fIprev\fR is not specified, returns the numerical index of the previous
-sibling of the item described by \fIsibling\fR.
-If \fIprev\fR is specified, it must described an item
-that is not an ancestor of \fIsibling\fR.
-Then it will become the new previous sibling of \fIsibling\fR.
-.TP
-\fIpathName \fBitem remove \fIitemDesc\fR
-Removes the item described by \fIitemDesc\fR
-from the children list of its father, so that it will become an orphan.
-.TP
-\fIpathName \fBitem bbox \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
-Returns a list with four elements giving an approximate bounding box
-for the item described by \fIitemDesc\fR.
-If no further argument is specified, the bbox spans the area of the item
-over all columns. If a \fIcolumn\fR is specified, only the area of the item
-in this column is considered, if an additional \fIelement\fR is specified,
-the area of this \fIelement\fR in \fIcolumn\fR of the specified item is
-returned.
-.TP
-\fIpathName \fBitem complex \fIitemDesc list\fR ...
-Modifies the elements of the item described by \fIitemDesc\fR.
-For every column of the treectrl there may be specified one \fIlist\fR,
-which in turn is an odd elemented list with at least three elements:
-the name of an element followed by \fIoption\-value\fR pairs.
-Every \fIoption\fR must be known by the element's type (see ELEMENTS below).
-The corresponding \fIvalue\fR will overwrite the value of the element for this
-one column in this item.
 .TP
 \fIpathName \fBitem dump \fIitemDesc\fR
 Returns a list with six elements in the form
@@ -431,6 +392,13 @@ modifies the given option(s) to have the given value(s) in the
 in this case the command returns an empty string.
 .RE
 .TP
+\fIpathName \fBitem firstchild \fIparent\fR ?\fIchild\fR?
+If \fIchild\fR is not specified, returns the numerical index of the first
+child of the item described by \fIparent\fR.
+If \fIchild\fR is specified, it must described an item
+that is not an ancestor of \fIparent\fR.
+Then it will become the new first child of \fIparent\fR.
+.TP
 \fIpathName \fBitem hasbutton \fIitemDesc\fR ?\fIboolean\fR?
 If \fIboolean\fR is not specified, returns 1 if to the left of
 the item described by \fIitemDesc\fR a button should be drawn, 0 otherwise.
@@ -451,6 +419,38 @@ parent of the item decribed by \fIdescendant\fR, 0 otherwise.
 \fIpathName \fBitem isopen \fIitemDesc\fR
 Returns 1, if the item described by \fIitemDesc\fR has cuurently the
 state \fBopen\fR switched on, 0 otherwise.
+.TP
+\fIpathName \fBitem lastchild \fIparent\fR ?\fIchild\fR?
+If \fIchild\fR is not specified, returns the numerical index of the last
+child of the item described by \fIparent\fR.
+If \fIchild\fR is specified, it must described an item
+that is not an ancestor of \fIparent\fR.
+Then it will become the new last child of \fIparent\fR.
+.TP
+\fIpathName \fBitem nextsibling \fIsibling\fR ?\fInext\fR?
+If \fInext\fR is not specified, returns the numerical index of the next
+sibling of the item described by \fIsibling\fR.
+If \fInext\fR is specified, it must described an item
+that is not an ancestor of \fIsibling\fR.
+Then it will become the new next sibling of \fIsibling\fR.
+.TP
+\fIpathName \fBitem numchildren \fIitemDesc\fR
+Returns the number of children of the item described by \fIitemDesc\fR.
+.TP
+\fIpathName \fBitem parent \fIitemDesc\fR
+Returns the numerical index of the parent of the item
+described by \fIitemDesc\fR.
+.TP
+\fIpathName \fBitem prevsibling \fIsibling\fR ?\fIprev\fR?
+If \fIprev\fR is not specified, returns the numerical index of the previous
+sibling of the item described by \fIsibling\fR.
+If \fIprev\fR is specified, it must described an item
+that is not an ancestor of \fIsibling\fR.
+Then it will become the new previous sibling of \fIsibling\fR.
+.TP
+\fIpathName \fBitem remove \fIitemDesc\fR
+Removes the item described by \fIitemDesc\fR
+from the children list of its father, so that it will become an orphan.
 .TP
 \fIpathName \fBitem rnc \fIitemDesc\fR
 Returns a list of two integers, which corresponds to the row and column
