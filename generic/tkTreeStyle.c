@@ -2179,7 +2179,7 @@ static void Style_Deleted(TreeCtrl *tree, Style *masterStyle)
 		while (column != NULL)
 		{
 			Style *style = (Style *) TreeItemColumn_GetStyle(tree, column);
-			if ((style != NULL) && ((style == masterStyle) || (style->master == masterStyle)))
+			if ((style != NULL) && (style->master == masterStyle))
 			{
 				Tree_InvalidateColumnWidth(tree, columnIndex);
 				TreeItemColumn_ForgetStyle(tree, column);
@@ -2211,6 +2211,43 @@ static void Element_Changed(TreeCtrl *tree, Element *masterElem, int flagM, int 
 			if (eLink->elem == masterElem)
 			{
 				Style_ElemChanged(tree, masterStyle, masterElem, flagM, flagT, csM);
+				break;
+			}
+		}
+		hPtr = Tcl_NextHashEntry(&search);
+	}
+}
+
+static void Element_Deleted(TreeCtrl *tree, Element *masterElem)
+{
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+	Style *masterStyle;
+	ElementLink *eLink;
+	int i, j;
+
+	hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
+	while (hPtr != NULL)
+	{
+		masterStyle = (Style *) Tcl_GetHashValue(hPtr);
+		for (i = 0; i < masterStyle->numElements; i++)
+		{
+			eLink = &masterStyle->elements[i];
+			if (eLink->elem == masterElem)
+			{
+				Element *elemList[20];
+				int elemMap[20];
+
+				for (j = 0; j < masterStyle->numElements; j++)
+				{
+					if (j == i)
+						continue;
+					elemList[(j < i) ? j : (j - 1)] =
+						masterStyle->elements[j].elem;
+					elemMap[(j < i) ? j : (j - 1)] = j;
+				}
+				Style_ChangeElements(tree, masterStyle,
+					masterStyle->numElements - 1, elemList, elemMap);
 				break;
 			}
 		}
@@ -2567,7 +2604,7 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			{
 				if (Element_FromObj(tree, objv[i], &elem) != TCL_OK)
 					return TCL_ERROR;
-				/* TODO: Mass changes to any Style using this Element */
+				Element_Deleted(tree, elem);
 				Element_FreeResources(tree, elem);
 			}
 			break;
