@@ -2708,6 +2708,154 @@ done:
 	return result;
 }
 
+static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	TreeCtrl *tree = (TreeCtrl *) clientData;
+	static CONST char *commandNames[] = { "get", "set", (char *) NULL };
+	enum { COMMAND_GET, COMMAND_SET };
+	int index;
+	Item *item;
+
+	if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
+		&index) != TCL_OK)
+		return TCL_ERROR;
+
+	switch (index)
+	{
+		/* T item state get I ?state? */
+		case COMMAND_GET:
+		{
+			Tcl_Obj *listObj;
+			int i, states[3];
+
+			if (objc > 6)
+			{
+				Tcl_WrongNumArgs(interp, 5, objv, "?state?");
+				return TCL_ERROR;
+			}
+			if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0) != TCL_OK)
+				return TCL_ERROR;
+			if (objc == 6)
+			{
+				states[STATE_OP_ON] = 0;
+				if (StateFromObj(tree, objv[5], states, NULL,
+					SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
+					return TCL_ERROR;
+				Tcl_SetObjResult(interp,
+					Tcl_NewBooleanObj((item->state & states[STATE_OP_ON]) != 0));
+				break;
+			}
+			listObj = Tcl_NewListObj(0, NULL);
+			for (i = 0; i < 32; i++)
+			{
+				if (tree->stateNames[i] == NULL)
+					continue;
+				if (item->state & (1L << i))
+				{
+					Tcl_ListObjAppendElement(interp, listObj,
+						Tcl_NewStringObj(tree->stateNames[i], -1));
+				}
+			}
+			Tcl_SetObjResult(interp, listObj);
+			break;
+		}
+
+		/* T item state set I ?I? {state ...} */
+		case COMMAND_SET:
+		{
+			TreeItem item, itemFirst, itemLast;
+			int i, states[3], stateOn, stateOff;
+			int listObjc;
+			Tcl_Obj **listObjv;
+
+			if (objc < 6 || objc > 7)
+			{
+				Tcl_WrongNumArgs(interp, 5, objv, "?last? stateList");
+				return TCL_ERROR;
+			}
+			if (TreeItem_FromObj(tree, objv[4], &itemFirst, IFO_ALLOK) != TCL_OK)
+				return TCL_ERROR;
+			if (objc == 6)
+			{
+				itemLast = itemFirst;
+			}
+			if (objc == 7)
+			{
+				if (TreeItem_FromObj(tree, objv[5], &itemLast, IFO_ALLOK) != TCL_OK)
+					return TCL_ERROR;
+			}
+			states[0] = states[1] = states[2] = 0;
+			if (Tcl_ListObjGetElements(interp, objv[objc - 1],
+				&listObjc, &listObjv) != TCL_OK)
+				return TCL_ERROR;
+			if (listObjc == 0)
+				break;
+			for (i = 0; i < listObjc; i++)
+			{
+				if (StateFromObj(tree, listObjv[i], states, NULL,
+					SFO_NOT_STATIC) != TCL_OK)
+					return TCL_ERROR;
+			}
+			if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL))
+			{
+				Tcl_HashEntry *hPtr;
+				Tcl_HashSearch search;
+
+				hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+				while (hPtr != NULL)
+				{
+					item = (TreeItem) Tcl_GetHashValue(hPtr);
+					stateOn = states[STATE_OP_ON];
+					stateOff = states[STATE_OP_OFF];
+					stateOn |= ~((Item *) item)->state & states[STATE_OP_TOGGLE];
+					stateOff |= ((Item *) item)->state & states[STATE_OP_TOGGLE];
+					TreeItem_ChangeState(tree, item, stateOff, stateOn);
+					hPtr = Tcl_NextHashEntry(&search);
+				}
+				break;
+			}
+			if (objc == 7)
+			{
+				int indexFirst, indexLast;
+
+				if (TreeItem_RootAncestor(tree, itemFirst) !=
+					TreeItem_RootAncestor(tree,itemLast))
+				{
+					FormatResult(interp,
+						"item %d and item %d don't share a common ancestor",
+						TreeItem_GetID(tree, itemFirst),
+						TreeItem_GetID(tree, itemLast));
+					return TCL_ERROR;
+				}
+				TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
+				TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
+				if (indexFirst > indexLast)
+				{
+					item = itemFirst;
+					itemFirst = itemLast;
+					itemLast = item;
+				}
+			}
+			item = itemFirst;
+			while (item != NULL)
+			{
+				stateOn = states[STATE_OP_ON];
+				stateOff = states[STATE_OP_OFF];
+				stateOn |= ~((Item *) item)->state & states[STATE_OP_TOGGLE];
+				stateOff |= ((Item *) item)->state & states[STATE_OP_TOGGLE];
+				TreeItem_ChangeState(tree, item, stateOff, stateOn);
+				if (item == itemLast)
+					break;
+				item = TreeItem_Next(tree, item);
+			}
+			break;
+		}
+	}
+
+	return TCL_OK;
+}
+
 int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
@@ -2802,7 +2950,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{ 1, 1, 0, 0, "item" }, /* isopen */
 		{ 1, 1, 0, 0, "item" }, /* rnc */
 		{ 1, 100000, 0, 0, "item ?option ...?" }, /* sort */
-		{ 1, 100000, 0, 0, "item ?state ...?" }, /* state */
+		{ 2, 100000, 0, 0, "command item ?arg ...?" }, /* state */
 		{ 2, 100000, 0, 0, "command item ?arg ...?" }, /* style */
 		{ 2, 100000, 0, 0, "item column ?text? ?column text ...?" }, /* text */
 		{ 1, 2, 0, 0, "item ?boolean?" }, /* visible */
@@ -2843,6 +2991,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		case COMMAND_STYLE:
 		{
 			return ItemStyleCmd(clientData, interp, objc, objv);
+		}
+		case COMMAND_STATE:
+		{
+			return ItemStateCmd(clientData, interp, objc, objv);
 		}
 	}
 
@@ -3004,6 +3156,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Tcl_SetObjResult(interp, Tcl_NewBooleanObj(item->hasButton));
 				return TCL_OK;
 			}
+#if 0
 			/* T item state I ?state ...? */
 			case COMMAND_STATE:
 			{
@@ -3052,6 +3205,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				TreeItem_ChangeState(tree, (TreeItem) item, stateOff, stateOn);
 				return TCL_OK;
 			}
+#endif
 			case COMMAND_VISIBLE:
 			{
 				int visible;
