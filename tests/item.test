@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.2 2002/12/31 12:20:12 krischan Exp $
+# CVS: @(#) $Id: item.test,v 1.3 2003/01/04 13:17:07 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -410,6 +410,240 @@ test tree-16.19 {item state: reset predefined state} -body {
     .t toggle 8
     .t item state get 8
 } -result {enabled}
+
+test tree-17.1 {item sort: missing args} -body {
+    .t item sort
+} -returnCodes error -result {wrong # args: should be ".t item sort item ?option ...?"}
+
+test tree-17.2 {item sort: invalid item} -body {
+    .t item sort foo
+} -returnCodes error -result {bad item description "foo"}
+
+test tree-17.3 {item sort: is all allowed?} -body {
+    .t item sort all
+} -returnCodes error -result {can't specify "all" for this command}
+
+test tree-17.4 {item sort: invalid option} -body {
+    .t item sort root -foo
+} -returnCodes error -result {bad option "-foo": must be -ascii, -column, -command, -decreasing, -dictionary, -first, -increasing, -integer, -last, -notreally, or -real}
+
+test tree-17.5 {item sort: missing arg to an option} -body {
+    .t item sort root -first
+} -returnCodes error -result {missing value for "-first" option}
+
+test tree-17.6 {item sort: invalid column} -body {
+    .t item sort root -column 3
+} -returnCodes error -result {bad column index "3": must be from 0 to 0}
+
+# Too ugly error message...
+test tree-17.7 {item sort: invalid column, second try} -constraints knownBug -body {
+    .t item sort root -column tail
+} -returnCodes error -result {can't specify "tail" for this command}
+
+test tree-17.8 {item sort: sort needs style to find text} -body {
+    .t item sort root
+} -returnCodes error -result {item 1 column 0 has no style}
+
+proc listItems {t {i root}} {
+    set res {}
+    foreach c [$t item children $i] {
+	lappend res $c
+	eval lappend res [listItems $t $c]
+    }
+    return $res
+}
+
+test tree-17.9 {item sort: set the texts in column 0 for all items} -body {
+    .t style create   textStyle
+    .t style elements textStyle eText
+    foreach i [listItems .t] {
+	.t item style set $i 0 textStyle
+	.t item style set $i 1 textStyle
+	.t item text $i 0 [expr {$i+5}]
+    }
+    .t item text 8 0
+} -result {13}
+
+test tree-17.10 {item sort: sort all by ascii} -body {
+    .t item sort root
+    listItems .t
+} -result {5 6 7 8 1 2 3 4}
+
+test tree-17.11 {item sort: sort all decreasing by ascii} -body {
+    .t item sort root -decreasing
+    listItems .t
+} -result {1 2 3 4 8 5 6 7}
+
+test tree-17.12 {item sort: sort all as integer} -body {
+    .t item sort root -integer
+    listItems .t
+} -result {1 2 3 4 5 6 7 8}
+
+test tree-17.13 {item sort: for integers -dictionary works also} -body {
+    .t item sort root -dictionary
+    listItems .t
+} -result {1 2 3 4 5 6 7 8}
+
+test tree-17.14 {item sort: sort all decreasing as integer} -body {
+    .t item sort root -integer -decreasing
+    listItems .t
+} -result {8 5 6 7 1 2 3 4}
+
+test tree-17.15 {item sort: don't sort, only return sorted items} -body {
+    .t item lastchild root 5
+    list [.t item sort root -notreally] [listItems .t]
+} -result {{5 8 1} {8 1 2 3 4 5 6 7}}
+
+test tree-17.16 {item sort: return integer sorted items} -body {
+    .t item sort root -notreally -integer
+} -result {1 5 8}
+
+test tree-17.17 {item sort: return integer sorted items} -body {
+    .t item sort root -notreally -dictionary -decreasing
+} -result {8 5 1}
+
+test tree-17.18 {item sort: two sort options, last wins (as in lsort)} -body {
+    .t item sort root -integer -ascii
+    listItems .t
+} -result {5 6 7 8 1 2 3 4}
+
+test tree-17.19 {item sort: two order options, last wins (as in lsort)} -body {
+    .t item sort root -real -decreasing -increasing
+    listItems .t
+} -result {1 2 3 4 5 6 7 8}
+
+test tree-17.20 {item sort: restrict to item of different parent} -body {
+    .t item sort root -first 2
+} -returnCodes error -result {item 2 is not a child of item 0}
+
+test tree-17.21 {item sort: restrict to unknown item} -body {
+    .t item sort root -first foo
+} -returnCodes error -result {bad item description "foo"}
+
+test tree-17.22 {item sort: restricted sort} -body {
+    .t item sort root -first 5 -last 8 -decreasing
+    listItems .t
+} -result {1 2 3 4 8 5 6 7}
+
+test tree-17.23 {item sort: restricted sort returned} -body {
+    .t item sort root -first 5 -last 8 -notreally
+} -result {5 8}
+
+test tree-17.24 {item sort: order of restriction doesn't matter} -body {
+    .t item sort root -first 8 -last 5 -notreally
+} -result {5 8}
+
+# Seems to be a little bit overoptimized...
+test tree-17.25 {item sort: very restricted sort returned} -constraints knownBug -body {
+    .t item sort root -first 5 -last 5 -notreally
+} -result {5}
+
+test tree-17.26 {item sort -command: missing arg} -body {
+    .t item sort root -command
+} -returnCodes error -result {missing value for "-command" option}
+
+test tree-17.27 {item sort -command: unknown command} -body {
+    .t item sort root -command foo
+} -returnCodes error -result {invalid command name "foo"}
+
+test tree-17.28 {item sort -command: unknown command} -body {
+    .t item sort root -command #
+} -returnCodes error -result {invalid command name "#"}
+
+test tree-17.29 {item sort -command: invalid return value} -body {
+    .t item sort root -command list
+} -returnCodes error -result {-command returned non-numeric result}
+
+proc myCompare {op item1 item2} {
+    switch -- $op {
+	1 - 0 - -1 {
+	    return $op
+	}
+	timespan-1 {
+	    regsub -all : [.t item text $item1 1] "" val1
+	    regsub -all : [.t item text $item2 1] "" val2
+	    return [expr {[string trimleft $val1 0]-[string trimleft $val2 0]}]
+	}
+	ascii {
+	    return [string compare [.t item text $item1 0] \
+				   [.t item text $item2 0]]
+	}
+	ascii-1 {
+	    return [string compare [.t item text $item1 1] \
+				   [.t item text $item2 1]]
+	}
+	default {
+	    return -code $op 0
+	}
+    }
+}
+
+test tree-17.30 {item sort -command: too less arguments to proc call} -body {
+    .t item sort root -command myCompare
+} -returnCodes error -result {wrong # args: should be "myCompare op item1 item2"}
+
+test tree-17.31 {item sort -command: always returning 0 is identity} -body {
+    set res [list [listItems .t]]
+    .t item sort root -command {myCompare 0}
+    lappend res [listItems .t]
+} -result {{1 2 3 4 8 5 6 7} {1 2 3 4 8 5 6 7}}
+
+# Returns error instead of the original return code.
+test tree-17.32 {item sort -command: returnCode break} -constraints knownBug -body {
+    list [catch {.t item sort root -command {myCompare break}} msg] $msg \
+	$errorInfo
+} -result {3 0 {0
+    (evaluating item sort -command)}}
+
+# Generates a segfault.
+test tree-17.33 {item sort -command: always returning 1 is identity?} -constraints knownBug -body {
+    set res [list [listItems .t]]
+    .t item sort root -command {myCompare 1}
+    lappend res [listItems .t]
+} -result {{1 2 3 4 8 5 6 7} {1 2 3 4 8 5 6 7}}
+
+# Generates a segfault.
+test tree-17.34 {item sort -command: always returning -1 reverts?} -constraints knownBug -body {
+    .t item sort root -command {myCompare -1}
+    listItems .t
+} -result {}
+
+test tree-17.35 {item sort -command: ascii} -body {
+    .t item sort root -command {myCompare ascii}
+    listItems .t
+} -result {5 6 7 8 1 2 3 4}
+
+test tree-17.36 {item sort -command: reverse ascii} -body {
+    .t item sort root -command {myCompare ascii} -decreasing
+    listItems .t
+} -result {1 2 3 4 8 5 6 7}
+
+test tree-17.37 {item sort: with timespans column} -body {
+    .t item text 1 1 "01:00"
+    .t item text 5 1 "10:00"
+    .t item text 8 1 "02:09:00"
+    .t item sort root -column 1
+    listItems .t
+} -result {1 2 3 4 8 5 6 7}
+
+test tree-17.38 {item sort -command: ascii with timespans column} -body {
+    .t item sort root -command {myCompare ascii-1}
+    listItems .t
+} -result {1 2 3 4 8 5 6 7}
+
+test tree-17.39 {item sort -command: timespan with timespans column} -body {
+    .t item sort root -command {myCompare timespan-1}
+    listItems .t
+} -result {1 2 3 4 5 6 7 8}
+
+test tree-17.40 {item sort -command: reverse timespan with timespans} -body {
+    .t item sort root -command {myCompare timespan-1} -decreasing
+    listItems .t
+} -result {8 5 6 7 1 2 3 4}
+
+test tree-17.41 {item sort -command: reverse timespan with timespans} -body {
+    .t item sort root -command {myCompare timespan-1} -decreasing -notreally
+} -result {8 5 1}
 
 test item-99.1 {some needed cleanup} -body {
     destroy .t
