@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.12 2003/11/25 22:46:11 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.13 2004/02/10 07:40:57 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -198,6 +198,9 @@ static void ImageChangedProc(
     int imageWidth, int imageHeight)
 {
     /* I would like to know the image was deleted... */
+    Column *column = (Column *) clientData;
+
+    Tree_DInfoChanged(column->tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
 }
 
 int Tree_FindColumnByTag(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, int flags)

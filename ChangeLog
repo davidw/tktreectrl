@@ -1,3 +1,9 @@
+2004-02-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (ImageChangedProc):   cause image change to
+	* generic/tkTreeColumn.c (ImageChangedProc): refresh window.
+	Could narrow down the full update, but better than nothing.
+
 2003-12-02  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* library/filelist-bindings.tcl: whitespace police

@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.17 2003/11/26 16:57:00 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.18 2004/02/10 07:40:57 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1490,6 +1490,9 @@ static void ImageChangedProc(
     int imageWidth, int imageHeight)
 {
     /* I would like to know the image was deleted... */
+    TreeCtrl *tree = (TreeCtrl *) clientData;
+
+    Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
 }
 
 Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName)
