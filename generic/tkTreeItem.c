@@ -1829,15 +1829,21 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		/* T item element configure I C E ... */
 		case COMMAND_CONFIGURE:
 		{
-			int result;
+			int result, eMask;
+
 			result = TreeStyle_ElementConfigure(tree, column->style, objv[6],
-				objc - 7, (Tcl_Obj **) objv + 7);
-			if (objc - 7 > 1)
+				objc - 7, (Tcl_Obj **) objv + 7, &eMask);
+			if (eMask != 0)
 			{
-				column->neededWidth = column->neededHeight = -1;
-				Tree_InvalidateColumnWidth(tree, columnIndex);
-				TreeItem_InvalidateHeight(tree, (TreeItem) item);
-				Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+				if (eMask & CS_DISPLAY)
+					Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+				if (eMask & CS_LAYOUT)
+				{
+					column->neededWidth = column->neededHeight = -1;
+					Tree_InvalidateColumnWidth(tree, columnIndex);
+					TreeItem_InvalidateHeight(tree, (TreeItem) item);
+					Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+				}
 			}
 			return result;
 		}
@@ -3082,54 +3088,77 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				int objc1, objc2;
 				Tcl_Obj **objv1, **objv2;
 				Column *column;
+				int eMask, cMask, iMask = 0;
+				int result = TCL_OK;
 
-				if (objc > 4)
+				if (objc <= 4)
+					break;
+				columnIndex = 0;
+				for (i = 4; i < objc; i++, columnIndex++)
 				{
-					columnIndex = 0;
-					for (i = 4; i < objc; i++, columnIndex++)
+					column = Item_FindColumn(tree, item, columnIndex);
+					if (column == NULL)
 					{
-						column = Item_FindColumn(tree, item, columnIndex);
-						if (column == NULL)
-						{
-							FormatResult(interp, "item %d doesn't have column %d",
-								item->id, columnIndex);
-							return TCL_ERROR;
-						}
-						/* List of element-configs per column */
-						if (Tcl_ListObjGetElements(interp, objv[i],
-							&objc1, &objv1) != TCL_OK)
-							return TCL_ERROR;
-						if (objc1 == 0)
-							continue;
-						if (column->style == NULL)
-						{
-							FormatResult(interp, "item %d column %d has no style",
-								item->id, columnIndex);
-							return TCL_ERROR;
-						}
-						for (j = 0; j < objc1; j++)
-						{
-							/* elem option value... */
-							if (Tcl_ListObjGetElements(interp, objv1[j],
-								&objc2, &objv2) != TCL_OK)
-								return TCL_ERROR;
-							if (objc2 < 3)
-							{
-								FormatResult(interp,
-									"wrong # args: should be \"element option value...\"");
-								return TCL_ERROR;
-							}
-							if (TreeStyle_ElementConfigure(tree, column->style,
-								objv2[0], objc2 - 1, objv2 + 1) != TCL_OK)
-								return TCL_ERROR;
-						}
-						column->neededWidth = column->neededHeight = -1;
+						FormatResult(interp, "item %d doesn't have column %d",
+							item->id, columnIndex);
+						result = TCL_ERROR;
+						goto doneComplex;
 					}
+					/* List of element-configs per column */
+					if (Tcl_ListObjGetElements(interp, objv[i],
+						&objc1, &objv1) != TCL_OK)
+					{
+						result = TCL_ERROR;
+						goto doneComplex;
+					}
+					if (objc1 == 0)
+						continue;
+					if (column->style == NULL)
+					{
+						FormatResult(interp, "item %d column %d has no style",
+							item->id, columnIndex);
+						result = TCL_ERROR;
+						goto doneComplex;
+					}
+					cMask = 0;
+					for (j = 0; j < objc1; j++)
+					{
+						/* elem option value... */
+						if (Tcl_ListObjGetElements(interp, objv1[j],
+							&objc2, &objv2) != TCL_OK)
+						{
+							result = TCL_ERROR;
+							goto doneComplex;
+						}
+						if (objc2 < 3)
+						{
+							FormatResult(interp,
+								"wrong # args: should be \"element option value...\"");
+							result = TCL_ERROR;
+							goto doneComplex;
+						}
+						if (TreeStyle_ElementConfigure(tree, column->style,
+							objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK)
+						{
+							result = TCL_ERROR;
+							goto doneComplex;
+						}
+						cMask |= eMask;
+						iMask |= eMask;
+					}
+					if (cMask & CS_LAYOUT)
+						column->neededWidth = column->neededHeight = -1;
+				}
+doneComplex:
+				if (iMask & CS_DISPLAY)
+					Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+				if (iMask & CS_LAYOUT)
+				{
 					Tree_InvalidateColumnWidth(tree, -1);
 					TreeItem_InvalidateHeight(tree, (TreeItem) item);
-					Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+					Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 				}
-				return TCL_OK;
+				return result;
 			}
 			case COMMAND_DUMP:
 			{
