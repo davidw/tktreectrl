@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.3 2003/01/04 13:17:07 krischan Exp $
+# CVS: @(#) $Id: item.test,v 1.4 2003/01/04 17:11:36 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -350,6 +350,10 @@ test tree-16.5 {item state get: invalid arg} -body {
     .t item state get 8 !open
 } -returnCodes error -result {can't specify '!' for this command}
 
+test tree-16.6 {item state get: invalid arg} -body {
+    .t item state get 8 ~open
+} -returnCodes error -result {can't specify '~' for this command}
+
 test tree-16.6 {item state get: unknown state} -body {
     .t item state get 8 foo
 } -returnCodes error -result {unknown state "foo"}
@@ -382,34 +386,47 @@ test tree-16.13 {item state: unknown states} -body {
     .t item state set 8 {foo bar}
 } -returnCodes error -result {unknown state "foo"}
 
-test tree-16.14 {item state: switch on states} -body {
+test tree-16.14 {item state: unknown state leaded by !} -body {
+    .t item state set 8 !foo
+} -returnCodes error -result {unknown state "foo"}
+
+test tree-16.15 {item state: unknown state leaded by ~} -body {
+    .t item state set 8 ~bar
+} -returnCodes error -result {unknown state "bar"}
+
+test tree-16.16 {item state: switch on states} -body {
     .t item state set 8 state0
     .t item state get 8
 } -result {open enabled state0}
 
-test tree-16.15 {item state get: user defined state not set} -body {
+test tree-16.17 {item state get: user defined state set} -body {
     .t item state get 8 state0
 } -result {1}
 
-test tree-16.16 {item state: switch off states} -body {
-    .t item state set 8 !state0
+test tree-16.18 {item state: toggle state} -body {
+    .t item state set 8 ~state0
     .t item state get 8
 } -result {open enabled}
 
-test tree-16.17 {item state: reset predefined state} -body {
+test tree-16.19 {item state: switch off states} -body {
+    .t item state set 8 !state0
+    .t item state get 8 state0
+} -result {0}
+
+test tree-16.20 {item state: reset predefined state} -body {
     .t collapse 8
     .t item state get 8
 } -result {enabled}
 
-test tree-16.18 {item state: reset predefined state} -body {
+test tree-16.21 {item state: reset predefined state} -body {
     .t expand 8
     .t item state get 8
 } -result {open enabled}
 
-test tree-16.19 {item state: reset predefined state} -body {
+test tree-16.22 {item state: reset predefined state} -body {
     .t toggle 8
-    .t item state get 8
-} -result {enabled}
+    .t item state get 8 enabled
+} -result {1}
 
 test tree-17.1 {item sort: missing args} -body {
     .t item sort
