@@ -106,7 +106,8 @@ static Tk_OptionSpec columnSpecs[] = {
 		0, (ClientData) NULL, COLU_CONF_TWIDTH},
 	{TK_OPTION_FONT, "-font", (char *) NULL, (char *) NULL,
 		(char *) NULL, -1, Tk_Offset(Column, tkfont),
-		TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
+		TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_NWIDTH |
+		COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY | COLU_CONF_TEXT},
 	{TK_OPTION_STRING, "-image", (char *) NULL, (char *) NULL,
 		(char *) NULL, -1, Tk_Offset(Column, imageString),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
