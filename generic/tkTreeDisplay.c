@@ -86,6 +86,7 @@ struct DInfo
 	int incrementTop; /* yScrollIncrement[] index of item at top */
 	int incrementLeft; /* xScrollIncrement[] index of item at left */
 #endif
+	TkRegion wsRgn; /* region containing whitespace */
 };
 
 /*========*/
@@ -2205,12 +2206,17 @@ static void ScrollHorizontalSimple(TreeCtrl *tree)
 	TkRegion damageRgn;
 	int minX, minY, maxX, maxY;
 	int width, offset;
-	int x;
+	int x, y;
 
 	minX = tree->inset;
 	maxX = Tk_Width(tree->tkwin) - tree->inset;
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
+
+/* We only scroll the content, not the whitespace */
+y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
+if (y < maxY)
+	maxY = y;
 
 	/* Horizontal scrolling */
 	if (dInfo->xOrigin != tree->xOrigin)
@@ -2283,12 +2289,17 @@ static void ScrollVerticalSimple(TreeCtrl *tree)
 	TkRegion damageRgn;
 	int minX, minY, maxX, maxY;
 	int height, offset;
-	int y;
+	int x, y;
 
 	minX = tree->inset;
 	maxX = Tk_Width(tree->tkwin) - tree->inset;
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
+
+/* We only scroll the content, not the whitespace */
+x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+if (x < maxX)
+	maxX = x;
 
 	/* Vertical scrolling */
 	if (dInfo->yOrigin != tree->yOrigin)
@@ -2548,18 +2559,133 @@ void TreeColumnProxy_Display(TreeCtrl *tree)
 	}
 }
 
+static TkRegion CalcWhiteSpaceRegion(TreeCtrl *tree)
+{
+	DInfo *dInfo = (DInfo *) tree->dInfo;
+	int x, y, minX, minY, maxX, maxY;
+	int left, right, top, bottom;
+	TkRegion wsRgn;
+	XRectangle rect;
+	Range *range;
+
+	x = 0 - tree->xOrigin;
+	y = 0 - tree->yOrigin;
+
+	minX = tree->inset;
+	maxX = Tk_Width(tree->tkwin) - tree->inset;
+	minY = tree->inset + Tree_HeaderHeight(tree);
+	maxY = Tk_Height(tree->tkwin) - tree->inset;
+
+	wsRgn = TkCreateRegion();
+
+	if (tree->vertical)
+	{
+		/* Erase area to right of last Range */
+		if (x + Tree_TotalWidth(tree) < maxX)
+		{
+			rect.x = x + Tree_TotalWidth(tree);
+			rect.y = minY;
+			rect.width = maxX - (x + Tree_TotalWidth(tree));
+			rect.height = maxY - minY;
+			TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+		}
+	}
+	else
+	{
+		/* Erase area below last Range */
+		if (y + Tree_TotalHeight(tree) < maxY)
+		{
+			rect.x = tree->inset;
+			rect.y = y + Tree_TotalHeight(tree);
+			rect.width = maxX - minX;
+			rect.height = maxY - (y + Tree_TotalHeight(tree));
+			TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+		}
+	}
+
+	for (range = dInfo->rangeFirstD;
+		range != NULL;
+		range = range->next)
+	{
+		if (tree->vertical)
+		{
+			left = MAX(x + range->offset, minX);
+			right = MIN(x + range->offset + range->totalWidth, maxX);
+			top = MAX(y + range->totalHeight, minY);
+			bottom = maxY;
+
+			/* Erase area below Range */
+			if (top < bottom)
+			{
+				rect.x = left;
+				rect.y = top;
+				rect.width = right - left;
+				rect.height = bottom - top;
+				TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+			}
+		}
+		else
+		{
+			left = MAX(x + range->totalWidth, minX);
+			right = maxX;
+			top = MAX(y + range->offset, minY);
+			bottom = MIN(y + range->offset + range->totalHeight, maxY);
+
+			/* Erase area to right of Range */
+			if (left < right)
+			{
+				rect.x = left;
+				rect.y = top;
+				rect.width = right - left;
+				rect.height = bottom - top;
+				TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+			}
+		}
+		if (range == dInfo->rangeLastD)
+			break;
+	}
+	return wsRgn;
+}
+
+#ifdef WIN32
+#include "tkWinInt.h"
+#endif
+
+void XFillRegion(Display *display, Drawable drawable, GC gc,
+	int x, int y, int width, int height, TkRegion rgn)
+{
+#ifdef WIN32
+	HDC dc;
+	TkWinDCState dcState;
+	HBRUSH brush;
+
+	dc = TkWinGetDrawableDC(display, drawable, &dcState);
+	brush = CreateSolidBrush(gc->foreground);
+	FillRgn(dc, (HRGN) rgn, brush);
+	DeleteObject(brush);
+	TkWinReleaseDrawableDC(drawable, dc, &dcState);
+#elif defined(TARGET_OS_MAC)
+#error "Mac developer: implement XFillRegion please!"
+#else
+	TkSetRegion(display, gc, rgn);
+	XFillRectangle(display, drawable, gc, x, y, width, height);
+	XSetClipMask(display, gc, None);
+#endif
+}
+
 void Tree_Display(ClientData clientData)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	DInfo *dInfo = (DInfo *) tree->dInfo;
 	DItem *dItem;
-	Range *range;
 	Tk_Window tkwin = tree->tkwin;
 	Drawable drawable = Tk_WindowId(tkwin);
-	int x, y, minX, minY, maxX, maxY, height, width;
+	int minX, minY, maxX, maxY, height, width;
 	int left, right, top, bottom;
 	int count;
 	int numCopy = 0, numDraw = 0;
+	TkRegion wsRgnNew, wsRgnDif;
+	XRectangle wsBox;
 
 if (tree->debug.enable && tree->debug.display && 0)
 	dbwin("Tree_Display %s\n", Tk_PathName(tree->tkwin));
@@ -2683,6 +2809,9 @@ if (tree->debug.enable && tree->debug.display && 0)
 	minY = tree->inset + Tree_HeaderHeight(tree);
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
 
+	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
+		drawable = dInfo->pixmap;
+
 	/* XOR off */
 	TreeColumnProxy_Undisplay(tree);
 	TreeDragImage_Undisplay(tree->dragImage);
@@ -2739,6 +2868,37 @@ if (tree->debug.enable && tree->debug.display && 0)
 	/* Does this need to be here? */
 	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 
+	/* Calculate the current whitespace region, subtract the old whitespace
+	 * region, and fill the difference with the background color. */
+	wsRgnNew = CalcWhiteSpaceRegion(tree);
+	wsRgnDif = TkCreateRegion();
+	TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
+	TkClipBox(wsRgnDif, &wsBox);
+	if ((wsBox.width > 0) && (wsBox.height > 0))
+	{
+		GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
+		if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor)
+		{
+			XFillRegion(tree->display, Tk_WindowId(tree->tkwin),
+				tree->debug.gcErase, wsBox.x, wsBox.y, wsBox.width, wsBox.height,
+				wsRgnDif);
+			DisplayDelay(tree);
+		}
+		XFillRegion(tree->display, drawable, gc,
+			wsBox.x, wsBox.y, wsBox.width, wsBox.height,
+			wsRgnDif);
+		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
+		{
+			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
+			dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], wsBox.y);
+			dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], wsBox.x + wsBox.width);
+			dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], wsBox.y + wsBox.height);
+		}
+	}
+	TkDestroyRegion(wsRgnDif);
+	TkDestroyRegion(dInfo->wsRgn);
+	dInfo->wsRgn = wsRgnNew;
+
 	/* See if there are any dirty items */
 	count = 0;
 	for (dItem = dInfo->dItem;
@@ -2764,8 +2924,6 @@ if (tree->debug.enable && tree->debug.display && 0)
 			pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
 				width, height, Tk_Depth(tkwin));
 		}
-		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
-			drawable = dInfo->pixmap;
 		for (dItem = dInfo->dItem;
 			dItem != NULL;
 			dItem = dItem->next)
@@ -2883,81 +3041,8 @@ numDraw++;
 			Tk_FreePixmap(tree->display, pixmap);
 	}
 
-	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
-		drawable = dInfo->pixmap;
-
 if (tree->debug.enable && tree->debug.display)
 	dbwin("copy %d draw %d %s\n", numCopy, numDraw, Tk_PathName(tree->tkwin));
-
-	x = 0 - tree->xOrigin;
-	y = 0 - tree->yOrigin;
-
-	if (tree->vertical)
-	{
-		/* Erase area to right of last Range */
-		if (x + Tree_TotalWidth(tree) < maxX)
-		{
-			Tk_Fill3DRectangle(tkwin, drawable, tree->border,
-				x + Tree_TotalWidth(tree), minY,
-				maxX - (x + Tree_TotalWidth(tree)),
-				maxY - minY, 0, TK_RELIEF_FLAT);
-		}
-	}
-	else
-	{
-		/* Erase area below last Range */
-		if (y + Tree_TotalHeight(tree) < maxY)
-		{
-			Tk_Fill3DRectangle(tkwin, drawable, tree->border,
-				tree->inset,
-				y + Tree_TotalHeight(tree),
-				Tk_Width(tkwin) - tree->inset * 2,
-				maxY - (y + Tree_TotalHeight(tree)),
-				0, TK_RELIEF_FLAT);
-		}
-	}
-
-	for (range = dInfo->rangeFirstD;
-		range != NULL;
-		range = range->next)
-	{
-		if (tree->vertical)
-		{
-			left = MAX(x + range->offset, minX);
-			right = MIN(x + range->offset + range->totalWidth, maxX);
-			top = MAX(y + range->totalHeight, minY);
-			bottom = maxY;
-
-			/* Erase area below Range */
-			if (top < bottom)
-			{
-				Tk_Fill3DRectangle(tkwin, drawable, tree->border,
-					left,
-					top,
-					right - left,
-					bottom - top,
-					0, TK_RELIEF_FLAT);
-			}
-		}
-		else
-		{
-			left = MAX(x + range->totalWidth, minX);
-			right = maxX;
-			top = MAX(y + range->offset, minY);
-			bottom = MIN(y + range->offset + range->totalHeight, maxY);
-
-			/* Erase area to right of Range */
-			if (left < right)
-			{
-				Tk_Fill3DRectangle(tkwin, drawable, tree->border,
-					left, top,
-					right - left,
-					bottom - top, 0, TK_RELIEF_FLAT);
-			}
-		}
-		if (range == dInfo->rangeLastD)
-			break;
-	}
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 	{
@@ -3363,6 +3448,9 @@ void Tree_RelayoutWindow(TreeCtrl *tree)
 	dInfo->xOrigin = tree->xOrigin;
 	dInfo->yOrigin = tree->yOrigin;
 
+	/* Needed if background color changes */
+	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 	{
 		if (dInfo->pixmap == None)
@@ -3567,6 +3655,22 @@ void Tree_InvalidateWindow(TreeCtrl *tree)
 
 void Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
 {
+	DInfo *dInfo = (DInfo *) tree->dInfo;
+
+	if (x1 < x2 && y1 < y2)
+	{
+		XRectangle rect;
+		TkRegion rgn = TkCreateRegion();
+
+		rect.x = x1;
+		rect.y = y1;
+		rect.width = x2 - x1;
+		rect.height = y2 - y1;
+		TkUnionRectWithRegion(&rect, rgn, rgn);
+		TkSubtractRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+		TkDestroyRegion(rgn);
+	}
+
 	Tree_InvalidateArea(tree, x1, y1, x2, y2);
 	Tree_EventuallyRedraw(tree);
 }
@@ -3589,6 +3693,7 @@ void TreeDInfo_Init(TreeCtrl *tree)
 	dInfo->flags = DINFO_OUT_OF_DATE;
 	dInfo->columnWidthSize = 10;
 	dInfo->columnWidth = (int *) ckalloc(sizeof(int) * dInfo->columnWidthSize);
+	dInfo->wsRgn = TkCreateRegion();
 	tree->dInfo = (TreeDInfo) dInfo;
 }
 
@@ -3611,6 +3716,7 @@ void TreeDInfo_Free(TreeCtrl *tree)
 		ckfree((char *) dInfo->xScrollIncrements);
 	if (dInfo->yScrollIncrements != NULL)
 		ckfree((char *) dInfo->yScrollIncrements);
+	TkDestroyRegion(dInfo->wsRgn);
 	WFREE(dInfo, DInfo);
 }
 
