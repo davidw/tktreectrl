@@ -3612,9 +3612,9 @@ doneComplex:
 			/* Apply default styles */
 			if (tree->defaultStyle.numStyles)
 			{
-				int i;
+				int i, n = MIN(tree->columnCount, tree->defaultStyle.numStyles);
 
-				for (i = 0; i < tree->defaultStyle.numStyles; i++)
+				for (i = 0; i < n; i++)
 				{
 					Column *column = Item_CreateColumn(tree, item, i, NULL);
 					if (tree->defaultStyle.styles[i] != NULL)
