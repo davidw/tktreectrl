@@ -1,3 +1,8 @@
+2004-11-30  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeElem.c: add "Elem" to a few names to prevent name
+	collision (notable CreateBitmap on Windows).
+
 2004-11-29  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeItem.c, generic/tkTreeElem.c: whitespace police

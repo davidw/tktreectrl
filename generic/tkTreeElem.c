@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.14 2004/11/29 20:31:36 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.15 2004/11/30 19:05:05 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -926,7 +926,7 @@ static Tk_OptionSpec bitmapOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void DeleteBitmap(ElementArgs *args)
+static void ElemDeleteBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -952,7 +952,7 @@ static int WorldChangedBitmap(ElementArgs *args)
     return mask;
 }
 
-static int ConfigBitmap(ElementArgs *args)
+static int ElemConfigBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1025,12 +1025,12 @@ static int ConfigBitmap(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateBitmap(ElementArgs *args)
+static int ElemCreateBitmap(ElementArgs *args)
 {
     return TCL_OK;
 }
 
-static void DisplayBitmap(ElementArgs *args)
+static void ElemDisplayBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1109,7 +1109,7 @@ static void DisplayBitmap(ElementArgs *args)
     }
 }
 
-static void LayoutBitmap(ElementArgs *args)
+static void ElemLayoutBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1296,11 +1296,11 @@ ElementType elemTypeBitmap = {
     sizeof(ElementBitmap),
     bitmapOptionSpecs,
     NULL,
-    CreateBitmap,
-    DeleteBitmap,
-    ConfigBitmap,
-    DisplayBitmap,
-    LayoutBitmap,
+    ElemCreateBitmap,
+    ElemDeleteBitmap,
+    ElemConfigBitmap,
+    ElemDisplayBitmap,
+    ElemLayoutBitmap,
     WorldChangedBitmap,
     StateProcBitmap,
     UndefProcBitmap,
