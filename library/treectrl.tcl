@@ -129,13 +129,13 @@ bind TreeCtrl <Control-KeyPress-backslash> {
 }
 
 bind TreeCtrl <KeyPress-plus> {
-    %W expand [%W index active]
+    %W item expand [%W index active]
 }
 bind TreeCtrl <KeyPress-minus> {
-    %W collapse [%W index active]
+    %W item collapse [%W index active]
 }
 bind TreeCtrl <KeyPress-Return> {
-    %W toggle [%W index active]
+    %W item toggle [%W index active]
 }
 
 
@@ -265,10 +265,10 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     if {[lindex $id 0] eq "item"} {
 	foreach {where item arg1 arg2} $id {}
 	if {$arg1 eq "button"} {
-	    $w toggle $item
+	    $w item toggle $item
 	    return
 	} elseif {$arg1 eq "line"} {
-	    $w toggle $arg2
+	    $w item toggle $arg2
 	    return
 	}
     }
@@ -325,10 +325,10 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
     if {[lindex $id 0] eq "item"} {
 	foreach {where item arg1 arg2} $id {}
 	if {$arg1 eq "button"} {
-	    $w toggle $item
+	    $w item toggle $item
 	    return
 	} elseif {$arg1 eq "line"} {
-	    $w toggle $arg2
+	    $w item toggle $arg2
 	    return
 	}
     }
