@@ -1,6 +1,6 @@
 proc ::TreeCtrlLoad {dir} {
-	uplevel #0 source [file join $dir treectrl.tcl]
-	uplevel #0 source [file join $dir filelist-bindings.tcl]
+	uplevel #0 source [list [file join $dir treectrl.tcl]]
+	uplevel #0 source [list [file join $dir filelist-bindings.tcl]]
 	tclPkgSetup $dir treectrl @VERSION@ {
 		{@treectrl_LIB_FILE@ load {treectrl imagetint textlayout}}
 	}
