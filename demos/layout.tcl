@@ -5,7 +5,7 @@ proc DemoLayout {} {
 
 	set T .f2.f1.t
 
-	$T configure -showroot yes -showrootbutton yes -showbuttons yes \
+	$T configure -showroot no -showrootbutton yes -showbuttons yes \
 		-showlines yes -itemheight 0 -selectmode browse
 
 	$T column configure 0 -text Layout
@@ -16,9 +16,10 @@ proc DemoLayout {} {
 	$T element create e3 rect -fill gray60
 	$T element create e4 rect -fill [list $::SystemHighlight {selected focus} gray80 {}] \
 		-showfocus yes
-	$T element create e5 rect -fill "{sky blue}" -width 20 -height 20
-	$T element create e6 rect -fill "{sky blue}" -width 30 -height 16
-	$T element create e7 rect -fill "{sky blue}" -width 30 -height 16
+	$T element create e5 rect -fill {"sky blue"} -width 20 -height 20
+	$T element create e6 rect -fill {"sea green"} -width 30 -height 16
+	$T element create e7 rect -fill {"sky blue"} -width 30 -height 16
+	$T element create e8 rect -fill gray70 -height 1
 
 	set S [$T style create s1]
 	$T style elements $S {e4 e3 e1 e2 e5 e6 e7}
@@ -30,13 +31,16 @@ proc DemoLayout {} {
 	$T style layout $S e6 -detach yes -expand ws -pade 2 -padn 2
 	$T style layout $S e7 -detach yes -expand wn -pade 2 -pads 2
 
-	$T item style set root 0 $S
-	$T item hasbutton root yes
+	set I [$T item create]
+	$T item hasbutton $I yes
+	$T item style set $I 0 $S
+	$T item lastchild root $I
+	set parent $I
 
-	set item [$T item create]
-	$T item hasbutton $item no
-	$T item style set $item 0 $S
-	$T item lastchild root $item
+	set I [$T item create]
+	$T item hasbutton $I no
+	$T item style set $I 0 $S
+	$T item lastchild $parent $I
 
 	###
 
@@ -80,18 +84,46 @@ proc DemoLayout {} {
 		-relief {sunken {selected} raised {}} -thickness 2 -filled yes
 	$T element create et text
 
+	set text "Here is a text element surrounded by a border element.\nResize the column to watch me wrap."
+
 	set S [$T style create s4]
 	$T style elements $S {eb et}
 	$T style layout $S eb -union et -ipadw 2 -ipadn 2 -ipade 2 -ipads 2
 	$T style layout $S et -squeeze x
 
-for {set i 0} {$i < 2} {incr i} {
+	set I [$T item create]
+	$T item hasbutton $I yes
+	$T item style set $I 0 $S
+	$T item text $I 0 $text
+	$T item lastchild root $I
+	set parent $I
+
 	set I [$T item create]
 	$T item hasbutton $I no
 	$T item style set $I 0 $S
-	$T item text $I 0 "Here is a text element surrounded by a border element\nResize the column to watch me wrap"
-	$T item lastchild root $I
-}
+	$T item text $I 0 $text
+	$T item lastchild $parent $I
+
+	###
+
+	set styleNum 5
+	foreach {orient expandList} {horizontal {s ns n} vertical {e we w}} {
+		foreach expand $expandList {
+
+			set S [$T style create s$styleNum -orient $orient]
+			$T style elements $S {e4 e8 e2 e5 e6}
+			$T style layout $S e4 -detach yes -iexpand es
+			$T style layout $S e8 -detach yes -expand n -iexpand e
+			$T style layout $S e2 -expand $expand
+			$T style layout $S e5 -expand $expand
+			$T style layout $S e6 -expand $expand
+			incr styleNum
+
+			set I [$T item create]
+			$T item style set $I 0 $S
+			$T item lastchild root $I
+		}
+	}
 
 	return
 }
