@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.21 2004/07/26 17:33:14 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.22 2004/07/30 21:22:56 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -626,7 +626,7 @@ test treectrl-7.1 {marquee: missing args} -body {
 
 test treectrl-7.2 {marquee: unknown command} -body {
     .t marquee foo
-} -returnCodes error -result {bad command "foo": must be anchor, cget, configure, coords, corner, identify, or visible}
+} -returnCodes error -result {bad command "foo": must be anchor, cget, configure, coords, corner, or identify}
 
 test treectrl-7.3 {marquee anchor: not yet modified} -body {
     .t marquee anchor
@@ -668,13 +668,10 @@ test treectrl-7.11 {marquee identify: after invalid item style map} -body {
 
 test treectrl-7.12 {marquee visible} -body {
     list [.t marquee configure -visible] \
-	 [.t marquee visible 1] \
-	 [.t marquee cget -visible] \
-	 [.t marquee visible 0] \
 	 [.t marquee cget -visible] \
 	 [.t marquee configure -visible 1] \
-	 [.t marquee visible]
-} -result {{-visible {} {} 0 0} 1 1 0 0 {} 1}
+	 [.t marquee cget -visible]
+} -result {{-visible {} {} 0 0} 0 {} 1}
 
 test treectrl-8.1 {selection: missing args} -body {
     .t selection
@@ -883,7 +880,7 @@ test treectrl-15.2 {identify: negative coords} -body {
     .t configure -showheader 1 -showlines 1 -showbuttons 1 \
 	-borderwidth 2 -highlightthickness 1 -treecolumn 2 \
 	-itemheight 0 -linethickness 1
-    .t item hasbutton 1 true
+    .t item configure 1 -button true
     update idletasks
     .t identify -5 -5
 } -result {}
@@ -933,7 +930,7 @@ test treectrl-16.1 {dragimage: missing args} -body {
 
 test treectrl-16.2 {dragimage: unknown command} -body {
     .t dragimage foo
-} -returnCodes error -result {bad command "foo": must be add, cget, clear, configure, offset, or visible}
+} -returnCodes error -result {bad command "foo": must be add, cget, clear, configure, or offset}
 
 test treectrl-16.3 {dragimage configure} -body {
     .t dragimage configure
@@ -965,11 +962,11 @@ test treectrl-16.9 {dragimage add: invalid element} -body {
 
 test treectrl-16.10 {dragimage add: is still not visible} -body {
     .t dragimage add 1 2
-    .t dragimage visible
+    .t dragimage cget -visible
 } -result {0}
 
 test treectrl-16.11 {dragimage visible} -body {
-    .t dragimage visible 1
+    .t dragimage configure -visible 1
     .t dragimage cget -visible
 } -result {1}
 

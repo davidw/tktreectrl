@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: style.test,v 1.2 2003/01/02 02:27:50 treectrl Exp $
+# CVS: @(#) $Id: style.test,v 1.3 2004/07/30 21:22:56 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -99,7 +99,7 @@ test style-4.4 {style names: no style defined} -body {
 
 test style-5.1 {style elements: missing args} -body {
     .t style elements
-} -returnCodes error -result {wrong # args: should be ".t style elements name ?element element...?"}
+} -returnCodes error -result {wrong # args: should be ".t style elements name ?elementList?"}
 
 test style-5.2 {style elements: unknown style} -body {
     .t style elements testStyle

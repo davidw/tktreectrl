@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.7 2004/07/26 17:33:14 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.8 2004/07/30 21:22:55 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -30,11 +30,7 @@ test item-1.1 {item: missing command} -body {
 
 test item-2.2 {item: invalid command} -body {
     .t item foo
-} -returnCodes error -result {bad command "foo": must be ancestors, children, create, delete, firstchild, lastchild, nextsibling, numchildren, parent, prevsibling, remove, bbox, complex, dump, element, hasbutton, index, isancestor, isopen, rnc, sort, state, style, text, or visible}
-
-test item-2.3 {item create: too many args} -body {
-    .t item create foo
-} -returnCodes error -result {wrong # args: should be ".t item create"}
+} -returnCodes error -result {bad command "foo": must be ancestors, children, create, delete, firstchild, lastchild, nextsibling, numchildren, parent, prevsibling, remove, bbox, cget, complex, configure, dump, element, index, isancestor, isopen, rnc, sort, state, style, or text}
 
 # Before continuing to test the item descriptions and their modifiers,
 # lets create some items with this hierarchy:
