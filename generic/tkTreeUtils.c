@@ -1,3 +1,13 @@
+/* 
+ * tkTreeUtils.c --
+ *
+ *	This module implements misc routines for treectrl widgets.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.7 2004/07/30 21:14:28 treectrl Exp $
+ */
+
 #include "tkTreeCtrl.h"
 #ifdef WIN32
 #include "tkWinInt.h"
