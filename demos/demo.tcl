@@ -397,6 +397,7 @@ proc MakeHeaderPopup {} {
 	$m2 add radiobutton -label "Gravity Right" -variable Popup(arrow,gravity) -value right -command {.f2.f1.t column configure $Popup(column) -arrowgravity right}
 
 	$m add checkbutton -label "Expand" -variable Popup(expand) -command {.f2.f1.t column configure $Popup(column) -expand $Popup(expand)}
+	$m add checkbutton -label "Squeeze" -variable Popup(squeeze) -command {.f2.f1.t column configure $Popup(column) -squeeze $Popup(squeeze)}
 
 	set m2 [menu $m.mJustify -tearoff no]
 	$m add cascade -label Justify -menu $m2
@@ -419,6 +420,7 @@ bind .f2.f1.t <ButtonPress-3> {
 			set Popup(arrow,side) [%W column cget $Popup(column) -arrowside]
 			set Popup(arrow,gravity) [%W column cget $Popup(column) -arrowgravity]
 			set Popup(expand) [%W column cget $Popup(column) -expand]
+			set Popup(squeeze) [%W column cget $Popup(column) -squeeze]
 			set Popup(justify) [%W column cget $Popup(column) -justify]
 			tk_popup %W.mHeader %X %Y
 			return
@@ -426,22 +428,22 @@ bind .f2.f1.t <ButtonPress-3> {
 	}
 	set m %W.mTree.mCollapse
 	$m delete 0 end
-	$m add command -label "All" -command {%W collapse all}
+	$m add command -label "All" -command {%W item collapse all}
 	if {$id ne ""} {
 		if {[lindex $id 0] eq "item"} {
 			set item [lindex $id 1]
-			$m add command -label "Item $item" -command "%W collapse $item"
-			$m add command -label "Item $item (recurse)" -command "%W collapse -recurse $item"
+			$m add command -label "Item $item" -command "%W item collapse $item"
+			$m add command -label "Item $item (recurse)" -command "%W item collapse $item -recurse"
 		}
 	}
 	set m %W.mTree.mExpand
 	$m delete 0 end
-	$m add command -label "All" -command {%W expand all}
+	$m add command -label "All" -command {%W item expand all}
 	if {$id ne ""} {
 		if {[lindex $id 0] eq "item"} {
 			set item [lindex $id 1]
-			$m add command -label "Item $item" -command "%W expand $item"
-			$m add command -label "Item $item (recurse)" -command "%W expand -recurse $item"
+			$m add command -label "Item $item" -command "%W item expand $item"
+			$m add command -label "Item $item (recurse)" -command "%W item expand $item -recurse"
 		}
 	}
 	foreach option {data display enable} {
@@ -574,7 +576,7 @@ proc DisplayStylesInList {} {
 	# One item for each element in the demo list
 	foreach elem [lsort [$T element names]] {
 		set item [$t item create -button yes]
-		$t collapse $item
+		$t item collapse $item
 		$t item style set $item 0 s1
 		$t item text $item 0 "Element $elem ([$T element type $elem])"
 
@@ -597,14 +599,14 @@ proc DisplayStylesInList {} {
 	# One item for each style in the demo list
 	foreach style [lsort [$T style names]] {
 		set item [$t item create -button yes]
-		$t collapse $item
+		$t item collapse $item
 		$t item style set $item 0 s1
 		$t item text $item 0 "Style $style"
 
 		# One item for each element in the style
 		foreach elem [$T style elements $style] {
 			set item2 [$t item create -button yes]
-			$t collapse $item2
+			$t item collapse $item2
 			$t item style set $item2 0 s1
 			$t item text $item2 0 "Element $elem ([$T element type $elem])"
 
@@ -656,7 +658,7 @@ proc DisplayStylesInItem {item} {
 	set column 0
 	foreach style [$T item style set $item] {
 		set item2 [$t item create]
-		$t collapse $item2
+		$t item collapse $item2
 		$t item style set $item2 0 s1
 		$t item element configure $item2 0 e1 -text "Column $column: Style $style"
 		set button 0
@@ -666,7 +668,7 @@ proc DisplayStylesInItem {item} {
 			foreach elem [$T item style elements $item $column] {
 				set button 1
 				set item3 [$t item create -button yes]
-				$t collapse $item3
+				$t item collapse $item3
 				$t item style set $item3 0 s1
 				$t item element configure $item3 0 e1 -text "Element $elem ([$T element type $elem])"
 
@@ -747,7 +749,7 @@ proc DemoClear {} {
 	eval $T element delete [$T element names]
 
 	$T item configure root -button no
-	$T expand root
+	$T item expand root
 
 	# Restore some happy defaults to the demo list
 	$T configure -orient vertical -wrap "" -xscrollincrement 0 \
