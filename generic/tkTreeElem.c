@@ -408,7 +408,7 @@ static int PerStateInfo_FromObj(
 
 	if ((objc & 1))
 	{
-		FormatResult(tree->interp, "list must have event number of elements");
+		FormatResult(tree->interp, "list must have even number of elements");
 		return TCL_ERROR;
 	}
 
