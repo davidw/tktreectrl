@@ -1,3 +1,13 @@
+2005-02-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* demos/demo.tcl: try loading treectrl before trying the
+	IsDevelopment branch of loading.
+
+	* generic/tkTreeItem.c (CompareAscii, CompareDict): handle the
+	case where no text value has been set for sorting
+
+	*** other mods by Tim Baker (treectrl) to this point ***
+
 2004-11-30  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeItem.c (TreeItem_FromObj): s/MOD_/TMOD_ to prevent
