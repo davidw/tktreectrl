@@ -77,7 +77,7 @@ proc DemoRandom {} {
 	for {set i 0} {$i < $::RandomN} {incr i} {
 		set numChildren [$T item numchildren $i]
 		if {$numChildren}  {
-			$T item hasbutton $i yes
+			$T item configure $i -button yes
 			$T item style set $i 0 s1 1 s3 2 s3
 			$T item complex $i \
 				[list [list e3 -text "Item $i"] [list e4 -text "($numChildren)"]] \
@@ -304,7 +304,7 @@ proc TreeCtrl::RandomMotion {T x y} {
 			set x [expr {[$T canvasx $x] - $Priv(drag,x)}]
 			set y [expr {[$T canvasy $y] - $Priv(drag,y)}]
 			$T dragimage offset $x $y
-			$T dragimage visible yes
+			$T dragimage configure -visible yes
 		}
 	}
 	return
@@ -330,7 +330,7 @@ proc TreeCtrl::RandomRelease1 {T x y} {
 		}
 		"drag" {
 			AutoScanCancel $T
-			$T dragimage visible no
+			$T dragimage configure -visible no
 			$T selection modify {} $Priv(drop)
 			$T configure -cursor ""
 			if {$Priv(drop) ne ""} {
@@ -401,7 +401,7 @@ proc RandomDrop {T target source pos} {
 	foreach item $parentList {
 		set numChildren [$T item numchildren $item]
 		if {$numChildren == 0} {
-			$T item hasbutton $item no
+			$T item configure $item -button no
 			$T item style map $item item s2 {e3 e3}
 		} else {
 			$T item element configure $item item e4 -text "($numChildren)"
@@ -410,7 +410,7 @@ proc RandomDrop {T target source pos} {
 
 	# Update the target that gained some children
 	if {[$T item style set $parent 0] ne "s1"} {
-		$T item hasbutton $parent yes
+		$T item configure $parent -button yes
 		$T item style map $parent item s1 {e3 e3}
 	}
 	set numChildren [$T item numchildren $parent]
