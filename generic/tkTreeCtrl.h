@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.19 2005/03/25 20:22:20 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.20 2005/03/29 21:03:32 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -104,6 +104,8 @@ struct TreeCtrl
     int showButtons;		/* boolean: Draw expand/collapse buttons */
     int showLines;		/* boolean: Draw lines connecting parent to
 				 * child */
+    int showRootLines;		/* boolean: Draw lines connecting children
+				 * of the root item */
     int showRoot;		/* boolean: Draw the unique root item */
     int showRootButton;		/* boolean: Draw expand/collapse button for
 				 * root item */
@@ -335,6 +337,7 @@ extern TreeItem TreeItem_SetParent(TreeCtrl *tree, TreeItem item, TreeItem paren
 extern TreeItem TreeItem_GetParent(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_SetNextSibling(TreeCtrl *tree, TreeItem item, TreeItem nextSibling);
 extern TreeItem TreeItem_GetNextSibling(TreeCtrl *tree, TreeItem item);
+extern TreeItem TreeItem_NextSiblingVisible(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_SetPrevSibling(TreeCtrl *tree, TreeItem item, TreeItem prevSibling);
 extern TreeItem TreeItem_GetPrevSibling(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_SetDInfo(TreeCtrl *tree, TreeItem item, TreeItemDInfo dInfo);
