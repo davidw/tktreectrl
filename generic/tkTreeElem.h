@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.6 2004/08/13 20:25:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.7 2004/10/12 03:53:06 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -137,13 +137,23 @@ struct PerStateType
 #define MATCH_PARTIAL	2
 #define MATCH_EXACT		3
 
+typedef struct TreeIterate_ *TreeIterate;
+
 extern void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem);
+extern TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr);
+extern TreeIterate Tree_ElementIterateNext(TreeIterate iter_);
+extern Element *Tree_ElementIterateGet(TreeIterate iter_);
+extern void Tree_ElementIterateChanged(TreeIterate iter_, int mask);
 
 typedef struct TreeCtrlStubs TreeCtrlStubs;
 struct TreeCtrlStubs
 {
 	int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, ElementType *typePtr);
 	void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item, Element *elem);
+	TreeIterate (*Tree_ElementIterateBegin)(TreeCtrl *tree, ElementType *elemTypePtr);
+	TreeIterate (*Tree_ElementIterateNext)(TreeIterate iter_);
+	Element *(*Tree_ElementIterateGet)(TreeIterate iter_);
+	void (*Tree_ElementIterateChanged)(TreeIterate iter_, int mask);
 	void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
 	int (*PerStateInfo_FromObj)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
 	PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
