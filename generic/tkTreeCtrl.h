@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.18 2005/01/03 21:36:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.19 2005/03/25 20:22:20 hobbs2 Exp $
  */
 
 #include "tkPort.h"
@@ -20,6 +20,14 @@
 #else /* HAVE_DBWIN_H */
 #define dbwin printf
 #endif /* HAVE_DBWIN_H */
+
+/* define TARGET_OS_MAC: */
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
+#include <TargetConditionals.h>
+#if defined(TARGET_OS_MAC) && ! TARGET_OS_MAC
+#undef TARGET_OS_MAC
+#endif
+#endif
 
 #ifndef TRUE
 #define TRUE 1

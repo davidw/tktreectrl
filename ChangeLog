@@ -1,3 +1,9 @@
+2005-03-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* Makefile.in, generic/tkTreeCtrl.h:         OS X patch from
+	* configure, configure.ac, tclconfig/tcl.m4: Steffen
+	* license.terms (new):
+
 2005-03-18  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* Makefile.in (AR): use @AR@
