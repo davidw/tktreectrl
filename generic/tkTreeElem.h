@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.4 2004/07/30 21:03:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.5 2004/08/09 02:17:58 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -88,5 +88,62 @@ extern ElementType elemTypeImage;
 extern ElementType elemTypeRect;
 extern ElementType elemTypeText;
 
+/***** ***** *****/
+
+extern ElementType *elementTypeList;
+
 extern int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, double *dv, char **sv);
+
+typedef struct PerStateData PerStateData;
+typedef struct PerStateInfo PerStateInfo;
+typedef struct PerStateType PerStateType;
+
+/* There is one of these for each XColor, Tk_Font, Tk_Image etc */
+struct PerStateData
+{
+	int stateOff;
+	int stateOn;
+	/* Type-specific fields go here */
+};
+
+#define DEBUG_PSI
+
+struct PerStateInfo
+{
+#ifdef DEBUG_PSI
+	PerStateType *type;
+#endif
+	Tcl_Obj *obj;
+	int count;
+	PerStateData *data;
+};
+
+typedef int (*PerStateType_FromObjProc)(TreeCtrl *, Tcl_Obj *, PerStateData *);
+typedef void (*PerStateType_FreeProc)(TreeCtrl *, PerStateData *);
+
+struct PerStateType
+{
+#ifdef DEBUG_PSI
+	char *name;
+#endif
+	int size;
+	PerStateType_FromObjProc fromObjProc;
+	PerStateType_FreeProc freeProc;
+};
+
+#define MATCH_NONE		0
+#define MATCH_ANY		1
+#define MATCH_PARTIAL	2
+#define MATCH_EXACT		3
+
+typedef struct TreeCtrlStubs TreeCtrlStubs;
+struct TreeCtrlStubs
+{
+	int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, ElementType *typePtr);
+	void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
+	int (*PerStateInfo_FromObj)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
+	PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
+	Tcl_Obj *(*PerStateInfo_ObjForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
+	void (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state);
+};
 
