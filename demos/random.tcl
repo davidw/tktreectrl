@@ -57,38 +57,42 @@ proc DemoRandom {} {
 	}
 
 	set clicks [clock clicks]
+	set items [$T index root]
 	for {set i 1} {$i < $::RandomN} {incr i} {
-		$T item create
+		set itemi [$T item create]
 		while 1 {
 			set j [expr {int(rand() * $i)}]
-			if {[$T depth $j] < 5} break
+			set itemj [lindex $items $j]
+			if {[$T depth $itemj] < 5} break
 		}
 		if {rand() * 2 > 1} {
-			$T collapse $i
+			$T collapse $itemi
 		}
 		if {rand() * 2 > 1} {
-			$T item lastchild $j $i
+			$T item lastchild $itemj $itemi
 		} else {
-			$T item firstchild $j $i
+			$T item firstchild $itemj $itemi
 		}
+		lappend items $itemi
 	}
 	puts "created $::RandomN-1 items in [expr [clock clicks] - $clicks] clicks"
 	set clicks [clock clicks]
 	for {set i 0} {$i < $::RandomN} {incr i} {
-		set numChildren [$T item numchildren $i]
+		set itemi [lindex $items $i]
+		set numChildren [$T item numchildren $itemi]
 		if {$numChildren}  {
-			$T item configure $i -button yes
-			$T item style set $i 0 s1 1 s3 2 s3
-			$T item complex $i \
+			$T item configure $itemi -button yes
+			$T item style set $itemi 0 s1 1 s3 2 s3
+			$T item complex $itemi \
 				[list [list e3 -text "Item $i"] [list e4 -text "($numChildren)"]] \
-				[list [list e6 -text "[$T item parent $i]"]] \
-				[list [list e6 -text "[$T depth $i]"]]
+				[list [list e6 -text "[$T item parent $itemi]"]] \
+				[list [list e6 -text "[$T depth $itemi]"]]
 		} else {
-			$T item style set $i 1 s3 2 s3 0 s2
-			$T item complex $i \
+			$T item style set $itemi 1 s3 2 s3 0 s2
+			$T item complex $itemi \
 				[list [list e3 -text "Item $i"]] \
-				[list [list e6 -text "[$T item parent $i]"]] \
-				[list [list e6 -text "[$T depth $i]"]]
+				[list [list e6 -text "[$T item parent $itemi]"]] \
+				[list [list e6 -text "[$T depth $itemi]"]]
 		}
 	}
 	puts "configured $::RandomN items in [expr [clock clicks] - $clicks] clicks"

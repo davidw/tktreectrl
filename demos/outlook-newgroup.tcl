@@ -73,59 +73,63 @@ proc DemoOutlookNewsgroup {} {
 
 	set thread 0
 	set Message(count,0) 0
+	set items [$T index root]
 	for {set i 1} {$i < $msgCnt} {incr i} {
-		$T item create
+		set itemi [$T item create]
 		while 1 {
 			set j [expr {int(rand() * $i)}]
+			set itemj [lindex $items $j]
 			if {$j == 0} break
-			if {[$T depth $j] == 5} continue
-			if {$Message(count,$Message(thread,$j)) == 15} continue
+			if {[$T depth $itemj] == 5} continue
+			if {$Message(count,$Message(thread,$itemj)) == 15} continue
 			break
 		}
-		$T item lastchild $j $i
+		$T item lastchild $itemj $itemi
 
-		set Message(read,$i) [expr rand() * 2 > 1]
+		set Message(read,$itemi) [expr rand() * 2 > 1]
 		if {$j == 0} {
-			set Message(thread,$i) [incr thread]
-			set Message(seconds,$i) [expr {[clock seconds] - int(rand() * 500000)}]
-			set Message(seconds2,$i) $Message(seconds,$i)
+			set Message(thread,$itemi) [incr thread]
+			set Message(seconds,$itemi) [expr {[clock seconds] - int(rand() * 500000)}]
+			set Message(seconds2,$itemi) $Message(seconds,$itemi)
 			set Message(count,$thread) 1
 		} else {
-			set Message(thread,$i) $Message(thread,$j)
-			set Message(seconds,$i) [expr {$Message(seconds2,$j) + int(rand() * 10000)}]
-			set Message(seconds2,$i) $Message(seconds,$i)
-			set Message(seconds2,$j) $Message(seconds,$i)
-			incr Message(count,$Message(thread,$j))
+			set Message(thread,$itemi) $Message(thread,$itemj)
+			set Message(seconds,$itemi) [expr {$Message(seconds2,$itemj) + int(rand() * 10000)}]
+			set Message(seconds2,$itemi) $Message(seconds,$itemi)
+			set Message(seconds2,$itemj) $Message(seconds,$itemi)
+			incr Message(count,$Message(thread,$itemj))
 		}
+		lappend items $itemi
 	}
 
 	for {set i 1} {$i < $msgCnt} {incr i} {
-		set subject "This is thread number $Message(thread,$i)"
+		set itemi [lindex $items $i]
+		set subject "This is thread number $Message(thread,$itemi)"
 		set from somebody@somewhere.net
-		set sent [clock format $Message(seconds,$i) -format "%d/%m/%y %I:%M %p"]
+		set sent [clock format $Message(seconds,$itemi) -format "%d/%m/%y %I:%M %p"]
 		set size [expr {1 + int(rand() * 10)}]KB
 
 		# This message has been read
-		if {$Message(read,$i)} {
-			$T item state set $i read
+		if {$Message(read,$itemi)} {
+			$T item state set $itemi read
 		}
 
 		# This message has unread descendants
-		if {[AnyUnreadDescendants $T $i]} {
-			$T item state set $i unread
+		if {[AnyUnreadDescendants $T $itemi]} {
+			$T item state set $itemi unread
 		}
 
-		if {[$T item numchildren $i]} {
-			$T item configure $i -button yes
+		if {[$T item numchildren $itemi]} {
+			$T item configure $itemi -button yes
 
 			# Collapse some messages
 			if {rand() * 2 > 1} {
-				$T collapse $i
+				$T collapse $itemi
 			}
 		}
 
 #		$T item style set $i 3 s1 4 s2.we 5 s2.we 6 s2.w
-		$T item text $i 3 $subject 4 $from 5 $sent 6 $size
+		$T item text $itemi 3 $subject 4 $from 5 $sent 6 $size
 	}
 
 	# Do something when the selection changes
