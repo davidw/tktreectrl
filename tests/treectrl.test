@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.8 2002/12/28 19:48:49 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.9 2002/12/28 21:18:46 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -2126,6 +2126,66 @@ test tree-15.11 {identify: item (to the right)} -body {
     update idletasks 
     .t identify 210 10
 } -result {item 1 column 2}
+
+test tree-16.1 {dragimage: missing args} -body {
+    .t dragimage
+} -returnCodes error -result {wrong # args: should be ".t dragimage command ?arg arg...?"}
+
+test tree-16.2 {dragimage: unknown command} -body {
+    .t dragimage foo
+} -returnCodes error -result {bad command "foo": must be add, cget, clear, configure, offset, or visible}
+
+test tree-16.3 {dragimage configure} -body {
+    .t dragimage configure
+} -result {{-visible {} {} 0 0}}
+
+test tree-16.4 {dragimage configure -visible} -body {
+    .t dragimage configure -visible
+} -result {-visible {} {} 0 0}
+
+test tree-16.5 {dragimage cget -visible} -constraints knownBug -body {
+    .t dragimage cget -visible
+} -result {0}
+
+test tree-16.6 {dragimage offset: without preceding add} -body {
+    .t dragimage offset
+} -result {0 0}
+
+test tree-16.7 {dragimage add: invalid item} -body {
+    .t dragimage add foo
+} -returnCodes error -result {bad item description "foo"}
+
+test tree-16.8 {dragimage add: invalid column} -body {
+    .t dragimage add 1 foo
+} -returnCodes error -result {column with tag "foo" doesn't exist}
+
+test tree-16.9 {dragimage add: invalid element} -body {
+    .t dragimage add 1 2 foo
+} -returnCodes error -result {element "foo" doesn't exist}
+
+test tree-16.10 {dragimage add: is still not visible} -body {
+    .t dragimage add 1 2
+    .t dragimage visible
+} -result {0}
+
+test tree-16.11 {dragimage visible} -body {
+    .t dragimage visible 1
+    .t dragimage cget -visible
+} -result {1}
+
+test tree-16.12 {dragimage offset} -body {
+    .t dragimage offset 10 10
+    .t dragimage offset
+} -result {10 10}
+
+test tree-16.13 {dragimage clear: too many args} -constraints knownBug -body {
+    .t dragimage clear 1
+} -returnCodes error -result {wrong # args: should be ".t dragimage clear"}
+
+test tree-16.14 {dragimage clear: doesn't modify the offset} -body {
+    .t dragimage clear
+    .t dragimage offset
+} -result {10 10}
 
 # cleanup
 image delete emptyImg
