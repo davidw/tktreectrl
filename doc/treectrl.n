@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.15 2003/01/02 02:25:13 treectrl Exp $
+'\" $Id: treectrl.n,v 1.16 2003/01/02 19:34:24 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -1180,6 +1180,12 @@ The following forms of the command are supported:
 \fIpathName \fBstate define\fR \fIstateName\fR
 Defines a new state with the name \fIstateName\fR,
 which must not be the name of a predefined or already user defined state.
+.TP
+\fIpathName \fBstate linkage\fR \fIstateName\fR
+Returns a string indicating
+whether the specified state is user defined
+by means of the \fBstate define\fR widget command (\fBdynamic\fR)
+or predefined by the treectrl widget itself (\fBstatic\fR).
 .TP
 \fIpathName \fBstate names\fR
 Returns a list containing the names of all user defined states.
