@@ -162,7 +162,7 @@ static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_PIXELS, "-width", "width", "Width",
 		"200", -1, Tk_Offset(TreeCtrl, width),
 		0, (ClientData) NULL, 0},
-	{TK_OPTION_STRING, "-wrap", (char *) NULL, (char *) NULL,
+	{TK_OPTION_STRING, "-wrap", "wrap", "Wrap",
 		(char *) NULL, Tk_Offset(TreeCtrl, wrapObj), -1,
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		TREE_CONF_WRAP | TREE_CONF_RELAYOUT},
@@ -1272,9 +1272,6 @@ badWrap:
 	if (tree->highlightWidth < 0)
 		tree->highlightWidth = 0;
 	tree->inset = tree->highlightWidth + tree->borderWidth;
-
-	if ((tree->columnTree < 0) || (tree->columnTree >= tree->columnCount))
-		tree->columnTree = 0;
 
 	if (oldShowRoot != tree->showRoot)
 	{
