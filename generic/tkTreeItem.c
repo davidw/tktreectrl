@@ -709,16 +709,19 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			case MOD_ABOVE:
 			{
 				item = (Item *) Tree_ItemAbove(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_BELOW:
 			{
 				item = (Item *) Tree_ItemBelow(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_BOTTOM:
 			{
 				item = (Item *) Tree_ItemBottom(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_CHILD:
@@ -768,11 +771,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			case MOD_LEFT:
 			{
 				item = (Item *) Tree_ItemLeft(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_LEFTMOST:
 			{
 				item = (Item *) Tree_ItemLeftMost(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_NEXT:
@@ -797,6 +802,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			case MOD_PARENT:
 			{
 				item = item->parent;
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_PREV:
@@ -821,11 +827,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			case MOD_RIGHT:
 			{
 				item = (Item *) Tree_ItemRight(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_RIGHTMOST:
 			{
 				item = (Item *) Tree_ItemRightMost(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_SIBLING:
@@ -858,6 +866,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			case MOD_TOP:
 			{
 				item = (Item *) Tree_ItemTop(tree, (TreeItem) item);
+				nextIsVisible = FALSE;
 				break;
 			}
 			case MOD_VISIBLE:
