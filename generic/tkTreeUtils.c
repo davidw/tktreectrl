@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.8 2004/08/09 02:27:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.9 2004/10/09 22:54:31 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -468,8 +468,10 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 {
 #ifdef WIN32
 	OffsetRgn((HRGN) region, xOffset, yOffset);
+#elif defined(TARGET_OS_MAC)
+#error "Mac developer: implement Tk_OffsetRegion please!"
 #else
-#error "Unix/Mac developer: implement Tk_OffsetRegion please!"
+	XOffsetRegion((Region) region, xOffset, yOffset);
 #endif
 }
 
