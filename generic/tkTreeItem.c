@@ -3857,7 +3857,7 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	totalWidth = 0;
 	treeColumn = tree->columns;
 	column = self->columns;
-	while (column != NULL)
+	while (treeColumn != NULL)
 	{
 		if (!TreeColumn_Visible(treeColumn))
 			columnWidth = 0;
@@ -3876,7 +3876,7 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 				Tcl_Obj *subListObj = Tcl_NewListObj(0, NULL);
 				Tcl_ListObjAppendElement(tree->interp, subListObj,
 					Tcl_NewIntObj(TreeColumn_Index(treeColumn)));
-				if (column->style != NULL)
+				if ((column != NULL) && (column->style != NULL))
 				{
 					drawArgs.style = column->style;
 					drawArgs.x = x + totalWidth + indent;
@@ -3891,7 +3891,8 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 			totalWidth += columnWidth;
 		}
 		treeColumn = TreeColumn_Next(treeColumn);
-		column = column->next;
+		if (column != NULL)
+			column = column->next;
 	}
 }
 
