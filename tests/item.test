@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.5 2003/01/05 13:43:41 krischan Exp $
+# CVS: @(#) $Id: item.test,v 1.6 2003/01/06 23:00:33 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -442,7 +442,7 @@ test item-17.3 {item sort: is all allowed?} -body {
 
 test item-17.4 {item sort: invalid option} -body {
     .t item sort root -foo
-} -returnCodes error -result {bad option "-foo": must be -ascii, -column, -command, -decreasing, -dictionary, -first, -increasing, -integer, -last, -notreally, or -real}
+} -returnCodes error -result {bad option "-foo": must be -ascii, -column, -command, -decreasing, -dictionary, -element, -first, -increasing, -integer, -last, -notreally, or -real}
 
 test item-17.5 {item sort: missing arg to an option} -body {
     .t item sort root -first
@@ -471,10 +471,13 @@ proc listItems {t {i root}} {
 
 test item-17.9 {item sort: set the texts in column 0 for all items} -body {
     .t style create   textStyle
-    .t style elements textStyle eText
+    .t style elements textStyle {eRect eBorder eText}
+    .t element create eTime text
+    .t style create   timeStyle
+    .t style elements timeStyle eTime
     foreach i [listItems .t] {
 	.t item style set $i 0 textStyle
-	.t item style set $i 1 textStyle
+	.t item style set $i 1 timeStyle
 	.t item text $i 0 [expr {$i+5}]
     }
     .t item text 8 0
@@ -655,7 +658,39 @@ test item-17.41 {item sort -command: reverse timespan with timespans} -body {
     .t item sort root -command {myCompare timespan-1} -decreasing -notreally
 } -result {8 5 1}
 
-test item-17.42 {item sort -command: no columns} -body {
+test item-17.42 {item sort -element: missing arg} -body {
+    .t item sort root -element
+} -returnCodes error -result {missing value for "-element" option}
+
+test item-17.43 {item sort -element: invalid element} -body {
+    .t item sort root -element foo
+} -returnCodes error -result {element "foo" doesn't exist}
+
+test item-17.44 {item sort -element: no text element} -body {
+    .t item sort root -element eBorder
+} -returnCodes error -result {element eBorder is not of type "text"}
+
+test item-17.45 {item sort -element: element in wrong column} -body {
+    .t item sort root -column 1 -element eText -dictionary
+    listItems .t
+} -returnCodes error -result {style timeStyle does not use element eText}
+
+test item-17.46 {item sort -element: -colum defaults to 0} -body {
+    .t item sort root -element eTime
+    listItems .t
+} -returnCodes error -result {style textStyle does not use element eTime}
+
+test item-17.47 {item sort -element: element in columns} -body {
+    .t item sort root -column 1 -element eTime
+    listItems .t
+} -result {1 2 3 4 8 5 6 7} ;# same result as in 17.37
+
+test item-17.48 {item sort -element: useless for -command} -body {
+    .t item sort root -column 1 -element eTime -command {myCompare timespan-1}
+    listItems .t
+} -result {1 2 3 4 5 6 7 8} ;# same result as in 17.39
+
+test item-17.49 {item sort -command: no columns} -body {
     while {![catch {.t column configure 0}]} {
 	.t column delete 0
     }
