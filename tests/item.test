@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.6 2003/01/06 23:00:33 krischan Exp $
+# CVS: @(#) $Id: item.test,v 1.7 2004/07/26 17:33:14 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -191,6 +191,7 @@ test item-13.2 {item complex: only allowed if column style is defined} -body {
 } -returnCodes error -result {item 8 doesn't have column 0}
 
 test item-13.3 {item complex: invalid list} -body {
+	.t column create
     .t item style set 8 0 testStyle
     .t item complex 8 {{e1 -text}}
 } -returnCodes error -result {wrong # args: should be "element option value..."}
@@ -470,6 +471,7 @@ proc listItems {t {i root}} {
 }
 
 test item-17.9 {item sort: set the texts in column 0 for all items} -body {
+    .t column create
     .t style create   textStyle
     .t style elements textStyle {eRect eBorder eText}
     .t element create eTime text

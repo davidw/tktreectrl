@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.3 2003/01/04 13:18:30 krischan Exp $
+# CVS: @(#) $Id: column.test,v 1.4 2004/07/26 17:33:14 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -34,7 +34,7 @@ test column-1.1 {missing args} -body {
 
 test column-1.2 {unknown command} -body {
     .t column foo
-} -returnCodes error -result {bad command "foo": must be bbox, cget, configure, delete, index, move, neededwidth, or width}
+} -returnCodes error -result {bad command "foo": must be bbox, cget, configure, create, delete, index, move, neededwidth, or width}
 
 test column-1.3 {configure: no column exists with numerical index} -body {
     .t column configure 0
@@ -45,6 +45,7 @@ test column-1.4 {configure: no column exists with tag} -body {
 } -returnCodes error -result {column with tag "column0" doesn't exist}
 
 test column-1.5 {configure: create and fill a column} -body {
+	.t column create
     .t column configure 0 -tag column0
     .t element create e rect -width 482
     .t style create s
@@ -55,6 +56,7 @@ test column-1.5 {configure: create and fill a column} -body {
 } -result {1}
 
 test column-1.6 {configure: create another column} -body {
+	.t column create
     .t column configure 1 -tag column1
 } -result {}
 
@@ -392,8 +394,8 @@ test column-7.2 {column move: invalid column} -body {
 } -returnCodes error -result {bad column index "2": must be from 0 to 0}
 
 test column-7.3 {column move: invalid column} -body {
-    .t column configure 1 -tag column1
-    .t column configure 2 -tag column3
+    .t column create -tag column1
+    .t column create -tag column3
     .t column move 0 2
     .t column index column2
 } -result {1}
