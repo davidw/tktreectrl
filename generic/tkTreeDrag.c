@@ -191,7 +191,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		/* T dragimage add I ?C? ?E ...? */
 		case COMMAND_ADD:
 		{
-			XRectangle rects[20];
+#define STATIC_SIZE 20
+			XRectangle staticRects[STATIC_SIZE], *rects = staticRects;
 			TreeItem item;
 			TreeItemColumn itemColumn;
 			TreeColumn treeColumn;
@@ -270,6 +271,8 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				drawArgs.x = x + indent + totalWidth;
 				drawArgs.width = TreeColumn_UseWidth(treeColumn) - indent;
 				drawArgs.justify = TreeColumn_Justify(treeColumn);
+				if (objc - 5 > STATIC_SIZE)
+					rects = (XRectangle *) ckalloc(sizeof(XRectangle) * (objc - 5));
 				count = TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5, rects);
 				if (count == -1)
 				{
@@ -305,6 +308,9 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						drawArgs.x = x + indent + totalWidth;
 						drawArgs.width = width - indent;
 						drawArgs.justify = TreeColumn_Justify(treeColumn);
+						count = TreeStyle_NumElements(tree, drawArgs.style);
+						if (count > STATIC_SIZE)
+							rects = (XRectangle *) ckalloc(sizeof(XRectangle) * count);
 						count = TreeStyle_GetElemRects(&drawArgs, 0, NULL, rects);
 						if (count == -1)
 						{
@@ -318,6 +324,11 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 							elem->y = rects[i].y;
 							elem->width = rects[i].width;
 							elem->height = rects[i].height;
+						}
+						if (rects != staticRects)
+						{
+							ckfree((char *) rects);
+							rects = staticRects;
 						}
 					}
 					totalWidth += width;
@@ -344,6 +355,8 @@ nextColumn:
 					dragImage->bounds[3] = elem->y + elem->height;
 			}
 doneAdd:
+			if (rects != staticRects)
+				ckfree((char *) rects);
 			TreeDragImage_Display(tree->dragImage);
 			return result;
 		}
