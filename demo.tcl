@@ -384,7 +384,7 @@ bind .f2.f1.t <ButtonPress-3> {
 bind TreeCtrlXXX <ButtonPress-1> {
 	focus %W
 	set id [%W identify %x %y]
-	puts "identify: $id"
+	dbwin "identify: $id\n"
 	if {$id ne "" && [lindex $id 0] eq "item"} {
 		foreach {where item arg1 arg2} $id {}
 		if {$arg1 eq "button"} {
@@ -455,7 +455,7 @@ proc DemoSet {cmd file} {
 	set clicks [clock clicks]
 	uplevel #0 $cmd
 	set clicks [expr {[clock clicks] - $clicks}]
-	puts "set list in [ClicksToSeconds $clicks] seconds ($clicks clicks)"
+	dbwin "set list in [ClicksToSeconds $clicks] seconds ($clicks clicks)\n"
 	.f2.f1.t xview moveto 0
 	.f2.f1.t yview moveto 0
 	update
