@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.1 2002/12/17 05:04:18 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.2 2004/08/13 20:30:38 treectrl Exp $
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.  The only places you should
@@ -36,7 +36,7 @@ AC_SUBST(CONFIGDIR)
 PACKAGE=treectrl
 
 MAJOR_VERSION=1
-MINOR_VERSION=0
+MINOR_VERSION=1
 PATCHLEVEL=
 
 VERSION=${MAJOR_VERSION}.${MINOR_VERSION}${PATCHLEVEL}
