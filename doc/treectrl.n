@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.4 2002/12/26 15:52:02 krischan Exp $
+'\" $Id: treectrl.n,v 1.5 2002/12/27 11:49:27 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -727,6 +727,64 @@ Returns a list containing the names of all user defined states.
 \fIpathName \fBstate undefine\fR \fIstateName\fR
 \fIStateName\fR must be the name of a user defined state.
 Removes this state from the list of user defined states.
+.RE
+.TP
+\fIpathName \fBselection \fIoption arg\fR
+This command is used to adjust the selection within a treectrl.
+It has several forms, depending on \fIoption\fR:
+.RS
+.TP
+\fIpathName \fBselection add \fIfirst\fR ?\fIlast\fR?
+\fIFirst\fR and \fIlast\fR (if specified)
+must be the string \fBall\fR or an \fIitemDesc\fR.
+Selects all of the items in the range between
+\fIfirst\fR and \fIlast\fR, inclusive,
+without affecting the selection state of items outside that range.
+If one of the arguments is the string \fBall\fR,
+all items of the treectrl widget are added to the selection instead.
+.TP
+\fIpathName \fBselection anchor ?\fIitemDesc\fR?
+If \fIitemDesc\fR is specified,
+the selection anchor is set to the described item.
+The selection anchor is the end of the selection that is fixed
+while dragging out a selection with the mouse.
+The item description \fBanchor\fR may be used to refer to the anchor item.
+This command doesn't modify the selection state of any item.
+Returns the numerical id of the selection anchor item.
+.TP
+\fIpathName \fBselection clear ?\fIfirst\fR? ?\fIlast\fR?
+\fIFirst\fR and \fIlast\fR (if specified)
+must be the string \fBall\fR or an \fIitemDesc\fR.
+If any of the items between \fIfirst\fR and \fIlast\fR
+(inclusive) are selected, they are deselected.
+The selection state is not changed for items outside this range.
+If no additional arguments is given
+or one of the arguments is the string \fBall\fR,
+the selection is completely cleared instead.
+.TP
+\fIpathName \fBselection count\fR
+Returns an integer indicating the number
+of items in the treectrl that are currently selected.
+.TP
+\fIpathName \fBselection get\fR
+Returns a list containing the numerical ids of
+all of the items in the treectrl that are currently selected.
+If there are no items selected in the treectrl then an empty
+string is returned.
+.TP
+\fIpathName \fBselection includes \fIitemDesc\fR
+Returns 1 if the item indicated by \fIitemDesc\fR is currently
+selected, 0 if it isn't.
+.TP
+\fIpathName \fBselection modify \fIselect deselect\fR
+Both arguments \fIselect\fR and \fIdeselect\fR must be
+the string \fBall\fR or a possibly empty list of \fIitemDesc\fRs.
+Selects all of the items described by \fIselect\fR,
+then deselects all items described by \fIdeselect\fR,
+without affecting the selection state of any item
+not mentioned in both arguments.
+If one item is described in both arguments \fIselect\fR and \fIdeselect\fR,
+it is added to the selection.
 .RE
 .TP
 \fIpathName \fBstyle \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?

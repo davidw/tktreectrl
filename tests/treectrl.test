@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.4 2002/12/26 15:54:19 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.5 2002/12/27 11:52:16 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -1513,6 +1513,82 @@ test tree-7.11 {marquee visible} -body {
 	 [.t marquee configure -visible 1] \
 	 [.t marquee visible]
 } -result {{-visible {} {} 0 0} 1 1 0 0 {} 1}
+
+test tree-8.1 {selection: missing args} -body {
+    .t selection
+} -returnCodes error -result {wrong # args: should be ".t selection command ?arg arg...?"}
+
+test tree-8.2 {selection: unknown command} -body {
+    .t selection foo
+} -returnCodes error -result {bad command "foo": must be add, anchor, clear, count, get, includes, or modify}
+
+test tree-8.3 {selection count/get: nothing selected yet} -body {
+    list [.t selection count] [.t selection get]
+} -result {0 {}}
+
+test tree-8.4 {selection anchor: always defined} -body {
+    .t selection anchor
+} -result {0}
+
+test tree-8.5 {selection anchor: modifies the anchor item} -body {
+    .t selection anchor "root lastchild"
+    .t index anchor
+} -result {8}
+
+test tree-8.6 {selection count/get: still nothing selected} -body {
+    list [.t selection count] [.t selection get]
+} -result {0 {}}
+
+test tree-8.7 {selection add: all children of an item} -body {
+    .t selection add "1 firstchild" "1 lastchild"
+    list [.t selection count] [.t selection get]
+} -result {2 {2 3}}
+
+test tree-8.8 {selection add: all items and then some} -constraints knownBug -body {
+    .t selection add all "1 lastchild"
+    list [.t selection count] [.t selection get]
+} -result {10 {0 1 2 3 4 5 6 7 8 12}}
+
+test tree-8.9 {selection clear} -body {
+    .t selection clear "root firstchild"
+    list [.t selection count] [.t selection get]
+} -result {9 {0 2 3 4 5 6 7 8 12}}
+
+test tree-8.10 {selection clear: some items and then all} -constraints knownBug -body {
+    .t selection clear "root lastchild" all
+    list [.t selection count] [.t selection get]
+} -result {0 {}}
+
+test tree-8.11 {selection modify: to be or not to be?} -body {
+    .t selection modify all all
+    list [.t selection count] [.t selection get]
+} -result {10 {0 1 2 3 4 5 6 7 8 12}}
+
+test tree-8.12 {selection clear: totally empty} -body {
+    .t selection clear
+    list [.t selection count] [.t selection get]
+} -result {0 {}}
+
+test tree-8.12 {selection modify: to be or not to be?} -body {
+    .t selection modify {{root firstchild} {root lastchild}} {{root lastchild}}
+    list [.t selection count] [.t selection get]
+} -result {2 {1 8}}
+
+test tree-8.13 {selection includes: missing args} -body {
+    .t selection includes
+} -returnCodes error -result {wrong # args: should be ".t selection includes index"}
+
+test tree-8.14 {selection includes: invalid item} -body {
+    .t selection includes {foo bar}
+} -returnCodes error -result {bad item description "foo bar"}
+
+test tree-8.15 {selection includes: item is selected} -body {
+    .t selection includes {root child 2}
+} -result {1}
+
+test tree-8.16 {selection includes: item is not selected} -body {
+    .t selection includes {root child 0 firstchild}
+} -result {0}
 
 # cleanup
 image delete emptyImg
