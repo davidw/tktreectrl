@@ -715,7 +715,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (objc < 3)
 	{
-		Tcl_WrongNumArgs(interp, 3, objv, "command ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
 		return TCL_ERROR;
 	}
 
@@ -737,7 +737,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Tcl_WrongNumArgs(interp, 3, objv, "column");
 				return TCL_ERROR;
 			}
-			if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column, 0) != TCL_OK)
+			if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column, CFO_NOT_TAIL) != TCL_OK)
 				return TCL_ERROR;
 			if (!tree->showHeader || !column->visible)
 				break;
