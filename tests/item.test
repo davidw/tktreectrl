@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.1 2002/12/30 21:42:21 krischan Exp $
+# CVS: @(#) $Id: item.test,v 1.2 2002/12/31 12:20:12 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -332,47 +332,83 @@ test tree-15.20 {item style set} -body {
 
 test tree-16.1 {item state: missing args} -body {
     .t item state
-} -returnCodes error -result {wrong # args: should be ".t item state item ?state ...?"}
+} -returnCodes error -result {wrong # args: should be ".t item state command item ?arg ...?"}
 
-test tree-16.2 {item state: unknown item} -body {
-    .t item state 999
+test tree-16.2 {item state: unknown command} -body {
+    .t item state foo bar
+} -returnCodes error -result {bad command "foo": must be get or set}
+
+test tree-16.3 {item state get: unknown item} -body {
+    .t item state get 999
 } -returnCodes error -result {item "999" doesn't exist}
 
-test tree-16.3 {item state: list all set states} -body {
-    .t item state 8
+test tree-16.4 {item state get: too much arg} -body {
+    .t item state get 8 open enabled
+} -returnCodes error -result {wrong # args: should be ".t item state get 8 ?state?"}
+
+test tree-16.5 {item state get: invalid arg} -body {
+    .t item state get 8 !open
+} -returnCodes error -result {can't specify '!' for this command}
+
+test tree-16.6 {item state get: unknown state} -body {
+    .t item state get 8 foo
+} -returnCodes error -result {unknown state "foo"}
+
+test tree-16.7 {item state: list all set states} -body {
+    .t item state get 8
 } -result {open enabled}
 
-test tree-16.4 {item state: try to reset predefined state} -body {
-    .t item state 8 !open
-} -returnCodes error -result {cannot change state "!open"}
+test tree-16.8 {item state get: state not set} -body {
+    .t item state get 8 active
+} -result {0}
 
-test tree-16.5 {item state: unknown states} -body {
-    .t item state 8 foo bar
-} -returnCodes error -result {cannot change state "foo"}
+test tree-16.9 {item state get: state set} -body {
+    .t item state get 8 open
+} -result {1}
 
-test tree-16.6 {item state: switch on states} -body {
-    .t item state 8 state0
-    .t item state 8
+test tree-16.10 {item state get: user defined state not set} -body {
+    .t item state get 8 state0
+} -result {0}
+
+test tree-16.11 {item state set: missing arg} -body {
+    .t item state set 8
+} -returnCodes error -result {wrong # args: should be ".t item state set 8 ?last? stateList"}
+
+test tree-16.12 {item state: try to reset predefined state} -body {
+    .t item state set 8 open
+} -returnCodes error -result {can't specify state "open" for this command}
+
+test tree-16.13 {item state: unknown states} -body {
+    .t item state set 8 {foo bar}
+} -returnCodes error -result {unknown state "foo"}
+
+test tree-16.14 {item state: switch on states} -body {
+    .t item state set 8 state0
+    .t item state get 8
 } -result {open enabled state0}
 
-test tree-16.7 {item state: switch off states} -body {
-    .t item state 8 !state0
-    .t item state 8
+test tree-16.15 {item state get: user defined state not set} -body {
+    .t item state get 8 state0
+} -result {1}
+
+test tree-16.16 {item state: switch off states} -body {
+    .t item state set 8 !state0
+    .t item state get 8
 } -result {open enabled}
 
-test tree-16.8 {item state: reset predefined state} -body {
+test tree-16.17 {item state: reset predefined state} -body {
     .t collapse 8
-    .t item state 8
+    .t item state get 8
 } -result {enabled}
 
-test tree-16.9 {item state: reset predefined state} -body {
+test tree-16.18 {item state: reset predefined state} -body {
     .t expand 8
-    .t item state 8
+    .t item state get 8
 } -result {open enabled}
 
-test tree-16.10 {item state: reset predefined state} -body {
+test tree-16.19 {item state: reset predefined state} -body {
     .t toggle 8
-    .t item state 8
+    .t item state get 8
 } -result {enabled}
 
 test item-99.1 {some needed cleanup} -body {
