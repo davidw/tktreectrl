@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.9 2005/01/03 21:28:24 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.10 2005/03/29 20:54:57 treectrl Exp $
  */
 
 /*
@@ -110,6 +110,18 @@ typedef struct EventInfo {
 	struct EventInfo *next; /* List of all EventInfos */
 } EventInfo;
 
+typedef struct GenerateField {
+	char which; /* The %-char */
+	char *string; /* Replace %-char with it */
+} GenerateField;
+
+typedef struct GenerateData {
+	GenerateField staticField[20];
+	GenerateField *field;
+	int count;
+	char *command; /* Tcl command to expand percents, or NULL */
+} GenerateData;
+
 typedef struct BindingTable {
 	Tcl_Interp *interp;
 	Tcl_HashTable patternTable; /* Key: PatternTableKey, Value: (BindValue *) */
@@ -127,14 +139,15 @@ static int ParseEventDescription(BindingTable *bindPtr, char *eventPattern,
 	Pattern *patPtr, EventInfo **eventInfoPtr, Detail **detailPtr);
 static int FindSequence(BindingTable *bindPtr, ClientData object,
 	char *eventString, int create, int *created, BindValue **result);
+static void Percents_CharMap(QE_ExpandArgs *args);
+static void Percents_Command(QE_ExpandArgs *args);
 #if ALLOW_INSTALL
 typedef struct PercentsData {
-	ClientData clientData;
+	GenerateData *gdPtr;
 	char *command;
 	EventInfo *eventPtr;
 	Detail *detailPtr;
 } PercentsData;
-static void Percents_Install(QE_ExpandArgs *args);
 #endif
 static int DeleteBinding(BindingTable *bindPtr, BindValue *valuePtr);
 static EventInfo *FindEvent(BindingTable *bindPtr, int eventType);
@@ -882,10 +895,8 @@ static void ExpandPercents(BindingTable *bindPtr, ClientData object,
 	}
 }
 
-#if 1
-
 static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
-	EventInfo *eiPtr, Detail *dPtr)
+	EventInfo *eiPtr, Detail *dPtr, GenerateData *gdPtr)
 {
 	Tcl_HashEntry *hPtr;
 	BindValue *valuePtr;
@@ -894,6 +905,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	Tcl_DString scripts, savedResult;
 	int code;
 	char *p, *end;
+	char *command = gdPtr ? gdPtr->command : NULL;
 
 	/* Find the first BindValue for this event */
 	key.type = eventPtr->type;
@@ -947,39 +959,48 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 #endif /* BIND_ACTIVE */
 
 #if ALLOW_INSTALL
-		/*
-		 * Call a Tcl script to expand the percents.
-		 */
-		if ((dPtr != NULL) && (dPtr->command != NULL))
+		if (command == NULL)
 		{
-			PercentsData data;
-
-			data.clientData = eventPtr->clientData;
-			data.command = dPtr->command;
-			data.eventPtr = eiPtr;
-			data.detailPtr = dPtr;
-			eventPtr->clientData = (ClientData) &data;
-			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
-				eventPtr, Percents_Install, &scripts);
-			eventPtr->clientData = data.clientData;
+			if ((dPtr != NULL) && (dPtr->command != NULL))
+			{
+				command = dPtr->command;
+			}
+			else if (((dPtr == NULL) ||
+				((dPtr != NULL) && (dPtr->expandProc == NULL))) &&
+				(eiPtr->command != NULL))
+			{
+				command = eiPtr->command;
+			}
 		}
-		else if (((dPtr == NULL) ||
-			((dPtr != NULL) && (dPtr->expandProc == NULL))) &&
-			(eiPtr->command != NULL))
+#endif /* ALLOW_INSTALL */
+
+		/* called by QE_GenerateCmd */
+		if (command != NULL)
 		{
 			PercentsData data;
 
-			data.clientData = eventPtr->clientData;
-			data.command = eiPtr->command;
+			data.gdPtr = gdPtr;
+			data.command = command;
 			data.eventPtr = eiPtr;
 			data.detailPtr = dPtr;
 			eventPtr->clientData = (ClientData) &data;
 			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
-				eventPtr, Percents_Install, &scripts);
-			eventPtr->clientData = data.clientData;
+				eventPtr, Percents_Command, &scripts);
+		}
+
+		/* called by QE_GenerateCmd */
+		else if (gdPtr != NULL)
+		{
+			/* Called QE_GenerateCmd with:
+			 * a) a static event and no percentsCommand argument, or
+			 * b) a dynamic event with no percentsCommand installed and
+			 *    no percentsCommand argument
+			 */
+			eventPtr->clientData = (ClientData) gdPtr;
+			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
+				eventPtr, Percents_CharMap, &scripts);
 		}
 		else
-#endif /* ALLOW_INSTALL */
 		{
 			QE_ExpandProc expandProc =
 				((dPtr != NULL) && (dPtr->expandProc != NULL)) ?
@@ -1062,129 +1083,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	Tcl_DStringResult(bindPtr->interp, &savedResult);
 }
 
-#else /* not 1 */
-
-static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
-	EventInfo *eiPtr, Detail *dPtr)
-{
-	Tcl_HashEntry *hPtr;
-	BindValue *valuePtr;
-	ObjectTableKey keyObj;
-	PatternTableKey key;
-	Tcl_DString command, savedResult;
-	int code;
-
-	/* Find the first BindValue for this event */
-	key.type = eventPtr->type;
-	key.detail = wantDetail ? eventPtr->detail : 0;
-	hPtr = Tcl_FindHashEntry(&bindPtr->patternTable, (char *) &key);
-	if (hPtr == NULL) return;
-
-	Tcl_DStringInit(&command);
-
-	/*
-	 * As in Tk bindings, we expect that bindings may be invoked
-	 * in the middle of Tcl commands. So we preserve the current
-	 * interpreter result and restore it later.
-	 */
-	Tcl_DStringInit(&savedResult);
-	Tcl_DStringGetResult(bindPtr->interp, &savedResult);
-
-	for (valuePtr = (BindValue *) Tcl_GetHashValue(hPtr);
-		valuePtr; valuePtr = valuePtr->nextValue)
-	{
-		if (wantDetail && valuePtr->detail)
-		{
-			keyObj.type = key.type;
-			keyObj.detail = 0;
-			keyObj.object = valuePtr->object;
-			hPtr = Tcl_FindHashEntry(&bindPtr->objectTable, (char *) &keyObj);
-			if (hPtr != NULL)
-			{
-				BindValue *value2Ptr;
-				value2Ptr = (BindValue *) Tcl_GetHashValue(hPtr);
-				value2Ptr->specific = 1;
-			}
-		}
-		
-		/*
-		 * If a binding for a more-specific event exists for this object
-		 * and event-type, and this is a binding for a less-specific
-		 * event, then skip this binding, since the binding for the
-		 * more-specific event was already invoked.
-		 */
-		else if (!wantDetail && valuePtr->specific)
-		{
-			if (debug_bindings)
-				dbwin("QE_BindEvent: Skipping less-specific event type=%d object='%s'\n",
-					valuePtr->type, valuePtr->object);
-
-			valuePtr->specific = 0;
-			continue;
-		}
-
-#if BIND_ACTIVE
-		/* This binding isn't active */
-		if (valuePtr->active == 0) continue;
-#endif /* BIND_ACTIVE */
-
-#if ALLOW_INSTALL
-		/*
-		 * Call a Tcl script to expand the percents.
-		 */
-		if (dPtr && (dPtr->command != NULL))
-		{
-			ClientData oldClientData = eventPtr->clientData;
-
-			eventPtr->clientData = (ClientData) dPtr;
-			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
-				eventPtr, Percents_Install, &command);
-			eventPtr->clientData = oldClientData;
-		}
-		else
-#endif /* ALLOW_INSTALL */
-		{
-			QE_ExpandProc expandProc =
-				((dPtr != NULL) && (dPtr->expandProc != NULL)) ?
-				dPtr->expandProc : eiPtr->expandProc;
-
-			ExpandPercents(bindPtr, valuePtr->object, valuePtr->command,
-				eventPtr, expandProc, &command);
-		}
-		code = Tcl_EvalEx(bindPtr->interp, Tcl_DStringValue(&command),
-			Tcl_DStringLength(&command), TCL_EVAL_GLOBAL);
-
-		if (code != TCL_OK)
-		{
-#if 0
-			if (code == TCL_CONTINUE)
-			{
-				/* Nothing */
-			}
-			else if (code == TCL_BREAK)
-			{
-				break;
-			}
-			else
-#endif
-			{
-				Tcl_AddErrorInfo(bindPtr->interp,
-					"\n    (command bound to quasi-event)");
-				Tcl_BackgroundError(bindPtr->interp);
-				break;
-			}
-		}
-	}
-
-	/* Restore the interpreter result */
-	Tcl_DStringResult(bindPtr->interp, &savedResult);
-
-	Tcl_DStringFree(&command);
-}
-
-#endif /* 0 */
-
-int QE_BindEvent(QE_BindingTable bindingTable, QE_Event *eventPtr)
+static int BindEventWrapper(QE_BindingTable bindingTable, QE_Event *eventPtr, GenerateData *gdPtr)
 {
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	Detail *dPtr = NULL;
@@ -1203,11 +1102,16 @@ int QE_BindEvent(QE_BindingTable bindingTable, QE_Event *eventPtr)
 			return TCL_OK;
 	}
 
-	BindEvent(bindPtr, eventPtr, 1, eiPtr, dPtr);
+	BindEvent(bindPtr, eventPtr, 1, eiPtr, dPtr, gdPtr);
 	if (eventPtr->detail)
-		BindEvent(bindPtr, eventPtr, 0, eiPtr, dPtr);
+		BindEvent(bindPtr, eventPtr, 0, eiPtr, dPtr, gdPtr);
 
 	return TCL_OK;
+}
+
+int QE_BindEvent(QE_BindingTable bindingTable, QE_Event *eventPtr)
+{
+	return BindEventWrapper(bindingTable, eventPtr, NULL);
 }
 
 static char *GetField(char *p, char *copy, int size)
@@ -1235,87 +1139,97 @@ static char *GetField(char *p, char *copy, int size)
 
 #define FIELD_SIZE 48
 
-static int ParseEventDescription(BindingTable *bindPtr, char *eventString,
-		Pattern *patPtr, EventInfo **eventInfoPtr, Detail **detailPtr)
+static int ParseEventDescription1(BindingTable *bindPtr, char *pattern, char eventName[FIELD_SIZE], char detailName[FIELD_SIZE])
 {
 	Tcl_Interp *interp = bindPtr->interp;
-	Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
-	char *p;
-	Tcl_HashEntry *hPtr;
-	char field[FIELD_SIZE];
-	EventInfo *eiPtr;
-	Detail *dPtr;
+	char *p = pattern;
 
-	if (eventInfoPtr) *eventInfoPtr = NULL;
-	if (detailPtr) *detailPtr = NULL;
-
-	p = eventString;
-
-	patPtr->type = -1;
-	patPtr->detail = 0;
+	eventName[0] = detailName[0] = '\0';
 
 	/* First char must by opening < */
 	if (*p != '<')
 	{
 		Tcl_AppendResult(interp, "missing \"<\" in event pattern \"",
-			eventString, "\"", (char *) NULL);
+			pattern, "\"", (char *) NULL);
 		return TCL_ERROR;
 	}
 	p++;
 
 	/* Event name (required)*/
-	p = GetField(p, field, FIELD_SIZE);
+	p = GetField(p, eventName, FIELD_SIZE);
 
 	if (debug_bindings)
-		dbwin("GetField='%s'\n", field);
-
-	hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, field);
-	if (hPtr == NULL)
-	{
-		Tcl_AppendStringsToObj(resultPtr, "unknown event \"",
-			field, "\"", NULL);
-		return TCL_ERROR;
-	}
-	eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
-	patPtr->type = eiPtr->type;
-	if (eventInfoPtr) *eventInfoPtr = eiPtr;
+		dbwin("GetField='%s'\n", eventName);
 
 	/* Terminating > */
 	if (*p == '>')
 		return TCL_OK;
 
 	/* Detail name (optional) */
-	p = GetField(p, field, FIELD_SIZE);
+	p = GetField(p, detailName, FIELD_SIZE);
 
 	if (debug_bindings)
-		dbwin("GetField='%s'\n", field);
+		dbwin("GetField='%s'\n", detailName);
 
-	if (*field != '\0')
+	/* Terminating > */
+	if (*p != '>')
+	{
+		Tcl_AppendResult(interp, "missing \">\" in event pattern \"",
+			pattern, "\"", (char *) NULL);
+		return TCL_ERROR;
+	}
+
+	return TCL_OK;
+}
+
+static int ParseEventDescription(BindingTable *bindPtr, char *eventString,
+	Pattern *patPtr, EventInfo **eventInfoPtr, Detail **detailPtr)
+{
+	Tcl_Interp *interp = bindPtr->interp;
+	Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
+	Tcl_HashEntry *hPtr;
+	char eventName[FIELD_SIZE], detailName[FIELD_SIZE];
+	EventInfo *eiPtr;
+	Detail *dPtr;
+
+	if (eventInfoPtr) *eventInfoPtr = NULL;
+	if (detailPtr) *detailPtr = NULL;
+
+	patPtr->type = -1;
+	patPtr->detail = 0;
+
+	if (ParseEventDescription1(bindPtr, eventString, eventName, detailName) != TCL_OK)
+		return TCL_ERROR;
+
+	hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
+	if (hPtr == NULL)
+	{
+		Tcl_AppendStringsToObj(resultPtr, "unknown event \"",
+			eventName, "\"", NULL);
+		return TCL_ERROR;
+	}
+	eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
+	patPtr->type = eiPtr->type;
+	if (eventInfoPtr) *eventInfoPtr = eiPtr;
+
+	if (detailName[0] != '\0')
 	{
 		/* Find detail for the matching event */
 		for (dPtr = eiPtr->detailList;
 			dPtr != NULL;
 			dPtr = dPtr->next)
 		{
-			if (strcmp(dPtr->name, field) == 0)
+			if (strcmp(dPtr->name, detailName) == 0)
 				break;
 		}
 		if (dPtr == NULL)
 		{
 			Tcl_AppendStringsToObj(resultPtr, "unknown detail \"",
-				field, "\" for event \"", eiPtr->name, "\"", NULL);
+				detailName, "\" for event \"", eiPtr->name, "\"", NULL);
 			return TCL_ERROR;
 		}
 		patPtr->detail = dPtr->code;
 		if (detailPtr) *detailPtr = dPtr;
-	}
-
-	/* Terminating > */
-	if (*p != '>')
-	{
-		Tcl_AppendResult(interp, "missing \">\" in event pattern \"",
-			eventString, "\"", (char *) NULL);
-		return TCL_ERROR;
 	}
 
 	return TCL_OK;
@@ -1441,7 +1355,10 @@ void QE_ExpandDetail(QE_BindingTable bindingTable, int event, int detail, Tcl_DS
 	Detail *dPtr;
 
 	if (detail == 0)
+	{
+		QE_ExpandString("", result);
 		return;
+	}
 
 	dPtr = FindDetail(bindPtr, event, detail);
 	if (dPtr != NULL)
@@ -1450,28 +1367,46 @@ void QE_ExpandDetail(QE_BindingTable bindingTable, int event, int detail, Tcl_DS
 		QE_ExpandString("unknown", result);
 }
 
+void QE_ExpandPattern(QE_BindingTable bindingTable, int eventType, int detail, Tcl_DString *result)
+{
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	EventInfo *eiPtr = FindEvent(bindPtr, eventType);
+
+	Tcl_DStringAppend(result, "<", 1);
+	Tcl_DStringAppend(result, eiPtr ? eiPtr->name : "unknown", -1);
+	if (detail)
+	{
+		Detail *dPtr = FindDetail(bindPtr, eventType, detail);
+		Tcl_DStringAppend(result, "-", 1);
+		Tcl_DStringAppend(result, dPtr ? dPtr->name : "unknown", -1);
+	}
+	Tcl_DStringAppend(result, ">", 1);
+}
+
 int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	Tk_Window tkwin = Tk_MainWindow(bindPtr->interp);
 	ClientData object;
 	char *string;
 
-	if ((objc - objOffset < 1) || (objc - objOffset > 4))
+	if ((objC < 1) || (objC > 4))
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
 			"?object? ?pattern? ?script?");
 		return TCL_ERROR;
 	}
 
-	if (objc - objOffset == 1)
+	if (objC == 1)
 	{
 		QE_GetAllObjects(bindingTable);
 		return TCL_OK;
 	}
 
-	string = Tcl_GetString(objv[objOffset + 1]);
+	string = Tcl_GetString(objV[1]);
 
 	if (string[0] == '.')
 	{
@@ -1488,11 +1423,11 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		object = (ClientData) Tk_GetUid(string);
 	}
 
-	if (objc - objOffset == 4)
+	if (objC == 4)
 	{
 		int append = 0;
-		char *sequence = Tcl_GetString(objv[objOffset + 2]);
-		char *script = Tcl_GetString(objv[objOffset + 3]);
+		char *sequence = Tcl_GetString(objV[2]);
+		char *script = Tcl_GetString(objV[3]);
 
 		if (script[0] == 0)
 		{
@@ -1506,9 +1441,9 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		return QE_CreateBinding(bindingTable, object, sequence, script,
 			append);
 	}
-	else if (objc - objOffset == 3)
+	else if (objC == 3)
 	{
-		char *sequence = Tcl_GetString(objv[objOffset + 2]);
+		char *sequence = Tcl_GetString(objV[2]);
 
 		return QE_GetBinding(bindingTable, object, sequence);
 	}
@@ -1522,84 +1457,38 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 /*
  * qegenerate -- Generate events from scripts.
- * Usage: qegenerate pattern {char value ...}
+ * Usage: qegenerate $pattern ?$charMap? ?$percentsCommand?
  * Desciption: Scripts can generate "fake" quasi-events by providing
  * a quasi-event pattern and option field/value pairs.
  */
- 
-typedef struct GenerateField {
-	char which; /* The %-char */
-	char *string; /* Replace %-char with it */
-} GenerateField;
-
-typedef struct GenerateData {
-	GenerateField staticField[20];
-	GenerateField *field;
-	int count;
-} GenerateData;
-
-/* Perform %-substitution using args passed to QE_GenerateCmd() */
-static void Percents_Generate(QE_ExpandArgs *args)
-{
-	GenerateData *data = (GenerateData *) args->clientData;
-	int i;
-
-	/* Reverse order to handle duplicate %-chars */
-	for (i = data->count - 1; i >= 0; i--)
-	{
-		if (args->which == data->field[i].which)
-		{
-			QE_ExpandString(data->field[i].string, args->result);
-			return;
-		}
-	}
-
-	switch (args->which)
-	{
-		case 'd': /* detail */
-			QE_ExpandDetail(args->bindingTable, args->event, args->detail,
-				args->result);
-			break;
-
-		case 'e': /* event */
-			QE_ExpandEvent(args->bindingTable, args->event, args->result);
-			break;
-
-		case 'W': /* object */
-			QE_ExpandString((char *) args->object, args->result);
-			break;
-
-		default: /* unknown */
-			QE_ExpandUnknown(args->which, args->result);
-			break;
-	}
-}
 
 int
 QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	QE_Event fakeEvent;
-	QE_ExpandProc oldExpandProc;
 	EventInfo *eiPtr;
 	Detail *dPtr;
 	GenerateData genData;
 	GenerateField *fieldPtr;
 	char *p, *t;
 	int listObjc;
+	int i;
 	Tcl_Obj **listObjv;
 	Pattern pats;
 	int result;
 
-	if (objc - objOffset < 2 || objc - objOffset > 3)
+	if (objC < 2 || objC > 4)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
-			"pattern ?charMap?");
+			"pattern ?charMap? ?percentsCommand?");
 		return TCL_ERROR;
 	}
 
-	p = Tcl_GetStringFromObj(objv[objOffset + 1], NULL);
+	p = Tcl_GetStringFromObj(objV[1], NULL);
 	if (ParseEventDescription(bindPtr, p, &pats, &eiPtr, &dPtr) != TCL_OK)
 		return TCL_ERROR;
 
@@ -1611,9 +1500,9 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		return TCL_ERROR;
 	}
 
-	if (objc - objOffset == 3)
+	if (objC >= 3)
 	{
-		if (Tcl_ListObjGetElements(bindPtr->interp, objv[objOffset + 2],
+		if (Tcl_ListObjGetElements(bindPtr->interp, objV[2],
 			&listObjc, &listObjv) != TCL_OK)
 			return TCL_ERROR;
 
@@ -1632,7 +1521,7 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			genData.field = (GenerateField *) Tcl_Alloc(sizeof(GenerateField) *
 				genData.count);
 		}
-		fieldPtr = &genData.field[0];
+		genData.count = 0;
 
 		while (listObjc > 1)
 		{
@@ -1646,9 +1535,20 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 				result = TCL_ERROR;
 				goto done;
 			}
+			/* Duplicate %-chars result in last duplicate being used */
+			fieldPtr = NULL;
+			for (i = 0; i < genData.count; i++)
+			{
+				if (genData.field[i].which == t[0])
+				{
+					fieldPtr = &genData.field[i];
+					break;
+				}
+			}
+			if (fieldPtr == NULL)
+				fieldPtr = &genData.field[genData.count++];
 			fieldPtr->which = t[0];
 			fieldPtr->string = Tcl_GetStringFromObj(listObjv[1], NULL);
-			fieldPtr++;
 			listObjv += 2;
 			listObjc -= 2;
 		}
@@ -1659,31 +1559,20 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		genData.field = genData.staticField;
 	}
 
-	/*
-	 * XXX Hack -- Swap in our own %-substitution routine. Percents_Generate()
-	 * uses the values the caller passed us.
-	 */
-	if ((dPtr != NULL) && (dPtr->expandProc != NULL))
+	if (objC == 4)
 	{
-		oldExpandProc = dPtr->expandProc;
-		dPtr->expandProc = Percents_Generate;
+		genData.command = Tcl_GetString(objV[3]);
 	}
 	else
 	{
-		oldExpandProc = eiPtr->expandProc;
-		eiPtr->expandProc = Percents_Generate;
+		genData.command = NULL;
 	}
 
 	fakeEvent.type = pats.type;
 	fakeEvent.detail = pats.detail;
-	fakeEvent.clientData = (ClientData) &genData;
+	fakeEvent.clientData = NULL;
 
-	result = QE_BindEvent(bindingTable, &fakeEvent);
-
-	if ((dPtr != NULL) && (dPtr->expandProc != NULL))
-		dPtr->expandProc = oldExpandProc;
-	else
-		eiPtr->expandProc = oldExpandProc;
+	result = BindEventWrapper(bindingTable, &fakeEvent, &genData);
 
 done:
 	if (genData.field != genData.staticField)
@@ -1699,6 +1588,8 @@ int
 QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	Tcl_Interp *interp = bindPtr->interp;
 	Tk_Window tkwin = Tk_MainWindow(interp);
@@ -1709,15 +1600,15 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	int index;
 	ClientData object;
 
-	if (objc - objOffset < 3)
+	if (objC < 3)
 	{
 		Tcl_WrongNumArgs(interp, objOffset + 1, objv,
 			"object pattern ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
 	}
 
-	t = Tcl_GetStringFromObj(objv[objOffset + 1], NULL);
-	eventString = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+	t = Tcl_GetStringFromObj(objV[1], NULL);
+	eventString = Tcl_GetStringFromObj(objV[2], NULL);
 
 	if (t[0] == '.')
 	{
@@ -1793,42 +1684,36 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 #endif /* BIND_ACTIVE */
 
-#if ALLOW_INSTALL
+/* Perform %-substitution with $charMap only */
+static void Percents_CharMap(QE_ExpandArgs *args)
+{
+	GenerateData *gdPtr = (GenerateData *) args->clientData;
+	int i;
 
-#if 0 /* comment */
-
-qeinstall detail <Setting> show_icons 500 QEExpandCmd_Setting
-
-proc QEExpandCmd_Setting {char object event detail charMap} {
-
-	switch -- $char {
-		c {
-			return [Setting $detail]
-		}
-		d {
-			return $detail
-		}
-		W {
-			return $object
-		}
-		default {
-			return $char
+	for (i = 0; i < gdPtr->count; i++)
+	{
+		GenerateField *gfPtr = &gdPtr->field[i];
+		if (gfPtr->which == args->which)
+		{
+			QE_ExpandString(gfPtr->string, args->result);
+			return;
 		}
 	}
+	QE_ExpandUnknown(args->which, args->result);
 }
 
-#endif /* comment */
-
 /* Perform %-substitution by calling a Tcl command */
-static void Percents_Install(QE_ExpandArgs *args)
+static void Percents_Command(QE_ExpandArgs *args)
 {
 	BindingTable *bindPtr = (BindingTable *) args->bindingTable;
 	Tcl_Interp *interp = bindPtr->interp;
 	PercentsData *data = (PercentsData *) args->clientData;
+	GenerateData *gdPtr = data->gdPtr;
 	EventInfo *eiPtr = data->eventPtr;
 	Detail *dPtr = data->detailPtr;
 	Tcl_DString command;
 	Tcl_SavedResult state;
+	int i;
 
 	Tcl_DStringInit(&command);
 	Tcl_DStringAppend(&command, data->command, -1);
@@ -1844,21 +1729,17 @@ static void Percents_Install(QE_ExpandArgs *args)
 	else
 		Tcl_DStringAppend(&command, "{}", -1);
 	Tcl_DStringStartSublist(&command);
-	if ((eiPtr->expandProc == Percents_Generate) ||
-		((dPtr != NULL) && (dPtr->expandProc == Percents_Generate)))
+
+	for (i = 0; i < gdPtr->count; i++)
 	{
-		GenerateData *genData = (GenerateData *) data->clientData;
-		int i;
-		for (i = 0; i < genData->count; i++)
-		{
-			GenerateField *genField = &genData->field[i];
-			char string[2];
-			string[0] = genField->which;
-			string[1] = '\0';
-			Tcl_DStringAppendElement(&command, string);
-			Tcl_DStringAppendElement(&command, genField->string);
-		}
+		GenerateField *genField = &gdPtr->field[i];
+		char string[2];
+		string[0] = genField->which;
+		string[1] = '\0';
+		Tcl_DStringAppendElement(&command, string);
+		Tcl_DStringAppendElement(&command, genField->string);
 	}
+
 	Tcl_DStringEndSublist(&command);
 	Tcl_SaveResult(interp, &state);
 	if (Tcl_EvalEx(interp, Tcl_DStringValue(&command),
@@ -1869,28 +1750,162 @@ static void Percents_Install(QE_ExpandArgs *args)
 	}
 	else
 	{
+		QE_ExpandUnknown(args->which, args->result);
 		Tcl_AddErrorInfo(interp, "\n    (expanding percents)");
 		Tcl_BackgroundError(interp);
 	}
 	Tcl_RestoreResult(interp, &state);
-
 	Tcl_DStringFree(&command);
 }
 
-int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+#if ALLOW_INSTALL
+
+int QE_InstallCmd_New(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *pattern, *command = NULL;
+	char eventName[FIELD_SIZE], detailName[FIELD_SIZE];
+	int id, length;
+	EventInfo *eiPtr;
+	Detail *dPtr = NULL;
+	Tcl_HashEntry *hPtr;
+
+	if (objC < 2 || objC > 3)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern ?percentsCommand?");
+		return TCL_ERROR;
+	}
+
+	pattern = Tcl_GetString(objV[1]);
+	if (ParseEventDescription1(bindPtr, pattern, eventName, detailName) != TCL_OK)
+		return TCL_ERROR;
+	hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
+
+	/* The event is not defined */
+	if (hPtr == NULL)
+	{
+		id = QE_InstallEvent(bindingTable, eventName, NULL);
+		if (id == 0)
+			return TCL_ERROR;
+
+		/* Find the event we just installed */
+		hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
+		if (hPtr == NULL)
+			return TCL_ERROR;
+		eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
+
+		/* Mark as installed-by-script */
+		eiPtr->dynamic = 1;
+	}
+
+	/* The event is already defined */
+	else
+	{
+		eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
+	}
+
+	if (detailName[0])
+	{
+		for (dPtr = eiPtr->detailList;
+			dPtr != NULL;
+			dPtr = dPtr->next)
+		{
+			if (strcmp(dPtr->name, detailName) == 0)
+				break;
+		}
+
+		/* The detail is not defined */
+		if (dPtr == NULL)
+		{
+			/* Define the new detail */
+			id = QE_InstallDetail(bindingTable, detailName, eiPtr->type, NULL);
+			if (id == 0)
+				return TCL_ERROR;
+
+			/* Get the detail we just defined */
+			dPtr = FindDetail(bindPtr, eiPtr->type, id);
+			if (dPtr == NULL)
+				return TCL_ERROR;
+
+			/* Mark as installed-by-script */
+			dPtr->dynamic = 1;
+		}
+	}
+
+	if (objC == 3)
+		command = Tcl_GetStringFromObj(objV[2], &length);
+
+	if (dPtr != NULL)
+	{
+		if (!dPtr->dynamic)
+		{
+			Tcl_AppendResult(bindPtr->interp, pattern, " is not dynamic",
+				NULL);
+			return TCL_ERROR;
+		}
+		if (command != NULL)
+		{
+			if (dPtr->command)
+			{
+				Tcl_Free(dPtr->command);
+				dPtr->command = NULL;
+			}
+			if (length)
+			{
+				dPtr->command = Tcl_Alloc(length + 1);
+				(void) strcpy(dPtr->command, command);
+			}
+		}
+		if (dPtr->command)
+			Tcl_SetResult(bindPtr->interp, dPtr->command, TCL_VOLATILE);
+	}
+	else
+	{
+		if (!eiPtr->dynamic)
+		{
+			Tcl_AppendResult(bindPtr->interp, pattern, " is not dynamic",
+				NULL);
+			return TCL_ERROR;
+		}
+		if (command != NULL)
+		{
+			if (eiPtr->command)
+			{
+				Tcl_Free(eiPtr->command);
+				eiPtr->command = NULL;
+			}
+			if (length)
+			{
+				eiPtr->command = Tcl_Alloc(length + 1);
+				(void) strcpy(eiPtr->command, command);
+			}
+		}
+		if (eiPtr->command)
+			Tcl_SetResult(bindPtr->interp, eiPtr->command, TCL_VOLATILE);
+	}
+
+	return TCL_OK;
+}
+
+int QE_InstallCmd_Old(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	static CONST char *commandOption[] = {"detail", "event", NULL};
 	int index;
 
-	if (objc - objOffset < 2)
+	if (objC < 2)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "option arg ...");
 		return TCL_ERROR;
 	}
 
-	if (Tcl_GetIndexFromObj(bindPtr->interp, objv[objOffset + 1],
+	if (Tcl_GetIndexFromObj(bindPtr->interp, objV[1],
 		commandOption, "option", 0, &index) != TCL_OK)
 	{
 		return TCL_ERROR;
@@ -1905,7 +1920,7 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			EventInfo *eiPtr;
 			Tcl_HashEntry *hPtr;
 
-			if ((objc - objOffset < 4) || (objc - objOffset > 5))
+			if ((objC < 4) || (objC > 5))
 			{
 				Tcl_WrongNumArgs(bindPtr->interp, objOffset + 2, objv,
 					"event detail ?percentsCommand?");
@@ -1913,7 +1928,7 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			}
 
 			/* Find the event type */
-			eventName = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+			eventName = Tcl_GetStringFromObj(objV[2], NULL);
 			hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
 			if (hPtr == NULL)
 			{
@@ -1924,7 +1939,7 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
 
 			/* Get the detail name */
-			detailName = Tcl_GetStringFromObj(objv[objOffset + 3], NULL);
+			detailName = Tcl_GetStringFromObj(objV[3], NULL);
 
 			/* Define the new detail */
 			id = QE_InstallDetail(bindingTable, detailName, eiPtr->type, NULL);
@@ -1937,11 +1952,11 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 				return TCL_ERROR;
 			dPtr->dynamic = 1;
 
-			if (objc - objOffset == 4)
+			if (objC == 4)
 				break;
 
 			/* Set the Tcl command for this detail */
-			command = Tcl_GetStringFromObj(objv[objOffset + 4], &length);
+			command = Tcl_GetStringFromObj(objV[4], &length);
 			if (length)
 			{
 				dPtr->command = Tcl_Alloc(length + 1);
@@ -1957,14 +1972,14 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			EventInfo *eiPtr;
 			Tcl_HashEntry *hPtr;
 
-			if (objc - objOffset < 3 || objc - objOffset > 4)
+			if (objC < 3 || objC > 4)
 			{
 				Tcl_WrongNumArgs(bindPtr->interp, objOffset + 2, objv,
 					"name ?percentsCommand?");
 				return TCL_ERROR;
 			}
 
-			eventName = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+			eventName = Tcl_GetStringFromObj(objV[2], NULL);
 
 			id = QE_InstallEvent(bindingTable, eventName, NULL);
 			if (id == 0)
@@ -1979,11 +1994,11 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			/* Mark as installed-by-script */
 			eiPtr->dynamic = 1;
 
-			if (objc - objOffset == 3)
+			if (objC == 3)
 				break;
 
 			/* Set the Tcl command for this event */
-			command = Tcl_GetStringFromObj(objv[objOffset + 3], &length);
+			command = Tcl_GetStringFromObj(objV[3], &length);
 			if (length)
 			{
 				eiPtr->command = Tcl_Alloc(length + 1);
@@ -1996,20 +2011,86 @@ int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	return TCL_OK;
 }
 
-int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *s;
+	int length;
+
+	if (objC < 2)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern ?percentsCommand?");
+		return TCL_ERROR;
+	}
+
+	s = Tcl_GetStringFromObj(objV[1], &length);
+	if (length && (!strcmp(s, "detail") || !strcmp(s, "event")))
+		return QE_InstallCmd_Old(bindingTable, objOffset, objc, objv);
+
+	return QE_InstallCmd_New(bindingTable, objOffset, objc, objv);
+}
+
+int QE_UninstallCmd_New(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *pattern;
+	Pattern pats;
+	EventInfo *eiPtr;
+	Detail *dPtr;
+
+	if (objC != 2)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern");
+		return TCL_ERROR;
+	}
+
+	pattern = Tcl_GetString(objV[1]);
+	if (ParseEventDescription(bindPtr, pattern, &pats, &eiPtr, &dPtr) != TCL_OK)
+		return TCL_ERROR;
+
+	if (dPtr != NULL)
+	{
+		if (!dPtr->dynamic)
+		{
+			Tcl_AppendResult(bindPtr->interp,
+				"can't uninstall static detail \"", dPtr->name, "\"", NULL);
+			return TCL_ERROR;
+		}
+		return QE_UninstallDetail(bindingTable, eiPtr->type, dPtr->code);
+	}
+
+	if (!eiPtr->dynamic)
+	{
+		Tcl_AppendResult(bindPtr->interp,
+			"can't uninstall static event \"", eiPtr->name, "\"", NULL);
+		return TCL_ERROR;
+	}
+
+	return QE_UninstallEvent(bindingTable, eiPtr->type);
+}
+
+int QE_UninstallCmd_Old(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	static CONST char *commandOption[] = {"detail", "event", NULL};
 	int index;
 
-	if (objc - objOffset < 2)
+	if (objC < 2)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "option arg ...");
 		return TCL_ERROR;
 	}
 
-	if (Tcl_GetIndexFromObj(bindPtr->interp, objv[objOffset + 1],
+	if (Tcl_GetIndexFromObj(bindPtr->interp, objV[1],
 		commandOption, "option", 0, &index) != TCL_OK)
 	{
 		return TCL_ERROR;
@@ -2024,7 +2105,7 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			EventInfo *eiPtr;
 			Tcl_HashEntry *hPtr;
 
-			if (objc - objOffset != 4)
+			if (objC != 4)
 			{
 				Tcl_WrongNumArgs(bindPtr->interp, objOffset + 2, objv,
 					"event detail");
@@ -2032,7 +2113,7 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			}
 
 			/* Find the event type */
-			eventName = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+			eventName = Tcl_GetStringFromObj(objV[2], NULL);
 			hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
 			if (hPtr == NULL)
 			{
@@ -2043,7 +2124,7 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
 
 			/* Get the detail name */
-			detailName = Tcl_GetStringFromObj(objv[objOffset + 3], NULL);
+			detailName = Tcl_GetStringFromObj(objV[3], NULL);
 			for (dPtr = eiPtr->detailList;
 				dPtr != NULL;
 				dPtr = dPtr->next)
@@ -2075,7 +2156,7 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			EventInfo *eiPtr;
 			char *eventName;
 
-			if (objc - objOffset != 3)
+			if (objC != 3)
 			{
 				Tcl_WrongNumArgs(bindPtr->interp, objOffset + 2, objv,
 					"name");
@@ -2083,7 +2164,7 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 			}
 
 			/* Find the event type */
-			eventName = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+			eventName = Tcl_GetStringFromObj(objV[2], NULL);
 			hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
 			if (hPtr == NULL)
 			{
@@ -2107,23 +2188,80 @@ int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	return TCL_OK;
 }
 
-int QE_LinkageCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[])
 {
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *s;
+	int length;
+
+	if (objC < 2)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern");
+		return TCL_ERROR;
+	}
+
+	s = Tcl_GetStringFromObj(objV[1], &length);
+	if (length && (!strcmp(s, "detail") || !strcmp(s, "event")))
+		return QE_UninstallCmd_Old(bindingTable, objOffset, objc, objv);
+
+	return QE_UninstallCmd_New(bindingTable, objOffset, objc, objv);
+}
+
+int QE_LinkageCmd_New(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *pattern;
+	Pattern pats;
+	EventInfo *eiPtr;
+	Detail *dPtr;
+
+	if (objC != 2)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern");
+		return TCL_ERROR;
+	}
+
+	pattern = Tcl_GetString(objV[1]);
+	if (ParseEventDescription(bindPtr, pattern, &pats, &eiPtr, &dPtr) != TCL_OK)
+		return TCL_ERROR;
+
+	if (dPtr != NULL)
+	{
+		Tcl_SetResult(bindPtr->interp, dPtr->dynamic ? "dynamic" : "static",
+			TCL_STATIC);
+		return TCL_OK;
+	}
+
+	Tcl_SetResult(bindPtr->interp, eiPtr->dynamic ? "dynamic" : "static",
+		TCL_STATIC);
+	return TCL_OK;
+}
+
+int QE_LinkageCmd_Old(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	char *eventName, *detailName;
 	Detail *dPtr;
 	EventInfo *eiPtr;
 	Tcl_HashEntry *hPtr;
 
-	if (objc - objOffset < 2 || objc - objOffset > 3)
+	if (objC < 2 || objC > 3)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "event ?detail?");
 		return TCL_ERROR;
 	}
 
 	/* Find the event type */
-	eventName = Tcl_GetStringFromObj(objv[objOffset + 1], NULL);
+	eventName = Tcl_GetStringFromObj(objV[1], NULL);
 	hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
 	if (hPtr == NULL)
 	{
@@ -2133,7 +2271,7 @@ int QE_LinkageCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	}
 	eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
 
-	if (objc - objOffset == 2)
+	if (objC == 2)
 	{
 		Tcl_SetResult(bindPtr->interp, eiPtr->dynamic ? "dynamic" : "static",
 			TCL_STATIC);
@@ -2141,7 +2279,7 @@ int QE_LinkageCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	}
 
 	/* Get the detail name */
-	detailName = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
+	detailName = Tcl_GetStringFromObj(objV[2], NULL);
 	for (dPtr = eiPtr->detailList;
 		dPtr != NULL;
 		dPtr = dPtr->next)
@@ -2161,6 +2299,28 @@ int QE_LinkageCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		TCL_STATIC);
 
 	return TCL_OK;
+}
+
+int QE_LinkageCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	char *s;
+	int length;
+
+	if (objC < 2)
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv, "pattern");
+		return TCL_ERROR;
+	}
+
+	s = Tcl_GetStringFromObj(objV[1], &length);
+	if ((objC == 3) || (length && s[0] != '<'))
+		return QE_LinkageCmd_Old(bindingTable, objOffset, objc, objv);
+
+	return QE_LinkageCmd_New(bindingTable, objOffset, objc, objv);
 }
 
 #endif /* ALLOW_INSTALL */
