@@ -8,8 +8,10 @@ struct ElementArgs
 	Element *elem;
 	int state;
 	struct {
+		int noop;
 	} create;
 	struct {
+		int noop;
 	} delete;
 	struct {
 		int objc;
