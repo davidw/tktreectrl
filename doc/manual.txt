@@ -271,8 +271,10 @@ T item XXX
 
 	T item sort I $option $value ...
 
-	T item state I
-	T item state I $state ...
+	T item state get I
+	T item state get I $state
+	T item state set I $stateDesc
+	T item state set I I $stateDesc
 
 	T item style XXX
 		T item style elements I C
@@ -320,7 +322,8 @@ T notify XXX
 
 	T notify eventnames
 
-	T notify generate $pattern -$char $value ...
+	T notify generate $pattern
+	T notify generate $pattern $charMap
 
 	T notify install event $eventName
 	T notify install event $eventName $percentsCmd

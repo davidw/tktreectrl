@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.13 2002/12/30 17:36:16 krischan Exp $
+'\" $Id: treectrl.n,v 1.14 2002/12/31 12:18:23 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -855,14 +855,24 @@ Does no real comparison; instead just turn the items upside-down.
 Convert to floating-point values and use floating comparison.
 .RE
 .TP
-\fIpathName \fBitem state \fIitemDesc\fR ?\fIstateDesc\fR ...?
-If no \fIstateDesc\fR is specified, returns a list containing
+\fIpathName \fBitem state get \fIitemDesc\fR ?\fIstateName\fR ...?
+If no \fIstateName\fR is specified, returns a list containing
 the names of all (predefined and user defined) states
 which are currently switched on for the item described by \fIitemDesc\fR.
-If there are one or more \fIstateDesc\fRs are specified,
-each must describe a user defined state (see STATES below).
+If a \fIstateName\fR is specified,
+1 is returned if the specified state is currently switched on for the item,
+0 otherwise.
+.TP
+\fIpathName \fBitem state set \fIitemDesc\fR ?\fIlastItem\fR? \fIstateDescList\fR
+Every element of \fIstateDescList\fR
+must describe a user defined state (see STATES below).
 Every state with an leading \fB!\fR will be switched off for the
-given item, every state without leading \fB!\fR will be switched on.
+item described by \fIitemDesc\fR,
+every state without leading \fB!\fR will be switched on.
+If \fIlastItem\fR is specified, the state change will be made for all items
+in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
+\fIItemDesc\fR may be the string \fBall\fR,
+then all items will get the new state.
 .TP
 \fIpathName \fBitem style \fIcommand itemDesc\fR ?\fIarg\fR ...?
 This command is used to manipulate the style of the item.
@@ -1068,21 +1078,22 @@ Returns a list containing the names of all events,
 which are installed by means of the \fBnotify install event\fR widget command
 or by the treectrl widget itself.
 .TP
-\fIpathName \fBnotify generate\fR \fIpattern\fR ?\fIfield value ...\fR?
+\fIpathName \fBnotify generate\fR \fIpattern\fR ?\fIcharMap\fR?
 The event with the pattern \fIpattern\fR is generated,
 if it is configured as active.
 If there are details defined for the event,
 \fIpattern\fR must describe an \fIeventName\-detail\fR pair,
-otherwise pattern should be a simple eventname.
+otherwise pattern should be a simple event name.
 
-The specified (up to 10) \fIfield\-value\fR pairs
-are a list of substitution descriptions,
-which is done in the registered script before it will be evaluated.
-Every field should start with a dash followed by exactly one character,
-then every occurence of a percent character (\fB%\fR)
-followed directly by that character will be replaced by \fIvalue\fR.
-If during installation of the detail a \fIscript\fR was specified,
-the \fIfield\-value\fR pairs are ignored.
+The optional \fIcharMap\fR is a list of \fIkey\-value\fR pairs
+as in the form returned by \fBarray get\fR;
+each key has to be exactly one character.
+If this argument is specified,
+the following substitution will be done in the script
+registered for the generated event
+before it will be evaluated:
+every occurence of a percent character (\fB%\fR) followed by a \fIkey\fR
+will be replaced with its corresponding \fIvalue\fR.
 .TP
 \fIpathName \fBnotify install detail\fR \fIeventName detail\fR ?\fIpercentsCommand\fR?
 Installs a new detail \fIdetail\fR 
@@ -1974,7 +1985,7 @@ Use the item in the first row of this column.
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
 .PP
 Beside of all the normal Tk events, which are generated as reaction
-of e.g. mouse movements of key presses, 
+of e.g. mouse movements or key presses, 
 the treectrl widget generates at various places
 events created by treectrl widget:
 .TP 13
