@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.23 2004/07/30 21:21:01 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.24 2004/08/09 02:40:43 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 1.0  "Tk Commands"
 .BS
@@ -150,6 +150,8 @@ package require \fBtreectrl  1.0\fR
 \fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?\fR
 .sp
 \fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+.sp
+\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?\fR
 .sp
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName ...\fR?\fR
 .sp
@@ -1415,6 +1417,10 @@ that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
+\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?\fR
+Just like \fBitem state set\fR but manipulates user-defined states for a single
+item column, not the item as a whole.
+.TP
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName ...\fR?\fR
 If no \fIstateName\fR is specified, returns a list containing
 the names of all (predefined and user defined) states
@@ -2140,6 +2146,14 @@ Acceptable values are the typical relief values,
 but the value seems to be ignored anyway;
 better use the \fB-sunken\fR column option instead.
 .TP
+\fB\fB-squeeze\fR\fR \fIboolean\fR
+Specifies a boolean value that indicates whether or not the column should
+shrink when the content width of the treectrl is less than the total needed width
+of all visible columns. Defaults to false, which means the column will not get
+smaller than its needed width. The column will not get smaller than the value
+of its \fB-minwidth\fR option, if specified. This option has no effect if the
+\fB-width\fR option is set.
+.TP
 \fB\fB-stepwidth\fR\fR \fIsize\fR
 Specifies a sort of tabbed alignment for columns that displays
 more than one item next to each other
@@ -2470,8 +2484,7 @@ Indicates the root item of the treectrl.
 The \fIitemDesc\fR may be followed by one or more \fImodifier\fRs.
 A modifier changes the item described by the \fIitemDesc\fR relative to
 the description upto this point.
-It may be specified in any of the following forms,
-all optionally followed by \fBvisible\fR:
+It may be specified in any of the following forms:
 .TP
 \fBabove\fR
 Use the item one row above in this column.

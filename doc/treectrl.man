@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.6 2004/07/30 21:21:01 treectrl Exp $}
+  $Id: treectrl.man,v 1.7 2004/08/09 02:40:43 treectrl Exp $}
 ][manpage_begin treectrl n 1.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -998,6 +998,11 @@ The following forms of the command are supported:
 
 [list_begin definitions]
 
+[call [arg pathName] [cmd {item state forcolumn}] [arg itemDesc] [arg column] \
+     [opt [arg stateDescList]]]
+Just like [cmd {item state set}] but manipulates user-defined states for a single
+item column, not the item as a whole.
+
 [call [arg pathName] [cmd {item state get}] [arg itemDesc] \
      [opt [arg {stateName ...}]]]
 If no [arg stateName] is specified, returns a list containing
@@ -1755,6 +1760,14 @@ Specifies the 3-D effect desired for the column header containing the title.
 Acceptable values are the typical relief values,
 but the value seems to be ignored anyway;
 better use the [option -sunken] column option instead.
+
+[opt_def [option -squeeze] [arg boolean]]
+Specifies a boolean value that indicates whether or not the column should
+shrink when the content width of the treectrl is less than the total needed width
+of all visible columns. Defaults to false, which means the column will not get
+smaller than its needed width. The column will not get smaller than the value
+of its [option -minwidth] option, if specified. This option has no effect if the
+[option -width] option is set.
 
 [opt_def [option -stepwidth] [arg size]]
 Specifies a sort of tabbed alignment for columns that displays
