@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.12 2002/12/30 10:53:49 krischan Exp $
+'\" $Id: treectrl.n,v 1.13 2002/12/30 17:36:16 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -220,6 +220,15 @@ It is possible to adjust the origin of the coordinate system
 relative to the origin of the window using the
 \fBxview\fR and \fByview\fR widget commands;
 this is typically used for scrolling.
+
+A treectrl widget can be horizontal or vertical oriented
+like many other Tk widgets.
+For displaying hierarchical data only vertical orientation is useful,
+since only then the children of an item
+are displayed directly below their parent.
+If the treectrl widget is used only
+to display data in a multicolumn listbox,
+the specification of an orientation will give useful results.
 
 .SH "WIDGET COMMAND"
 .PP
@@ -795,8 +804,7 @@ from the children list of its father, so that it will become an orphan.
 .TP
 \fIpathName \fBitem rnc \fIitemDesc\fR
 Returns a list of two integers, which corresponds to the row and column
-of the item described by \fIitemDesc\fR for a vertical oriented treectrl;
-for a horizontal oriented treectrl the two values are switched.
+of the item described by \fIitemDesc\fR.
 .TP
 \fIpathName \fBitem sort \fIitemDesc\fR ?\fIoption\fR ...?
 Sorts the children of the item described by \fIitemDesc\fR,
@@ -1086,19 +1094,24 @@ The optional \fIpercentsCommand\fR will be called
 before the event is triggered
 for every two character sequence
 starting with a percent character (\fB%\fR).
-The script is called with four additional arguments:
+The script is called with at least four additional arguments:
 the second character of the sequence,
 the window for which the event is triggered,
-\fIeventName\fR and \fIdetail\fR;
-the two character sequence of the command will be replaced by
-the returning string.
+\fIeventName\fR and \fIdetail\fR,
+and finally the \fIfield\-value\fR pairs specified
+as arguments in the \fBnotify generate\fR call to generate the event
+(the leading dash is dropped from the \fIfield\fRs).
+The two character sequence of the command will be replaced by
+the returning string, or by an empty string
+if the command returns with a returnCode other than 0.
 .TP
 \fIpathName \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?
 Installs a new event with the name \fIeventName\fR.
 An event create by this command is called dynamic,
 whereas events created by the treectrl widget itself are called static.
 For the optional \fIpercentsCommand\fR argument
-see the description of the \fBnotify install detail\fR widget command above.
+see the description of the \fBnotify install detail\fR widget command above;
+the value for the argument \fIdetail\fR is the empty string.
 .TP
 \fIpathName \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?
 Returns a string indicating
@@ -1905,19 +1918,13 @@ It may be specified in any of the following forms,
 all optionally followed by \fBvisible\fR:
 .TP 12
 \fBabove\fR
-Use the item one row above
-in a vertical oriented treectrl,
-otherwise one column to the left.
+Use the item one row above in this column.
 .TP 12
 \fBbelow\fR
-Use the item one row below
-in a vertical oriented treectrl,
-otherwise one column to the right.
+Use the item one row below in this column.
 .TP 12
 \fBbottom\fR
-Use the item in the last row of this column
-in a vertical oriented treectrl,
-otherwise the item in the same row of the last column.
+Use the item in the last row of this column.
 .TP 12
 \fBchild\fR \fIn\fR
 Use the \fIn\fRth child of the item.
@@ -1929,14 +1936,10 @@ Use the first child of the item.
 Use the last child of the item.
 .TP 12
 \fBleft\fR
-Use the item one column to the left
-in a vertical oriented treectrl,
-otherwise one row above.
+Use the item one column to the left in the same row.
 .TP 12
 \fBleftmost\fR
-Use the item in the same row of the first column
-in a vertical oriented treectrl,
-otherwise the item in the first row of this column.
+Use the item of the first column in the same row.
 .TP 12
 \fBnext\fR
 Use the next item, which is the first existant (or visible) item of the
@@ -1957,22 +1960,16 @@ or the parent if there is no previos sibling.
 Use the previous sibling of the item.
 .TP 12
 \fBright\fR
-Use the item one column to the right
-in a vertical oriented treectrl,
-otherwise one row below.
+Use the item one column to the right in the same row.
 .TP 12
 \fBrightmost\fR
-Use the item in the same row of the last column
-in a vertical oriented treectrl,
-otherwise the item in the last row of this column.
+Use the item of the last column in the same row.
 .TP 12
 \fBsibling\fR \fIn\fR
 Use the \fIn\fRth child of the item's parent.
 .TP 12
 \fBtop\fR
-Use the item in the first row of this column
-in a vertical oriented treectrl,
-otherwise the item in the same row of the first column.
+Use the item in the first row of this column.
 
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
 .PP
@@ -2069,16 +2066,67 @@ This can be a widget path (then the string starts with \fB.\fR),
 or a generic tag.
 Valid for all event types.
 
-'\".SH "DEFAULT BINDINGS"
-'\".PP
-'\"Tk automatically creates class bindings for trees that give them
-'\"the following default behavior.
-'\".IP [1]
-'\"The Up and Down keys move the active cursor one line up or down.
-'\"Control-p and Control-n behave the same as Up and Down, respectively.
+.SH "DEFAULT BINDINGS"
+.PP
+Tk automatically creates class bindings for treectrls that give them
+the following default behavior.
+.IP [1]
+Clicking mouse button 1 over an item positions the active cursor
+on the item, sets the input focus to this widget,
+and resets the selection of the widget to this item, if it is not
+already in the selection.
+.IP [2]
+Clicking mouse button 1 with the Control key down will reposition the
+active cursor and add the item to the selection
+without ever removing any items from the selection.
+.IP [3]
+If the mouse is dragged out of the widget
+while button 1 is pressed, the treectrl will automatically scroll to
+make more items visible (if there are more items off-screen on the side
+where the mouse left the window).
+.IP [4]
+The Left and Right keys move the active cursor one item to the left or right;
+for an hierarchical tree with vertical orientation nothing will happen,
+since it has no two items in the same row.
+The selection is set to include only the active item.
+If Left or Right is typed with the Shift key down, then the active
+cursor moves and the selection is extended to include the new item.
+.IP [5]
+The Up and Down keys move the active cursor one item up or down.
+The selection is set to include only the active item.
+If Up or Down is typed with the Shift key down, then the active
+cursor moves and the selection is extended to include the new item.
+.IP [6]
+The Next and Prior keys move the active cursor forward or backwards
+by one screenful, without affecting the selection.
+.IP [7]
+Control-Next and Control-Prior scroll the view right or left by one page
+without moving the active cursor or affecting the selection.
+Control-Left and Control-Right behave the same.
+.IP [8]
+The Home and End keys scroll to the left or right end of the widget
+without moving the active cursor or affecting the selection.
+.IP [9]
+The Control-Home and Control-End keys scroll to the top or bottom
+of the widget, they also activate and select the first or last item.
+If also the Shift key is down, then the active
+cursor moves and the selection is extended to include the new item.
+.IP [10]
+The Space and Select keys set the selection to the active item.
+.IP [11]
+Control-/ selects the entire contents of the widget.
+.IP [12]
+Control-\e clears any selection in the widget.
+.IP [13]
+The + and - keys expand or collapse the active item,
+the Return key toggles the active item.
+.IP [14]
+The mousewheel scrolls the view of the widget four lines up or down
+depending on the direction, the wheel was turned.
+The active cursor or the selection is not affected.
 
-'\".SH "SEE ALSO"
-'\"toplevel(n)
+.SH "SEE ALSO"
+listbox(n), image(n), bitmap(n), bind(n), options(n)
 
 .SH KEYWORDS
 tree, widget
