@@ -1,5 +1,7 @@
 2004-11-29  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* generic/tkTreeItem.c, generic/tkTreeElem.c: whitespace police
+
 	* generic/tkTreeCtrl.c: adapt to Tk_PhotoPut(Zoomed)Block API
 	changes for 8.5 (TIP #116).
 
