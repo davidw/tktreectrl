@@ -33,6 +33,7 @@ typedef struct TreeItemDInfo_ *TreeItemDInfo;
 typedef struct TreeMarquee_ *TreeMarquee;
 typedef struct TreeItemRInfo_ *TreeItemRInfo;
 typedef struct TreeStyle_ *TreeStyle;
+typedef struct TreeElement_ *TreeElement;
 
 enum { LEFT, TOP, RIGHT, BOTTOM };
 
@@ -339,10 +340,13 @@ extern int TreeStyle_UseHeight(StyleDrawArgs *drawArgs);
 extern void TreeStyle_Draw(StyleDrawArgs *args);
 extern void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_);
 extern void TreeStyle_Free(TreeCtrl *tree);
-extern int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *style_);
+extern int TreeElement_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeElement *elemPtr);
+extern int TreeElement_IsType(TreeCtrl *tree, TreeElement elem_, CONST char *type);
+extern int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr);
 extern Tcl_Obj *TreeStyle_ToObj(TreeStyle style_);
 extern Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_);
 extern void TreeStyle_SetText(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *textObj);
+extern int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index);
 extern TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle master);
 extern int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj);
 extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
@@ -359,7 +363,7 @@ extern void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT);
 #define SORT_DOUBLE 2
 #define SORT_LONG 3
 #define SORT_COMMAND 4
-extern int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int type, long *lv, double *dv, char **sv);
+extern int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int type, long *lv, double *dv, char **sv);
 extern int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[], XRectangle rects[]);
 extern int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -505,6 +509,7 @@ extern void TextLayout_Free(TextLayout textLayout);
 extern void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr);
 extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
+extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 
 
 #define PAD_TOP_LEFT     0
