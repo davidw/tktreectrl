@@ -868,7 +868,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			}
 			case MOD_VISIBLE:
 			{
-				break;
+				goto baditem;
 			}
 		}
 		if (item == NULL)
@@ -2854,7 +2854,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				TreeItem item_ = (TreeItem) item;
 				XRectangle rect;
 
-				if (!TreeItem_ReallyVisible(tree, item_))
+				if (!TreeItem_ReallyVisible(tree, item_)
+					|| (tree->columnCountVis < 1))
 					return TCL_OK;
 				Tree_ItemBbox(tree, item_, &x, &y, &w, &h);
 				if (objc > 4)
@@ -3591,7 +3592,7 @@ char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 	StyleDrawArgs drawArgs;
 	TreeColumn treeColumn;
 
-	if (!TreeItem_ReallyVisible(tree, item_))
+	if (!TreeItem_ReallyVisible(tree, item_) || (tree->columnCountVis < 1))
 		return NULL;
 
 	Tree_ItemBbox(tree, item_, &left, &top, &width, &height);
@@ -3652,7 +3653,7 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	StyleDrawArgs drawArgs;
 	TreeColumn treeColumn;
 
-	if (!TreeItem_ReallyVisible(tree, item_))
+	if (!TreeItem_ReallyVisible(tree, item_) || (tree->columnCountVis < 1))
 		return;
 
 	Tree_ItemBbox(tree, item_, &x, &y, &w, &h);
