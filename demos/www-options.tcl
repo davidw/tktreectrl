@@ -55,16 +55,16 @@ proc DemoInternetOptions {} {
 		if {($setting eq "on") || ($setting eq "off")} {
 			set ::Option(setting,$item) $setting
 			if {$group eq ""} {
-				$T item state $item check
+				$T item state set $item check
 				if {$setting eq "on"} {
-					$T item state $item on
+					$T item state set $item on
 				}
 			} else {
 				if {$setting eq "on"} {
 					set ::Option(current,$group) $item
-					$T item state $item on
+					$T item state set $item on
 				}
-				$T item state $item radio
+				$T item state set $item radio
 			}
 		} else {
 			$T item element configure $item 0 e1 -image internet-$setting
@@ -115,20 +115,19 @@ proc TreeCtrl::OptionButton1 {T x y} {
 		set group $::Option(group,$item)
 		# a checkbutton
 		if {$group eq ""} {
+			$T item state set $item ~on
 			if {$::Option(setting,$item) eq "on"} {
 				set setting off
-				$T item state $item !on
 			} else {
 				set setting on
-				$T item state $item on
 			}
 			set ::Option(setting,$item) $setting
 		# a radiobutton
 		} else {
 			set current $::Option(current,$group)
 			if {$current eq $item} return
-			$T item state $current !on
-			$T item state $item on
+			$T item state set $current !on
+			$T item state set $item on
 			set ::Option(setting,$item) on
 			set ::Option(current,$group) $item
 		}

@@ -104,12 +104,12 @@ proc DemoOutlookNewsgroup {} {
 
 		# This message has been read
 		if {$Message(read,$i)} {
-			$T item state $i read
+			$T item state set $i read
 		}
 
 		# This message has unread descendants
 		if {[AnyUnreadDescendants $T $i]} {
-			$T item state $i unread
+			$T item state set $i unread
 		}
 
 		if {[$T item numchildren $i]} {
@@ -155,7 +155,7 @@ proc MessageReadDelayed {} {
 	if {!$Message(read,$I)} {
 
 		# Read the message
-		$T item state $I read
+		$T item state set $I read
 		set Message(read,$I) 1
 
 		# Check ancestors (except root)
@@ -163,7 +163,7 @@ proc MessageReadDelayed {} {
 
 			# This ancestor has no more unread descendants
 			if {![AnyUnreadDescendants $T $I2]} {
-				$T item state $I2 !unread
+				$T item state set $I2 !unread
 			}
 		}
 	}

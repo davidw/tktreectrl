@@ -310,16 +310,16 @@ proc TreeCtrl::HelpMotion {w x y} {
 		if {[llength $id] == 6} {
 			if {$item ne $Priv(help,prev)} {
 				if {$Priv(help,prev) ne ""} {
-					$w item state $Priv(help,prev) !mouseover
+					$w item state set $Priv(help,prev) !mouseover
 				}
-				$w item state $item mouseover
+				$w item state set $item mouseover
 				set Priv(help,prev) $item
 			}
 			return
 		}
 	}
 	if {$Priv(help,prev) ne ""} {
-		$w item state $Priv(help,prev) !mouseover
+		$w item state set $Priv(help,prev) !mouseover
 		set Priv(help,prev) ""
 	}
 	return
