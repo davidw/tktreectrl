@@ -69,7 +69,12 @@ proc DemoHelpContents {} {
 	}
 
 	bind TreeCtrlHelp <Double-ButtonPress-1> {
-		TreeCtrl::DoubleButton1 %W %x %y
+		if {[lindex [%W identify %x %y] 0] eq "header"} {
+			TreeCtrl::DoubleButton1 %W %x %y
+		} else {
+			TreeCtrl::HelpButton1 %W %x %y
+		}
+		break
 	}
 	bind TreeCtrlHelp <ButtonPress-1> {
 		TreeCtrl::HelpButton1 %W %x %y
@@ -188,7 +193,12 @@ proc DemoHelpContents2 {} {
 	}
 
 	bind TreeCtrlHelp <Double-ButtonPress-1> {
-		TreeCtrl::DoubleButton1 %W %x %y
+		if {[lindex [%W identify %x %y] 0] eq "header"} {
+			TreeCtrl::DoubleButton1 %W %x %y
+		} else {
+			TreeCtrl::HelpButton1 %W %x %y
+		}
+		break
 	}
 	bind TreeCtrlHelp <ButtonPress-1> {
 		TreeCtrl::HelpButton1 %W %x %y

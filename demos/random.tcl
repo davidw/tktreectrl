@@ -92,6 +92,7 @@ proc DemoRandom {} {
 
 	bind TreeCtrlRandom <Double-ButtonPress-1> {
 		TreeCtrl::DoubleButton1 %W %x %y
+		break
 	}
 	bind TreeCtrlRandom <Control-ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) toggle
@@ -445,7 +446,7 @@ proc TreeCtrl::RandomAutoScanCheck {T x y} {
 	return
 }
 
-proc ::TreeCtrl::RandomAutoScanCheckAux {T} {
+proc TreeCtrl::RandomAutoScanCheckAux {T} {
 	variable Priv
 	unset Priv(autoscan,afterId,$T)
 	set x [winfo pointerx $T]
