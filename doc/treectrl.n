@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.5 2002/12/27 11:49:27 krischan Exp $
+'\" $Id: treectrl.n,v 1.6 2002/12/27 19:23:31 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -143,7 +143,7 @@ The default is 200 pixel.
 If this option is less than or equal to zero then the window will
 not request any size at all.
 .OP \-wrap wrap Wrap
-Specifies how to arange items inside treectrl's window.
+Specifies how to arrange items inside treectrl's window.
 The value must be an emtyp string, \fBwindow\fR, or a list with an integer
 as first element and either \fBitems\fR or \fBpixels\fR as second element.
 The empty string as wrap mode means that each item appears on
@@ -256,14 +256,18 @@ by \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the \fBtree\fR
 command.
 .TP
-\fIpathName \fBcollapse\fR \fIitemDesc\fR
-Switches off the \fBopen\fR state of the item described by \fIitemDesc\fR.
+\fIpathName \fBcollapse\fR ?\fB\-recurse\fR? ?\fIitemDesc ...\fR?
+Switches off the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the item has descendants, they are no longer displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
 widget options \fB\-closedbuttonimage\fR or \fB\-closedbuttonbitmap\fR,
 or a \fB\+\fR sign if no image or bitmap is configured.
 If the item is already closed, this command has no effect.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case all items of the treectrl widget are collapsed.
+If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
+will also be collapsed.
 .TP
 \fIpathName \fBcompare\fR \fIitemDesc1 op itemDesc2\fR
 From both items described by the \fIitemDesc\fRs the index is retrieved
@@ -286,6 +290,14 @@ modifies the given widget option(s) to have the given value(s);  in
 this case the command returns an empty string.
 \fIOption\fR may have any of the values accepted by the \fBtree\fR
 command.
+.TP
+\fIpathName \fBdepth\fR ?\fIitemDesc\fR?
+If the additional argument \fIitemDesc\fR is specified,
+returns a decimal string giving the depth of
+the item describing by \fIitemDesc\fR, whereas depth is defined as
+the number of steps you must go upward to reach to root item.
+If no \fIitemDesc\fR is specified, the maximum depth of all
+items in the treectrl widget is returned instead.
 .TP
 \fIpathName \fBelement \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 This command is used to manipulate elements (see ELEMENTS below).
@@ -340,14 +352,18 @@ Returns the type of the elements given by \fIelement\fR,
 such as \fBrect\fR or \fBtext\fR.
 .RE
 .TP
-\fIpathName \fBexpand\fR \fIitemDesc\fR
-Switches on the \fBopen\fR state of the item described by \fIitemDesc\fR.
+\fIpathName \fBexpand\fR ?\fB\-recurse\fR? ?\fIitemDesc ...\fR?
+Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the item has descendants, they are now displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
 widget options \fB\-openbuttonimage\fR or \fB\-openbuttonbitmap\fR,
 or a \fB\-\fR sign if no image or bitmap is configured.
 If the item is already open, this command has no effect.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case all items of the treectrl widget are expanded.
+If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
+will also be expanded.
 .TP
 \fIpathName \fBindex \fIitemDesc\fR
 This command returns a decimal string giving the numerical id
@@ -404,6 +420,8 @@ the item described by \fIfirst\fR is delete.
 If both \fIfirst\fR and \fIlast\fR are specified,
 the must decribe items with the same root item;
 then the range of items between \fIfirst\fR and \fIlast\fR is deleted.
+There is no way to delete the root item of the treectrl widget;
+in all cases the specification of the root item is ignored;
 .TP
 \fIpathName \fBitem dump \fIitemDesc\fR
 Returns a list with six elements in the form
@@ -709,6 +727,27 @@ Returns 1 if the dotted line surrounding the marquee is currently visible,
 0 otherwise.
 .RE
 .TP
+\fIpathName \fBnumitems\fR
+Returns a decimal string giving the number of
+items created in the treectrl widget.
+This number is always positive,
+since a newly created treectrl widget has already the root item,
+which cannot be deleted.
+.TP
+\fIpathName \fBorphans\fR
+Returns a list containing the numerical ids of all items
+which has no parent item.
+An item is created without having a parent,
+and can later become an orphan again
+by means of the \fBitem remove\fR widget command.
+.TP
+\fIpathName \fBrange \fIfirst\fR \fIlast\fR
+\fIFirst\fR and \fIlast\fR must be an \fIitemDesc\fR.
+Returns a list containing the numerical ids of all items
+in the range between \fIfirst\fR and \fIlast\fR, inclusive.
+The order between \fIfirst\fR and \fIlast\fR doesn't matter,
+and the result is always ordered by the increasing index of the items.
+.TP
 \fIpathName \fBstate \fIoption\fR ?\fIstateName\fR?
 This command is used to manipulate the list of user defined states,
 see section STATES below.
@@ -728,6 +767,12 @@ Returns a list containing the names of all user defined states.
 \fIStateName\fR must be the name of a user defined state.
 Removes this state from the list of user defined states.
 .RE
+.TP
+\fIpathName \fBsee \fIitemDesc\fR
+Adjust the view in the treectrl so that the item
+described by \fIitemDesc\fR is visible.
+If the item is already visible then the command has no effect;
+otherwise the treectrl scrolls to bring the item into view.
 .TP
 \fIpathName \fBselection \fIoption arg\fR
 This command is used to adjust the selection within a treectrl.
@@ -932,11 +977,15 @@ i.e. independent from the other elements.
 Returns a list containing the names of all existing styles.
 .RE
 .TP
-\fIpathName \fBtoggle\fR \fIitemDesc\fR
-Changes the \fBopen\fR state of the item described by \fIitemDesc\fR.
+\fIpathName \fBtoggle\fR ?\fB\-recurse\fR? ?\fIitemDesc ...\fR?
+Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the state is currently switched off,
 this command does the same as the \fBexpand\fR widget command,
 otherwise the same as the \fBcollapse\fR widget command.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case the state of all items of the treectrl widget are toggled.
+If \fB\-recurse\fR is specified, the state of all descendants of
+\fIitemDesc\fR will also be toggles.
 .TP
 \fIpathName \fBxview  \fR?\fIargs\fR?
 This command is used to query and change the horizontal position of the
@@ -1015,7 +1064,7 @@ becomes visible.
 .PP
 A state consists basically of just a string: its \fIstateName\fR.
 For every item a set of these states is managed,
-which means that every item can have every state on or off.
+which means that every item can have every state switched on or off.
 The following states are predefined for every item:
 .TP 10
 \fBactive\fR
@@ -1300,8 +1349,8 @@ Indicates the root item of the treectrl.
 The \fIitemDesc\fR may be followed by one or more \fImodifier\fRs.
 A modifier changes the item described by the \fIitemDesc\fR relative to
 the description upto this point.
-It may be specified in any of the following forms, all optionally preceded
-by \fBvisible\fR:
+It may be specified in any of the following forms,
+all optionally followed by \fBvisible\fR:
 .TP 12
 \fBabove\fR
 Use the item one row above
