@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.8 2002/12/28 13:41:15 krischan Exp $
+'\" $Id: treectrl.n,v 1.9 2002/12/28 19:44:29 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -362,6 +362,85 @@ this case the command returns an empty string.
 \fIOption\fR may have any of the values accepted by the \fBtreectrl\fR
 command.
 .TP
+\fIpathName \fBcontentbox\fR
+Returns a list with four elements giving an approximate bounding box
+for the space used to display the items inside the columns,
+i.e. the space of the treectrl widget without
+the surrounding borders and the column headers.
+.TP
+\fIpathName \fBdebug \fIoption\fR ?\fIarg arg ...\fR?
+This command is used to facilitate debugging of the treectrl widget.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBdebug\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBdebug cget \fIelement option\fR
+This command returns the current value of the debugging option
+named \fIoption\fR.
+\fIOption\fR may have any of the values accepted by the
+\fBdebug configure\fR widget command.
+.TP
+\fIpathName \fBdebug configure \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+This command is similar to the \fBconfigure\fR widget command except
+that it modifies debugging options
+instead of modifying options for the overall treectrl widget.
+If no \fIoption\fR is specified, the command returns a list describing
+all of the available debugging options (see \fBTk_ConfigureInfo\fR
+for information on the format of this list).
+If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
+a list describing the one named option (this list will be identical to
+the corresponding sublist of the value returned if no \fIoption\fR
+is specified).
+If one or more \fIoption\-value\fR pairs are specified, then the command
+modifies the given debugging option(s) to have the given value(s);
+in this case the command returns an empty string.
+
+The following debugging options are supported:
+.RS
+.TP
+\fB\-displaydelay \fImillis\fR
+Specifies a time duration in milliseconds, which should be waited
+after something has been drawn to the screen.
+Setting this option has only an effect,
+if the debugging options \fB\-enable\fR and \fB\-display\fR are switched on.
+.TP
+\fB\-data \fIboolean\fR
+If this option is switched on
+(together with the debugging option \fB\-enable\fR),
+at various places a consistence check
+on the internal data structure is made
+(e.g. for every item is checked,
+if the registered number of children is equal to the number of child items).
+If an inconsistency was found, a Tcl background error is raised.
+.TP
+\fB\-display \fIboolean\fR
+If this option is switched on
+(together with the debugging option \fB\-enable\fR),
+at varios places additional debugging output is printed to stdout.
+.TP
+\fB\-enable \fIboolean\fR
+All other debugging options only take effect,
+if this option is also switched on.
+.TP
+\fB\-erasecolor \fIcolor\fR
+Use this color, when parts of the treectrl widget should be deleted.
+If you use an unusual color for this option (like \fBpink\fR),
+superflous screen redraws can be spotted more easily.
+Setting this option has only an effect,
+if the debugging options \fB\-enable\fR and \fB\-display\fR are switched on.
+.RE
+.TP
+\fIpathName \fBdebug dinfo\fR
+For every of the treectrl widget
+a line with some internal valuess info about all items
+is printed to stdout.
+The command returns the empty string.
+.TP
+\fIpathName \fBdebug scroll\fR
+Returns a string useful for debugging vertical scrolling.
+.RE
+.TP
 \fIpathName \fBdepth\fR ?\fIitemDesc\fR?
 If the additional argument \fIitemDesc\fR is specified,
 returns a decimal string giving the depth of
@@ -435,6 +514,39 @@ If the item is already open, this command has no effect.
 in which case all items of the treectrl widget are expanded.
 If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
 will also be expanded.
+.TP
+\fIpathName \fBidentify \fIx y\fR
+Returns a list containing some diagnostics about what
+is displayed at the given windows coordinates \fBx\fR and \fBy\fR.
+The resulting list may be empty,
+if nothing is displayed at the given coordinates,
+otherwise the first list element is \fBheader\fR or \fBitem\fR.
+
+If the coordinates are in the header area
+and thus the first element of the result is \fBheader\fR,
+the number of the column or the string \fBtail\fR
+is the second element in the resulting list;
+if the x coordinate is near the left or right end of the header,
+a third element \fBleft\fR or \fBright\fR is added respectively.
+
+If the coordinates are below the header area
+and thus the first element of the result is \fBitem\fR,
+the numerical id of the item
+is the second element in the resulting list.
+If the x coordinate doesn't fall into the column
+displaying the hierarchical structure,
+the elements \fBcolumn\fR and the column number are added.
+If the x coordinate if above the column
+displaying the hierarchical structure,
+the following elements are added to the resulting list:
+\fBline\fR and the numerical id of the item the line comes from,
+if the x coordinate is above an item connecting line;
+\fBbutton\fR, if the x coordinate is above a button;
+\fBcolumn\fR, the column number, \fBelem\fR, and the element name,
+if the x coordinate is above an element of the item;
+\fBcolumn\fR and the column number,
+if the x coordinate is to the right of the elements;
+nothing otherwise.
 .TP
 \fIpathName \fBindex \fIitemDesc\fR
 This command returns a decimal string giving the numerical id
