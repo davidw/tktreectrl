@@ -198,6 +198,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	int i;
 	TkWinDCState state;
 	HDC dc;
+	int ROP2;
 
 	/* Dots on even pixels only */
 	nw = !(wx & 1) == !(wy & 1);
@@ -206,6 +207,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
 
 	dc = TkWinGetDrawableDC(tree->display, drawable, &state);
+	ROP2 = GetROP2(dc);
 	SetROP2(dc, R2_NOT);
 	if (w) /* left */
 	{
@@ -239,6 +241,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 			LineTo(dc, x + i + 1, y + height - 1);
 		}
 	}
+	SetROP2(dc, ROP2);
 	TkWinReleaseDrawableDC(drawable, dc, &state);
 #else
 	int wx = x + tree->drawableXOrigin;
@@ -309,6 +312,7 @@ struct DotStatePriv
 	HDC dc;
 	TkWinDCState dcState;
 	HRGN rgn;
+	int ROP2;
 #else
 	GC gc;
 	TkRegion rgn;
@@ -334,6 +338,7 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 	dotState->dc = TkWinGetDrawableDC(tree->display, drawable, &dotState->dcState);
 
 	/* XOR drawing */
+	dotState->ROP2 = GetROP2(dotState->dc);
 	SetROP2(dotState->dc, R2_NOT);
 
 	/* Keep drawing inside the contentbox */
@@ -419,6 +424,7 @@ void DotRect_Restore(DotState *p)
 {
 	struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
+	SetROP2(dotState->dc, dotState->ROP2);
 	SelectClipRgn(dotState->dc, NULL);
 	DeleteObject(dotState->rgn);
 	TkWinReleaseDrawableDC(dotState->drawable, dotState->dc, &dotState->dcState);
