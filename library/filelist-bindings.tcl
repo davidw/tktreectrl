@@ -250,7 +250,7 @@ proc TreeCtrl::FileListMotion {T x y} {
 	    set x [expr {[$T canvasx $x] - $Priv(drag,x)}]
 	    set y [expr {[$T canvasy $y] - $Priv(drag,y)}]
 	    $T dragimage offset $x $y
-	    $T dragimage visible yes
+	    $T dragimage configure -visible yes
 	}
     }
     return
@@ -283,7 +283,7 @@ proc TreeCtrl::FileListRelease1 {T x y} {
 
 	    # Some dragging occurred
 	    if {$Priv(drag,motion)} {
-		$T dragimage visible no
+		$T dragimage configure -visible no
 		if {$Priv(drop) ne ""} {
 		    $T selection modify {} $Priv(drop)
 		    if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
