@@ -1126,7 +1126,8 @@ static char *GetField(char *p, char *copy, int size)
 {
 	int ch = *p;
 
-	while ((ch != '\0') && !isspace(ch) && (ch != '>')
+	while ((ch != '\0') && !isspace(UCHAR(ch)) &&
+		((ch != '>') || (p[1] != '\0'))
 		&& (ch != '-') && (size > 1))
 	{
 		*copy = ch;
@@ -1435,23 +1436,28 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
  */
  
 typedef struct GenerateField {
-	char which;
-	char *string;
+	char which; /* The %-char */
+	char *string; /* Replace %-char with it */
 } GenerateField;
 
-static GenerateField generateField[10];
-static int generateCount;
+typedef struct GenerateData {
+	GenerateField staticField[20];
+	GenerateField *field;
+	int count;
+} GenerateData;
 
 /* Perform %-substitution using args passed to QE_GenerateCmd() */
 static void Percents_Generate(QE_ExpandArgs *args)
 {
+	GenerateData *data = (GenerateData *) args->clientData;
 	int i;
 
-	for (i = 0; i < generateCount; i++)
+	/* Reverse order to handle duplicate %-chars */
+	for (i = data->count - 1; i >= 0 ; i--)
 	{
-		if (args->which == generateField[i].which)
+		if (args->which == data->field[i].which)
 		{
-			QE_ExpandString(generateField[i].string, args->result);
+			QE_ExpandString(data->field[i].string, args->result);
 			return;
 		}
 	}
@@ -1487,6 +1493,7 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST *objPtr;
 	EventInfo *eiPtr;
 	Detail *dPtr;
+	GenerateData genData;
 	GenerateField *fieldPtr;
 	char *p, *t;
 	Pattern pats;
@@ -1506,35 +1513,39 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	/* Can't generate an event without a detail*/
 	if ((dPtr == NULL) && (eiPtr->detailList != NULL))
 	{
-		Tcl_AppendResult(bindPtr->interp, "cannot generate \"", p, "\": missing detail",
-			(char *) NULL);
+		Tcl_AppendResult(bindPtr->interp, "cannot generate \"", p,
+			"\": missing detail", (char *) NULL);
 		return TCL_ERROR;
 	}
-
-	fakeEvent.type = pats.type;
-	fakeEvent.detail = pats.detail;
-	fakeEvent.clientData = (ClientData) dPtr;
 
 	objPtr = objv + objOffset + 2;
 	objc -= objOffset + 2;
 
-	fieldPtr = &generateField[0];
-	generateCount = 0;
+	genData.count = objc / 2;
+	genData.field = genData.staticField;
+	if (genData.count > sizeof(genData.staticField) /
+		sizeof(genData.staticField[0]))
+	{
+		genData.field = (GenerateField *) Tcl_Alloc(sizeof(GenerateField) *
+			genData.count);
+	}
+	fieldPtr = &genData.field[0];
 
 	while (objc > 1)
 	{
 		int length;
+
 		t = Tcl_GetStringFromObj(objPtr[0], &length);
 		if ((length != 2) || (t[0] != '-'))
 		{
 			Tcl_AppendResult(bindPtr->interp, "invalid percent char \"", t,
 				"\"", NULL);
-			return TCL_ERROR;
+			result = TCL_ERROR;
+			goto done;
 		}
 		fieldPtr->which = t[1];
 		fieldPtr->string = Tcl_GetStringFromObj(objPtr[1], NULL);
 		fieldPtr++;
-		generateCount++;
 		objPtr += 2;
 		objc -= 2;
 	}
@@ -1542,7 +1553,8 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	if (objc != 0)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, 2, objv, "pattern ?field value ...?");
-		return TCL_ERROR;
+		result = TCL_ERROR;
+		goto done;
 	}
 
 	/*
@@ -1560,6 +1572,10 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		eiPtr->expandProc = Percents_Generate;
 	}
 
+	fakeEvent.type = pats.type;
+	fakeEvent.detail = pats.detail;
+	fakeEvent.clientData = (ClientData) &genData;
+
 	result = QE_BindEvent(bindingTable, &fakeEvent);
 
 	if ((dPtr != NULL) && (dPtr->expandProc != NULL))
@@ -1567,6 +1583,9 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	else
 		eiPtr->expandProc = oldExpandProc;
 
+done:
+	if (genData.field != genData.staticField)
+		Tcl_Free((char *) genData.field);
 	return result;
 }
 
@@ -1591,7 +1610,7 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
     if (objc - objOffset < 3)
     {
 		Tcl_WrongNumArgs(interp, objOffset + 1, objv,
-			"window pattern ?option? ?value? ?option value ...?");
+			"object pattern ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
     }
 
@@ -1615,6 +1634,8 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 	if (FindSequence(bindPtr, object, eventString, 0, NULL, &valuePtr) != TCL_OK)
 		return TCL_ERROR;
+	if (valuePtr == NULL)
+		return TCL_OK;
 
 	objPtr = objv + objOffset + 3;
 	objc -= objOffset + 3;
