@@ -60,7 +60,8 @@ struct DInfo
 	int yOrigin; /* Last seen TreeCtrl.yOrigin */
 	int totalWidth; /* Last seen Tree_TotalWidth() */
 	int totalHeight; /* Last seen Tree_TotalHeight() */
-	int columnWidth[20]; /* Last seen column widths */
+	int *columnWidth; /* Last seen column widths */
+	int columnWidthSize; /* Num elements in columnWidth */
 	int headerHeight; /* Last seen TreeCtrl.headerHeight */
 	DItem *dItem; /* Head of list for each visible item */
 	DItem *dItemLast; /* Temp for UpdateDInfo() */
@@ -2574,6 +2575,12 @@ if (tree->debug.enable && tree->debug.display && 0)
 		TreeColumn treeColumn = tree->columns;
 		int columnIndex = 0;
 
+		if (dInfo->columnWidthSize < tree->columnCount)
+		{
+			dInfo->columnWidthSize *= 2;
+			dInfo->columnWidth = (int *) ckrealloc((char *) dInfo->columnWidth,
+				sizeof(int) * dInfo->columnWidthSize);
+		}
 		while (treeColumn != NULL)
 		{
 			if (dInfo->columnWidth[columnIndex] != TreeColumn_UseWidth(treeColumn))
@@ -3580,6 +3587,8 @@ void TreeDInfo_Init(TreeCtrl *tree)
 	gcValues.graphics_exposures = True;
 	dInfo->scrollGC = Tk_GetGC(tree->tkwin, GCGraphicsExposures, &gcValues);
 	dInfo->flags = DINFO_OUT_OF_DATE;
+	dInfo->columnWidthSize = 10;
+	dInfo->columnWidth = (int *) ckalloc(sizeof(int) * dInfo->columnWidthSize);
 	tree->dInfo = (TreeDInfo) dInfo;
 }
 
