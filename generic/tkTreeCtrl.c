@@ -1681,6 +1681,11 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 				return TCL_ERROR;
 			}
 			string = Tcl_GetStringFromObj(objv[3], &length);
+			if (!length || (*string == '~') || (*string == '!'))
+			{
+				FormatResult(interp, "invalid state name \"%s\"", string);
+				return TCL_ERROR;
+			}
 			for (i = 0; i < 32; i++)
 			{
 				if (tree->stateNames[i] == NULL)
