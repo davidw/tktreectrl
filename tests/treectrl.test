@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.3 2002/12/26 12:30:57 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.4 2002/12/26 15:54:19 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -1462,6 +1462,57 @@ test tree-6.72 {item state: reset predefined state} -body {
     .t toggle 8
     .t item state 8
 } -result {enabled}
+
+test tree-7.1 {marquee: missing args} -body {
+    .t marquee
+} -returnCodes error -result {wrong # args: should be ".t marquee command ?arg arg...?"}
+
+test tree-7.2 {marquee: unknown command} -body {
+    .t marquee foo
+} -returnCodes error -result {bad command "foo": must be anchor, cget, configure, coords, corner, identify, or visible}
+
+test tree-7.3 {marquee anchor: not yet modified} -body {
+    .t marquee anchor
+} -result {0 0}
+
+test tree-7.4 {marquee anchor: odd arguments} -body {
+    .t marquee anchor 1
+} -returnCodes error -result {wrong # args: should be ".t marquee anchor ?x y?"}
+
+test tree-7.5 {marquee identify: should be empty} -body {
+    .t marquee identify
+} -result {}
+
+test tree-7.6 {marquee anchor: set it} -body {
+    .t marquee anchor 5 5
+} -result {}
+
+test tree-7.7 {marquee coords: retrieve them} -body {
+    .t marquee coords
+} -result {5 5 0 0}
+
+test tree-7.8 {marquee identify: just the root} -body {
+    .t marquee identify
+} -result {0}
+
+test tree-7.9 {marquee corner: set it} -body {
+    .t marquee corner 600 600
+    .t marquee coords
+} -result {5 5 600 600}
+
+test tree-7.10 {marquee identify} -body {
+    .t marquee identify
+} -result {0 {1 0} 2 3 4 5 6 7 {8 {0 eRect eImage}}}
+
+test tree-7.11 {marquee visible} -body {
+    list [.t marquee configure -visible] \
+	 [.t marquee visible 1] \
+	 [.t marquee cget -visible] \
+	 [.t marquee visible 0] \
+	 [.t marquee cget -visible] \
+	 [.t marquee configure -visible 1] \
+	 [.t marquee visible]
+} -result {{-visible {} {} 0 0} 1 1 0 0 {} 1}
 
 # cleanup
 image delete emptyImg
