@@ -641,8 +641,9 @@ wrapLine:
 
 		curX = 0;
 		baseline += height;
+		layoutPtr->numLines++;
 
-		if ((maxLines > 0) && (++layoutPtr->numLines >= maxLines))
+		if ((maxLines > 0) && (layoutPtr->numLines >= maxLines))
 			break;
 	}
 
@@ -779,6 +780,9 @@ finish:
 	}
 
 	Tcl_DStringFree(&lineBuffer);
+
+	if (layoutPtr->numLines == 1)
+		dbwin("WARNING: single-line TextLayout created\n");
 
 	return (TextLayout) layoutPtr;
 }

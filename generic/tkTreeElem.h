@@ -27,6 +27,7 @@ struct ElementArgs
 		Drawable drawable;
 	} display;
 	struct {
+		int squeeze;
 		int width;
 		int height;
 	} layout;

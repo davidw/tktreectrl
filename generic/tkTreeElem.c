@@ -2857,8 +2857,8 @@ static void TextUpdateLayout(ElementArgs *args)
 
 	if (elemX->layout != NULL)
 	{
-/*if (tree->debug.enable && tree->debug.display)
-	dbwin("TextUpdateLayout %s: free %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");*/
+if (1 && tree->debug.enable && tree->debug.display)
+	dbwin("TextUpdateLayout %s: free %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
 		TextLayout_Free(elemX->layout);
 		elemX->layout = NULL;
 	}
@@ -2896,7 +2896,9 @@ static void TextUpdateLayout(ElementArgs *args)
 		width = elemX->width;
 	else if ((masterX != NULL) && (masterX->widthObj != NULL))
 		width = masterX->width;
-
+if (0 && tree->debug.enable)
+dbwin("lines %d multiLine %d width %d squeeze %d\n",
+lines, multiLine, width, args->layout.squeeze);
 	if ((lines == 1) || (!multiLine && (width == 0)))
 		return;
 
@@ -2926,8 +2928,8 @@ static void TextUpdateLayout(ElementArgs *args)
 	elemX->layout = TextLayout_Compute(tkfont, text,
 		Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
 
-/*if (tree->debug.enable && tree->debug.display)
-	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");*/
+if (1 && tree->debug.enable && tree->debug.display)
+	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
 }
 
 static void DeleteText(ElementArgs *args)
@@ -3098,9 +3100,6 @@ static void DisplayText(ElementArgs *args)
 
 	if (elemX->layout != NULL)
 		layout = elemX->layout;
-	else if ((elemX->text == NULL) && (masterX != NULL) &&
-		(masterX->layout != NULL))
-		layout = masterX->layout;
 
 	if (layout != NULL)
 	{
@@ -3175,15 +3174,6 @@ static void LayoutText(ElementArgs *args)
 	}
 #endif
 
-	if ((masterX != NULL) /* && (elemX != masterX) */ &&
-		(masterX->layoutInvalid || (masterX->layoutWidth != args->layout.width)))
-	{
-		args->elem = (Element *) masterX;
-		TextUpdateLayout(args);
-		args->elem = elem;
-		masterX->layoutInvalid = FALSE;
-		masterX->layoutWidth = args->layout.width;
-	}
 	if (elemX->layoutInvalid || (elemX->layoutWidth != args->layout.width))
 	{
 		TextUpdateLayout(args);
@@ -3193,9 +3183,6 @@ static void LayoutText(ElementArgs *args)
 
 	if (elemX->layout != NULL)
 		layout = elemX->layout;
-	else if ((elemX->text == NULL) && (masterX != NULL) &&
-		(masterX->layout != NULL))
-		layout = masterX->layout;
 
 	if (layout != NULL)
 	{
@@ -3240,7 +3227,7 @@ static void LayoutText(ElementArgs *args)
 			width = elemX->width;
 		else if ((masterX != NULL) && (masterX->widthObj != NULL))
 			width = masterX->width;
-		if (width && (width < args->layout.width))
+		if ((width > 0) && (width < args->layout.width))
 			args->layout.width = width;
 		Tk_GetFontMetrics(tkfont, &fm);
 		args->layout.height = fm.linespace; /* TODO: multi-line strings */

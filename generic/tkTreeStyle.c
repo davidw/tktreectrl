@@ -1167,21 +1167,32 @@ static void Style_DoLayout2(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 
 		layout->useHeight = eLink->neededHeight;
 
+		/* If a Text Element is given less width than it needs (due to
+		 * -squeeze x layout), then it may wrap lines. This means
+		 * the height can vary depending on the width. */
 		if (eLink->elem->typePtr == &elemTypeText)
 		{
-			if (layout->iWidth != eLink->layoutWidth)
+			ElementArgs args;
+
+			if (layout->iWidth == eLink->layoutWidth)
 			{
-				ElementArgs args;
-
-				args.tree = tree;
-				args.state = state;
-				args.elem = eLink->elem;
-				args.layout.width = layout->iWidth;
-				(*args.elem->typePtr->layoutProc)(&args);
-
-				eLink->layoutWidth = layout->iWidth;
-				eLink->layoutHeight = args.layout.height;
+				layout->useHeight = eLink->layoutHeight;
+				continue;
 			}
+
+			if ((eLink->layoutWidth == -1) &&
+				(layout->iWidth >= eLink->neededWidth))
+				continue;
+
+			args.tree = tree;
+			args.state = state;
+			args.elem = eLink->elem;
+			args.layout.squeeze = layout->iWidth < eLink->neededWidth;
+			args.layout.width = layout->iWidth;
+			(*args.elem->typePtr->layoutProc)(&args);
+
+			eLink->layoutWidth = layout->iWidth;
+			eLink->layoutHeight = args.layout.height;
 			layout->useHeight = eLink->layoutHeight;
 		}
 	}
@@ -1209,21 +1220,32 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[20], c
 
 		layout->useHeight = eLink->neededHeight;
 
+		/* If a Text Element is given less width than it needs (due to
+		 * -squeeze x layout), then it may wrap lines. This means
+		 * the height can vary depending on the width. */
 		if (eLink->elem->typePtr == &elemTypeText)
 		{
-			if (layout->iWidth != eLink->layoutWidth)
+			ElementArgs args;
+
+			if (layout->iWidth == eLink->layoutWidth)
 			{
-				ElementArgs args;
-
-				args.tree = tree;
-				args.state = state;
-				args.elem = eLink->elem;
-				args.layout.width = layout->iWidth;
-				(*args.elem->typePtr->layoutProc)(&args);
-
-				eLink->layoutWidth = layout->iWidth;
-				eLink->layoutHeight = args.layout.height;
+				layout->useHeight = eLink->layoutHeight;
+				continue;
 			}
+
+			if ((eLink->layoutWidth == -1) &&
+				(layout->iWidth >= eLink->neededWidth))
+				continue;
+
+			args.tree = tree;
+			args.state = state;
+			args.elem = eLink->elem;
+			args.layout.squeeze = layout->iWidth < eLink->neededWidth;
+			args.layout.width = layout->iWidth;
+			(*args.elem->typePtr->layoutProc)(&args);
+
+			eLink->layoutWidth = layout->iWidth;
+			eLink->layoutHeight = args.layout.height;
 			layout->useHeight = eLink->layoutHeight;
 		}
 	}
@@ -1311,6 +1333,7 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 			args.tree = tree;
 			args.state = state;
 			args.elem = eLink2->elem;
+			args.layout.squeeze = 0;
 			args.layout.width = -1;
 			(*args.elem->typePtr->layoutProc)(&args);
 			eLink2->neededWidth = args.layout.width;
