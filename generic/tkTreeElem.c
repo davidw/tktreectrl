@@ -2174,16 +2174,32 @@ static int ConfigRect(ElementArgs *args)
 				elemX->open = 0;
 				if (elemX->openString != NULL)
 				{
+					int badChar = 0;
+
 					for (i = 0; elemX->openString[i]; i++)
 					{
 						switch (elemX->openString[i])
 						{
-							case 'w': elemX->open |= 0x01; break;
-							case 'n': elemX->open |= 0x02; break;
-							case 'e': elemX->open |= 0x04; break;
-							case 's': elemX->open |= 0x08; break;
+							case 'w': case 'W': elemX->open |= 0x01; break;
+							case 'n': case 'N': elemX->open |= 0x02; break;
+							case 'e': case 'E': elemX->open |= 0x04; break;
+							case 's': case 'S': elemX->open |= 0x08; break;
+							default:
+							{
+								Tcl_ResetResult(tree->interp);
+								Tcl_AppendResult(tree->interp, "bad open value \"",
+									elemX->openString, "\": must be a string ",
+									"containing zero or more of n, e, s, and w",
+									(char *) NULL);
+								badChar = 1;
+								break;
+							}
 						}
+						if (badChar)
+							break;
 					}
+					if (badChar)
+						continue;
 				}
 			}
 
