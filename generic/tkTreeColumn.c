@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.17 2004/08/09 02:03:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.18 2005/03/29 20:58:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -868,7 +868,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column, 0) != TCL_OK)
 		return TCL_ERROR;
 	    /* Update layout if needed */
-	    (void) Tree_TotalWidth(tree);
+	    (void) Tree_WidthOfColumns(tree);
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(column->useWidth));
 	    break;
 	}
