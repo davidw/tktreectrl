@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.15 2002/12/30 21:42:22 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.16 2003/01/02 19:36:53 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -524,7 +524,7 @@ test tree-5.1 {state: missing args} -body {
 
 test tree-5.2 {state: invalid command} -body {
     .t state foo
-} -returnCodes error -result {bad command "foo": must be define, undefine, or names}
+} -returnCodes error -result {bad command "foo": must be define, linkage, names, or undefine}
 
 test tree-5.3 {state names: too many args} -body {
     .t state names foo bar
@@ -568,6 +568,22 @@ test tree-5.10 {state undefine} -body {
     .t state names
 } -result {state0}
 
+test tree-5.11 {state linkage: missing args} -body {
+    .t state linkage
+} -returnCodes error -result {wrong # args: should be ".t state linkage state"}
+
+test tree-5.12 {state linkage: unknown state} -body {
+    .t state linkage foo
+} -returnCodes error -result {unknown state "foo"}
+
+test tree-5.13 {state linkage: predefined state} -body {
+    .t state linkage open
+} -result {static}
+
+test tree-5.14 {state linkage: user defined state} -body {
+    .t state linkage state0
+} -result {dynamic}
+
 test tree-7.0 {some prerequisites for the marquee test} -body {
     .t element create eImage image -width 202
     .t element create eRect rect -width 10c
@@ -608,7 +624,7 @@ test tree-7.7 {marquee coords: retrieve them} -body {
 
 test tree-7.8 {marquee identify: just the root} -body {
     .t marquee identify
-} -result {0}
+} -result {{0 0}}
 
 test tree-7.9 {marquee corner: set it} -body {
     .t marquee corner 600 600
@@ -617,14 +633,12 @@ test tree-7.9 {marquee corner: set it} -body {
 
 test tree-7.10 {marquee identify} -body {
     .t marquee identify
-} -result {0 1 2 3 4 5 6 7 {8 {0 eRect eImage}}}
+} -result {{0 0} {1 0} {2 0} {3 0} {4 0} {5 0} {6 0} {7 0} {8 {0 eRect eImage}}}
 
-test tree-7.11 {marquee identify: after invalid item style map} -constraints knownBug -body {
-    # BUG ALERT: After this buggy statement, "marquee identify" returns a
-    #		 different result! I suspect, that this one is invalid...
+test tree-7.11 {marquee identify: after invalid item style map} -body {
     catch {.t item style map 1 0 noStyle {foo bar}}
     .t marquee identify
-} -result {0 1 2 3 4 5 6 7 {8 {0 eRect eImage}}}
+} -result {{0 0} {1 0} {2 0} {3 0} {4 0} {5 0} {6 0} {7 0} {8 {0 eRect eImage}}}
 
 test tree-7.12 {marquee visible} -body {
     list [.t marquee configure -visible] \
