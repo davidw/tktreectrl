@@ -250,7 +250,7 @@ proc TreeCtrl::HelpButton1 {w x y} {
 			$w toggle $item
 			return
 		}
-		if {[llength [$w selection get]} {
+		if {[llength [$w selection get]]} {
 			set item2 [$w selection get]
 			$w collapse $item2
 			foreach item2 [$w item ancestors $item2] {
