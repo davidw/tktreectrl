@@ -1809,7 +1809,8 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 		case COMMAND_ADD:
 		{
 			int indexFirst, indexLast, count;
-			TreeItem staticItems[20], *items = staticItems;
+#define STATIC_SIZE 20
+			TreeItem staticItems[STATIC_SIZE], *items = staticItems;
 			Tcl_HashEntry *hPtr;
 			Tcl_HashSearch search;
 
@@ -1829,7 +1830,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 			if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL))
 			{
 				count = tree->itemCount - tree->selectCount;
-				if (count + 1 > sizeof(staticItems) / sizeof(staticItems[0]))
+				if (count + 1 > STATIC_SIZE)
 					items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 				count = 0;
 
@@ -1877,7 +1878,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 				}
 				count = indexLast - indexFirst + 1;
 			}
-			if (count + 1 > sizeof(staticItems) / sizeof(staticItems[0]))
+			if (count + 1 > STATIC_SIZE)
 				items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 			count = 0;
 			item = itemFirst;
@@ -1925,7 +1926,7 @@ doneADD:
 		case COMMAND_CLEAR:
 		{
 			int indexFirst, indexLast, count;
-			TreeItem staticItems[20], *items = staticItems;
+			TreeItem staticItems[STATIC_SIZE], *items = staticItems;
 			Tcl_HashEntry *hPtr;
 			Tcl_HashSearch search;
 
@@ -1948,7 +1949,7 @@ doneADD:
 			if ((objc == 3) || (itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL))
 			{
 				count = tree->selectCount;
-				if (count + 1 > sizeof(staticItems) / sizeof(staticItems[0]))
+				if (count + 1 > STATIC_SIZE)
 					items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 				count = 0;
 
@@ -1996,7 +1997,7 @@ doneADD:
 				}
 				count = indexLast - indexFirst + 1;
 			}
-			if (count + 1 > sizeof(staticItems) / sizeof(staticItems[0]))
+			if (count + 1 > STATIC_SIZE)
 				items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
 			count = 0;
 			item = itemFirst;
@@ -2084,7 +2085,6 @@ doneCLEAR:
 			Tcl_HashEntry *hPtr;
 			Tcl_HashSearch search;
 			TreeItem item;
-#define STATIC_SIZE 20
 			TreeItem staticItemS[STATIC_SIZE], *itemS = staticItemS;
 			TreeItem staticItemD[STATIC_SIZE], *itemD = staticItemD;
 			TreeItem staticNewS[STATIC_SIZE], *newS = staticNewS;
