@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: qebind.h,v 1.2 2004/07/30 20:54:46 treectrl Exp $
+ * RCS: @(#) $Id: qebind.h,v 1.3 2005/03/29 20:57:19 treectrl Exp $
  */
 
 #ifndef INCLUDED_QEBIND_H
@@ -55,6 +55,7 @@ extern void QE_ExpandNumber(long number, Tcl_DString *result);
 extern void QE_ExpandString(char *string, Tcl_DString *result);
 extern void QE_ExpandEvent(QE_BindingTable bindingTable, int eventType, Tcl_DString *result);
 extern void QE_ExpandDetail(QE_BindingTable bindingTable, int event, int detail, Tcl_DString *result);
+extern void QE_ExpandPattern(QE_BindingTable bindingTable, int eventType, int detail, Tcl_DString *result);
 extern void QE_ExpandUnknown(char which, Tcl_DString *result);
 extern int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[]);
