@@ -27,8 +27,8 @@ T column XXX
 		-arrow
 		-arrowside
 		-arrowgravity
-		-arrowpadw
 		-arrowpade
+		-arrowpadw
 		-bitmap
 		-border
 		-borderwidth
@@ -37,6 +37,8 @@ T column XXX
 		-font
 		-image
 		-imagepade
+		-imagepadn
+		-imagepads
 		-imagepadw
 		-itembackground
 		-justify
@@ -48,6 +50,8 @@ T column XXX
 		-text
 		-textcolor
 		-textpade
+		-textpadn
+		-textpads
 		-textpadw
 		-width
 		-visible
@@ -319,6 +323,7 @@ T notify XXX
 	T notify generate $pattern -$char $value ...
 
 	T notify install event $eventName
+	T notify install event $eventName $percentsCmd
 
 	T notify install detail $eventName $detailName
 	T notify install detail $eventName $detailName $percentsCmd
