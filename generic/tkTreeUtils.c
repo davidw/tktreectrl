@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.7 2004/07/30 21:14:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.8 2004/08/09 02:27:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -461,6 +461,15 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 	TkSetRegion(display, gc, rgn);
 	XFillRectangle(display, drawable, gc, box.x, box.y, box.width, box.height);
 	XSetClipMask(display, gc, None);
+#endif
+}
+
+void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
+{
+#ifdef WIN32
+	OffsetRgn((HRGN) region, xOffset, yOffset);
+#else
+#error "Unix/Mac developer: implement Tk_OffsetRegion please!"
 #endif
 }
 
