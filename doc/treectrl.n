@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.9 2002/12/28 19:44:29 krischan Exp $
+'\" $Id: treectrl.n,v 1.10 2002/12/28 21:16:27 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -448,6 +448,78 @@ the item describing by \fIitemDesc\fR, whereas depth is defined as
 the number of steps you must go upward to reach to root item.
 If no \fIitemDesc\fR is specified, the maximum depth of all
 items in the treectrl widget is returned instead.
+.TP
+\fIpathName \fBdragimage \fIoption\fR ?\fIarg ...\fR?
+This command is used to manipulate the dragimage,
+one or more dotted lines around rectangular regions of the treectrl widget.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBdragimage\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBdragimage add \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
+Adds the shapes of the item described by \fIitemDesc\fR
+to the shapes of the dragimage.
+Specifying additional arguments reduces
+the number of rectangles that are added to the dragimage.
+If no additional arguments is specified,
+for every element of the item in every column a dotted rectangles is added.
+If \fIcolumn\fR is specified, all elements in other columns are ignored.
+If also \fIelement\fR is specified, only a rectangle for this one element
+of the specified item in the given column is added.
+.TP
+\fIpathName \fBdragimage cget \fIoption\fR
+This command returns the current value of the dragimage option
+named \fIoption\fR.
+\fIOption\fR may have any of the values accepted by the
+\fBdragimage configure\fR widget command.
+.TP
+\fIpathName \fBdragimage clear\fR
+Removes all shapes (if there are any) from the dragimage.
+This command does not modify the dragimage offset.
+.TP
+\fIpathName \fBdragimage configure ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+This command is similar to the \fBconfigure\fR widget command except
+that it modifies the dragimage options
+instead of modifying options for the overall treectrl widget.
+If no \fIoption\fR is specified, the command returns a list describing
+all of the available dragimage options (see \fBTk_ConfigureInfo\fR
+for information on the format of this list).
+If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
+a list describing the one named dragimage option (this list will be identical
+to the corresponding sublist of the value returned if no \fIoption\fR
+is specified).
+If one or more \fIoption\-value\fR pairs are specified, then the command
+modifies the given dragimage option(s) to have the given value(s);
+in this case the command returns an empty string.
+
+The following dragimage options are supported:
+.RS
+.TP
+\fB\-visible \fIboolean\fR
+Specifies a boolean value which determines
+whether the dragimage should currently be visible.
+This option should not be modified by means of the
+\fBdragimage configure\fR widget command;
+instead use the \fBdragimage visible\fR widget command.
+.RE
+.TP
+\fIpathName \fBdragimage offset\fR ?\fIx y\fR?
+Returns a list containing the x and y offsets of the dragimage,
+if no additional arguments are specified.
+The dragimage offset is the screen distance, the image is displayed
+relative to the item its shape is derived from.
+If two coordinates are specified,
+sets the dragimage offset to the given coordinates \fIx\fR and \fIy\fR.
+.TP
+\fIpathName \fBdragimage visible\fR ?\fIboolean\fR?
+If the additional argument specifies true, the dotted lines will become
+visible and the dragimage option \fB\-visible\fR becomes 1;
+if it specifies false, the dotted lines will be hidden
+and the dragimage option \fB\-visible\fR becomes 0.
+Returns 1 if the dragimage is currently visible,
+0 otherwise.
+.RE
 .TP
 \fIpathName \fBelement \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 This command is used to manipulate elements (see ELEMENTS below).
