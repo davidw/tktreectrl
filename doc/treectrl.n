@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.10 2002/12/28 21:16:27 krischan Exp $
+'\" $Id: treectrl.n,v 1.11 2002/12/29 13:45:56 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -982,6 +982,129 @@ Returns 1 if the dotted line surrounding the marquee is currently visible,
 0 otherwise.
 .RE
 .TP
+\fIpathName \fBnotify \fIoption\fR ?\fIarg ...\fR?
+This command is used to manipulate the event mechanism of a treectrl widget,
+which stands in parallel to Tk's event mechanism.
+It has two major advantages:
+arbitrary new events can be defined
+together with arbitrary details,
+and before the event is triggered
+the called Tcl command underlys a customizable percent substitution.
+
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBnotify\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBnotify bind\fR ?\fIobject\fR? ?\fIpattern\fR? ?\fIscript\fR?
+This command associates \fIscript\fR with the object given by
+\fIobject\fR such that whenever the event sequence given by
+\fIpattern\fR occurs for the object
+the command will be invoked.
+This widget command is similar to the \fBbind\fR command except that
+it operates on any object in a treectl rather than entire widgets,
+and it works also for non X11 event pattern.
+If all arguments are specified then a new binding is created, replacing
+any existing binding for the same \fIpattern\fR and \fIobject\fR
+(if the first character of \fIscript\fR is ``+'' then \fIscript\fR
+augments an existing binding rather than replacing it).
+In this case the return value is an empty string.
+If \fIscript\fR is omitted then the command returns the \fIscript\fR
+associated with \fIobject\fR and \fIpattern\fR (an error occurs
+if there is no such binding).
+If both \fIscript\fR and \fIpattern\fR are omitted then the command
+returns a list of all the sequences for which bindings have been
+defined for \fIobject\fR.
+If no optional argument is specified, a list of all \fIobject\fRs
+to which a pattern-script combination is bound yet, is returned.
+.TP
+\fIpathName \fBnotify configure\fR \fIwindow pattern\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+This command is similar to the \fBconfigure\fR widget command except
+that it modifies event options defined for \fIpattern\fR in \fIwindow\fR
+instead of modifying options for the overall treectrl widget.
+If no \fIoption\fR is specified, the command returns a list with
+\fIoption\-value\fR pairs describing all
+the available event options for \fIpattern\fR in \fIwindow\fR.
+If \fIoption\fR is specified with no \fIvalue\fR,
+then the command does nothing.
+If one or more \fIoption\-value\fR pairs are specified, then the command
+modifies the given option(s) to have the given value(s) for the layout;
+in this case the command returns an empty string.
+
+The following event options are supported:
+.RS
+.TP
+\fB\-active \fIboolean\fR
+Specifies if the event should be active.
+As long as this option is specified as false,
+the event will not trigger.
+.RE
+.TP
+\fIpathName \fBnotify detailnames\fR \fIeventName\fR
+Returns a list containing the names of all details,
+which are installed for the event with the name \fIeventName\fR
+by means of the \fBnotify install detail\fR widget command
+or by the treectrl widget itself.
+.TP
+\fIpathName \fBnotify eventnames\fR
+Returns a list containing the names of all events,
+which are installed by means of the \fBnotify install event\fR widget command
+or by the treectrl widget itself.
+.TP
+\fIpathName \fBnotify generate\fR \fIpattern\fR ?\fIfield value ...\fR?
+The event with the pattern \fIpattern\fR is generated,
+if it is configured as active.
+If there are details defined for the event,
+\fIpattern\fR must describe an \fIeventName\-detail\fR pair,
+otherwise pattern should be a simple eventname.
+
+The specified (up to 10) \fIfield\-value\fR pairs
+are a list of substitution descriptions,
+which is done in the registered script before it will be evaluated.
+Every field should start with a dash followed by exactly one character,
+then every occurence of a percent character (\fB%\fR)
+followed directly by that character will be replaced by \fIvalue\fR.
+If during installation of the detail a \fIscript\fR was specified,
+the \fIfield\-value\fR pairs are ignored.
+.TP
+\fIpathName \fBnotify install detail\fR \fIeventName detail\fR ?\fIscript\fR?
+Installs a new detail \fIdetail\fR 
+for the event with the name \fIeventName\fR.
+A detail create by this command is called dynamic,
+whereas details created by the treectrl widget itself are called static.
+
+The optional \fIscript\fR will be called before the event is triggered
+for every two character sequence starting with a percent character (\fB%\fR).
+The script is called with four additional arguments:
+the second character of the sequence,
+the window for which the event is triggered,
+\fIeventName\fR and \fIdetail\fR;
+the two character sequence of the command will be replaced by
+the returning string.
+.TP
+\fIpathName \fBnotify install event\fR \fIeventName\fR
+Installs a new event with the name \fIeventName\fR.
+An event create by this command is called dynamic,
+whereas events created by the treectrl widget itself are called static.
+.TP
+\fIpathName \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?
+Returns a string indicating
+whether the specified event or detail
+is created by means of the \fBnotify install\fR widget command (\fBdynamic\fR)
+or by the treectrl widget itself (\fBstatic\fR).
+.TP
+\fIpathName \fBnotify uninstall detail\fR \fIeventName detail\fR
+If the specified detail \fIdetail\fR 
+of the event with the name \fIeventName\fR is static
+(i.e. created by the treectrl widget itself), an error is generated.
+Otherwise the dynamic detail is removed from the event.
+.TP
+\fIpathName \fBnotify uninstall event\fR \fIeventName\fR
+If the specified event with the name \fIeventName\fR is static
+(i.e. created by the treectrl widget itself), an error is generated.
+Otherwise the dynamic event is removed.
+.RE
+.TP
 \fIpathName \fBnumcolumns\fR
 Returns a decimal string giving the number of
 columns configured in the treectrl widget.
@@ -1025,8 +1148,8 @@ which must not be the name of a predefined or already user defined state.
 \fIpathName \fBstate names\fR
 Returns a list containing the names of all user defined states.
 .TP
-\fIpathName \fBstate undefine\fR \fIstateName\fR
-\fIStateName\fR must be the name of a user defined state.
+\fIpathName \fBstate undefine\fR ?\fIstateName ...\fR?
+Every \fIstateName\fR must be the name of a user defined state.
 Removes this state from the list of user defined states.
 .RE
 .TP
