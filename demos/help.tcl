@@ -259,12 +259,12 @@ proc TreeCtrl::HelpButton1 {w x y} {
 				}
 			}
 		}
-		$w selection modify $item all
 		$w activate $item
 		foreach item2 [$w item ancestors $item] {
 			$w item expand $item2
 		}
 		$w item toggle $item
+		$w selection modify $item all
 	}
 	return
 }
