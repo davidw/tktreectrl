@@ -1367,7 +1367,7 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 	if ((objc - objOffset < 1) || (objc - objOffset > 4))
 	{
-		Tcl_WrongNumArgs(bindPtr->interp, objOffset, objv,
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
 			"?object? ?pattern? ?script?");
 		return TCL_ERROR;
 	}
@@ -1494,7 +1494,8 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 	if (objc - objOffset < 2)
 	{
-		Tcl_WrongNumArgs(bindPtr->interp, objOffset, objv, "pattern ?field value ...?");
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
+			"pattern ?field value ...?");
 		return TCL_ERROR;
 	}
 
@@ -1589,7 +1590,8 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	
     if (objc - objOffset < 3)
     {
-		Tcl_WrongNumArgs(interp, objOffset, objv, "window pattern ?option? ?value? ?option value ...?");
+		Tcl_WrongNumArgs(interp, objOffset + 1, objv,
+			"window pattern ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
     }
 
