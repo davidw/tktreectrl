@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.11 2002/12/29 13:45:56 krischan Exp $
+'\" $Id: treectrl.n,v 1.12 2002/12/30 10:53:49 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -239,6 +239,7 @@ commands are possible for treectrl widgets:
 Sets the active item to the one described by \fIitemDesc\fR,
 and switches on the state \fBactive\fR for this item.
 From now on the item can be retrieved with the item description \fBactive\fR.
+An \fB<ActiveItem>\fR event is generated.
 .TP
 \fIpathName \fBcanvasx\fR \fIscreenx\fR
 Given a window x-coordinate in the treectrl \fIscreenx\fR,
@@ -268,6 +269,10 @@ If the item is already closed, this command has no effect.
 in which case all items of the treectrl widget are collapsed.
 If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
 will also be collapsed.
+For every item, that actually will be collapsed,
+two events are generated:
+a \fB<Collapse-before>\fR event before the item state is changed,
+and a \fB<Collapse-after>\fR event after the item state was changed.
 .TP
 \fIpathName \fBcolumn \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
 This command is used to manipulate the columns of the treectrl widget
@@ -586,6 +591,10 @@ If the item is already open, this command has no effect.
 in which case all items of the treectrl widget are expanded.
 If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
 will also be expanded.
+For every item, that actually will be expanded,
+two events are generated:
+an \fB<Expand-before>\fR event before the item state is changed,
+and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
 \fIpathName \fBidentify \fIx y\fR
 Returns a list containing some diagnostics about what
@@ -1067,14 +1076,16 @@ followed directly by that character will be replaced by \fIvalue\fR.
 If during installation of the detail a \fIscript\fR was specified,
 the \fIfield\-value\fR pairs are ignored.
 .TP
-\fIpathName \fBnotify install detail\fR \fIeventName detail\fR ?\fIscript\fR?
+\fIpathName \fBnotify install detail\fR \fIeventName detail\fR ?\fIpercentsCommand\fR?
 Installs a new detail \fIdetail\fR 
 for the event with the name \fIeventName\fR.
 A detail create by this command is called dynamic,
 whereas details created by the treectrl widget itself are called static.
 
-The optional \fIscript\fR will be called before the event is triggered
-for every two character sequence starting with a percent character (\fB%\fR).
+The optional \fIpercentsCommand\fR will be called
+before the event is triggered
+for every two character sequence
+starting with a percent character (\fB%\fR).
 The script is called with four additional arguments:
 the second character of the sequence,
 the window for which the event is triggered,
@@ -1082,10 +1093,12 @@ the window for which the event is triggered,
 the two character sequence of the command will be replaced by
 the returning string.
 .TP
-\fIpathName \fBnotify install event\fR \fIeventName\fR
+\fIpathName \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?
 Installs a new event with the name \fIeventName\fR.
 An event create by this command is called dynamic,
 whereas events created by the treectrl widget itself are called static.
+For the optional \fIpercentsCommand\fR argument
+see the description of the \fBnotify install detail\fR widget command above.
 .TP
 \fIpathName \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?
 Returns a string indicating
@@ -1157,7 +1170,9 @@ Removes this state from the list of user defined states.
 Adjust the view in the treectrl so that the item
 described by \fIitemDesc\fR is visible.
 If the item is already visible then the command has no effect;
-otherwise the treectrl scrolls to bring the item into view.
+otherwise the treectrl scrolls to bring the item into view,
+and the corresponding \fB<Scroll-x>\fR and/or \fB<Scroll-y>\fR
+events are generated.
 .TP
 \fIpathName \fBselection \fIoption arg\fR
 This command is used to adjust the selection within a treectrl.
@@ -1172,6 +1187,7 @@ Selects all of the items in the range between
 without affecting the selection state of items outside that range.
 If one of the arguments is the string \fBall\fR,
 all items of the treectrl widget are added to the selection instead.
+A \fB<Selection>\fR event is generated.
 .TP
 \fIpathName \fBselection anchor ?\fIitemDesc\fR?
 If \fIitemDesc\fR is specified,
@@ -1191,6 +1207,7 @@ The selection state is not changed for items outside this range.
 If no additional arguments is given
 or one of the arguments is the string \fBall\fR,
 the selection is completely cleared instead.
+A \fB<Selection>\fR event is generated.
 .TP
 \fIpathName \fBselection count\fR
 Returns an integer indicating the number
@@ -1215,6 +1232,7 @@ without affecting the selection state of any item
 not mentioned in both arguments.
 If one item is described in both arguments \fIselect\fR and \fIdeselect\fR,
 it is added to the selection.
+A \fB<Selection>\fR event is generated.
 .RE
 .TP
 \fIpathName \fBstyle \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
@@ -1393,6 +1411,7 @@ option.
 Adjusts the view in the window so that \fIfraction\fR of the
 total width of the tree is off-screen to the left.
 \fIFraction\fR must be a fraction between 0 and 1.
+A \fB<Scroll-x>\fR event is generated.
 .TP
 \fIpathName \fBxview scroll \fInumber what\fR
 This command shifts the view in the window left or right according to
@@ -1408,6 +1427,7 @@ adjusts in units of nine-tenths the window's width.
 If \fInumber\fR is negative then information farther to the left
 becomes visible;  if it is positive then information farther to the right
 becomes visible.
+A \fB<Scroll-x>\fR event is generated.
 .RE
 .TP
 \fIpathName \fByview \fR?\fIargs\fR?
@@ -1429,6 +1449,7 @@ option.
 Adjusts the view in the window so that \fIfraction\fR of the tree's
 area is off-screen to the top.
 \fIFraction\fR is a fraction between 0 and 1.
+A \fB<Scroll-y>\fR event is generated.
 .TP
 \fIpathName \fByview scroll \fInumber what\fR
 This command adjusts the view in the window up or down according to
@@ -1443,6 +1464,7 @@ the view adjusts in units of nine-tenths the window's height.
 If \fInumber\fR is negative then higher information becomes
 visible;  if it is positive then lower information
 becomes visible.
+A \fB<Scroll-y>\fR event is generated.
 .RE
 
 .SH COLUMNS
@@ -1459,7 +1481,8 @@ which can be configured my means of the \fB-tag\fR column option.
 
 There is always one special column, the tail column, which fills
 all space to the right of the last ordinary column.
-This column can only be specified by its name \fBtail\fR, it has no number.
+This column has no number;
+it can only be specified by its tag \fBtail\fR, which cannot be modified.
 It is explicitely mentioned for a widget command,
 if its \fIcolumn\fR argument can also specify the tail column.
 
@@ -1481,12 +1504,10 @@ if there is more space available for drawing the arrow then needed.
 \fISide\fR must be either \fBleft\fR (the default) or \fBright\fR.
 .TP
 \fB\-arrowpade \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the right side of the arrow.
 .TP
 \fB\-arrowpadw \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left side of the arrow.
+leave on the left or right side of the arrow.
 .TP
 \fB\-bitmap \fIbitmap\fR
 Specifies the bitmap to display in the element
@@ -1521,12 +1542,14 @@ to the left of the column title.
 This option overrides the \fB\-bitmap\fR column option.
 .TP
 \fB\-imagepade \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the right side of the image.
+.TP
+\fB\-imagepadn \fIamount\fR
+.TP
+\fB\-imagepads \fIamount\fR
 .TP
 \fB\-imagepadw \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left side of the image.
+leave on the corresponding side of the image.
 .TP
 \fB\-itembackground \fIcolorList\fR
 Specifies a list of colors, which should be used as
@@ -1569,12 +1592,14 @@ Specifies a color, which should be used as foreground color
 to display the column title.
 .TP
 \fB\-textpade \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the right side of the text.
+.TP
+\fB\-textpadn \fIamount\fR
+.TP
+\fB\-textpads \fIamount\fR
 .TP
 \fB\-textpadw \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left side of the text.
+leave on the corresponding side of the text.
 .TP
 \fB\-width \fIsize\fR
 Specifies the width of the column.
@@ -1948,6 +1973,101 @@ Use the \fIn\fRth child of the item's parent.
 Use the item in the first row of this column
 in a vertical oriented treectrl,
 otherwise the item in the same row of the first column.
+
+.SH "EVENTS AND SCRIPT SUBSTITUTIONS"
+.PP
+Beside of all the normal Tk events, which are generated as reaction
+of e.g. mouse movements of key presses, 
+the treectrl widget generates at various places
+events created by treectrl widget:
+.TP 13
+\fB<ActiveItem>\fR
+Generated without detail
+whenever the active item changes.
+.TP 13
+\fB<Collapse>\fR
+Generated with the detail \fBafter\fR or \fBbefore\fR,
+whenever an item is collapsed.
+.TP 13
+\fB<Expand>\fR
+Generated with the detail \fBafter\fR or \fBbefore\fR,
+whenever an item is expanded.
+.TP 13
+\fB<Scroll>\fR
+Generated with the detail \fBx\fR or \fBy\fR,
+whenever the origin of the window changes.
+.TP 13
+\fB<Selection>\fR
+Generated without detail
+whenever the selection changes.
+.PP
+By means of the \fBnotify bind\fR widget command Tcl scripts can
+be specified,
+which will be executed whenever the event triggers.
+The command will be executed in the same interpreter that the
+\fBnotify bind\fR command was executed in, and it will run at global
+level (only global variables will be accessible).
+If the script contains any \fB%\fR characters,
+then the script will not be executed directly.
+Instead, a new script will be
+generated by replacing each \fB%\fR,
+and the character following it,
+with information from the current event.
+The replacement depends on the character following the \fB%\fR,
+as defined in the list below.
+Unless otherwise indicated,
+Some of the substitutions are only valid for certain types of events;
+if they are used for other types of events
+the value substituted is undefined.
+.IP \fB%%\fR 5
+Replaced with a single percent.
+.IP \fB%c\fR 5
+Replaced with the number of items that are currently selected
+for a selection event,
+or with the numerical id of the item, which will become the active item
+for an activation event,
+invalid for other event types.
+.IP \fB%d\fR 5
+Replaced with the detail of the event,
+or with the empty string if the event has no detail.
+Valid for all event types.
+.IP \fB%D\fR 5
+Replaced with a (possibly empty) list of item ids;
+all mentioned items will be removed from the selection.
+Valid only for selection events.
+.IP \fB%e\fR 5
+Replaced with the name of the event.
+Valid for all event types.
+.IP \fB%I\fR 5
+Replaced with the numerical id of the item,
+which is to be collapsed or expanded.
+Valid only for collapse or expand events.
+.IP \fB%l\fR 5
+Replaced with the lower bound, i.e. the first fraction
+as returned by the widget command \fBxview\fR for horizontal scrolling
+or \fByview\fR for vertical scrolling.
+Valid only for scrolling events.
+.IP \fB%p\fR 5
+Replaced with the numerical id of the item,
+which was  the active item upto now.
+Valid only for activation events.
+.IP \fB%S\fR 5
+Replaced with a (possibly empty) list of item ids;
+all mentioned items will be added to the selection.
+Valid only for selection events.
+.IP \fB%T\fR 5
+Replaced with the path name of the treectrl widget.
+Valid for all event types.
+.IP \fB%u\fR 5
+Replaced with the upper bound, i.e. the second fraction
+returned by the widget command \fBxview\fR for horizontal scrolling
+or \fByview\fR for vertical scrolling.
+Valid only for scrolling events.
+.IP \fB%W\fR 5
+Replaced with the name of the object the event is bound for.
+This can be a widget path (then the string starts with \fB.\fR),
+or a generic tag.
+Valid for all event types.
 
 '\".SH "DEFAULT BINDINGS"
 '\".PP
