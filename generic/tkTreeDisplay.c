@@ -510,6 +510,9 @@ Range *Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
 
 	Range_RedoIfNeeded(tree);
 
+	if ((Tree_TotalWidth(tree) <= 0) || (Tree_TotalHeight(tree) <= 0))
+		return NULL;
+
 	range = dInfo->rangeFirst;
 
 	if (nearest)
@@ -1205,7 +1208,7 @@ void Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h
 	Range *range;
 	RItem *rItem;
 
-	if (!TreeItem_ReallyVisible(tree, item))
+	if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
 		return;
 	Range_RedoIfNeeded(tree);
 	rItem = (RItem *) TreeItem_GetRInfo(tree, item);
@@ -1232,7 +1235,7 @@ TreeItem Tree_ItemLARB(TreeCtrl *tree, TreeItem item, int vertical, int prev)
 	Range *range;
 	int i, l, u;
 
-	if (!TreeItem_ReallyVisible(tree, item))
+	if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
 		return NULL;
 	Range_RedoIfNeeded(tree);
 	rItem = (RItem *) TreeItem_GetRInfo(tree, item);
@@ -1305,7 +1308,7 @@ TreeItem Tree_ItemFL(TreeCtrl *tree, TreeItem item, int vertical, int first)
 	Range *range;
 	int i, l, u;
 
-	if (!TreeItem_ReallyVisible(tree, item))
+	if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
 		return NULL;
 	Range_RedoIfNeeded(tree);
 	rItem = (RItem *) TreeItem_GetRInfo(tree, item);
@@ -1368,7 +1371,7 @@ int Tree_ItemToRNC(TreeCtrl *tree, TreeItem item, int *row, int *col)
 {
 	RItem *rItem;
 
-	if (!TreeItem_ReallyVisible(tree, item))
+	if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
 		return TCL_ERROR;
 	Range_RedoIfNeeded(tree);
 	rItem = (RItem *) TreeItem_GetRInfo(tree, item);
