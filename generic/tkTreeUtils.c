@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.10 2004/10/24 18:34:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.11 2005/01/03 22:02:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -255,6 +255,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 			LineTo(dc, x + i + 1, y + height - 1);
 		}
 	}
+
 	TkWinReleaseDrawableDC(drawable, dc, &state);
 #else
 	int wx = x + tree->drawableXOrigin;
@@ -275,7 +276,11 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	sw = !(wx & 1) == !((wy + height - 1) & 1);
 	se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
 
+#if defined(TARGET_OS_MAC)
+	gcValues.function = GXxor;
+#else
 	gcValues.function = GXinvert;
+#endif
 	gcMask = GCFunction;
 	gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
 
@@ -364,7 +369,11 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 	gcValues.line_width = 1;
 	gcValues.dash_offset = 0;
 	gcValues.dashes = 1;
+#if defined(TARGET_OS_MAC)
+	gcValues.function = GXxor;
+#else
 	gcValues.function = GXinvert;
+#endif
 	mask = GCLineWidth | GCLineStyle | GCDashList | GCDashOffset | GCFunction;
 	dotState->gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
 
