@@ -1044,7 +1044,9 @@ int B_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
 		int totWidth = Tree_TotalWidth(tree);
 
-		if (totWidth <= abs(visWidth))
+		if (visWidth < 0)
+			visWidth = 0;
+		if (totWidth <= visWidth)
 			return TCL_OK;
 
 		if (visWidth > 1)
@@ -1131,7 +1133,9 @@ int B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
 		int totHeight = Tree_TotalHeight(tree);
 
-		if (totHeight <= abs(visHeight))
+		if (visHeight < 0)
+			visHeight = 0;
+		if (totHeight <= visHeight)
 			return TCL_OK;
 
 		if (visHeight > 1)
@@ -2675,7 +2679,7 @@ if (tree->debug.enable && tree->debug.display && 0)
 		TreeColumn treeColumn = tree->columns;
 		int columnIndex = 0;
 
-		if (dInfo->columnWidthSize < tree->columnCount)
+		while (dInfo->columnWidthSize < tree->columnCount)
 		{
 			dInfo->columnWidthSize *= 2;
 			dInfo->columnWidth = (int *) ckrealloc((char *) dInfo->columnWidth,
@@ -3187,6 +3191,8 @@ void Tree_GetScrollFractionsX(TreeCtrl *tree, double fractions[2])
 	int index, offset;
 
 	/* The tree is empty, or everything fits in the window */
+	if (visWidth < 0)
+		visWidth = 0;
 	if (totWidth <= visWidth)
 	{
 		fractions[0] = 0.0;
@@ -3225,6 +3231,8 @@ void Tree_GetScrollFractionsY(TreeCtrl *tree, double fractions[2])
 	int index, offset;
 
 	/* The tree is empty, or everything fits in the window */
+	if (visHeight < 0)
+		visHeight = 0;
 	if (totHeight <= visHeight)
 	{
 		fractions[0] = 0.0;
@@ -3262,6 +3270,8 @@ void Tree_SetOriginX(TreeCtrl *tree, int xOrigin)
 	int index, indexMax, offset;
 
 	/* The tree is empty, or everything fits in the window */
+	if (visWidth < 0)
+		visWidth = 0;
 	if (totWidth <= visWidth)
 	{
 		xOrigin = 0 - tree->inset;
@@ -3328,6 +3338,8 @@ void Tree_SetOriginY(TreeCtrl *tree, int yOrigin)
 	int index, indexMax, offset;
 
 	/* The tree is empty, or everything fits in the window */
+	if (visHeight < 0)
+		visHeight = 0;
 	if (totHeight <= visHeight)
 	{
 		yOrigin = 0 - topInset;
