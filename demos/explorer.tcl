@@ -195,7 +195,7 @@ proc ExplorerHeaderInvoke {T C} {
 		}
 		modified {
 			if {$dirCount} {
-				$T item sort root $order -last "root child $dirCount prevsibling" -column $C -integer -column name -dictionary
+				$T item sort root $order -last "root child $lastDir" -column $C -integer -column name -dictionary
 			}
 			if {$dirCount < [$T numitems] - 1} {
 				$T item sort root $order -first "root child $dirCount" -column $C -integer -column name -dictionary
