@@ -16,6 +16,7 @@ struct Column
 	Tk_Font tkfont; /* -font */
 	Tk_Justify justify; /* -justify */
 	Tk_3DBorder border; /* -border */
+	Tcl_Obj *borderWidthObj; /* -borderwidth */
 	int borderWidth; /* -borderwidth */
 	int relief; /* -relief */
 	XColor *textColor; /* -textcolor */
@@ -27,33 +28,35 @@ struct Column
 	int sunken; /* -sunken */
 	Tcl_Obj *itemBgObj; /* -itembackground */
 	int button; /* -button */
+	Tcl_Obj *textPadObj[4]; /* -textpad* */
+	int textPad[4]; /* -textpad* */
+	Tcl_Obj *imagePadObj[4]; /* -imagepad* */
+	int imagePad[4]; /* -imagepad* */
+	Tcl_Obj *arrowPadObj[2]; /* -arrowpadw -arrowpade */
+	int arrowPad[2]; /* -arrowpadw -arrowpade */
+
+#define ARROW_NONE 0
+#define ARROW_UP 1
+#define ARROW_DOWN 2
+	int arrow; /* -arrow */
+
+#define SIDE_LEFT 0
+#define SIDE_RIGHT 1
+	int arrowSide; /* -arrowside */
+	int arrowGravity; /* -arrowgravity */
 
 	TreeCtrl *tree;
 	int index; /* column number */
 	int textLen;
 	int textWidth;
 	Tk_Image image;
-	int neededWidth; /* calculated from borders + text + arrow */
-	int neededHeight; /* calculated from borders + text */
+	int neededWidth; /* calculated from borders + image/bitmap + text + arrow */
+	int neededHeight; /* calculated from borders + image/bitmap + text */
 	int useWidth; /* -width, -minwidth, or required+expansion */
 	int widthOfItems; /* width of all TreeItemColumns */
-	int textPad[2]; /* padding for text */
-	int imagePad[2]; /* padding for image */
 	int itemBgCount;
 	XColor **itemBgColor;
 	GC bitmapGC;
-
-#define ARROW_NONE 0
-#define ARROW_UP 1
-#define ARROW_DOWN 2
-	int arrow;
-
-#define SIDE_LEFT 0
-#define SIDE_RIGHT 1
-	int arrowSide;
-	int arrowGravity;
-
-	int arrowPad[2];
 	Column *next;
 };
 
@@ -82,11 +85,13 @@ static Tk_OptionSpec columnSpecs[] = {
 	{TK_OPTION_STRING_TABLE, "-arrowgravity", (char *) NULL, (char *) NULL,
 		"left", -1, Tk_Offset(Column, arrowGravity),
 		0, (ClientData) arrowSideST, COLU_CONF_DISPLAY},
-	{TK_OPTION_PIXELS, "-arrowpadw", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, arrowPad[SIDE_LEFT]),
-		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-arrowpade", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, arrowPad[SIDE_RIGHT]),
+		"6", Tk_Offset(Column, arrowPadObj[SIDE_RIGHT]),
+		Tk_Offset(Column, arrowPad[SIDE_RIGHT]),
+		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
+	{TK_OPTION_PIXELS, "-arrowpadw", (char *) NULL, (char *) NULL,
+		"6", Tk_Offset(Column, arrowPadObj[SIDE_LEFT]),
+		Tk_Offset(Column, arrowPad[SIDE_LEFT]),
 		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
 	{TK_OPTION_BITMAP, "-bitmap", (char *) NULL, (char *) NULL,
 		(char *) NULL, -1, Tk_Offset(Column, bitmap),
@@ -96,7 +101,7 @@ static Tk_OptionSpec columnSpecs[] = {
 		DEF_BUTTON_BG_COLOR, -1, Tk_Offset(Column, border),
 		0, (ClientData) DEF_BUTTON_BG_MONO, COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-borderwidth", (char *) NULL, (char *) NULL,
-		"2", -1, Tk_Offset(Column, borderWidth),
+		"2", Tk_Offset(Column, borderWidthObj), Tk_Offset(Column, borderWidth),
 		0, (ClientData) NULL, COLU_CONF_TWIDTH | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 	{TK_OPTION_BOOLEAN, "-button", (char *) NULL, (char *) NULL,
 		"1", -1, Tk_Offset(Column, button),
@@ -113,10 +118,20 @@ static Tk_OptionSpec columnSpecs[] = {
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		COLU_CONF_IMAGE | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-imagepade", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, imagePad[SIDE_RIGHT]),
+		"6", Tk_Offset(Column, imagePadObj[RIGHT]),
+		Tk_Offset(Column, imagePad[RIGHT]),
 		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
+	{TK_OPTION_PIXELS, "-imagepadn", (char *) NULL, (char *) NULL,
+		"0", Tk_Offset(Column, imagePadObj[TOP]),
+		Tk_Offset(Column, imagePad[TOP]),
+		0, (ClientData) NULL, COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
+	{TK_OPTION_PIXELS, "-imagepads", (char *) NULL, (char *) NULL,
+		"0", Tk_Offset(Column, imagePadObj[BOTTOM]),
+		Tk_Offset(Column, imagePad[BOTTOM]),
+		0, (ClientData) NULL, COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-imagepadw", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, imagePad[SIDE_LEFT]),
+		"6", Tk_Offset(Column, imagePadObj[LEFT]),
+		Tk_Offset(Column, imagePad[LEFT]),
 		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
 	{TK_OPTION_STRING, "-itembackground", (char *) NULL, (char *) NULL,
 		(char *) NULL, Tk_Offset(Column, itemBgObj), -1,
@@ -149,10 +164,20 @@ static Tk_OptionSpec columnSpecs[] = {
 		DEF_BUTTON_FG, -1, Tk_Offset(Column, textColor),
 		0, (ClientData) NULL, COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-textpade", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, textPad[SIDE_RIGHT]),
+		"6", Tk_Offset(Column, textPadObj[RIGHT]),
+		Tk_Offset(Column, textPad[RIGHT]),
 		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
+	{TK_OPTION_PIXELS, "-textpadn", (char *) NULL, (char *) NULL,
+		"0", Tk_Offset(Column, textPadObj[TOP]),
+		Tk_Offset(Column, textPad[TOP]),
+		0, (ClientData) NULL, COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
+	{TK_OPTION_PIXELS, "-textpads", (char *) NULL, (char *) NULL,
+		"0", Tk_Offset(Column, textPadObj[BOTTOM]),
+		Tk_Offset(Column, textPad[BOTTOM]),
+		0, (ClientData) NULL, COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-textpadw", (char *) NULL, (char *) NULL,
-		"6", -1, Tk_Offset(Column, textPad[SIDE_LEFT]),
+		"6", Tk_Offset(Column, textPadObj[LEFT]),
+		Tk_Offset(Column, textPad[LEFT]),
 		0, (ClientData) NULL, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
 	{TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
 		(char *) NULL, Tk_Offset(Column, widthObj), Tk_Offset(Column, width),
@@ -286,9 +311,15 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 				continue;
 			}
 
-			/* Verify -tag is unique */
 			if ((mask & COLU_CONF_TAG) && (column->tag != NULL))
 			{
+				if (column->index == -1)
+				{
+					FormatResult(tree->interp,
+						"can't change tag of tail column");
+					continue;
+				}
+				/* Verify -tag is unique */
 				walk = (Column *) tree->columns;
 				if (!strcmp(column->tag, "tail"))
 				{
@@ -600,15 +631,15 @@ int TreeColumn_NeededWidth(TreeColumn column_)
 			Tk_SizeOfImage(column->image, &imgWidth, &imgHeight);
 		else
 			Tk_SizeOfBitmap(column->tree->display, column->bitmap, &imgWidth, &imgHeight);
-		padList[n] = MAX(column->imagePad[SIDE_LEFT], padList[n]);
-		padList[n + 1] = column->imagePad[SIDE_RIGHT];
+		padList[n] = MAX(column->imagePad[LEFT], padList[n]);
+		padList[n + 1] = column->imagePad[RIGHT];
 		widthList[n] = imgWidth;
 		n++;
 	}
 	if (column->textLen > 0)
 	{
-		padList[n] = MAX(column->textPad[SIDE_LEFT], padList[n]);
-		padList[n + 1] = column->textPad[SIDE_RIGHT];
+		padList[n] = MAX(column->textPad[LEFT], padList[n]);
+		padList[n + 1] = column->textPad[RIGHT];
 		widthList[n] = column->textWidth;
 		n++;
 	}
@@ -643,6 +674,7 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 			Tk_SizeOfImage(column->image, &imgWidth, &imgHeight);
 		else
 			Tk_SizeOfBitmap(column->tree->display, column->bitmap, &imgWidth, &imgHeight);
+		imgHeight += column->imagePad[TOP] + column->imagePad[BOTTOM];
 		column->neededHeight = MAX(column->neededHeight, imgHeight);
 	}
 	if (column->text != NULL)
@@ -650,6 +682,7 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 		Tk_Font tkfont = column->tkfont ? column->tkfont : column->tree->tkfont;
 		Tk_FontMetrics fm;
 		Tk_GetFontMetrics(tkfont, &fm);
+		fm.linespace += column->textPad[TOP] + column->textPad[BOTTOM];
 		column->neededHeight = MAX(column->neededHeight, fm.linespace);
 	}
 	column->neededHeight += column->borderWidth * 2;
@@ -1081,8 +1114,8 @@ static void Column_Layout(Column *column, struct Layout *layout)
 			Tk_SizeOfImage(column->image, &imgWidth, &imgHeight);
 		else
 			Tk_SizeOfBitmap(column->tree->display, column->bitmap, &imgWidth, &imgHeight);
-		padList[n] = MAX(column->imagePad[SIDE_LEFT], padList[n]);
-		padList[n + 1] = column->imagePad[SIDE_RIGHT];
+		padList[n] = MAX(column->imagePad[LEFT], padList[n]);
+		padList[n + 1] = column->imagePad[RIGHT];
 		widthList[n] = imgWidth;
 		layout->imageWidth = imgWidth;
 		iImage = n++;
@@ -1094,8 +1127,8 @@ static void Column_Layout(Column *column, struct Layout *layout)
 		layout->bytesThatFit = 0;
 		if (layout->width >= TreeColumn_NeededWidth((TreeColumn) column))
 		{
-			padList[n] = MAX(column->textPad[SIDE_LEFT], padList[n]);
-			padList[n + 1] = column->textPad[SIDE_RIGHT];
+			padList[n] = MAX(column->textPad[LEFT], padList[n]);
+			padList[n + 1] = column->textPad[RIGHT];
 			widthList[n] = column->textWidth;
 			iText = n++;
 			layout->bytesThatFit = column->textLen;
@@ -1109,8 +1142,8 @@ static void Column_Layout(Column *column, struct Layout *layout)
 				width = column->textWidth - width;
 				layout->bytesThatFit = Ellipsis(layout->tkfont, column->text,
 					column->textLen, &width, "...");
-				padList[n] = MAX(column->textPad[SIDE_LEFT], padList[n]);
-				padList[n + 1] = column->textPad[SIDE_RIGHT];
+				padList[n] = MAX(column->textPad[LEFT], padList[n]);
+				padList[n + 1] = column->textPad[RIGHT];
 				widthList[n] = width;
 				iText = n++;
 				layout->textWidth = width;
@@ -1305,19 +1338,23 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
 
 	if (column->image != NULL)
 	{
-		int imgW, imgH;
+		int imgW, imgH, ix, iy, h;
 		Tk_SizeOfImage(column->image, &imgW, &imgH);
-		Tk_RedrawImage(column->image, 0, 0, imgW, imgH,
-			drawable, x + layout.imageLeft + column->sunken,
-			y + (height - imgH) / 2 + column->sunken);
+		ix = x + layout.imageLeft + column->sunken;
+		h = column->imagePad[TOP] + imgH + column->imagePad[BOTTOM];
+		iy = y + (height - h) / 2 + column->sunken;
+		iy += column->imagePad[TOP];
+		Tk_RedrawImage(column->image, 0, 0, imgW, imgH, drawable, ix, iy);
 	}
 	else if (column->bitmap != None)
 	{
-		int imgW, imgH, bx, by;
+		int imgW, imgH, bx, by, h;
 
 		Tk_SizeOfBitmap(tree->display, column->bitmap, &imgW, &imgH);
 		bx = x + layout.imageLeft + column->sunken;
-		by = y + (height - imgH) / 2 + column->sunken;
+		h = column->imagePad[TOP] + imgH + column->imagePad[BOTTOM];
+		by = y + (height - h) / 2 + column->sunken;
+		by += column->imagePad[TOP];
 		XSetClipOrigin(tree->display, column->bitmapGC, bx, by);
 		XCopyPlane(tree->display, column->bitmap, drawable, column->bitmapGC,
 			0, 0, (unsigned int) imgW, (unsigned int) imgH,
@@ -1334,6 +1371,7 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
 		int textLen = column->textLen;
 		char *ellipsis = "...";
 		int ellipsisLen = strlen(ellipsis);
+		int tx, ty, h;
 
 		if (textLen + ellipsisLen > sizeof(staticStr))
 			text = ckalloc(textLen + ellipsisLen);
@@ -1353,10 +1391,12 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
 		gcValues.graphics_exposures = False;
 		mask = GCFont | GCForeground | GCGraphicsExposures;
 		gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
+		tx = x + layout.textLeft + column->sunken;
+		h = column->textPad[TOP] + layout.fm.linespace + column->textPad[BOTTOM];
+		ty = y + (height - h) / 2 + layout.fm.ascent + column->sunken;
+		ty += column->textPad[TOP];
 		Tk_DrawChars(tree->display, drawable, gc,
-			layout.tkfont, text, textLen,
-			x + layout.textLeft + column->sunken,
-			y + (height - layout.fm.linespace) / 2 + layout.fm.ascent + column->sunken);
+			layout.tkfont, text, textLen, tx, ty);
 		Tk_FreeGC(tree->display, gc);
 		if (text != staticStr)
 			ckfree(text);
@@ -1663,9 +1703,14 @@ int Tree_WidthOfColumns(TreeCtrl *tree)
 
 void Tree_InitColumns(TreeCtrl *tree)
 {
-	tree->columnTail = (TreeColumn) Column_Alloc(tree);
+	Column *column;
+
+	column = Column_Alloc(tree);
+	column->index = -1;
+	column->tag = ckalloc(5);
+	strcpy(column->tag, "tail");
+	tree->columnTail = (TreeColumn) column;
 	tree->columnCount = 0;
-	((Column *) tree->columnTail)->index = -1;
 }
 
 void Tree_FreeColumns(TreeCtrl *tree)
