@@ -1,6 +1,7 @@
 bind TreeCtrlFileList <Double-ButtonPress-1> {
 	TreeCtrl::FileListEditCancel %W
 	TreeCtrl::DoubleButton1 %W %x %y
+	break
 }
 bind TreeCtrlFileList <Control-ButtonPress-1> {
 	set TreeCtrl::Priv(selectMode) toggle

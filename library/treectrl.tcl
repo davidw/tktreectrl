@@ -313,6 +313,16 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
 	if {$id eq ""} {
 		return
 	}
+	if {[lindex $id 0] eq "item"} {
+		foreach {where item arg1 arg2} $id {}
+		if {$arg1 eq "button"} {
+			$w toggle $item
+			return
+		} elseif {$arg1 eq "line"} {
+			$w toggle $arg2
+			return
+		}
+	}
 	if {[lindex $id 0] eq "header"} {
 		set column [lindex $id 1]
 		set visCount 0
