@@ -1,4 +1,4 @@
-#!../Tcl-8.4.1/bin/wish84.exe
+#!../TclTk-8.4.6/bin/wish84.exe
 
 set thisPlatform $::tcl_platform(platform)
 switch -- $thisPlatform {
@@ -487,6 +487,8 @@ proc InitDemoList {} {
 	# Tk listbox has linespace + 1 height
 	$t style layout s1 e2 -union [list e1] -ipadx 2 -ipady {0 1} -iexpand e
 
+	$t configure -defaultstyle s1
+
 	#	"Picture Catalog" DemoPictureCatalog
 	#	"Picture Catalog 2" DemoPictureCatalog2
 	#	"Folder Contents (Vertical)" DemoExplorerFilesV
@@ -508,7 +510,7 @@ proc InitDemoList {} {
 	] {
 		set item [$t item create]
 		$t item lastchild root $item
-		$t item style set $item 0 s1
+#		$t item style set $item 0 s1
 		$t item text $item 0 $label
 		set DemoCmd($item) $command
 		set DemoFile($item) $file
@@ -571,9 +573,8 @@ proc DisplayStylesInList {} {
 
 	# One item for each element in the demo list
 	foreach elem [lsort [$T element names]] {
-		set item [$t item create]
+		set item [$t item create -button yes]
 		$t collapse $item
-		$t item hasbutton $item yes
 		$t item style set $item 0 s1
 		$t item text $item 0 "Element $elem ([$T element type $elem])"
 
@@ -595,24 +596,22 @@ proc DisplayStylesInList {} {
 
 	# One item for each style in the demo list
 	foreach style [lsort [$T style names]] {
-		set item [$t item create]
+		set item [$t item create -button yes]
 		$t collapse $item
-		$t item hasbutton $item yes
 		$t item style set $item 0 s1
 		$t item text $item 0 "Style $style"
 
 		# One item for each element in the style
 		foreach elem [$T style elements $style] {
-			set item2 [$t item create]
+			set item2 [$t item create -button yes]
 			$t collapse $item2
-			$t item hasbutton $item2 yes
 			$t item style set $item2 0 s1
 			$t item text $item2 0 "Element $elem ([$T element type $elem])"
 
 			# One item for each layout option for this element in this style
 			foreach {option value} [$T style layout $style $elem] {
 				set item3 [$t item create]
-				$t item hasbutton $item3 no
+#				$t item hasbutton $item3 no
 				$t item style set $item3 0 s1
 				$t item text $item3 0 [list $option $value]
 				$t item lastchild $item2 $item3
@@ -666,9 +665,8 @@ proc DisplayStylesInItem {item} {
 		if {[string length $style]} {
 			foreach elem [$T item style elements $item $column] {
 				set button 1
-				set item3 [$t item create]
+				set item3 [$t item create -button yes]
 				$t collapse $item3
-				$t item hasbutton $item3 yes
 				$t item style set $item3 0 s1
 				$t item element configure $item3 0 e1 -text "Element $elem ([$T element type $elem])"
 
@@ -695,7 +693,7 @@ proc DisplayStylesInItem {item} {
 				$t item lastchild $item2 $item3
 			}
 			if {$button} {
-				$t item hasbutton $item2 yes
+				$t item configure $item2 -button yes
 			}
 		}
 		$t item lastchild root $item2
@@ -748,7 +746,7 @@ proc DemoClear {} {
 	# Delete all elements in demo list
 	eval $T element delete [$T element names]
 
-	$T item hasbutton root no
+	$T item configure root -button no
 	$T expand root
 
 	# Restore some happy defaults to the demo list
