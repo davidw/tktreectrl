@@ -198,7 +198,7 @@ proc TreeCtrl::FileListMotion {T x y} {
 				set Priv(drag,motion) 1
 				# Don't generate the event if it wasn't installed
 				if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-					$T notify generate <Drag-begin> -T $T
+					$T notify generate <Drag-begin> [list T $T]
 				}
 			}
 
@@ -284,12 +284,12 @@ proc TreeCtrl::FileListRelease1 {T x y} {
 				if {$Priv(drop) ne ""} {
 					$T selection modify {} $Priv(drop)
 					if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-						$T notify generate <Drag-receive> -T $T -I $Priv(drop) \
-							-l $Priv(selection)
+						$T notify generate <Drag-receive> [list T $T \
+							I $Priv(drop) l $Priv(selection)]
 					}
 				}
 				if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-					$T notify generate <Drag-end> -T $T
+					$T notify generate <Drag-end> [list T $T]
 				}
 
 			} elseif {$Priv(selectMode) eq "toggle"} {
@@ -577,9 +577,9 @@ proc ::TreeCtrl::EntryClose {T accept} {
 	update
 
 	if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
-		$T notify generate <Edit-accept> -T $T -I $Priv(entry,$T,item) \
-			-C $Priv(entry,$T,column) -E $Priv(entry,$T,element) \
-			-t [$T.entry get]
+		$T notify generate <Edit-accept> [list T $T I $Priv(entry,$T,item) \
+			C $Priv(entry,$T,column) E $Priv(entry,$T,element) \
+			t [$T.entry get]]
 	}
 
 	$T notify bind $T.entry <Scroll> {}
@@ -772,9 +772,9 @@ proc ::TreeCtrl::TextClose {T accept} {
 	update
 
 	if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
-		$T notify generate <Edit-accept> -T $T -I $Priv(text,$T,item) \
-			-C $Priv(text,$T,column) -E $Priv(text,$T,element) \
-			-t [$T.text get 1.0 end-1c]
+		$T notify generate <Edit-accept> [list T $T I $Priv(text,$T,item) \
+			C $Priv(text,$T,column) E $Priv(text,$T,element) \
+			t [$T.text get 1.0 end-1c]]
 	}
 
 	$T notify bind $T.text <Scroll> {}

@@ -423,7 +423,8 @@ proc ::TreeCtrl::Release1 {w x y} {
 				$w column configure $Priv(column) -sunken no
 				# Don't generate the event if it wasn't installed
 				if {[lsearch -exact [$w notify eventnames] Header] != -1} {
-					$w notify generate <Header-invoke> -T $w -C $Priv(column)
+					$w notify generate <Header-invoke> [list T $w \
+						C $Priv(column)]
 				}
 			}
 		}
