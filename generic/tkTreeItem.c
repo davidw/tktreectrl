@@ -2037,7 +2037,15 @@ struct SortItem
 
 typedef struct SortData SortData;
 
-/* one per TreeColumn */
+/* Used to process -element option */
+struct SortElement
+{
+	TreeStyle style;
+	TreeElement elem;
+	int elemIndex;
+};
+
+/* One per TreeColumn */
 struct SortColumn
 {
 	int (*proc)(SortData *, struct SortItem *, struct SortItem *, int); 
@@ -2045,8 +2053,11 @@ struct SortColumn
 	int column;
 	int order;
 	Tcl_Obj *command;
+	struct SortElement elems[20];
+	int elemCount;
 };
 
+/* Data for sort as a whole */
 struct SortData
 {
 	TreeCtrl *tree;
@@ -2424,23 +2435,23 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	Item *item, *first, *last, *walk, *lastChild;
 	Column *column;
-	int i, count, index, indexF = 0, indexL = 0;
+	int i, j, count, elemIndex, index, indexF = 0, indexL = 0;
 	int sawColumn = FALSE, sawCmd = FALSE;
 	static int (*sortProc[5])(SortData *, struct SortItem *, struct SortItem *, int) =
 		{ CompareAscii, CompareDict, CompareDouble, CompareLong, CompareCmd };
 	SortData sortData;
 	TreeColumn treeColumn;
+	struct SortElement *elemPtr;
 	int notReally = FALSE;
 	int result = TCL_OK;
 
 	if (TreeItem_FromObj(tree, objv[3], (TreeItem *) &item, 0) != TCL_OK)
 		return TCL_ERROR;
 
-	if (tree->columnCount < 1)
-	{
-		FormatResult(interp, "there are no columns");
-		return TCL_ERROR;
-	}
+	/* If the item has no children, then nothing is done and no error
+	 * is generated. */
+	if (item->numChildren < 1)
+		return TCL_OK;
 
 	/* Defaults: sort ascii strings in column 0 only */
 	sortData.tree = tree;
@@ -2448,6 +2459,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	sortData.columns[0].column = 0;
 	sortData.columns[0].sortBy = SORT_ASCII;
 	sortData.columns[0].order = 1;
+	sortData.columns[0].elemCount = 0;
 	sortData.result = TCL_OK;
 
 	first = item->firstChild;
@@ -2456,11 +2468,11 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	for (i = 4; i < objc; )
 	{
 		static CONST char *optionName[] = { "-ascii", "-column", "-command",
-			"-decreasing", "-dictionary", "-first", "-increasing", "-integer",
-			"-last", "-notreally", "-real", NULL };
-		int numArgs[] = { 1, 2, 2, 1, 1, 2, 1, 1, 2, 1, 1 };
+			"-decreasing", "-dictionary", "-element", "-first", "-increasing",
+			"-integer", "-last", "-notreally", "-real", NULL };
+		int numArgs[] = { 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 1, 1 };
 		enum { OPT_ASCII, OPT_COLUMN, OPT_COMMAND, OPT_DECREASING, OPT_DICT,
-			OPT_FIRST, OPT_INCREASING, OPT_INTEGER, OPT_LAST,
+			OPT_ELEMENT, OPT_FIRST, OPT_INCREASING, OPT_INTEGER, OPT_LAST,
 			OPT_NOT_REALLY, OPT_REAL };
 
 		if (Tcl_GetIndexFromObj(interp, objv[i], optionName, "option", 0,
@@ -2494,6 +2506,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					/* Defaults for this column */
 					sortData.columns[sortData.count - 1].sortBy = SORT_ASCII;
 					sortData.columns[sortData.count - 1].order = 1;
+					sortData.columns[sortData.count - 1].elemCount = 0;
 				}
 				sortData.columns[sortData.count - 1].column = TreeColumn_Index(treeColumn);
 				sawColumn = TRUE;
@@ -2509,6 +2522,79 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			case OPT_DICT:
 				sortData.columns[sortData.count - 1].sortBy = SORT_DICT;
 				break;
+			case OPT_ELEMENT:
+			{
+				int listObjc;
+				Tcl_Obj **listObjv;
+
+				if (Tcl_ListObjGetElements(interp, objv[i + 1], &listObjc,
+					&listObjv) != TCL_OK)
+					return TCL_ERROR;
+				elemPtr = sortData.columns[sortData.count - 1].elems;
+				sortData.columns[sortData.count - 1].elemCount = 0;
+				if (listObjc == 0)
+				{
+				}
+				else if (listObjc == 1)
+				{
+					if (TreeElement_FromObj(tree, listObjv[0], &elemPtr->elem)
+						!= TCL_OK)
+					{
+						Tcl_AddErrorInfo(interp,
+							"\n    (processing -element option)");
+						return TCL_ERROR;
+					}
+					if (!TreeElement_IsType(tree, elemPtr->elem, "text"))
+					{
+						FormatResult(interp,
+							"element %s is not of type \"text\"",
+							Tcl_GetString(listObjv[0]));
+						Tcl_AddErrorInfo(interp,
+							"\n    (processing -element option)");
+						return TCL_ERROR;
+					}
+					elemPtr->style = NULL;
+					elemPtr->elemIndex = -1;
+					sortData.columns[sortData.count - 1].elemCount++;
+				}
+				else
+				{
+					if (listObjc & 1)
+					{
+						FormatResult(interp,
+							"list must have even number of elements");
+						Tcl_AddErrorInfo(interp,
+							"\n    (processing -element option)");
+						return TCL_ERROR;
+					}
+					for (j = 0; j < listObjc; j += 2)
+					{
+						if ((TreeStyle_FromObj(tree, listObjv[j],
+							&elemPtr->style) != TCL_OK) ||
+							(TreeElement_FromObj(tree, listObjv[j + 1],
+							&elemPtr->elem) != TCL_OK) ||
+							(TreeStyle_FindElement(tree, elemPtr->style,
+							elemPtr->elem, &elemPtr->elemIndex) != TCL_OK))
+						{
+							Tcl_AddErrorInfo(interp,
+								"\n    (processing -element option)");
+							return TCL_ERROR;
+						}
+						if (!TreeElement_IsType(tree, elemPtr->elem, "text"))
+						{
+							FormatResult(interp,
+								"element %s is not of type \"text\"",
+								Tcl_GetString(listObjv[j + 1]));
+							Tcl_AddErrorInfo(interp,
+								"\n    (processing -element option)");
+							return TCL_ERROR;
+						}
+						sortData.columns[sortData.count - 1].elemCount++;
+						elemPtr++;
+					}
+				}
+				break;
+			}
 			case OPT_FIRST:
 				if (TreeItem_FromObj(tree, objv[i + 1], (TreeItem *) &first, 0) != TCL_OK)
 					return TCL_ERROR;
@@ -2543,6 +2629,14 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				break;
 		}
 		i += numArgs[index];
+	}
+
+	/* If there are no columns, we cannot perform a sort unless -command
+	 * is specified. */
+	if ((tree->columnCount < 1) && (sortData.columns[0].sortBy != SORT_COMMAND))
+	{
+		FormatResult(interp, "there are no columns");
+		return TCL_ERROR;
 	}
 
 	if (first == last)
@@ -2640,8 +2734,45 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				result = TCL_ERROR;
 				goto done;
 			}
-			if (TreeStyle_GetSortData(tree,
-				column->style, sortData.columns[i].sortBy,
+
+			/* -element was empty. Find the first text element in the style */
+			if (sortData.columns[i].elemCount == 0)
+				elemIndex = -1;
+
+			/* -element was element name. Find the element in the style */
+			else if ((sortData.columns[i].elemCount == 1) &&
+				(sortData.columns[i].elems[0].style == NULL))
+			{
+				if (TreeStyle_FindElement(tree, column->style,
+					sortData.columns[i].elems[0].elem, &elemIndex) != TCL_OK)
+				{
+					result = TCL_ERROR;
+					goto done;
+				}
+			}
+
+			/* -element was style/element pair list */
+			else
+			{
+				TreeStyle masterStyle = TreeStyle_GetMaster(tree, column->style);
+
+				/* If the item style does not match any in the -element list,
+				 * we will use the first text element in the item style. */
+				elemIndex = -1;
+
+				/* Match a style from the -element list. Look in reverse order
+				 * to handle duplicates. */
+				for (j = sortData.columns[i].elemCount - 1; j >= 0; j--)
+				{
+					if (sortData.columns[i].elems[j].style == masterStyle)
+					{
+						elemIndex = sortData.columns[i].elems[j].elemIndex;
+						break;
+					}
+				}
+			}
+			if (TreeStyle_GetSortData(tree, column->style, elemIndex,
+				sortData.columns[i].sortBy,
 				&sortItem1->longValue,
 				&sortItem1->doubleValue,
 				&sortItem1->string) != TCL_OK)
