@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.16 2004/10/24 18:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.17 2005/01/03 21:38:38 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1690,6 +1690,12 @@ static DItem *UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead, Range *range
 	TreeItem item;
 	int maxX, maxY;
 	int index, indexVis;
+#ifdef BG_IMAGE
+	int bgImgWidth, bgImgHeight;
+
+	if (tree->backgroundImage != NULL)
+		Tk_SizeOfImage(tree->backgroundImage, &bgImgWidth, &bgImgHeight);
+#endif
 
 	maxX = Tk_Width(tree->tkwin) - tree->inset;
 	maxY = Tk_Height(tree->tkwin) - tree->inset;
@@ -1747,6 +1753,15 @@ static DItem *UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead, Range *range
 					tree->columnTreeVis &&
 					((dItem->oldY & 1) != (y & 1)))
 					dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+#ifdef BG_IMAGE
+				/* We can't copy the item to its new position unless it
+				 * has the same part of the background image behind it */
+				else if ((tree->backgroundImage != NULL) &&
+					(((dItem->oldY + dInfo->yOrigin) % bgImgHeight) !=
+					((y + tree->yOrigin) % bgImgHeight)))
+					dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+#endif
 			}
 
 			/* Make a new DItem */
@@ -1840,6 +1855,15 @@ static DItem *UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead, Range *range
 					tree->columnTreeVis &&
 					((dItem->oldY & 1) != (y & 1)))
 					dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+#ifdef BG_IMAGE
+				/* We can't copy the item to its new position unless it
+				 * has the same part of the background image behind it */
+				else if ((tree->backgroundImage != NULL) &&
+					(((dItem->oldX + dInfo->xOrigin) % bgImgWidth) !=
+					((x + tree->xOrigin) % bgImgWidth)))
+					dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+#endif
 			}
 
 			/* Make a new DItem */
@@ -2190,9 +2214,23 @@ numCopy++;
 				tree->copyGC,
 				oldX, oldY, width, height,
 				oldX, oldY + offset);
+#if 1
+			if (offset < 0)
+			{
+				dirtyMin = oldY + offset + height;
+				dirtyMax = oldY + height;
+			}
+			else
+			{
+				dirtyMin = oldY;
+				dirtyMax = oldY + offset;
+			}
+			Tree_InvalidateArea(tree, oldX, dirtyMin, oldX + width, dirtyMax);
+#else
 			dirtyMin = MAX(oldY, oldY + offset + height);
 			dirtyMax = MIN(oldY + height, oldY + offset);
 			Tree_InvalidateArea(tree, oldX, dirtyMin, width, dirtyMax - dirtyMin);
+#endif
 			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX);
 			dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY + offset);
 			dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + width);
@@ -2527,11 +2565,26 @@ numCopy++;
 
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
+			int dirtyMin, dirtyMax;
 			XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
 				tree->copyGC,
 				oldX, oldY, width, height,
 				oldX + offset, oldY);
+#if 1
+			if (offset < 0)
+			{
+				dirtyMin = oldX + offset + width;
+				dirtyMax = oldX + width;
+			}
+			else
+			{
+				dirtyMin = oldX;
+				dirtyMax = oldX + offset;
+			}
+			Tree_InvalidateArea(tree, dirtyMin, oldY, dirtyMax, oldY + height);
+#else
 			Tree_InvalidateArea(tree, oldX, oldY, width, height);
+#endif
 			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX + offset);
 			dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY);
 			dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + offset + width);
@@ -2558,13 +2611,17 @@ void TreeColumnProxy_Draw(TreeCtrl *tree)
 	unsigned long gcMask;
 	GC gc;
 
+#if defined(TARGET_OS_MAC)
+	gcValues.function = GXxor;
+#else
 	gcValues.function = GXinvert;
+#endif
 	gcValues.graphics_exposures = False;
 	gcMask = GCFunction | GCGraphicsExposures;
 	gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
 
 	/* GXinvert doesn't work with XFillRectangle() on Win32 */
-#ifdef WIN32
+#if defined(WIN32) || defined(TARGET_OS_MAC)
 	XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc,
 		tree->columnProxy.sx,
 		tree->inset,
@@ -2688,6 +2745,64 @@ static TkRegion CalcWhiteSpaceRegion(TreeCtrl *tree)
 	return wsRgn;
 }
 
+#ifdef BG_IMAGE
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_DrawTiledImage --
+ *
+ *	This procedure draws a tiled image in the indicated box.
+ *  The image is offset to start at the upper left corner of the actual
+ *  items drawing area.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image, 
+		int x1, int y1, int x2, int y2)
+{
+	int		imgWidth, imgHeight;
+	int		srcX, srcY;
+	int		srcW, srcH;
+	int		dstX, dstY;
+
+	Tk_SizeOfImage(image, &imgWidth, &imgHeight);        
+
+	srcX = (x1 + tree->drawableXOrigin) % imgWidth;
+	dstX = x1;    
+	while (dstX < x2) 
+	{
+		srcW = imgWidth - srcX;
+		if (dstX + srcW > x2) {
+			srcW = x2 - dstX;
+		}
+
+		srcY = (y1 + tree->drawableYOrigin) % imgHeight;
+		dstY = y1;
+		while (dstY < y2)
+		{
+			srcH = imgHeight - srcY;
+			if (dstY + srcH > y2) {
+				srcH = y2 - dstY;
+			}
+			Tk_RedrawImage(image, srcX, srcY, srcW, srcH, drawable, dstX, dstY);
+			srcY = 0;
+			dstY += srcH;
+		}   
+		srcX = 0;
+		
+		/* the last tile gives dstX = x2 which ends the while loop; same for y above */
+		dstX += srcW;
+	};
+}
+#endif
+
 void Tree_Display(ClientData clientData)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
@@ -2703,7 +2818,7 @@ void Tree_Display(ClientData clientData)
 	XRectangle wsBox;
 
 if (tree->debug.enable && tree->debug.display && 0)
-	dbwin("Tree_Display %s\n", Tk_PathName(tree->tkwin));
+	dbwin("Tree_Display %s\n", Tk_PathName(tkwin));
 
 	if (tree->deleted)
 	{
@@ -2820,9 +2935,9 @@ if (tree->debug.enable && tree->debug.display && 0)
 	}
 
 	minX = tree->inset;
-	maxX = Tk_Width(tree->tkwin) - tree->inset;
+	maxX = Tk_Width(tkwin) - tree->inset;
 	minY = tree->inset + Tree_HeaderHeight(tree);
-	maxY = Tk_Height(tree->tkwin) - tree->inset;
+	maxY = Tk_Height(tkwin) - tree->inset;
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		drawable = dInfo->pixmap;
@@ -2877,12 +2992,83 @@ if (tree->debug.enable && tree->debug.display && 0)
 		}
 	}
 
+#ifdef BG_IMAGE
+	if (tree->backgroundImage != NULL)
+	{
+		wsRgnNew = CalcWhiteSpaceRegion(tree);
+
+		/* If we scrolled, redraw entire whitespace area */
+		if (dInfo->xOrigin != tree->xOrigin ||
+			dInfo->yOrigin != tree->yOrigin)
+		{
+			wsRgnDif = wsRgnNew;
+		}
+		else
+		{
+			wsRgnDif = TkCreateRegion();
+			TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
+		}
+		TkClipBox(wsRgnDif, &wsBox);
+		if ((wsBox.width > 0) && (wsBox.height > 0))
+		{
+			Drawable pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
+				wsBox.width, wsBox.height, Tk_Depth(tkwin));
+			GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
+
+if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor)
+{
+	Tk_FillRegion(tree->display, Tk_WindowId(tkwin),
+		tree->debug.gcErase, wsRgnDif);
+	DisplayDelay(tree);
+}
+
+			/* FIXME: only if backgroundImage is transparent */
+			Tk_OffsetRegion(wsRgnDif, -wsBox.x, -wsBox.y);
+			Tk_FillRegion(tree->display, pixmap, gc, wsRgnDif);
+			Tk_OffsetRegion(wsRgnDif, wsBox.x, wsBox.y);
+
+			tree->drawableXOrigin = tree->xOrigin + wsBox.x;
+			tree->drawableYOrigin = tree->yOrigin + wsBox.y;
+
+			Tree_DrawTiledImage(tree, pixmap, tree->backgroundImage,
+				0, 0, wsBox.width, wsBox.height);
+
+			TkSetRegion(tree->display, tree->copyGC, wsRgnNew);
+/*			XSetClipOrigin(tree->display, tree->copyGC, 0,
+				0);*/
+			XCopyArea(tree->display, pixmap, drawable, tree->copyGC,
+				0, 0, wsBox.width, wsBox.height,
+				wsBox.x, wsBox.y);
+			XSetClipMask(tree->display, tree->copyGC, None);
+/*			XSetClipOrigin(tree->display, tree->copyGC, 0, 0);*/
+
+			Tk_FreePixmap(tree->display, pixmap);
+
+			if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
+			{
+				dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
+				dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], wsBox.y);
+				dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], wsBox.x + wsBox.width);
+				dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], wsBox.y + wsBox.height);
+			}
+		}
+		if (wsRgnDif != wsRgnNew)
+			TkDestroyRegion(wsRgnDif);
+		TkDestroyRegion(dInfo->wsRgn);
+		dInfo->wsRgn = wsRgnNew;
+	}
+#endif
+
 	dInfo->xOrigin = tree->xOrigin;
 	dInfo->yOrigin = tree->yOrigin;
 
 	/* Does this need to be here? */
 	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 
+#ifdef BG_IMAGE
+	if (tree->backgroundImage == NULL)
+	{
+#endif
 	/* Calculate the current whitespace region, subtract the old whitespace
 	 * region, and fill the difference with the background color. */
 	wsRgnNew = CalcWhiteSpaceRegion(tree);
@@ -2891,10 +3077,10 @@ if (tree->debug.enable && tree->debug.display && 0)
 	TkClipBox(wsRgnDif, &wsBox);
 	if ((wsBox.width > 0) && (wsBox.height > 0))
 	{
-		GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
+		GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
 		if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor)
 		{
-			Tk_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
+			Tk_FillRegion(tree->display, Tk_WindowId(tkwin),
 				tree->debug.gcErase, wsRgnDif);
 			DisplayDelay(tree);
 		}
@@ -2910,6 +3096,9 @@ if (tree->debug.enable && tree->debug.display && 0)
 	TkDestroyRegion(wsRgnDif);
 	TkDestroyRegion(dInfo->wsRgn);
 	dInfo->wsRgn = wsRgnNew;
+#ifdef BG_IMAGE
+	}
+#endif
 
 	/* See if there are any dirty items */
 	count = 0;
@@ -3054,18 +3243,23 @@ numDraw++;
 	}
 
 if (tree->debug.enable && tree->debug.display)
-	dbwin("copy %d draw %d %s\n", numCopy, numDraw, Tk_PathName(tree->tkwin));
+	dbwin("copy %d draw %d %s\n", numCopy, numDraw, Tk_PathName(tkwin));
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 	{
-		drawable = Tk_WindowId(tree->tkwin);
-		XCopyArea(tree->display, dInfo->pixmap, drawable,
-			tree->copyGC,
-			dInfo->dirty[LEFT], dInfo->dirty[TOP],
-			dInfo->dirty[RIGHT] - dInfo->dirty[LEFT],
-			dInfo->dirty[BOTTOM] - dInfo->dirty[TOP],
-			dInfo->dirty[LEFT],dInfo-> dirty[TOP]);
+		drawable = Tk_WindowId(tkwin);
+
+		if (dInfo->dirty[LEFT] < dInfo->dirty[RIGHT])
+		{
+			XCopyArea(tree->display, dInfo->pixmap, drawable,
+				tree->copyGC,
+				dInfo->dirty[LEFT], dInfo->dirty[TOP],
+				dInfo->dirty[RIGHT] - dInfo->dirty[LEFT],
+				dInfo->dirty[BOTTOM] - dInfo->dirty[TOP],
+				dInfo->dirty[LEFT], dInfo-> dirty[TOP]);
+		}
 	}
+
 
 	/* XOR on */
 	TreeMarquee_Display(tree->marquee);
