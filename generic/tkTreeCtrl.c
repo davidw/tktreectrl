@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.21 2004/07/30 20:57:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.22 2004/08/09 02:09:36 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -38,7 +38,8 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_SYNONYM, "-bg", (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, (ClientData) "-background"},
     {TK_OPTION_PIXELS, "-borderwidth", "borderWidth", "BorderWidth",
-     DEF_LISTBOX_BORDER_WIDTH, -1, Tk_Offset(TreeCtrl, borderWidth),
+     DEF_LISTBOX_BORDER_WIDTH, Tk_Offset(TreeCtrl, borderWidthObj),
+     Tk_Offset(TreeCtrl, borderWidth),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_COLOR, "-buttoncolor", "buttonColor", "ButtonColor",
      "#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
@@ -86,8 +87,8 @@ static Tk_OptionSpec optionSpecs[] = {
      DEF_LISTBOX_FG, Tk_Offset(TreeCtrl, fgObj), Tk_Offset(TreeCtrl, fgColorPtr),
      0, (ClientData) NULL, TREE_CONF_FG | TREE_CONF_REDISPLAY},
     {TK_OPTION_PIXELS, "-height", "height", "Height",
-     "200", -1, Tk_Offset(TreeCtrl, height),
-     0, (ClientData) NULL, 0},
+     "200", Tk_Offset(TreeCtrl, heightObj), Tk_Offset(TreeCtrl, height),
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_COLOR, "-highlightbackground", "highlightBackground",
      "HighlightBackground", DEF_LISTBOX_HIGHLIGHT_BG, -1, 
      Tk_Offset(TreeCtrl, highlightBgColorPtr),
@@ -96,7 +97,8 @@ static Tk_OptionSpec optionSpecs[] = {
      DEF_LISTBOX_HIGHLIGHT, -1, Tk_Offset(TreeCtrl, highlightColorPtr),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
     {TK_OPTION_PIXELS, "-highlightthickness", "highlightThickness",
-     "HighlightThickness", DEF_LISTBOX_HIGHLIGHT_WIDTH, -1,
+     "HighlightThickness", DEF_LISTBOX_HIGHLIGHT_WIDTH,
+     Tk_Offset(TreeCtrl, highlightWidthObj),
      Tk_Offset(TreeCtrl, highlightWidth),
      0, (ClientData) NULL, 0},
     {TK_OPTION_PIXELS, "-indent", "indent", "Indent",
@@ -173,8 +175,8 @@ static Tk_OptionSpec optionSpecs[] = {
      "0", -1, Tk_Offset(TreeCtrl, columnTree),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-width", "width", "Width",
-     "200", -1, Tk_Offset(TreeCtrl, width),
-     0, (ClientData) NULL, 0},
+     "200", Tk_Offset(TreeCtrl, widthObj), Tk_Offset(TreeCtrl, width),
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_STRING, "-wrap", "wrap", "Wrap",
      (char *) NULL, Tk_Offset(TreeCtrl, wrapObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL,
@@ -540,8 +542,9 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (TreeItem_RootAncestor(tree, item1) !=
 		    TreeItem_RootAncestor(tree, item2)) {
 		FormatResult(interp,
-			"item %d and item %d don't share a common ancestor",
-			TreeItem_GetID(tree, item1), TreeItem_GetID(tree, item2));
+			"item %s%d and item %s%d don't share a common ancestor",
+			itemPrefix, TreeItem_GetID(tree, item1),
+			itemPrefix, TreeItem_GetID(tree, item2));
 		goto error;
 	    }
 	    TreeItem_ToIndex(tree, item1, &index1, NULL);
@@ -654,7 +657,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (item == NULL)
 		break;
 
-	    sprintf(buf, "item %d", TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
+	    sprintf(buf, "item %s%d", itemPrefix, TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 	    depth = TreeItem_GetDepth(tree, item);
 	    if (tree->showRoot || tree->showButtons || tree->showLines)
 		depth++;
@@ -676,7 +679,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			item = TreeItem_GetParent(tree, item);
 		    } while (++column < depth);
 		    if (TreeItem_GetNextSibling(tree, item) != NULL)
-			sprintf(buf + strlen(buf), " line %d",
+			sprintf(buf + strlen(buf), " line %s%d", itemPrefix,
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
 	    } else if (tree->columnCountVis == 1) {
@@ -814,8 +817,9 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (TreeItem_RootAncestor(tree, itemFirst) !=
 		    TreeItem_RootAncestor(tree, itemLast)) {
 		FormatResult(interp,
-			"item %d and item %d don't share a common ancestor",
-			TreeItem_GetID(tree, itemFirst), TreeItem_GetID(tree, itemLast));
+			"item %s%d and item %s%d don't share a common ancestor",
+			itemPrefix, TreeItem_GetID(tree, itemFirst),
+			itemPrefix, TreeItem_GetID(tree, itemLast));
 		goto error;
 	    }
 	    TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -1795,7 +1799,6 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 	case COMMAND_ADD:
 	{
 	    int indexFirst, indexLast, count;
-#define STATIC_SIZE 20
 	    TreeItem staticItems[STATIC_SIZE], *items = staticItems;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
@@ -1813,8 +1816,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 	    }
 	    if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
 		count = tree->itemCount - tree->selectCount;
-		if (count + 1 > STATIC_SIZE)
-		    items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+		STATIC_ALLOC(items, TreeItem, count + 1);
 		count = 0;
 
 		/* Include detached items */
@@ -1836,9 +1838,9 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		if (TreeItem_RootAncestor(tree, itemFirst) !=
 			TreeItem_RootAncestor(tree, itemLast)) {
 		    FormatResult(interp,
-			    "item %d and item %d don't share a common ancestor",
-			    TreeItem_GetID(tree, itemFirst),
-			    TreeItem_GetID(tree, itemLast));
+			    "item %s%d and item %s%d don't share a common ancestor",
+			    itemPrefix, TreeItem_GetID(tree, itemFirst),
+			    itemPrefix, TreeItem_GetID(tree, itemLast));
 		    return TCL_ERROR;
 		}
 		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -1854,8 +1856,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 		}
 		count = indexLast - indexFirst + 1;
 	    }
-	    if (count + 1 > STATIC_SIZE)
-		items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+	    STATIC_ALLOC(items, TreeItem, count + 1);
 	    count = 0;
 	    item = itemFirst;
 	    while (item != NULL) {
@@ -1872,8 +1873,7 @@ doneADD:
 		items[count] = NULL;
 		TreeNotify_Selection(tree, items, NULL);
 	    }
-	    if (items != staticItems)
-		ckfree((char *) items);
+	    STATIC_FREE2(items, staticItems);
 	    break;
 	}
 
@@ -1915,8 +1915,7 @@ doneADD:
 	    }
 	    if ((objc == 3) || (itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
 		count = tree->selectCount;
-		if (count + 1 > STATIC_SIZE)
-		    items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+		STATIC_ALLOC(items, TreeItem, count + 1);
 		count = 0;
 
 		/* Include detached items */
@@ -1938,9 +1937,9 @@ doneADD:
 		if (TreeItem_RootAncestor(tree, itemFirst) !=
 			TreeItem_RootAncestor(tree, itemLast)) {
 		    FormatResult(interp,
-			    "item %d and item %d don't share a common ancestor",
-			    TreeItem_GetID(tree, itemFirst),
-			    TreeItem_GetID(tree, itemLast));
+			    "item %s%d and item %s%d don't share a common ancestor",
+			    itemPrefix, TreeItem_GetID(tree, itemFirst),
+			    itemPrefix, TreeItem_GetID(tree, itemLast));
 		    return TCL_ERROR;
 		}
 		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -1956,8 +1955,7 @@ doneADD:
 		}
 		count = indexLast - indexFirst + 1;
 	    }
-	    if (count + 1 > STATIC_SIZE)
-		items = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+	    STATIC_ALLOC(items, TreeItem, count + 1);
 	    count = 0;
 	    item = itemFirst;
 	    while (item != NULL) {
@@ -1974,8 +1972,7 @@ doneCLEAR:
 		items[count] = NULL;
 		TreeNotify_Selection(tree, NULL, items);
 	    }
-	    if (items != staticItems)
-		ckfree((char *) items);
+	    STATIC_FREE2(items, staticItems);
 	    break;
 	}
 
@@ -2058,17 +2055,14 @@ doneCLEAR:
 
 	    /* List of items to select */
 	    if (objcS > 0) {
-		if (objcS > STATIC_SIZE)
-		    itemS = (TreeItem *) ckalloc(sizeof(TreeItem) * objcS);
+		STATIC_ALLOC(itemS, TreeItem, objcS);
 		for (i = 0; i < objcS; i++) {
 		    if (TreeItem_FromObj(tree, objvS[i], &itemS[i], IFO_ALLOK) != TCL_OK) {
-			if (itemS != staticItemS)
-			    ckfree((char *) itemS);
+			STATIC_FREE2(itemS, staticItemS);
 			return TCL_ERROR;
 		    }
 		    if (itemS[i] == ITEM_ALL) {
-			if (itemS != staticItemS)
-			    ckfree((char *) itemS);
+			STATIC_FREE2(itemS, staticItemS);
 			allS = TRUE;
 			break;
 		    }
@@ -2078,8 +2072,7 @@ doneCLEAR:
 	    /* Select all */
 	    if (allS) {
 		count = tree->itemCount - tree->selectCount;
-		if (count + 1 > STATIC_SIZE)
-		    newS = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+		STATIC_ALLOC(newS, TreeItem, count + 1);
 		count = 0;
 
 		/* Include detached items */
@@ -2096,15 +2089,13 @@ doneCLEAR:
 		    newS[count] = NULL;
 		    TreeNotify_Selection(tree, newS, NULL);
 		}
-		if (newS != staticNewS)
-		    ckfree((char *) newS);
+		STATIC_FREE2(newS, staticNewS);
 		break;
 	    }
 
 	    /* Select some, deselect none */
 	    if ((objcS > 0) && (objcD == 0)) {
-		if (objcS + 1 > STATIC_SIZE)
-		    newS = (TreeItem *) ckalloc(sizeof(TreeItem) * (objcS + 1));
+		STATIC_ALLOC(newS, TreeItem, objcS + 1);
 		count = 0;
 		for (i = 0; i < objcS; i++) {
 		    item = itemS[i];
@@ -2123,10 +2114,8 @@ doneCLEAR:
 		    newS[count] = NULL;
 		    TreeNotify_Selection(tree, newS, NULL);
 		}
-		if (newS != staticNewS)
-		    ckfree((char *) newS);
-		if (itemS != staticItemS)
-		    ckfree((char *) itemS);
+		STATIC_FREE2(newS, staticNewS);
+		STATIC_FREE2(itemS, staticItemS);
 		break;
 	    }
 
@@ -2135,14 +2124,11 @@ doneCLEAR:
 		break;
 
 	    /* List of items to deselect */
-	    if (objcD > STATIC_SIZE)
-		itemD = (TreeItem *) ckalloc(sizeof(TreeItem) * objcD);
+	    STATIC_ALLOC(itemD, TreeItem, objcD);
 	    for (i = 0; i < objcD; i++) {
 		if (TreeItem_FromObj(tree, objvD[i], &itemD[i], IFO_ALLOK) != TCL_OK) {
-		    if (itemS != staticItemS)
-			ckfree((char *) itemS);
-		    if (itemD != staticItemD)
-			ckfree((char *) itemD);
+		    STATIC_FREE2(itemS, staticItemS);
+		    STATIC_FREE2(itemD, staticItemD);
 		    return TCL_ERROR;
 		}
 		if (itemD[i] == ITEM_ALL) {
@@ -2154,8 +2140,7 @@ doneCLEAR:
 	    /* Select none, Deselect all */
 	    if ((objcS == 0) && allD) {
 		count = tree->selectCount;
-		if (count + 1 > STATIC_SIZE)
-		    newD = (TreeItem *) ckalloc(sizeof(TreeItem) * (count + 1));
+		STATIC_ALLOC(newD, TreeItem, count + 1);
 		count = 0;
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
@@ -2170,15 +2155,13 @@ doneCLEAR:
 		    newD[count] = NULL;
 		    TreeNotify_Selection(tree, NULL, newD);
 		}
-		if (newD != staticNewD)
-		    ckfree((char *) newD);
+		STATIC_FREE2(newD, staticNewD);
 		break;
 	    }
 
 	    /* Select none, deselect some */
 	    if ((objcS == 0) && !allD) {
-		if (objcD + 1 > STATIC_SIZE)
-		    newD = (TreeItem *) ckalloc(sizeof(TreeItem) * (objcD + 1));
+		STATIC_ALLOC(newD, TreeItem, objcD + 1);
 		count = 0;
 		for (i = 0; i < objcD; i++) {
 		    item = itemD[i];
@@ -2197,19 +2180,15 @@ doneCLEAR:
 		    newD[count] = NULL;
 		    TreeNotify_Selection(tree, NULL, newD);
 		}
-		if (newD != staticNewD)
-		    ckfree((char *) newD);
-		if (itemD != staticItemD)
-		    ckfree((char *) itemD);
+		STATIC_FREE2(newD, staticNewD);
+		STATIC_FREE2(itemD, staticItemD);
 		break;
 	    }
 
 	    /* Select some, deselect some */
 	    if ((objcS > 0) && !allD) {
-		if (objcS + 1 > STATIC_SIZE)
-		    newS = (TreeItem *) ckalloc(sizeof(TreeItem) * (objcS + 1));
-		if (objcD + 1 > STATIC_SIZE)
-		    newD = (TreeItem *) ckalloc(sizeof(TreeItem) * (objcD + 1));
+		STATIC_ALLOC(newS, TreeItem, objcS + 1);
+		STATIC_ALLOC(newD, TreeItem, objcD + 1);
 		countS = 0;
 		for (i = 0; i < objcS; i++) {
 		    item = itemS[i];
@@ -2249,21 +2228,16 @@ doneCLEAR:
 		    newD[countD] = NULL;
 		    TreeNotify_Selection(tree, newS, newD);
 		}
-		if (newS != staticNewS)
-		    ckfree((char *) newS);
-		if (itemS != staticItemS)
-		    ckfree((char *) itemS);
-		if (newD != staticNewD)
-		    ckfree((char *) newD);
-		if (itemD != staticItemD)
-		    ckfree((char *) itemD);
+		STATIC_FREE2(newS, staticNewS);
+		STATIC_FREE2(itemS, staticItemS);
+		STATIC_FREE2(newD, staticNewD);
+		STATIC_FREE2(itemD, staticItemD);
 		break;
 	    }
 
 	    /* Select some, deselect all */
 	    countD = tree->selectCount;
-	    if (countD + 1 > STATIC_SIZE)
-		newD = (TreeItem *) ckalloc(sizeof(TreeItem) * (countD + 1));
+	    STATIC_ALLOC(newD, TreeItem, countD + 1);
 	    countD = 0;
 	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 	    while (hPtr != NULL) {
@@ -2280,8 +2254,7 @@ doneCLEAR:
 		}
 		hPtr = Tcl_NextHashEntry(&search);
 	    }
-	    if (objcS + 1 > STATIC_SIZE)
-		newS = (TreeItem *) ckalloc(sizeof(TreeItem) * (objcS + 1));
+	    STATIC_ALLOC(newS, TreeItem, objcS + 1);
 	    countS = 0;
 	    for (i = 0; i < objcS; i++) {
 		item = itemS[i];
@@ -2301,15 +2274,10 @@ doneCLEAR:
 		newD[countD] = NULL;
 		TreeNotify_Selection(tree, newS, newD);
 	    }
-	    if (newS != staticNewS)
-		ckfree((char *) newS);
-	    if (itemS != staticItemS)
-		ckfree((char *) itemS);
-	    if (newD != staticNewD)
-		ckfree((char *) newD);
-	    if (itemD != staticItemD)
-		ckfree((char *) itemD);
-
+	    STATIC_FREE2(newS, staticNewS);
+	    STATIC_FREE2(itemS, staticItemS);
+	    STATIC_FREE2(newD, staticNewD);
+	    STATIC_FREE2(itemD, staticItemD);
 	    break;
 	}
     }
@@ -2951,6 +2919,9 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 	return TCL_ERROR;
     }
 #endif
+    if (TreeElement_Init(interp) != TCL_OK) {
+	return TCL_ERROR;
+    }
     if (TreeStyle_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
