@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.29 2005/01/03 21:46:06 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.30 2005/03/29 21:01:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -183,6 +183,9 @@ static Tk_OptionSpec optionSpecs[] = {
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-showlines", "showLines",
      "ShowLines", "1", -1, Tk_Offset(TreeCtrl, showLines),
+     0, (ClientData) NULL, TREE_CONF_REDISPLAY},
+    {TK_OPTION_BOOLEAN, "-showrootlines", "showRootLines",
+     "ShowRootLines", "1", -1, Tk_Offset(TreeCtrl, showRootLines),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
     {TK_OPTION_BOOLEAN, "-showroot", "showRoot",
      "ShowRoot", "1", -1, Tk_Offset(TreeCtrl, showRoot),
@@ -702,10 +705,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			sprintf(buf + strlen(buf), " button");
 		}
 		else if (tree->showLines) {
+		    TreeItem sibling;
 		    do {
 			item = TreeItem_GetParent(tree, item);
 		    } while (++column < depth);
-		    if (TreeItem_GetNextSibling(tree, item) != NULL)
+		    sibling = TreeItem_NextSiblingVisible(tree, item);
+		    if ((sibling != NULL) &&
+			((TreeItem_GetParent(tree, sibling) != tree->root) ||
+			tree->showRootLines))
 			sprintf(buf + strlen(buf), " line %s%d", itemPrefix,
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
