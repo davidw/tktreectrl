@@ -2326,12 +2326,25 @@ static int find_pivot(SortData *sortData, struct SortItem *left, struct SortItem
 	return 0;
 }
 
+/* If the user provides a -command which does not properly compare two
+ * elements, quicksort may go into an infinite loop or access illegal memory.
+ * This #define indicates parts of the code which are not part of a normal
+ * quicksort, but are present to detect the aforementioned bugs. */
+#define BUGGY_COMMAND
+
 static struct SortItem *partition(SortData *sortData, struct SortItem *left, struct SortItem *right, struct SortItem *pivot)
 {
 	int v;
+#ifdef BUGGY_COMMAND
+	struct SortItem *min = left, *max = right;
+#endif
 
 	while (left <= right)
 	{
+		/*
+			while (*left < *pivot)
+				++left;
+		*/
 		while (1)
 		{
 			v = CompareProc(sortData, left, pivot);
@@ -2339,8 +2352,17 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
 				return NULL;
 			if (v >= 0)
 				break;
+#ifdef BUGGY_COMMAND
+			/* If -command always returns < 0, 'left' becomes invalid */
+			if (left == max)
+				goto buggy;
+#endif
 			left++;
 		}
+		/*
+			while (*right >= *pivot)
+				--right;
+		*/
 		while (1)
 		{
 			v = CompareProc(sortData, right, pivot);
@@ -2348,6 +2370,11 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
 				return NULL;
 			if (v < 0)
 				break;
+#ifdef BUGGY_COMMAND
+			/* If -command always returns >= 0, 'right' becomes invalid */
+			if (right == min)
+				goto buggy;
+#endif
 			right--;
 		}
 		if (left < right)
@@ -2360,6 +2387,12 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
 		}
 	}
 	return left;
+#ifdef BUGGY_COMMAND
+buggy:
+	FormatResult(sortData->tree->interp, "buggy item sort -command detected");
+	sortData->result = TCL_ERROR;
+	return NULL;
+#endif
 }
 
 static void quicksort(SortData *sortData, struct SortItem *left, struct SortItem *right)
@@ -2403,8 +2436,11 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	if (TreeItem_FromObj(tree, objv[3], (TreeItem *) &item, 0) != TCL_OK)
 		return TCL_ERROR;
 
-	if ((tree->columnCount < 1) || (item->numChildren <= 1))
+	if (tree->columnCount < 1)
+	{
+		FormatResult(interp, "there are no columns");
 		return TCL_OK;
+	}
 
 	/* Defaults: sort ascii strings in column 0 only */
 	sortData.tree = tree;
@@ -2442,7 +2478,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				sortData.columns[sortData.count - 1].sortBy = SORT_ASCII;
 				break;
 			case OPT_COLUMN:
-				if (TreeColumn_FromObj(tree, objv[i + 1], &treeColumn, 0) != TCL_OK)
+				if (TreeColumn_FromObj(tree, objv[i + 1], &treeColumn, CFO_NOT_TAIL) != TCL_OK)
 					return TCL_ERROR;
 				/* The first -column we see is the first column we compare */
 				if (sawColumn)
@@ -2510,7 +2546,11 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	}
 
 	if (first == last)
+	{
+		if (notReally)
+			Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) first));
 		return TCL_OK;
+	}
 
 	for (i = 0; i < sortData.count; i++)
 	{
@@ -2618,7 +2658,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (sortData.result != TCL_OK)
 	{
-		result = TCL_ERROR;
+		result = sortData.result;
 		goto done;
 	}
 
