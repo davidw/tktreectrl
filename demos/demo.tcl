@@ -1,4 +1,4 @@
-#! D:/Programming/Tcl-8.4.1/bin/wish84.exe
+#!../Tcl-8.4.1/bin/wish84.exe
 
 set thisPlatform $::tcl_platform(platform)
 switch -- $thisPlatform {
