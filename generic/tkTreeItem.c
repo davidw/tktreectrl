@@ -1142,6 +1142,34 @@ void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column
 		panic("TreeItem_RemoveColumn: can't find column");
 }
 
+static Column *Item_CreateColumn(TreeCtrl *tree, Item *self, int columnIndex, int *isNew)
+{
+	Column *column;
+	int i;
+
+	if (isNew != NULL) (*isNew) = FALSE;
+	column = self->columns;
+	if (column == NULL)
+	{
+		column = Column_Alloc();
+		column->neededWidth = column->neededHeight = -1;
+		self->columns = column;
+		if (isNew != NULL) (*isNew) = TRUE;
+	}
+	for (i = 0; i < columnIndex; i++)
+	{
+		if (column->next == NULL)
+		{
+			column->next = Column_Alloc();
+			column->next->neededWidth = column->next->neededHeight = -1;
+			if (isNew != NULL) (*isNew) = TRUE;
+		}
+		column = column->next;
+	}
+
+	return column;
+}
+
 void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int beforeIndex)
 {
 	Item *self = (Item *) item;
@@ -1171,13 +1199,22 @@ void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int bef
 		walk = walk->next;
 	}
 
-	if (move == NULL)
+	if (move == NULL && before == NULL)
 		return;
-
-	if (prevM == NULL)
-		self->columns = move->next;
+	if (move == NULL)
+		move = Column_Alloc();
 	else
-		prevM->next = move->next;
+	{
+		if (before == NULL)
+		{
+			prevB = Item_CreateColumn(tree, self, beforeIndex - 1, NULL);
+			last = prevB;
+		}
+		if (prevM == NULL)
+			self->columns = move->next;
+		else
+			prevM->next = move->next;
+	}
 	if (before == NULL)
 	{
 		last->next = move;
@@ -1298,36 +1335,6 @@ void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem item_)
 	self->neededHeight = -1;
 }
 
-static Column *Item_CreateColumn(TreeCtrl *tree, Item *self, int columnIndex, int *isNew)
-{
-	Column *column;
-	int i;
-
-	if (isNew != NULL) (*isNew) = FALSE;
-	column = self->columns;
-	if (column == NULL)
-	{
-		column = Column_Alloc();
-		column->neededWidth = column->neededHeight = -1;
-		self->columns = column;
-		if (isNew != NULL) (*isNew) = TRUE;
-	}
-	for (i = 0; i < columnIndex; i++)
-	{
-		if (column->next == NULL)
-		{
-			column->next = Column_Alloc();
-			column->next->neededWidth = column->next->neededHeight = -1;
-			if (isNew != NULL) (*isNew) = TRUE;
-		}
-		column = column->next;
-	}
-
-	Tree_CreateColumn(tree, columnIndex, NULL);
-
-	return column;
-}
-
 static Column *Item_FindColumn(TreeCtrl *tree, Item *self, int columnIndex)
 {
 	Column *column;
@@ -1347,25 +1354,12 @@ static Column *Item_FindColumn(TreeCtrl *tree, Item *self, int columnIndex)
 static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
 	Column **column, int *indexPtr)
 {
+	TreeColumn treeColumn;
 	int columnIndex;
 
-	if (Tcl_GetIntFromObj(NULL, obj, &columnIndex) == TCL_OK)
-	{
-		if (columnIndex < 0)
-		{
-			FormatResult(tree->interp, "bad column index \"%d\": must be > 0",
-				columnIndex);
-			return TCL_ERROR;
-		}
-	}
-	else
-	{
-		TreeColumn treeColumn;
-
-		if (Tree_FindColumnByTag(tree, obj, &treeColumn, CFO_NOT_TAIL) != TCL_OK)
-			return TCL_ERROR;
-		columnIndex = TreeColumn_Index(treeColumn);
-	}
+	if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_TAIL) != TCL_OK)
+		return TCL_ERROR;
+	columnIndex = TreeColumn_Index(treeColumn);
 	(*column) = Item_FindColumn(tree, item, columnIndex);
 	if ((*column) == NULL)
 	{
@@ -1390,26 +1384,12 @@ int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItem
 
 static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Column **column, int *indexPtr)
 {
+	TreeColumn treeColumn;
 	int columnIndex;
 
-	if (Tcl_GetIntFromObj(NULL, obj, &columnIndex) == TCL_OK)
-	{
-		if (columnIndex < 0)
-		{
-			FormatResult(tree->interp,
-				"bad column index \"%d\": must be >= 0",
-				columnIndex);
-			return TCL_ERROR;
-		}
-	}
-	else
-	{
-		TreeColumn treeColumn;
-
-		if (Tree_FindColumnByTag(tree, obj, &treeColumn, CFO_NOT_TAIL) != TCL_OK)
-			return TCL_ERROR;
-		columnIndex = TreeColumn_Index(treeColumn);
-	}
+	if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_TAIL) != TCL_OK)
+		return TCL_ERROR;
+	columnIndex = TreeColumn_Index(treeColumn);
 	(*column) = Item_CreateColumn(tree, item, columnIndex, NULL);
 	if (indexPtr != NULL)
 		(*indexPtr) = columnIndex;
@@ -2248,11 +2228,11 @@ static int CompareCmd(SortData *sortData, struct SortItem *a, struct SortItem *b
 	Tcl_ListObjLength(interp, sortData->columns[n].command, &objc);
 	Tcl_ListObjReplace(interp, sortData->columns[n].command, objc - 2,
 		2, 2, paramObjv);
-   	Tcl_ListObjGetElements(interp, sortData->columns[n].command,
+	Tcl_ListObjGetElements(interp, sortData->columns[n].command,
 		&objc, &objv);
 
 	sortData->result = Tcl_EvalObjv(interp, objc, objv, 0);
-  
+
 	if (sortData->result != TCL_OK)
 	{
 		Tcl_AddErrorInfo(interp, "\n    (evaluating item sort -command)");
@@ -3481,6 +3461,8 @@ doneComplex:
 			}
 			case COMMAND_INDEX:
 			{
+				if (tree->updateIndex)
+					Tree_UpdateItemIndex(tree);
 				FormatResult(interp, "%d %d", item->index, item->indexVis);
 				return TCL_OK;
 			}
@@ -3626,6 +3608,22 @@ doneComplex:
 		case COMMAND_CREATE:
 		{
 			item = (Item *) TreeItem_Alloc(tree);
+
+			/* Apply default styles */
+			if (tree->defaultStyle.numStyles)
+			{
+				int i;
+
+				for (i = 0; i < tree->defaultStyle.numStyles; i++)
+				{
+					Column *column = Item_CreateColumn(tree, item, i, NULL);
+					if (tree->defaultStyle.styles[i] != NULL)
+					{
+						column->style = TreeStyle_NewInstance(tree,
+							tree->defaultStyle.styles[i]);
+					}
+				}
+			}
 			Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item));
 			break;
 		}
