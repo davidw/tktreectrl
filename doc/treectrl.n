@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.6 2002/12/27 19:23:31 krischan Exp $
+'\" $Id: treectrl.n,v 1.7 2002/12/27 22:04:06 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -31,8 +31,8 @@ treectrl \- Create and manipulate hierarchical multicolumn widgets
 Specifies the desired mode for changing the background of individual
 items. The value should be one of \fBrow\fR, \fBcolumn\fR, \fBindex\fR, or
 \fBvisindex\fR. The default is \fBrow\fR. This option has only an effect
-for columns which have \fB-itembackground\fR defined as list of two or more
-colors (see the \fBcolumn\fR widget command below for more on this). The color
+for columns which have \fB\-itembackground\fR defined as list of two or more
+colors (see section COLUMNS below for more on this). The color
 of items is changed for any row or column, if \fBrow\fR or \fBcolumn\fR is
 specified respectively. When \fBindex\fR is specified, collapsed
 items are counted also for evaluating the background color,
@@ -268,6 +268,57 @@ If the item is already closed, this command has no effect.
 in which case all items of the treectrl widget are collapsed.
 If \fB\-recurse\fR is specified, all descendants of \fIitemDesc\fR
 will also be collapsed.
+.TP
+\fIpathName \fBcolumn \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
+This command is used to manipulate the columns of the treectrl widget.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBcolumn\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBcolumn bbox \fIcolumn\fR
+Returns a list with four elements giving an approximate bounding box
+for the column header specified by \fIcolumn\fR.
+If the treectrl is configured to don't display the column headers
+by means of the \fB\-showheader\fR option,
+an empty list is returned instead.
+.TP
+\fIpathName \fBcolumn cget \fIcolumn option\fR
+This command returns the current value of the option named \fIoption\fR
+for the column specified by \fIcolumn\fR.
+\fIOption\fR may have any of the values accepted by the
+\fBcolumn configure\fR widget command.
+.TP
+\fIpathName \fBcolumn configure \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+This command is similar to the \fBconfigure\fR widget command except
+that it modifies options associated with the column specified by \fIcolumn\fR
+instead of modifying options for the overall treectrl widget.
+If no \fIoption\fR is specified, the command returns a list describing
+all of the available options for \fIcolumn\fR (see \fBTk_ConfigureInfo\fR
+for information on the format of this list).
+If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
+a list describing the one named option (this list will be identical to
+the corresponding sublist of the value returned if no \fIoption\fR
+is specified).
+If one or more \fIoption\-value\fR pairs are specified, then the command
+modifies the given option(s) to have the given value(s) for \fIcolumn\fR;
+in this case the command returns an empty string.
+
+The specified column is created, if it not already exists
+and if at least one \fIoption\-value\fR pair is specified.
+See COLUMNS below for details on the options available for columns.
+.TP
+\fIpathName \fBcolumn delete \fIcolumn\fR
+Deletes the specified \fIcolumn\fR from the treectrl widget.
+All remaining columns of the treectrl widget will get new column numbers:
+in an unchanged order, but with succesive numbers.
+.TP
+\fIpathName \fBcolumn width \fIcolumn\fR
+This command returns a decimal string giving the width
+of the column specified by \fIcolumn\fR,
+even if the treectrl is configured to don't display the column headers
+by means of the \fB\-showheader\fR option.
+.RE
 .TP
 \fIpathName \fBcompare\fR \fIitemDesc1 op itemDesc2\fR
 From both items described by the \fIitemDesc\fRs the index is retrieved
@@ -1059,6 +1110,142 @@ If \fInumber\fR is negative then higher information becomes
 visible;  if it is positive then lower information
 becomes visible.
 .RE
+
+.SH COLUMNS
+A treectrl widget is capable of displaying multiple columns next to each
+other.
+An item can be considered as a row, which reaches over all columns.
+
+Many of the widget commands for a treectrl take as one argument an
+indicator of which column of the treectrl to operate on.  These
+indicators are called \fIcolumn\fRs and may be specified
+as numerical index as given by the first \fBcolumn configure\fR
+widget command which created the column or by its name,
+which can be configured my means of the \fB-tag\fR column option.
+
+The following options are supported for columns:
+.TP
+\fB\-arrow \fIdirection\fR
+Indicates whether or not an arrow should be drawn in the column header
+to the right of the column title.
+\fIDirection\fR must have one of the values
+\fBnone\fR (the default), \fBup\fR, or \fBdown\fR.
+.TP
+\fB\-arrowside \fIside\fR
+Indicates on which side an arrow should be drawn, if at all.
+\fISide\fR must be either \fBleft\fR or \fBright\fR (the default).
+.TP
+\fB\-arrowgravity \fIside\fR
+Indicates onto which side an arrow should be packed,
+if there is more space available for drawing the arrow then needed.
+\fISide\fR must be either \fBleft\fR (the default) or \fBright\fR.
+.TP
+\fB\-arrowpade \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the right side of the arrow.
+.TP
+\fB\-arrowpadw \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the left side of the arrow.
+.TP
+\fB\-bitmap \fIbitmap\fR
+Specifies the bitmap to display in the element
+to the left of the column title.
+.TP
+\fB\-background \fIcolor\fR
+Specifies the color to use for the background of the column header.
+.TP
+\fB\-borderwidth \fIsize\fR
+Specifies a non-negative value indicating the width
+of the 3-D border to draw around the outside of the column header
+(if such a border is being drawn;  the \fBrelief\fR column option
+determines this).
+The value may have any of the forms acceptable to \fBTk_GetPixels\fR.
+.TP
+\fB\-button \fIboolean\fR
+Indicates whether or not a mouse click on the column header should
+change the sorting order of the tree.
+.TP
+\fB\-expand \fIboolean\fR
+Indicates whether or not any extra spaces should be distributed
+to this column.
+This option will actually only work, if the column has no fix width defined
+by means of the \fB\-width\fR column option.
+.TP
+\fB\-font \fIfontName\fR
+Specifies the font to use for the column title inside the column header.
+.TP
+\fB\-image \fIimage\fR
+Specifies the image to display in the element
+to the left of the column title.
+This option overrides the \fB\-bitmap\fR column option.
+.TP
+\fB\-imagepade \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the right side of the image.
+.TP
+\fB\-imagepadw \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the left side of the image.
+.TP
+\fB\-itembackground \fIcolorList\fR
+Specifies a list of colors, which should be used as
+alternating background color for the items of this column.
+See also the \fB\-backgroundmode\fR widget option for more on this.
+.TP
+\fB\-justify \fIjustification\fR
+This option determines how the items (and the title) line up with each other.
+Must be one of \fBleft\fR (the default), \fBcenter\fR, or \fBright\fR.
+.TP
+\fB\-minwidth \fIsize\fR
+Specifies the minimum size, in screen units,
+that will be permitted for this column.
+.TP
+\fB\-relief \fIrelief\fR
+Specifies the 3-D effect desired for the column header containing the title.
+Acceptable values are the typical relief values,
+but the value seems to be ignored anyway;
+better use the \fB\-sunken\fR column option instead.
+.TP
+\fB\-stepwidth \fIsize\fR
+Specifies a sort of tabbed alignment for columns that displays
+more than one item next to each other
+(typically in a treectrl widget with horizontal orientation).
+Every item will get an x-coordinate which is a multiple of \fIsize\fR.
+.TP
+\fB\-sunken \fIboolean\fR
+Indicates whether or not the column header containing the column title
+will be displayed with a sunken relief.
+.TP
+\fB\-tag \fItag\fR
+Defines a unique name for the columns which can be used in subsequent calls
+of the treectrl widget commands, wherever a column must be specified.
+.TP
+\fB\-text \fItext\fR
+Specifies a text to be displayed inside the column title.
+.TP
+\fB\-textcolor \fIcolor\fR
+Specifies a color, which should be used as foreground color
+to display the column title.
+.TP
+\fB\-textpade \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the right side of the text.
+.TP
+\fB\-textpadw \fIamount\fR
+\fIAmount\fR specifies how much padding to
+leave on the left side of the text.
+.TP
+\fB\-width \fIsize\fR
+Specifies the width of the column.
+.TP
+\fB\-visible \fIboolean\fR
+Indicates whether or not the column should be displayed.
+.TP
+\fB\-widthhack \fIboolean\fR
+Indicates whether or not all items inside the column
+should have the same width
+(typically in a treectrl widget with horizontal orientation).
 
 .SH STATES
 .PP
