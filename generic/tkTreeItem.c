@@ -154,7 +154,7 @@ if (tree->debug.enable && tree->debug.data)
 	dbwin("Tree_UpdateItemIndex %s\n", Tk_PathName(tree->tkwin));
 
 	/* Also track max depth */
-	tree->depth = 0;
+	tree->depth = -1;
 
 	item->index = 0;
 	item->indexVis = -1;
@@ -516,8 +516,9 @@ static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv, CONST char **i
 %W index "anchor MODIFIERS"
 %W index "nearest x y MODIFIERS"
 %W index "root MODIFIERS"
-%W index "first MODIFIERS"
-%W index "last MODIFIERS"
+%W index "first ?visible? MODIFIERS"
+%W index "last ?visible? MODIFIERS"
+%W index "rnc row col MODIFIERS"
 %W index "ID MODIFIERS"
 MODIFIERS:
 	above
@@ -528,16 +529,15 @@ MODIFIERS:
 	bottom
 	leftmost
 	rightmost
-	next
-	prev
+	next ?visible?
+	prev ?visible?
 	parent
-	firstchild
-	lastchild
-	child N
-	nextsibling
-	prevsibling
-	sibling N
-	visible
+	firstchild ?visible?
+	lastchild ?visible?
+	child N ?visible?
+	nextsibling ?visible?
+	prevsibling ?visible?
+	sibling N ?visible?
 
 Examples:
 	%W index "first visible firstchild"
@@ -664,12 +664,6 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			}
 			case INDEX_ROOT:
 			{
-				if ((flags & IFO_NOTROOT))
-				{
-					Tcl_AppendResult(interp,
-						"can't specify \"root\" for this command", NULL);
-					return TCL_ERROR;
-				}
 				item = (Item *) tree->root;
 				break;
 			}
@@ -881,6 +875,15 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 		listIndex += modArgs[index];
 		if (nextIsVisible)
 			listIndex++;
+	}
+	if (ISROOT(item))
+	{
+		if ((flags & IFO_NOTROOT))
+		{
+			Tcl_AppendResult(interp,
+				"can't specify \"root\" for this command", NULL);
+			return TCL_ERROR;
+		}
 	}
 	(*itemPtr) = (TreeItem) item;
 	return TCL_OK;
@@ -2770,7 +2773,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{ 1, 1, 0, 0, "item" }, /* ancestors */
 		{ 1, 1, 0, 0, "item" }, /* children */
 		{ 0, 0, 0, 0, NULL }, /* create */
-		{ 1, 2, IFO_ALLOK | IFO_NOTROOT, IFO_ALLOK | IFO_NOTROOT | AF_EQUALOK | AF_SAMEROOT, "first ?last?" }, /* delete */
+		{ 1, 2, IFO_ALLOK, IFO_ALLOK | AF_EQUALOK | AF_SAMEROOT, "first ?last?" }, /* delete */
 		{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR, "item ?newFirstChild?" }, /* firstchild */
 		{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR, "item ?newLastChild?" }, /* lastchild */
 		{ 1, 2, IFO_NOTROOT | AF_PARENT, IFO_NOTROOT | AF_NOTANCESTOR, "item ?newNextSibling?" }, /* nextsibling */
@@ -3267,7 +3270,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				while (1)
 				{
 					Item *prev = (Item *) TreeItem_Prev(tree, (TreeItem) item2);
-					TreeItem_Delete(tree, (TreeItem) item2);
+					if (!ISROOT(item2))
+						TreeItem_Delete(tree, (TreeItem) item2);
 					if (item2 == item)
 						break;
 					item2 = prev;
@@ -3275,7 +3279,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			else
 			{
-				TreeItem_Delete(tree, (TreeItem) item);
+				if (!ISROOT(item))
+					TreeItem_Delete(tree, (TreeItem) item);
 			}
 			break;
 		}
