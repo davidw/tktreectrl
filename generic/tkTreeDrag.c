@@ -12,6 +12,7 @@ struct DragElem
 struct DragImage
 {
 	TreeCtrl *tree;
+	Tk_OptionTable optionTable;
 	int visible;
 	int x, y; /* offset to draw at in canvas coords */
 	int bounds[4]; /* bounds of all DragElems */
@@ -27,8 +28,6 @@ static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 		(char *) NULL, 0, -1, 0, 0, 0}
 };
-
-static Tk_OptionTable optionTable = NULL;
 
 static DragElem *DragElem_Alloc(DragImage *dragImage)
 {
@@ -57,13 +56,11 @@ int TreeDragImage_Init(TreeCtrl *tree)
 {
 	DragImage *dragImage;
 
-	if (optionTable == NULL)
-		optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
-
 	dragImage = (DragImage *) ckalloc(sizeof(DragImage));
 	memset(dragImage, '\0', sizeof(DragImage));
 	dragImage->tree = tree;
-	if (Tk_InitOptions(tree->interp, (char *) dragImage, optionTable,
+	dragImage->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
+	if (Tk_InitOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
 		tree->tkwin) != TCL_OK)
 	{
 		WFREE(dragImage, DragImage);
@@ -80,7 +77,7 @@ void TreeDragImage_Free(TreeDragImage dragImage_)
 
 	while (elem != NULL)
 		elem = DragElem_Free(dragImage, elem);
-	Tk_FreeConfigOptions((char *) dragImage, optionTable,
+	Tk_FreeConfigOptions((char *) dragImage, dragImage->optionTable,
 		dragImage->tree->tkwin);
 	WFREE(dragImage, DragImage);
 }
@@ -117,7 +114,7 @@ static int DragImage_Config(DragImage *dragImage, int objc, Tcl_Obj *CONST objv[
 	Tk_SavedOptions savedOptions;
 	int mask, result;
 
-	result = Tk_SetOptions(tree->interp, (char *) dragImage, optionTable,
+	result = Tk_SetOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
 		objc, objv, tree->tkwin, &savedOptions, &mask);
 	if (result != TCL_OK)
 	{
@@ -372,7 +369,7 @@ doneAdd:
 				return TCL_ERROR;
 			}
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) dragImage,
-				optionTable, objv[3], tree->tkwin);
+				dragImage->optionTable, objv[3], tree->tkwin);
 			if (resultObjPtr == NULL)
 				return TCL_ERROR;
 			Tcl_SetObjResult(interp, resultObjPtr);
@@ -413,7 +410,7 @@ doneAdd:
 			if (objc <= 4)
 			{
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) dragImage,
-					optionTable,
+					dragImage->optionTable,
 					(objc == 3) ? (Tcl_Obj *) NULL : objv[3],
 					tree->tkwin);
 				if (resultObjPtr == NULL)

@@ -5,6 +5,7 @@ typedef struct Marquee Marquee;
 struct Marquee
 {
 	TreeCtrl *tree;
+	Tk_OptionTable optionTable;
 	int visible;
 	int x1, y1, x2, y2;
 	int onScreen;
@@ -19,19 +20,15 @@ static Tk_OptionSpec optionSpecs[] = {
 		(char *) NULL, 0, -1, 0, 0, 0}
 };
 
-static Tk_OptionTable optionTable = NULL;
-
 int TreeMarquee_Init(TreeCtrl *tree)
 {
 	Marquee *marquee;
 
-	if (optionTable == NULL)
-		optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
-
 	marquee = (Marquee *) ckalloc(sizeof(Marquee));
 	memset(marquee, '\0', sizeof(Marquee));
 	marquee->tree = tree;
-	if (Tk_InitOptions(tree->interp, (char *) marquee, optionTable,
+	marquee->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
+	if (Tk_InitOptions(tree->interp, (char *) marquee, marquee->optionTable,
 		tree->tkwin) != TCL_OK)
 	{
 		WFREE(marquee, Marquee);
@@ -45,7 +42,7 @@ void TreeMarquee_Free(TreeMarquee marquee_)
 {
 	Marquee *marquee = (Marquee *) marquee_;
 
-	Tk_FreeConfigOptions((char *) marquee, optionTable,
+	Tk_FreeConfigOptions((char *) marquee, marquee->optionTable,
 		marquee->tree->tkwin);
 	WFREE(marquee, Marquee);
 }
@@ -102,7 +99,7 @@ static int Marquee_Config(Marquee *marquee, int objc, Tcl_Obj *CONST objv[])
 	Tk_SavedOptions savedOptions;
 	int mask, result;
 
-	result = Tk_SetOptions(tree->interp, (char *) marquee, optionTable,
+	result = Tk_SetOptions(tree->interp, (char *) marquee, marquee->optionTable,
 		objc, objv, tree->tkwin, &savedOptions, &mask);
 	if (result != TCL_OK)
 	{
@@ -180,7 +177,7 @@ int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				return TCL_ERROR;
 			}
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) marquee,
-				optionTable, objv[3], tree->tkwin);
+				marquee->optionTable, objv[3], tree->tkwin);
 			if (resultObjPtr == NULL)
 				return TCL_ERROR;
 			Tcl_SetObjResult(interp, resultObjPtr);
@@ -200,7 +197,7 @@ int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			if (objc <= 4)
 			{
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) marquee,
-					optionTable,
+					marquee->optionTable,
 					(objc == 3) ? (Tcl_Obj *) NULL : objv[3],
 					tree->tkwin);
 				if (resultObjPtr == NULL)

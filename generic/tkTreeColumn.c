@@ -50,6 +50,7 @@ struct Column
 	int arrowGravity; /* -arrowgravity */
 
 	TreeCtrl *tree;
+	Tk_OptionTable optionTable;
 	int index; /* column number */
 	int textLen;
 	int textWidth;
@@ -176,8 +177,6 @@ static Tk_OptionSpec columnSpecs[] = {
 		(char *) NULL, 0, -1, 0, 0, 0}
 };
 
-static Tk_OptionTable columnOptionTable = NULL;
-
 /* Called when Tk_Image is deleted or modified */
 static void ImageChangedProc(
 	ClientData clientData,
@@ -288,7 +287,7 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 	{
 		if (error == 0)
 		{
-			if (Tk_SetOptions(tree->interp, (char *) column, columnOptionTable,
+			if (Tk_SetOptions(tree->interp, (char *) column, column->optionTable,
 				objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK)
 			{
 				mask = 0;
@@ -500,13 +499,11 @@ static Column *Column_Alloc(TreeCtrl *tree)
 {
 	Column *column;
 
-	if (columnOptionTable == NULL)
-		columnOptionTable = Tk_CreateOptionTable(tree->interp, columnSpecs);
-
 	column = (Column *) ckalloc(sizeof(Column));
 	memset(column, '\0', sizeof(Column));
 	column->tree = tree;
-	if (Tk_InitOptions(tree->interp, (char *) column, columnOptionTable,
+	column->optionTable = Tk_CreateOptionTable(tree->interp, columnSpecs);
+	if (Tk_InitOptions(tree->interp, (char *) column, column->optionTable,
 		tree->tkwin) != TCL_OK)
 	{
 		WFREE(column, Column);
@@ -514,7 +511,7 @@ static Column *Column_Alloc(TreeCtrl *tree)
 	}
 #if 0
 	if (Tk_SetOptions(header->tree->interp, (char *) column,
-		columnOptionTable, 0,
+		column->optionTable, 0,
 		NULL, header->tree->tkwin, &savedOptions,
 		(int *) NULL) != TCL_OK)
 	{
@@ -567,7 +564,7 @@ static Column *Column_Free(Column *column)
 		Tk_FreeGC(tree->display, column->bitmapGC);
 	if (column->image != NULL)
 		Tk_FreeImage(column->image);
-	Tk_FreeConfigOptions((char *) column, columnOptionTable, tree->tkwin);
+	Tk_FreeConfigOptions((char *) column, column->optionTable, tree->tkwin);
 	WFREE(column, Column);
 	tree->columnCount--;
 	return next;
@@ -795,7 +792,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			if (TreeColumn_FromObj(tree, objv[3], &column, 0) != TCL_OK)
 				return TCL_ERROR;
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) column,
-				columnOptionTable, objv[4], tree->tkwin);
+				((Column *) column)->optionTable, objv[4], tree->tkwin);
 			if (resultObjPtr == NULL)
 				return TCL_ERROR;
 			Tcl_SetObjResult(interp, resultObjPtr);
@@ -820,7 +817,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					0) != TCL_OK)
 					return TCL_ERROR;
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) column,
-					columnOptionTable,
+					column->optionTable,
 					(objc == 4) ? (Tcl_Obj *) NULL : objv[4],
 					tree->tkwin);
 				if (resultObjPtr == NULL)

@@ -15,6 +15,7 @@ typedef struct ElementLink ElementLink;
 
 struct Style
 {
+	Tk_OptionTable optionTable;
 	Tk_Uid name;
 	int numElements;
 	ElementLink *elements;
@@ -79,8 +80,6 @@ static Tk_OptionSpec styleOptionSpecs[] = {
 	{TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 		(char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
-
-static Tk_OptionTable styleOptionTable = NULL;
 
 struct Layout
 {
@@ -2772,20 +2771,21 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 
 	style = (Style *) ckalloc(sizeof(Style));
 	memset(style, '\0', sizeof(Style));
+	style->optionTable = Tk_CreateOptionTable(tree->interp, styleOptionSpecs); 
 	style->name = Tk_GetUid(name);
 
 	if (Tk_InitOptions(tree->interp, (char *) style,
-		styleOptionTable, tree->tkwin) != TCL_OK)
+		style->optionTable, tree->tkwin) != TCL_OK)
 	{
 		WFREE(style, Style);
 		return NULL;
 	}
 
 	if (Tk_SetOptions(tree->interp, (char *) style,
-		styleOptionTable, objc, objv, tree->tkwin,
+		style->optionTable, objc, objv, tree->tkwin,
 		NULL, NULL) != TCL_OK)
 	{
-		Tk_FreeConfigOptions((char *) style, styleOptionTable, tree->tkwin);
+		Tk_FreeConfigOptions((char *) style, style->optionTable, tree->tkwin);
 		WFREE(style, Style);
 		return NULL;
 	}
@@ -3250,7 +3250,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
 				return TCL_ERROR;
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) style,
-				styleOptionTable, objv[4], tree->tkwin);
+				style->optionTable, objv[4], tree->tkwin);
 			if (resultObjPtr == NULL)
 				return TCL_ERROR;
 			Tcl_SetObjResult(interp, resultObjPtr);
@@ -3272,7 +3272,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			if (objc <= 5)
 			{
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) style,
-					styleOptionTable,
+					style->optionTable,
 					(objc == 4) ? (Tcl_Obj *) NULL : objv[4],
 					tree->tkwin);
 				if (resultObjPtr == NULL)
@@ -3282,7 +3282,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			else
 			{
 				if (Tk_SetOptions(tree->interp, (char *) style,
-					styleOptionTable, objc - 4, objv + 4, tree->tkwin,
+					style->optionTable, objc - 4, objv + 4, tree->tkwin,
 					NULL, NULL) != TCL_OK)
 					return TCL_ERROR;
 				Style_Changed(tree, style);
@@ -3910,8 +3910,6 @@ int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_)
 int TreeStyle_Init(Tcl_Interp *interp)
 {
 	ElementType *typePtr;
-
-	styleOptionTable = Tk_CreateOptionTable(interp, styleOptionSpecs);
 
 	elementTypeList = &elemTypeBitmap;
 	elemTypeBitmap.next = &elemTypeBorder;
