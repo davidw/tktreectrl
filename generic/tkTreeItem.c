@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.20 2004/08/09 02:23:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.21 2004/08/11 00:35:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3300,9 +3300,9 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
 	count = 0;
 
 	/* Include detached items */
-	hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 	while (hPtr != NULL) {
-	    item = (TreeItem) Tcl_GetHashValue(hPtr);
+	    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
 	    if (item == tree->root)
 	    {
 		hPtr = Tcl_NextHashEntry(&search);
@@ -3310,10 +3310,8 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
 		    break;
 		item = (TreeItem) Tcl_GetHashValue(hPtr);
 	    }
-	    if (TreeItem_GetSelected(tree, item)) {
-		Tree_RemoveFromSelection(tree, item);
-		items[count++] = item;
-	    }
+	    Tree_RemoveFromSelection(tree, item);
+	    items[count++] = item;
 	    hPtr = Tcl_NextHashEntry(&search);
 	}
 	goto doneCLEAR;
@@ -3375,10 +3373,12 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		"bbox",
 		"cget",
+		"collapse",
 		"complex",
 		"configure",
 		"dump",
 		"element",
+		"expand",
 		"index",
 		"isancestor",
 		"isopen",
@@ -3387,6 +3387,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		"state",
 		"style",
 		"text",
+		"toggle",
 		(char *) NULL
 	};
 	enum {
@@ -3404,10 +3405,12 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		COMMAND_BBOX,
 		COMMAND_CGET,
+		COMMAND_COLLAPSE,
 		COMMAND_COMPLEX,
 		COMMAND_CONFIGURE,
 		COMMAND_DUMP,
 		COMMAND_ELEMENT,
+		COMMAND_EXPAND,
 		COMMAND_INDEX,
 		COMMAND_ISANCESTOR,
 		COMMAND_ISOPEN,
@@ -3415,7 +3418,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		COMMAND_SORT,
 		COMMAND_STATE,
 		COMMAND_STYLE,
-		COMMAND_TEXT
+		COMMAND_TEXT,
+		COMMAND_TOGGLE
 	};
 #define AF_NOTANCESTOR	0x00010000 /* item can't be ancestor of other item */
 #define AF_PARENT		0x00020000 /* item must have a parent */
@@ -3443,10 +3447,12 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		
 		{ 1, 3, 0, AF_NOT_ITEM, "item ?column? ?element?" }, /* bbox */
 		{ 2, 2, 0, AF_NOT_ITEM, "item option" }, /* cget */
+		{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* collapse */
 		{ 2, 100000, 0, AF_NOT_ITEM, "item list..." }, /* complex */
 		{ 1, 100000, 0, AF_NOT_ITEM, "item ?option? ?value? ?option value...?" }, /* configure */
 		{ 1, 1, 0, 0, "item" }, /* dump */
 		{ 4, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item column element ?arg ...?" }, /* element */
+		{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* expand */
 		{ 1, 1, 0, 0, "item" }, /* index */
 		{ 2, 2, 0, 0, "item item2" }, /* isancestor */
 		{ 1, 1, 0, 0, "item" }, /* isopen */
@@ -3455,6 +3461,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{ 2, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item ?arg ...?" }, /* state */
 		{ 2, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item ?arg ...?" }, /* style */
 		{ 2, 100000, 0, AF_NOT_ITEM, "item column ?text? ?column text ...?" }, /* text */
+		{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* toggle */
 	};
 	int index;
 	int numArgs = objc - 3;
@@ -3650,6 +3657,53 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				}
 				Tcl_SetObjResult(interp, listObj);
 			}
+			break;
+		}
+		case COMMAND_COLLAPSE:
+		case COMMAND_EXPAND:
+		case COMMAND_TOGGLE:
+		{
+			int recurse = 0;
+			int mode;
+
+			if (numArgs == 2)
+			{
+				char *s = Tcl_GetString(objv[4]);
+				if (strcmp(s, "-recurse"))
+				{
+					FormatResult(interp, "bad option \"%s\": must be -recurse",
+						s);
+					return TCL_ERROR;
+				}
+				recurse = 1;
+			}
+			switch (index)
+			{
+				case COMMAND_COLLAPSE:
+					mode = 0;
+					break;
+				case COMMAND_EXPAND:
+					mode = 1;
+					break;
+				case COMMAND_TOGGLE:
+					mode = -1;
+					break;
+			}
+			if (item == (Item *) ITEM_ALL)
+			{
+				Tcl_HashEntry *hPtr;
+				Tcl_HashSearch search;
+
+				hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+				while (hPtr != NULL)
+				{
+					item = (Item *) Tcl_GetHashValue(hPtr);
+					TreeItem_OpenClose(tree, (TreeItem) item, mode, 0);
+					hPtr = Tcl_NextHashEntry(&search);
+				}
+				break;
+			}
+			TreeItem_OpenClose(tree, (TreeItem) item, mode, recurse);
 			break;
 		}
 		case COMMAND_COMPLEX:
