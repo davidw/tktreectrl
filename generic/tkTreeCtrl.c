@@ -1566,6 +1566,86 @@ Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName)
 	return (Tk_Image) Tcl_GetHashValue(hPtr);
 }
 
+int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags)
+{
+	Tcl_Interp *interp = tree->interp;
+	int i, op = STATE_OP_ON, op2, op3, length, state = 0;
+	char ch0, *string;
+
+	string = Tcl_GetStringFromObj(obj, &length);
+	if (length == 0)
+		goto unknown;
+	ch0 = string[0];
+	if (ch0 == '!')
+	{
+		if (flags & SFO_NOT_OFF)
+		{
+			FormatResult(interp, "can't specify '!' for this command");
+			return TCL_ERROR;
+		}
+		op = STATE_OP_OFF;
+		++string;
+		ch0 = string[0];
+	}
+	else if (ch0 == '~')
+	{
+		if (flags & SFO_NOT_TOGGLE)
+		{
+			FormatResult(interp, "can't specify '~' for this command");
+			return TCL_ERROR;
+		}
+		op = STATE_OP_TOGGLE;
+		++string;
+		ch0 = string[0];
+	}
+	for (i = 0; i < 32; i++)
+	{
+		if (tree->stateNames[i] == NULL)
+			continue;
+		if ((ch0 == tree->stateNames[i][0]) &&
+			(strcmp(string, tree->stateNames[i]) == 0))
+		{
+			if ((i < STATE_USER - 1) && (flags & SFO_NOT_STATIC))
+			{
+				FormatResult(interp,
+					"can't specify state \"%s\" for this command",
+					tree->stateNames[i]);
+				return TCL_ERROR;
+			}
+			state = 1L << i;
+			break;
+		}
+	}
+	if (state == 0)
+		goto unknown;
+
+	if (op == 0)
+	{
+		op2 = 1;
+		op3 = 2;
+	}
+	else if (op == 1)
+	{
+		op2 = 0;
+		op3 = 2;
+	}
+	else
+	{
+		op2 = 0;
+		op3 = 1;
+	}
+	states[op2] &= ~state;
+	states[op3] &= ~state;
+
+	states[op] |= state;
+	if (indexPtr != NULL) (*indexPtr) = i;
+	return TCL_OK;
+
+unknown:
+	FormatResult(interp, "unknown state \"%s\"", string);
+	return TCL_ERROR;
+}
+
 static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
 	Tcl_Interp *interp = tree->interp;
@@ -1648,33 +1728,17 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 
 		case COMMAND_UNDEFINE:
 		{
-			char *string;
-			int i, j, length;
+			int i, index, states[3];
 
-			for (j = 3; j < objc; j++)
+			for (i = 3; i < objc; i++)
 			{
-				string = Tcl_GetStringFromObj(objv[j], &length);
-				for (i = 0; i < 32; i++)
-				{
-					if (tree->stateNames[i] == NULL)
-						continue;
-					if (strcmp(tree->stateNames[i], string) == 0)
-						break;
-				}
-				if (i < STATE_USER - 1)
-				{
-					FormatResult(interp, "state \"%s\" cannot be undefined",
-						string);
+				states[STATE_OP_ON] = 0;
+				if (StateFromObj(tree, objv[i], states, &index,
+					SFO_NOT_STATIC | SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 					return TCL_ERROR;
-				}
-				if (i == 32)
-				{
-					FormatResult(interp, "unknown state \"%s\"", string);
-					return TCL_ERROR;
-				}
-				TreeStyle_UndefineState(tree, 1L << i);
-				ckfree(tree->stateNames[i]);
-				tree->stateNames[i] = NULL;
+				TreeStyle_UndefineState(tree, states[STATE_OP_ON]);
+				ckfree(tree->stateNames[index]);
+				tree->stateNames[index] = NULL;
 			}
 			break;
 		}
