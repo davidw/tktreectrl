@@ -27,8 +27,7 @@ T column XXX
 		-arrow
 		-arrowside
 		-arrowgravity
-		-arrowpade
-		-arrowpadw
+		-arrowpad
 		-bitmap
 		-border
 		-borderwidth
@@ -36,10 +35,8 @@ T column XXX
 		-expand
 		-font
 		-image
-		-imagepade
-		-imagepadn
-		-imagepads
-		-imagepadw
+		-imagepadx
+		-imagepady
 		-itembackground
 		-justify
 		-minwidth
@@ -49,10 +46,8 @@ T column XXX
 		-tag
 		-text
 		-textcolor
-		-textpade
-		-textpadn
-		-textpads
-		-textpadw
+		-textpadx
+		-textpady
 		-width
 		-visible
 		-widthhack
@@ -372,6 +367,8 @@ T state XXX
 
 	T state undefine $stateName
 
+	T state linkage $stateName
+
 	T state names
 
 T style XXX
@@ -391,14 +388,10 @@ T style XXX
 
 	T style layout S E
 	T style layout S E $option $value ...
-		-padw
-		-padn
-		-pade
-		-pads
-		-ipadw
-		-ipadn
-		-ipade
-		-ipads
+		-pad
+		-pady
+		-ipadx
+		-ipady
 		-expand
 		-iexpand
 		-detach
