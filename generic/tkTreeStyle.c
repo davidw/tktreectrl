@@ -1,3 +1,13 @@
+/* 
+ * tkTreeStyle.c --
+ *
+ *	This module implements styles for treectrl widgets.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.14 2004/07/30 21:13:53 treectrl Exp $
+ */
+
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
 
@@ -2583,10 +2593,14 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
-	static CONST char *commandNames[] = { "cget", "configure", "create", "delete",
-		"names", "type", (char *) NULL };
-	enum { COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
-		COMMAND_NAMES, COMMAND_TYPE };
+	static CONST char *commandNames[] = {
+		"cget", "configure", "create", "delete", "names", "type",
+		(char *) NULL
+	};
+	enum {
+		COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
+		COMMAND_NAMES, COMMAND_TYPE
+	};
 	int index;
 
 	if (objc < 3)
@@ -2845,12 +2859,14 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Element *elem;
 	ElementLink *eLink;
 	int i, index;
-	static CONST char *optionNames[] = { "-padx", "-pady", "-ipadx",
-		"-ipady", "-expand", "-union", "-detach", "-iexpand",
-		"-squeeze", (char *) NULL };
-	enum { OPTION_PADX, OPTION_PADY, OPTION_iPADX, OPTION_iPADY,
-		OPTION_EXPAND,
-		OPTION_UNION, OPTION_DETACH, OPTION_iEXPAND, OPTION_SQUEEZE };
+	static CONST char *optionNames[] = {
+		"-padx", "-pady", "-ipadx", "-ipady", "-expand", "-union", "-detach",
+		"-iexpand", "-squeeze", (char *) NULL
+	};
+	enum {
+		OPTION_PADX, OPTION_PADY, OPTION_iPADX, OPTION_iPADY, OPTION_EXPAND,
+		OPTION_UNION, OPTION_DETACH, OPTION_iEXPAND, OPTION_SQUEEZE
+	};
 
 	if (objc < 5)
 	{
@@ -2936,23 +2952,23 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{
 			case OPTION_PADX:
 			{
-				 objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadX);
-				 break;
+				objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadX);
+				break;
 			}
 			case OPTION_PADY:
 			{
-				 objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadY);
-				 break;
+				objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadY);
+				break;
 			}
 			case OPTION_iPADX:
 			{
-				 objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadX);
-				 break;
+				objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadX);
+				break;
 			}
 			case OPTION_iPADY:
 			{
-				 objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadY);
-				 break;
+				objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadY);
+				break;
 			}
 			case OPTION_DETACH:
 			{
@@ -3239,9 +3255,11 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
-	static CONST char *commandNames[] = { "cget", "configure", "create", "delete",
-		"elements", "layout", "names", (char *) NULL };
-	enum { COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
+	static CONST char *commandNames[] = {
+		"cget", "configure", "create", "delete", "elements", "layout",
+		"names", (char *) NULL };
+	enum {
+		COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
 		COMMAND_ELEMENTS, COMMAND_LAYOUT, COMMAND_NAMES };
 	int index;
 
@@ -3378,7 +3396,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc < 4 || objc > 5)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "name ?element element...?");
+				Tcl_WrongNumArgs(interp, 3, objv, "name ?elementList?");
 				return TCL_ERROR;
 			}
 			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
