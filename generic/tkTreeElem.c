@@ -303,45 +303,17 @@ struct PerStateType
 #define MATCH_PARTIAL 2
 #define MATCH_EXACT 3
 
-static int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
+static int StateFromObj2(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
 {
-	Tcl_Interp *interp = tree->interp;
-	int i, negate = 0, length, state = 0;
-	char ch0, *string;
+	int states[3];
 
-	string = Tcl_GetStringFromObj(obj, &length);
-	if (length == 0)
-		goto unknown;
-	ch0 = string[0];
-	if (ch0 == '!')
-	{
-		negate = 1;
-		++string;
-		ch0 = string[0];
-	}
-	for (i = 0; i < 32; i++)
-	{
-		if (tree->stateNames[i] == NULL)
-			continue;
-		if ((ch0 == tree->stateNames[i][0]) &&
-			(strcmp(string, tree->stateNames[i]) == 0))
-		{
-			state = 1L << i;
-			break;
-		}
-	}
-	if (state == 0)
-		goto unknown;
+	states[0] = states[1] = states[2] = 0;
+	if (StateFromObj(tree, obj, states, NULL, SFO_NOT_TOGGLE) != TCL_OK)
+		return TCL_ERROR;
 
-	if (negate)
-		(*stateOff) |= state;
-	else
-		(*stateOn) |= state;
+	(*stateOn) |= states[STATE_OP_ON];
+	(*stateOff) |= states[STATE_OP_OFF];
 	return TCL_OK;
-
-unknown:
-	FormatResult(interp, "unknown state \"%s\"", string);
-	return TCL_ERROR;
 }
 
 static void PerStateInfo_Free(
@@ -406,7 +378,7 @@ static int PerStateInfo_FromObj(
 		return TCL_OK;
 	}
 
-	if ((objc & 1))
+	if (objc & 1)
 	{
 		FormatResult(tree->interp, "list must have even number of elements");
 		return TCL_ERROR;
@@ -430,7 +402,7 @@ static int PerStateInfo_FromObj(
 		pData->stateOff = pData->stateOn = 0; /* all states */
 		for (j = 0; j < objc2; j++)
 		{
-			if (StateFromObj(tree, objv2[j], &pData->stateOff, &pData->stateOn) != TCL_OK)
+			if (StateFromObj2(tree, objv2[j], &pData->stateOff, &pData->stateOn) != TCL_OK)
 			{
 				PerStateInfo_Free(tree, typePtr, pInfo);
 				return TCL_ERROR;
@@ -553,7 +525,7 @@ static void PerStateInfo_Undefine(
 			{
 				Tcl_ListObjIndex(tree->interp, listObj, j, &stateObj);
 				stateOff = stateOn = 0;
-				StateFromObj(tree, stateObj, &stateOff, &stateOn);
+				StateFromObj2(tree, stateObj, &stateOff, &stateOn);
 				if ((stateOff | stateOn) & state)
 				{
 					Tcl_ListObjReplace(tree->interp, listObj, j, 1, 0, NULL);
