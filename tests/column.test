@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.2 2003/01/02 02:27:50 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.3 2003/01/04 13:18:30 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -457,5 +457,6 @@ test column-99.1 {some needed cleanup} -body {
 } -result {}
 
 # cleanup
+image delete emptyImg
 ::tcltest::cleanupTests
 return
