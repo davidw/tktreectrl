@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.16 2003/01/02 19:36:53 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.17 2003/01/04 13:19:40 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -960,6 +960,35 @@ test tree-16.14 {dragimage clear: doesn't modify the offset} -body {
     .t dragimage clear
     .t dragimage offset
 } -result {10 10}
+
+test tree-17.1 {columnproxy: Normally left blank} -body {
+    # BTW: This shouldn't be an option...
+    .t cget -columnproxy
+} -result {}
+
+test tree-17.2 {columnproxy: Normally left blank} -body {
+    .t configure -columnproxy foo
+} -returnCodes error -result {bad screen distance "foo"}
+
+test tree-17.3 {columnproxy: Negative screen distance} -body {
+    # It is unclear if this should be forbiden...
+    .t configure -columnproxy -1c
+    update idletasks
+    .t cget -columnproxy
+} -result {-1c}
+
+test tree-17.4 {columnproxy: screen distance bigger than width} -body {
+    # It is unclear if this should be forbiden...
+    .t configure -columnproxy [expr {[winfo width .t] + 10}]
+    update idletasks
+    .t cget -columnproxy
+} -result {216}
+
+test tree-17.5 {columnproxy} -body {
+    .t configure -columnproxy 100
+    update idletasks
+    .t cget -columnproxy
+} -result {100}
 
 # cleanup
 image delete emptyImg
