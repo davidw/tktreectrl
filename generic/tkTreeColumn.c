@@ -7,19 +7,10 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.16 2004/07/30 20:55:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.17 2004/08/09 02:03:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
-
-#define STATIC_SIZE 20
-#define STATIC_ALLOC(P,T,C) \
-    if (C > STATIC_SIZE) \
-	P = (T *) ckalloc(sizeof(T) * (C))
-#define STATIC_FREE(P,T,C) \
-    memset((char *) P, 0xAA, sizeof(T) * (C)); \
-    if (C > STATIC_SIZE) \
-	ckfree((char *) P)
 
 typedef struct Column Column;
 
@@ -42,6 +33,7 @@ struct Column
     int relief;			/* -relief */
     XColor *textColor;		/* -textcolor */
     int expand;			/* -expand */
+    int squeeze;		/* -squeeze */
     int visible;		/* -visible */
     char *tag;			/* -tag */
     char *imageString;		/* -image */
@@ -162,6 +154,9 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_RELIEF, "-relief", (char *) NULL, (char *) NULL,
      "raised", -1, Tk_Offset(Column, relief),
      0, (ClientData) NULL, COLU_CONF_DISPLAY},
+    {TK_OPTION_BOOLEAN, "-squeeze", (char *) NULL, (char *) NULL,
+     "0", -1, Tk_Offset(Column, squeeze),
+     0, (ClientData) NULL, COLU_CONF_TWIDTH},
     {TK_OPTION_PIXELS, "-stepwidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, stepWidthObj),
      Tk_Offset(Column, stepWidth),
@@ -653,6 +648,11 @@ Tk_Justify TreeColumn_Justify(TreeColumn column_)
 int TreeColumn_WidthHack(TreeColumn column_)
 {
     return ((Column *) column_)->widthHack;
+}
+
+int TreeColumn_Squeeze(TreeColumn column_)
+{
+    return ((Column *) column_)->squeeze;
 }
 
 GC TreeColumn_BackgroundGC(TreeColumn column_, int index)
@@ -1512,6 +1512,7 @@ void Tree_LayoutColumns(TreeCtrl *tree)
     Column *column = (Column *) tree->columns;
     int width, visWidth, totalWidth = 0;
     int numExpand = 0;
+    int numSqueeze = 0, squeezeWidth = 0;
 
     while (column != NULL) {
 	if (column->visible) {
@@ -1523,6 +1524,10 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
 		if (column->expand)
 		    numExpand++;
+		if (column->squeeze) {
+		    numSqueeze++;
+		    squeezeWidth += width - MAX(0, TreeColumn_MinWidth((TreeColumn) column));
+		}
 	    }
 	    column->useWidth = width;
 	    totalWidth += width;
@@ -1532,6 +1537,38 @@ void Tree_LayoutColumns(TreeCtrl *tree)
     }
 
     visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    if (visWidth <= 0) return;
+
+    /* Squeeze columns */
+    if ((visWidth < totalWidth) && (numSqueeze > 0)) {
+	int need, allow, each;
+	need = totalWidth - visWidth;
+	allow = MIN(squeezeWidth, need);
+	while (allow > 0) {
+	    if (allow >= numSqueeze)
+		each = allow / numSqueeze;
+	    else
+		each = 1;
+	    numSqueeze = 0;
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+		if (column->visible && column->squeeze && (column->widthObj == NULL)) {
+		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
+		    if (column->useWidth > min) {
+			int sub = MIN(each, column->useWidth - min);
+			column->useWidth -= sub;
+			allow -= sub;
+			if (!allow) break;
+			if (column->useWidth > min)
+			    numSqueeze++;
+		    }
+		}
+		column = column->next;
+	    }
+	}
+    }
+
+    /* Expand columns */
     if ((visWidth > totalWidth) && (numExpand > 0)) {
 	int extraWidth = (visWidth - totalWidth) / numExpand;
 	int fudge = (visWidth - totalWidth) - extraWidth * numExpand;
