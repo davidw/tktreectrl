@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: notify.test,v 1.1 2002/12/30 21:42:22 krischan Exp $
+# CVS: @(#) $Id: notify.test,v 1.2 2002/12/31 12:20:53 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -211,7 +211,7 @@ test notify-5.7 {notify configure: dynamic event} -body {
 
 test notify-6.1 {notify generate: missing args} -body {
     .t notify generate
-} -returnCodes error -result {wrong # args: should be ".t notify generate pattern ?field value ...?"}
+} -returnCodes error -result {wrong # args: should be ".t notify generate pattern ?charMap?"}
 
 test notify-6.2 {notify generate: invalid event} -body {
     .t notify generate Greetings
@@ -248,25 +248,24 @@ test notify-6.9 {notify generate: and AGAIN!} -body {
 }
 
 test notify-6.10 {notify generate: invalid percent char} -body {
-    .t notify generate <Greetings-Sent> -foo bar
-} -returnCodes error -result {invalid percent char "-foo"}
+    .t notify generate <Greetings-Sent> {foo bar}
+} -returnCodes error -result {invalid percent char "foo"}
 
 test notify-6.11 {notify generate: odd number of field args} -body {
-    .t notify generate <Greetings-Sent> -f
-} -returnCodes error -result {wrong # args: should be ".t notify pattern ?field value ...?"}
+    .t notify generate <Greetings-Sent> f
+} -returnCodes error -result {char map must have even number of elements}
 
 test notify-6.12 {notify generate: huge number of field args} -body {
-    set command [list .t notify generate <Greetings-Sent>]
     for {set x 1} {$x < 2048} {incr x} {
-	lappend command -f $x
+	lappend map f $x
     }
-    eval $command
+    .t notify generate <Greetings-Sent> $map
 } -output {
 }
 
 test notify-6.13 {notify generate: not so much field args} -body {
     .t notify generate <Greetings-Sent> \
-	-0 a -1 b -2 c -3 d -4 e -5 f -6 g -7 h -8 i -9 j -X x
+	{0 a 1 b 2 c 3 d 4 e 5 f 6 g 7 h 8 i 9 j X x}
 } -output {
 }
 
@@ -275,7 +274,7 @@ test notify-6.14 {notify install/bind/generate: do some replacements} -body {
     .t notify install detail Percent Test
     .t notify bind .t <Percent-Test> \
 	{puts -nonewline "%%W: %2 %b %| %~ %2 %b%%"}
-    .t notify generate <Percent-Test> -2 to -b be -~ not -| or
+    .t notify generate <Percent-Test> {2 to b be ~ not | or}
 } -output {%W: to be or not to be%}
 
 proc doMyOwnSubst {field window eventName detail args} {
@@ -291,7 +290,7 @@ test notify-6.15 {notify install/bind/generate: my own replacements} -body {
 } -output {%W: TO BE OR NOT TO BE%}
 
 test notify-6.16 {notify install/bind/generate: standard replacements} -body {
-    .t notify generate <Percent-Test> -2 to -b be -~ not -| or
+    .t notify generate <Percent-Test> {2 to b be ~ not | or}
 } -output {%W: TO BE OR NOT TO BE%}
 
 test notify-6.17 {notify install/bind/generate: my own replacements} -body {
@@ -304,7 +303,7 @@ test notify-6.17 {notify install/bind/generate: my own replacements} -body {
 } -output {%W: TO BE OR NOT TO BE%}
 
 test notify-6.18 {notify install/bind/generate: standard replacements} -body {
-    .t notify generate <Percent> -2 to -b be -~ not -| or
+    .t notify generate <Percent> {2 to b be ~ not | or}
 } -output {%W: TO BE OR NOT TO BE%}
 
 test notify-7.1 {notify uninstall: missing args} -body {
