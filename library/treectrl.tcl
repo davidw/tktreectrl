@@ -435,8 +435,9 @@ proc ::TreeCtrl::Release1 {w x y} {
 		$w column configure $Priv(column) -sunken no
 		# Don't generate the event if it wasn't installed
 		if {[lsearch -exact [$w notify eventnames] Header] != -1} {
-		    $w notify generate <Header-invoke> [list T $w \
-							    C $Priv(column)]
+		    $w notify generate <Header-invoke> \
+			[list C $Priv(column)] \
+			"::TreeCtrl::PercentsCmd $w"
 		}
 	    }
 	}
@@ -920,4 +921,29 @@ proc ::TreeCtrl::ScanDrag {w x y} {
 	$w scan dragto $x $y
     }
     return
+}
+
+proc ::TreeCtrl::PercentsCmd {T char object event detail charMap} {
+    if {$detail ne ""} {
+	set pattern <$event-$detail>
+    } else {
+	set pattern <$event>
+    }
+    switch -- $char {
+	d { return $detail }
+	e { return $event }
+	P { return $pattern }
+	W { return $object }
+	T { return $T }
+	? {
+	    array set map $charMap
+	    array set map [list T $T W $object P $pattern e $event d $detail]
+	    return [array get map]
+	}
+	default {
+	    array set map [list $char $char]
+	    array set map $charMap
+	    return $map($char)
+	}
+    }
 }
