@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.10 2005/01/03 21:24:29 treectrl Exp $}
+  $Id: treectrl.man,v 1.11 2005/03/21 19:55:26 treectrl Exp $}
 ][manpage_begin treectrl n 1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -252,7 +252,7 @@ specified screen distance is reached.
 [tkoption_def -xscrolldelay xScrollDelay ScrollDelay]
 Specifies the amount of time before the default binding should handle
 repeating mouse motion events in horizontal direction with button 1 pressed.
-The value should be a list of upto 2 integers.
+The value should be a list of 1 or 2 integers.
 The first integer specifies the timespan in microseconds
 before the active item should be changed to get nearer to the
 current mouse position. If there are two integers specified, the first is only
@@ -273,7 +273,7 @@ is unconstrained.
 [tkoption_def -yscrolldelay yScrollDelay ScrollDelay]
 Specifies the amount of time before the default binding should handle
 repeating mouse motion events in vertical direction with button 1 pressed.
-The value should be a list of upto 2 integers.
+The value should be a list of 1 or 2 integers.
 The first integer specifies the timespan in microseconds
 before the active item should be changed to get nearer to the
 current mouse position. If there are two integers specified, the first is only
@@ -700,7 +700,7 @@ The following forms of the command are supported:
 [list_begin definitions]
 [call [arg pathName] [cmd {item ancestors}] [arg itemDesc]]
 Returns a list containing the numerical indexes of all ancestors
-of the item specified by [arg itemDesc] from its parent upto the
+of the item specified by [arg itemDesc] from its parent up to the
 root item.
 
 [call [arg pathName] [cmd {item bbox}] [arg itemDesc] [opt [arg column]] \
@@ -1877,7 +1877,7 @@ It can be modified by means of the widget command [cmd selection].
 
 [para]
 By means of the [cmd {state define}] widget command
-upto 27 additional [arg stateName]s can be defined.
+up to 27 additional [arg stateName]s can be defined.
 
 [para]
 Some widget commands expect a [arg stateDesc] argument,
@@ -2140,7 +2140,7 @@ Indicates the root item of the treectrl.
 [para]
 The [arg itemDesc] may be followed by one or more [arg modifier]s.
 A modifier changes the item described by the [arg itemDesc] relative to
-the description upto this point.
+the description up to this point.
 It may be specified in any of the following forms:
 
 [list_begin definitions]
