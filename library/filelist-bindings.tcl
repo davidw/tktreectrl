@@ -196,7 +196,10 @@ proc TreeCtrl::FileListMotion {T x y} {
 					}
 				}
 				set Priv(drag,motion) 1
-				$T notify generate <Drag-begin> -T $T
+				# Don't generate the event if it wasn't installed
+				if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
+					$T notify generate <Drag-begin> -T $T
+				}
 			}
 
 			# Find the element under the cursor
@@ -280,10 +283,14 @@ proc TreeCtrl::FileListRelease1 {T x y} {
 				$T dragimage visible no
 				if {$Priv(drop) ne ""} {
 					$T selection modify {} $Priv(drop)
-					$T notify generate <Drag-receive> -T $T -I $Priv(drop) \
-						-l $Priv(selection)
+					if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
+						$T notify generate <Drag-receive> -T $T -I $Priv(drop) \
+							-l $Priv(selection)
+					}
 				}
-				$T notify generate <Drag-end> -T $T
+				if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
+					$T notify generate <Drag-end> -T $T
+				}
 
 			} elseif {$Priv(selectMode) eq "toggle"} {
 				# don't rename
@@ -569,7 +576,7 @@ proc ::TreeCtrl::EntryClose {T accept} {
 	place forget $T.entry
 	update
 
-	if {$accept} {
+	if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
 		$T notify generate <Edit-accept> -T $T -I $Priv(entry,$T,item) \
 			-C $Priv(entry,$T,column) -E $Priv(entry,$T,element) \
 			-t [$T.entry get]
@@ -764,7 +771,7 @@ proc ::TreeCtrl::TextClose {T accept} {
 	place forget $T.text
 	update
 
-	if {$accept} {
+	if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
 		$T notify generate <Edit-accept> -T $T -I $Priv(text,$T,item) \
 			-C $Priv(text,$T,column) -E $Priv(text,$T,element) \
 			-t [$T.text get 1.0 end-1c]
