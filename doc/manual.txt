@@ -55,6 +55,12 @@ T column XXX
 
 	T column delete C
 
+	T column index C
+
+	T column move C C
+
+	T column neededwidth C
+
 	T column width C
 
 T compare I $op I
