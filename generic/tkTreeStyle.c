@@ -5,20 +5,11 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.14 2004/07/30 21:13:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.15 2004/08/09 02:25:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
-
-#define STATIC_SIZE 20
-#define STATIC_ALLOC(P,T,C) \
-	if (C > STATIC_SIZE) \
-		P = (T *) ckalloc(sizeof(T) * (C))
-#define STATIC_FREE(P,T,C) \
-	memset((char *) P, 0xAA, sizeof(T) * (C)); \
-	if (C > STATIC_SIZE) \
-		ckfree((char *) P)
 
 typedef struct Style Style;
 typedef struct ElementLink ElementLink;
@@ -78,8 +69,6 @@ struct ElementLink
 	int flags; /* ELF_xxx */
 	int *onion, onionCount; /* -union option info */
 };
-
-static ElementType *elementTypeList = NULL;
 
 static char *orientStringTable[] = { "horizontal", "vertical", (char *) NULL };
 
@@ -3949,23 +3938,6 @@ int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_)
 
 int TreeStyle_Init(Tcl_Interp *interp)
 {
-	ElementType *typePtr;
-
-	elementTypeList = &elemTypeBitmap;
-	elemTypeBitmap.next = &elemTypeBorder;
-	elemTypeBorder.next = &elemTypeImage;
-	elemTypeImage.next = &elemTypeRect;
-	elemTypeRect.next = &elemTypeText;
-	elemTypeText.next = NULL;
-
-	for (typePtr = elementTypeList;
-		typePtr != NULL;
-		typePtr = typePtr->next)
-	{
-		typePtr->optionTable = Tk_CreateOptionTable(interp,
-			typePtr->optionSpecs);
-	}
-
 	return TCL_OK;
 }
 
