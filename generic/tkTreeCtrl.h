@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.15 2004/08/09 02:11:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.16 2004/08/11 00:31:16 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -199,6 +199,7 @@ struct TreeCtrl
     TreeMarquee marquee;
     TreeDInfo dInfo;
     int selectCount;		/* Number of selected items */
+    Tcl_HashTable selection;	/* Selected items */
 
 #define TREE_WRAP_NONE 0
 #define TREE_WRAP_ITEMS 1
