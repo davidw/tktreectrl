@@ -1,3 +1,14 @@
+/* 
+ * tkTreeCtrl.c --
+ *
+ *	This module is the header for treectrl widgets for the Tk toolkit.
+ *
+ * Copyright (c) 2002-2003 Christian Krone
+ * Copyright (c) 2003 ActiveState Corporation
+ *
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.12 2003/11/25 22:12:27 hobbs2 Exp $
+ */
+
 #include "tkPort.h"
 #include "default.h"
 #include "tkInt.h"
@@ -39,166 +50,174 @@ enum { LEFT, TOP, RIGHT, BOTTOM };
 
 struct TreeCtrlDebug
 {
-	Tk_OptionTable optionTable;
-	int enable; /* Turn all debugging on/off */
-	int data; /* Debug data structures */
-	int display; /* Debug display routines */
-	int displayDelay; /* Delay between copy/draw operations */
-	XColor *eraseColor; /* Erase "invalidated" areas */
-	GC gcErase; /* for eraseColor */
+    Tk_OptionTable optionTable;
+    int enable;			/* Turn all debugging on/off */
+    int data;			/* Debug data structures */
+    int display;		/* Debug display routines */
+    int displayDelay;		/* Delay between copy/draw operations */
+    XColor *eraseColor;		/* Erase "invalidated" areas */
+    GC gcErase;			/* for eraseColor */
 };
 
 struct TreeCtrl
 {
-	/* Standard stuff */
-	Tk_Window tkwin;
-	Display *display;
-	Tcl_Interp *interp;
-	Tcl_Command widgetCmd;
-	Tk_OptionTable optionTable;
+    /* Standard stuff */
+    Tk_Window tkwin;
+    Display *display;
+    Tcl_Interp *interp;
+    Tcl_Command widgetCmd;
+    Tk_OptionTable optionTable;
 
-	/* Configuration options */
-	Tcl_Obj *fgObj; /* -foreground */
-	XColor *fgColorPtr; /* -foreground */
-	int borderWidth; /* -borderwidth */
-	Tk_3DBorder border; /* -background */
-	Tk_Cursor cursor; /* Current cursor for window, or None. */
-	int relief; /* -relief */
-	int highlightWidth; /* -highlightthickness */
-	XColor *highlightBgColorPtr; /* -highlightbackground */
-	XColor *highlightColorPtr; /* -highlightcolor */
-	char *xScrollCmd; /* -xscrollcommand */
-	char *yScrollCmd; /* -yscrollcommand */
-	Tcl_Obj *xScrollDelay; /* -xscrolldelay: used by scripts */
-	Tcl_Obj *yScrollDelay; /* -yscrolldelay: used by scripts */
-	int xScrollIncrement; /* -xscrollincrement */
-	int yScrollIncrement; /* -yscrollincrement */
-	Tcl_Obj *scrollMargin; /* -scrollmargin: used by scripts */
-	char *takeFocus; /* -takfocus */
-	Tcl_Obj *fontObj; /* -font */
-	Tk_Font tkfont; /* -font */
-	int showButtons; /* boolean: Draw expand/collapse buttons */
-	int showLines; /* boolean: Draw lines connecting parent to child */
-	int showRoot; /* boolean: Draw the unique root item */
-	int showRootButton; /* boolean: Draw expand/collapse button for root item */
-	int showHeader; /* boolean: show column titles */
-	Tcl_Obj *indentObj; /* pixels: offset of child relative to parent */
-	int indent; /* pixels: offset of child relative to parent */
-	char *selectMode; /* -selectmode: used by scripts only */
-	Tcl_Obj *itemHeightObj; /* -itemheight: Fixed height for all items (unless overridden) */
-	int itemHeight; /* -itemheight: Fixed height for all items (unless overridden) */
-	int width; /* -width */
-	int height; /* -height */
-	int columnTree; /* column where buttons/lines are drawn */
+    /* Configuration options */
+    Tcl_Obj *fgObj;		/* -foreground */
+    XColor *fgColorPtr;		/* -foreground */
+    int borderWidth;		/* -borderwidth */
+    Tk_3DBorder border;		/* -background */
+    Tk_Cursor cursor;		/* Current cursor for window, or None. */
+    int relief;			/* -relief */
+    int highlightWidth;		/* -highlightthickness */
+    XColor *highlightBgColorPtr; /* -highlightbackground */
+    XColor *highlightColorPtr;	/* -highlightcolor */
+    char *xScrollCmd;		/* -xscrollcommand */
+    char *yScrollCmd;		/* -yscrollcommand */
+    Tcl_Obj *xScrollDelay;	/* -xscrolldelay: used by scripts */
+    Tcl_Obj *yScrollDelay;	/* -yscrolldelay: used by scripts */
+    int xScrollIncrement;	/* -xscrollincrement */
+    int yScrollIncrement;	/* -yscrollincrement */
+    Tcl_Obj *scrollMargin;		/* -scrollmargin: used by scripts */
+    char *takeFocus;		/* -takfocus */
+    Tcl_Obj *fontObj;		/* -font */
+    Tk_Font tkfont;		/* -font */
+    int showButtons;		/* boolean: Draw expand/collapse buttons */
+    int showLines;		/* boolean: Draw lines connecting parent to
+				 * child */
+    int showRoot;		/* boolean: Draw the unique root item */
+    int showRootButton;		/* boolean: Draw expand/collapse button for
+				 * root item */
+    int showHeader;		/* boolean: show column titles */
+    Tcl_Obj *indentObj;		/* pixels: offset of child relative to
+				 * parent */
+    int indent;			/* pixels: offset of child relative to
+				 * parent */
+    char *selectMode;		/* -selectmode: used by scripts only */
+    Tcl_Obj *itemHeightObj;	/* -itemheight: Fixed height for all items
+                                    (unless overridden) */
+    int itemHeight;		/* -itemheight: Fixed height for all items
+                                    (unless overridden) */
+    int width;			/* -width */
+    int height;			/* -height */
+    int columnTree;		/* column where buttons/lines are drawn */
 #define DOUBLEBUFFER_NONE 0
 #define DOUBLEBUFFER_ITEM 1
 #define DOUBLEBUFFER_WINDOW 2
-	int doubleBuffer; /* -doublebuffer */
-	XColor *buttonColor; /* -buttoncolor */
-	Tcl_Obj *buttonSizeObj; /* -buttonSize */
-	int buttonSize; /* -buttonsize */
-	Tcl_Obj *buttonThicknessObj; /* -buttonthickness */
-	int buttonThickness; /* -buttonthickness */
-	XColor *lineColor; /* -linecolor */
-	Tcl_Obj *lineThicknessObj; /* -linethickness */
-	int lineThickness; /* -linethickness */
+    int doubleBuffer;		/* -doublebuffer */
+    XColor *buttonColor;	/* -buttoncolor */
+    Tcl_Obj *buttonSizeObj;	/* -buttonSize */
+    int buttonSize;		/* -buttonsize */
+    Tcl_Obj *buttonThicknessObj;/* -buttonthickness */
+    int buttonThickness;	/* -buttonthickness */
+    XColor *lineColor;		/* -linecolor */
+    Tcl_Obj *lineThicknessObj;	/* -linethickness */
+    int lineThickness;		/* -linethickness */
 #define LINE_STYLE_DOT 0
 #define LINE_STYLE_SOLID 1
-	int lineStyle; /* -linestyle */
-	int vertical; /* -orient */
-	Tcl_Obj *wrapObj; /* -wrap */
-	char *openButtonString; /* -openbuttonimage */
-	char *closedButtonString; /* -closedbuttonimage */
-	Pixmap openButtonBitmap; /* -openbuttonbitmap */
-	Pixmap closedButtonBitmap; /* -closedbuttonbitmap */
-	int useIndent; /* MAX of open/closed button width and indent */
+    int lineStyle;		/* -linestyle */
+    int vertical;		/* -orient */
+    Tcl_Obj *wrapObj;		/* -wrap */
+    char *openButtonString;	/* -openbuttonimage */
+    char *closedButtonString;	/* -closedbuttonimage */
+    Pixmap openButtonBitmap;	/* -openbuttonbitmap */
+    Pixmap closedButtonBitmap;	/* -closedbuttonbitmap */
+    int useIndent;		/* MAX of open/closed button width and
+				 * indent */
 #define BG_MODE_COLUMN 0
 #define BG_MODE_INDEX 1
 #define BG_MODE_ROW 2
 #define BG_MODE_VISINDEX 3
-	int backgroundMode; /* -backgroundmode */
-	int *itemPadX; /* -itempadx */
-	Tcl_Obj *itemPadXObj; /* -itempadx */
-	int *itemPadY; /* -itempady */
-	Tcl_Obj *itemPadYObj; /* -itempady */
+    int backgroundMode;		/* -backgroundmode */
+    int *itemPadX;		/* -itempadx */
+    Tcl_Obj *itemPadXObj;	/* -itempadx */
+    int *itemPadY;		/* -itempady */
+    Tcl_Obj *itemPadYObj;	/* -itempady */
 
-	struct TreeCtrlDebug debug;
+    struct TreeCtrlDebug debug;
 
-	/* Other stuff */
-	int gotFocus; /* flag */
-	int deleted; /* flag */
-	int updateIndex; /* flag */
-	int inset; /* borderWidth + highlightWidth */
-	int xOrigin; /* offset from content x=0 to window x=0 */
-	int yOrigin; /* offset from content y=0 to window y=0 */
-	GC copyGC;
-	GC textGC;
-	GC buttonGC;
-	GC lineGC;
-	Tk_Image openButtonImage; /* -openbuttonimage */
-	Tk_Image closedButtonImage; /* -closedbuttonimage */
-	GC buttonOpenGC;
-	GC buttonClosedGC;
-	int closedButtonWidth;
-	int closedButtonHeight;
-	int openButtonWidth;
-	int openButtonHeight;
-	int prevWidth;
-	int prevHeight;
-	int drawableXOrigin;
-	int drawableYOrigin;
+    /* Other stuff */
+    int gotFocus;		/* flag */
+    int deleted;		/* flag */
+    int updateIndex;		/* flag */
+    int inset;			/* borderWidth + highlightWidth */
+    int xOrigin;		/* offset from content x=0 to window x=0 */
+    int yOrigin;		/* offset from content y=0 to window y=0 */
+    GC copyGC;
+    GC textGC;
+    GC buttonGC;
+    GC lineGC;
+    Tk_Image openButtonImage;	/* -openbuttonimage */
+    Tk_Image closedButtonImage;	/* -closedbuttonimage */
+    GC buttonOpenGC;
+    GC buttonClosedGC;
+    int closedButtonWidth;
+    int closedButtonHeight;
+    int openButtonWidth;
+    int openButtonHeight;
+    int prevWidth;
+    int prevHeight;
+    int drawableXOrigin;
+    int drawableYOrigin;
 
-	TreeColumn columns; /* List of columns */
-	TreeColumn columnTail; /* Last infinitely-wide column */
-	TreeColumn columnVis; /* First visible column */
-	int columnCount; /* Number of columns */
-	int columnCountVis; /* Number of visible columns */
-	int headerHeight; /* Height of column titles */
-	int widthOfColumns; /* Sum of column widths */
-	int columnTreeLeft; /* left of column where buttons/lines are drawn */
-	int columnTreeVis; /* TRUE if columnTree is visible */
-	int columnBgCnt; /* Max -itembackground colors */
+    TreeColumn columns;		/* List of columns */
+    TreeColumn columnTail;	/* Last infinitely-wide column */
+    TreeColumn columnVis;	/* First visible column */
+    int columnCount;		/* Number of columns */
+    int columnCountVis;		/* Number of visible columns */
+    int headerHeight;		/* Height of column titles */
+    int widthOfColumns;		/* Sum of column widths */
+    int columnTreeLeft;		/* left of column where buttons/lines are
+				 * drawn */
+    int columnTreeVis;		/* TRUE if columnTree is visible */
+    int columnBgCnt;		/* Max -itembackground colors */
 
-	TreeItem root;
-	TreeItem activeItem;
-	TreeItem anchorItem;
-	int nextItemId;
-	Tcl_HashTable itemHash; /* TreeItem.id -> TreeItem */
-	Tcl_HashTable elementHash; /* Element.name -> Element */
-	Tcl_HashTable styleHash; /* Style.name -> Style */
-	Tcl_HashTable imageHash; /* image name -> Tk_Image */
-	int depth; /* max depth of items under root */
-	int itemCount; /* Total number of items */
-	int itemVisCount; /* Total number of ReallyVisible() items */
-	QE_BindingTable bindingTable;
-	TreeDragImage dragImage;
-	TreeMarquee marquee;
-	TreeDInfo dInfo;
-	int selectCount; /* Number of selected items */
+    TreeItem root;
+    TreeItem activeItem;
+    TreeItem anchorItem;
+    int nextItemId;
+    Tcl_HashTable itemHash;	/* TreeItem.id -> TreeItem */
+    Tcl_HashTable elementHash;	/* Element.name -> Element */
+    Tcl_HashTable styleHash;	/* Style.name -> Style */
+    Tcl_HashTable imageHash;	/* image name -> Tk_Image */
+    int depth;			/* max depth of items under root */
+    int itemCount;		/* Total number of items */
+    int itemVisCount;		/* Total number of ReallyVisible() items */
+    QE_BindingTable bindingTable;
+    TreeDragImage dragImage;
+    TreeMarquee marquee;
+    TreeDInfo dInfo;
+    int selectCount;		/* Number of selected items */
 
 #define TREE_WRAP_NONE 0
 #define TREE_WRAP_ITEMS 1
 #define TREE_WRAP_PIXELS 2
 #define TREE_WRAP_WINDOW 3
-	int wrapMode; /* TREE_WRAP_xxx */
-	int wrapArg; /* Number of items, number of pixels */
+    int wrapMode;		/* TREE_WRAP_xxx */
+    int wrapArg;		/* Number of items, number of pixels */
 
-	int totalWidth; /* Max/Sum of all TreeRanges */
-	int totalHeight; /* Max/Sum of all TreeRanges */
+    int totalWidth;		/* Max/Sum of all TreeRanges */
+    int totalHeight;		/* Max/Sum of all TreeRanges */
 
-	struct {
-		Tcl_Obj *xObj;
-		int x; /* Window coords */
-		int sx; /* Window coords */
-		int onScreen;
-	} columnProxy;
+    struct {
+	Tcl_Obj *xObj;
+	int x;		/* Window coords */
+	int sx;		/* Window coords */
+	int onScreen;
+    } columnProxy;
 
-	char *stateNames[32]; /* Names of static and dynamic item states */
+    char *stateNames[32];	/* Names of static and dynamic item states */
 
-	int scanX;
-	int scanY;
-	int scanXOrigin;
-	int scanYOrigin;
+    int scanX;
+    int scanY;
+    int scanXOrigin;
+    int scanYOrigin;
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -224,20 +243,20 @@ extern void Tree_UpdateScrollbarY(TreeCtrl *tree);
 extern void Tree_AddToSelection(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item);
 
-#define STATE_OP_ON 0
-#define STATE_OP_OFF 1
-#define STATE_OP_TOGGLE 2
-#define SFO_NOT_OFF 0x0001
-#define SFO_NOT_TOGGLE 0x0002
-#define SFO_NOT_STATIC 0x0004
+#define STATE_OP_ON	0
+#define STATE_OP_OFF	1
+#define STATE_OP_TOGGLE	2
+#define SFO_NOT_OFF	0x0001
+#define SFO_NOT_TOGGLE	0x0002
+#define SFO_NOT_STATIC	0x0004
 extern int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
 
 /* tkTreeItem.c */
 
 #define ITEM_ALL ((TreeItem) -1)
-#define IFO_ALLOK 0x0001 /* ItemFromObj flag: "all" is acceptable */
-#define IFO_NULLOK 0x0002 /* ItemFromObj flag: can be NULL */
-#define IFO_NOTROOT 0x0004 /* ItemFromObj flag: "root" is forbidden */
+#define IFO_ALLOK	0x0001	/* ItemFromObj flag: "all" is acceptable */
+#define IFO_NULLOK	0x0002	/* ItemFromObj flag: can be NULL */
+#define IFO_NOTROOT	0x0004	/* ItemFromObj flag: "root" is forbidden */
 extern int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int flags);
 
 extern void FormatResult(Tcl_Interp *interp, char *fmt, ...);
@@ -248,12 +267,12 @@ extern TreeItem TreeItem_AllocRoot(TreeCtrl *tree);
 extern int TreeItem_Debug(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item, int mode, int recurse);
 
-#define STATE_OPEN 0x0001
-#define STATE_SELECTED 0x0002
-#define STATE_ENABLED 0x0004
-#define STATE_ACTIVE 0x0008
-#define STATE_FOCUS 0x0010
-#define STATE_USER 6 /* first user bit */
+#define STATE_OPEN	0x0001
+#define STATE_SELECTED	0x0002
+#define STATE_ENABLED	0x0004
+#define STATE_ACTIVE	0x0008
+#define STATE_FOCUS	0x0010
+#define STATE_USER	6		/* first user bit */
 extern int TreeItem_GetState(TreeCtrl *tree, TreeItem item_);
 
 #define CS_DISPLAY 0x01
@@ -326,15 +345,15 @@ extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex,
 typedef struct StyleDrawArgs StyleDrawArgs;
 struct StyleDrawArgs
 {
-	TreeCtrl *tree;
-	TreeStyle style;
-	int x;
-	int y;
-	int width;
-	int height;
-	Drawable drawable;
-	int state; /* STATE_xxx */
-	Tk_Justify justify;
+    TreeCtrl *tree;
+    TreeStyle style;
+    int x;
+    int y;
+    int width;
+    int height;
+    Drawable drawable;
+    int state;		/* STATE_xxx */
+    Tk_Justify justify;
 };
 
 /* tkTreeStyle.c */
@@ -502,7 +521,7 @@ extern void DotRect(TreeCtrl *tree, Drawable drawable, int x, int y, int width, 
 extern void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height, int open);
 typedef struct DotState
 {
-	int stuff[10];
+    int stuff[10];
 } DotState;
 extern void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *dotState);
 extern void DotRect_Draw(DotState *dotState, int x, int y, int width, int height);
@@ -521,7 +540,7 @@ extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion r
 #define PAD_BOTTOM_RIGHT 1
 extern Tk_ObjCustomOption PadAmountOption;
 
-extern int       TreeCtrl_GetPadAmountFromObj _ANSI_ARGS_((Tcl_Interp *interp,
-		     Tk_Window tkwin, Tcl_Obj *padObj,
-		     int *topLeftPtr, int *bottomRightPtr));
-extern Tcl_Obj * TreeCtrl_NewPadAmountObj _ANSI_ARGS_((int *padAmounts));
+extern int       TreeCtrl_GetPadAmountFromObj(Tcl_Interp *interp,
+	Tk_Window tkwin, Tcl_Obj *padObj,
+	int *topLeftPtr, int *bottomRightPtr);
+extern Tcl_Obj * TreeCtrl_NewPadAmountObj(int *padAmounts);
