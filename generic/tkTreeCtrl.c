@@ -6,7 +6,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.16 2003/11/25 22:45:37 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.17 2003/11/26 16:57:00 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2860,7 +2860,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	}
     }
 
-    Tk_PhotoPutZoomedBlock(interp, photoH, &photoBlock, 0, 0, w, h,
+    Tk_PhotoPutZoomedBlock(photoH, &photoBlock, 0, 0, w, h,
 	    zoom, zoom, 1, 1, TK_PHOTO_COMPOSITE_SET);
 
     Tcl_Free((char *) pixelPtr);

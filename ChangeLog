@@ -1,3 +1,8 @@
+2003-11-26  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (LoupeCmd): remove extra interp arg to
+	Tk_PhotoPutZoomedBlock.
+
 2003-11-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeColumn.c: whitespace police
