@@ -7,7 +7,7 @@ proc DemoBitmaps {} {
 
 	$T configure -showroot no -showbuttons no -showlines no \
 		-selectmode browse -orient horizontal -wrap "5 items" \
-		-showheader no
+		-showheader no -backgroundimage sky
 
 	$T column create -itembackground {gray90 {}}
 
@@ -47,9 +47,15 @@ proc DemoBitmaps {} {
 		set I [$T item create]
 		$T item style set $I 0 $S
 		$T item text $I 0 $name
+if 1 {
+		$T item element configure $I 0 elemBmp -bitmap $name \
+			-foreground [list brown {}] \
+			-background {"" {}}
+} else {
 		$T item element configure $I 0 elemBmp -bitmap $name \
 			-foreground [list $::SystemHighlight {selected focus} brown {}] \
 			-background {"" {}}
+}
 		$T item lastchild root $I
 	}
 
