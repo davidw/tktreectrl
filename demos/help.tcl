@@ -62,7 +62,7 @@ proc DemoHelpContents {} {
 		set item [$T item create]
 		$T item style set $item 0 $style
 		$T item element configure $item 0 e3 -text $text
-		$T collapse $item
+		$T item collapse $item
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
 		set parentList [lreplace $parentList $depth $depth $item]
@@ -100,7 +100,7 @@ proc DemoHelpContents {} {
 	}
 	bind TreeCtrlHelp <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
-			%W toggle [%W selection get]
+			%W item toggle [lindex [%W selection get] 0]
 		}
 		break
 	}
@@ -186,7 +186,7 @@ proc DemoHelpContents2 {} {
 		set item [$T item create]
 		$T item style set $item 0 $style
 		$T item element configure $item 0 e3 -text $text
-		$T collapse $item
+		$T item collapse $item
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
 		set parentList [lreplace $parentList $depth $depth $item]
@@ -224,7 +224,7 @@ proc DemoHelpContents2 {} {
 	}
 	bind TreeCtrlHelp <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
-			%W toggle [%W selection get]
+			%W item toggle [lindex [%W selection get] 0]
 		}
 		break
 	}
@@ -247,22 +247,24 @@ proc TreeCtrl::HelpButton1 {w x y} {
 		# didn't click an element
 		if {[llength $id] != 6} return
 		if {[$w selection includes $item]} {
-			$w toggle $item
+			$w item toggle $item
 			return
 		}
 		if {[llength [$w selection get]]} {
-			set item2 [$w selection get]
-			$w collapse $item2
+			set item2 [lindex [$w selection get] 0]
+			$w item collapse $item2
 			foreach item2 [$w item ancestors $item2] {
 				if {[$w compare $item != $item2]} {
-					$w collapse $item2
+					$w item collapse $item2
 				}
 			}
 		}
 		$w selection modify $item all
 		$w activate $item
-		eval $w expand [$w item ancestors $item]
-		$w toggle $item
+		foreach item2 [$w item ancestors $item] {
+			$w item expand $item2
+		}
+		$w item toggle $item
 	}
 	return
 }

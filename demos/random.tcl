@@ -66,7 +66,7 @@ proc DemoRandom {} {
 			if {[$T depth $itemj] < 5} break
 		}
 		if {rand() * 2 > 1} {
-			$T collapse $itemi
+			$T item collapse $itemi
 		}
 		if {rand() * 2 > 1} {
 			$T item lastchild $itemj $itemi
@@ -154,10 +154,10 @@ proc TreeCtrl::RandomButton1 {T x y} {
 		foreach {where item arg1 arg2 arg3 arg4} $id {}
 		switch $arg1 {
 			button {
-				$T toggle $item
+				$T item toggle $item
 			}
 			line {
-				$T toggle $arg2
+				$T item toggle $arg2
 			}
 			column {
 				set ok 0

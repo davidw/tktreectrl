@@ -124,7 +124,7 @@ proc DemoOutlookNewsgroup {} {
 
 			# Collapse some messages
 			if {rand() * 2 > 1} {
-				$T collapse $itemi
+				$T item collapse $itemi
 			}
 		}
 
@@ -352,7 +352,7 @@ proc DemoOutlookNewsgroup2 {} {
 	for {set i 1} {$i < $msgCnt} {incr i} {
 		if {rand() * 2 > 1} {
 			if {[$T item numchildren $i]} {
-				$T collapse $i
+				$T item collapse $i
 			}
 		}
 	}
