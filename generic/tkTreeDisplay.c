@@ -603,12 +603,21 @@ Range *Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
 RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
 {
 	RItem *rItem;
-	int x = (*x_), y = (*y_);
+	int x = -666, y = -666;
 	int i, l, u;
 
-	/* x and y must be in Range */
-	if (x < 0 || x >= range->totalWidth || y < 0 || y >= range->totalHeight)
-		goto panicNow;
+	if (x_ != NULL)
+	{
+		x = (*x_);
+		if (x < 0 || x >= range->totalWidth)
+			goto panicNow;
+	}
+	if (y_ != NULL)
+	{
+		y = (*y_);
+		if (y < 0 || y >= range->totalHeight)
+			goto panicNow;
+	}
 
 #if 1
 	if (tree->vertical)
@@ -623,8 +632,8 @@ RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
 			if ((y >= rItem->offset) && (y < rItem->offset + rItem->size))
 			{
 				/* Range -> item coords */
-				(*x_) = x;
-				(*y_) = y - rItem->offset;
+				if (x_ != NULL) (*x_) = x;
+				if (y_ != NULL) (*y_) = y - rItem->offset;
 				return rItem;
 			}
 			if (y < rItem->offset)
@@ -645,8 +654,8 @@ RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
 			if ((x >= rItem->offset) && (x < rItem->offset + rItem->size))
 			{
 				/* Range -> item coords */
-				(*x_) = x - rItem->offset;
-				(*y_) = y;
+				if (x_ != NULL) (*x_) = x - rItem->offset;
+				if (y_ != NULL) (*y_) = y;
 				return rItem;
 			}
 			if (x < rItem->offset)
@@ -753,10 +762,10 @@ static void Increment_RedoX(TreeCtrl *tree)
 	RItem *rItem;
 	int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
 	int totalWidth = Tree_TotalWidth(tree);
-	int x1, x2, x, y;
+	int x1, x2, x;
 	int size;
 
-	if (dInfo->rangeFirst == NULL)
+	if (totalWidth <= 0 /* dInfo->rangeFirst == NULL */)
 		return;
 
 	/* First increment is zero */
@@ -777,8 +786,7 @@ static void Increment_RedoX(TreeCtrl *tree)
 
 			/* Find RItem whose right side is >= x1 by smallest amount */
 			x = x1;
-			y = 0;
-			rItem = Range_ItemUnderPoint(tree, range, &x, &y);
+			rItem = Range_ItemUnderPoint(tree, range, &x, NULL);
 			if (rItem->offset + rItem->size < x2)
 				x2 = rItem->offset + rItem->size;
 		}
@@ -804,10 +812,10 @@ static void Increment_RedoY(TreeCtrl *tree)
 	int topInset = tree->inset + Tree_HeaderHeight(tree);
 	int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
 	int totalHeight = Tree_TotalHeight(tree);
-	int y1, y2, x, y;
+	int y1, y2, y;
 	int size;
 
-	if (dInfo->rangeFirst == NULL)
+	if (totalHeight <= 0 /* dInfo->rangeFirst == NULL */)
 		return;
 
 	/* First increment is zero */
@@ -827,9 +835,8 @@ static void Increment_RedoY(TreeCtrl *tree)
 				continue;
 
 			/* Find RItem whose bottom edge is >= y1 by smallest amount */
-			x = 0;
 			y = y1;
-			rItem = Range_ItemUnderPoint(tree, range, &x, &y);
+			rItem = Range_ItemUnderPoint(tree, range, NULL, &y);
 			if (rItem->offset + rItem->size < y2)
 				y2 = rItem->offset + rItem->size;
 		}
@@ -3602,11 +3609,12 @@ void DumpDInfo(TreeCtrl *tree)
 	DInfo *dInfo = (DInfo *) tree->dInfo;
 	DItem *dItem;
 	Range *range;
+	RItem *rItem;
 
-	dbwin("DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags %0x\n",
+	dbwin("DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
 		dInfo->itemWidth, dInfo->itemHeight,
 		dInfo->totalWidth, dInfo->totalHeight,
-		dInfo->flags);
+		dInfo->flags, tree->vertical, tree->itemVisCount);
 	dItem = dInfo->dItem;
 	while (dItem != NULL)
 	{
@@ -3643,6 +3651,15 @@ void DumpDInfo(TreeCtrl *tree)
 		dbwin("   Range: first %p last %p totalW,H %d,%d offset %d\n",
 			range->first, range->last,
 			range->totalWidth, range->totalHeight, range->offset);
+		rItem = range->first;
+		while (1)
+		{
+			dbwin("    RItem: item %d index %d offset %d size %d\n",
+				TreeItem_GetID(tree, rItem->item), rItem->index, rItem->offset, rItem->size);
+			if (rItem == range->last)
+				break;
+			rItem++;
+		}
 	}
 }
 
