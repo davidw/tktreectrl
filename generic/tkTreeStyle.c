@@ -2289,6 +2289,28 @@ static void Style_Deleted(TreeCtrl *tree, Style *masterStyle)
 		}
 		hPtr = Tcl_NextHashEntry(&search);
 	}
+
+	/* Update -defaultstyle option */
+	if (tree->defaultStyle.stylesObj != NULL)
+	{
+		Tcl_Obj *stylesObj = tree->defaultStyle.stylesObj;
+		if (Tcl_IsShared(stylesObj))
+		{
+			stylesObj = Tcl_DuplicateObj(stylesObj);
+			Tcl_DecrRefCount(tree->defaultStyle.stylesObj);
+			Tcl_IncrRefCount(stylesObj);
+			tree->defaultStyle.stylesObj = stylesObj;
+		}
+		for (columnIndex = 0; columnIndex < tree->defaultStyle.numStyles; columnIndex++)
+		{
+			Tcl_Obj *emptyObj;
+			if (tree->defaultStyle.styles[columnIndex] != (TreeStyle) masterStyle)
+				continue;
+			tree->defaultStyle.styles[columnIndex] = NULL;
+			emptyObj = Tcl_NewObj();
+			Tcl_ListObjReplace(tree->interp, stylesObj, columnIndex, 1, 1, &emptyObj);
+		}
+	}
 }
 
 static void Element_Changed(TreeCtrl *tree, Element *masterElem, int flagM, int flagT, int csM)
