@@ -9,21 +9,38 @@ proc DemoHelpContents {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode browse
 
 	InitPics help-*
+
+	#
+	# Create columns
+	#
 
 	$T column create -text "Help Contents"
 
 	# Define a new item state
 	$T state define mouseover
 
+	#
+	# Create elements
+	#
+
 	$T element create e1 image -image help-page
 	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
 	$T element create e3 text -fill [list $::SystemHighlightText {selected focus} blue {mouseover}] \
 		-font [list "[$T cget -font] underline" {mouseover}]
 	$T element create e4 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# book
 	set S [$T style create s1]
@@ -38,6 +55,10 @@ proc DemoHelpContents {} {
 	$T style layout $S e2 -padx {0 4} -expand ns
 	$T style layout $S e3 -expand ns
 	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
+
+	#
+	# Create items and assign styles
+	#
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -121,12 +142,25 @@ proc DemoHelpContents2 {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode browse
 
 	InitPics help-*
 
+	#
+	# Create columns
+	#
+
 	$T column create -text "Help Contents"
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 image -image help-page
 	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
@@ -134,6 +168,10 @@ proc DemoHelpContents2 {} {
 	$T element create e4 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 	$T element create e5 text -fill [list $::SystemHighlightText {selected focus} blue {}] \
 		-font "[$T cget -font] underline"
+
+	#
+	# Create styles using the elements
+	#
 
 	# book
 	set S [$T style create s1]
@@ -162,6 +200,10 @@ proc DemoHelpContents2 {} {
 	$T style layout $S e2 -padx {0 4} -expand ns
 	$T style layout $S e5 -expand ns
 	$T style layout $S e4 -union [list e5] -iexpand ns -ipadx {1 2}
+
+	#
+	# Create items and assign styles
+	#
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -327,7 +369,7 @@ proc TreeCtrl::HelpMotion {w x y} {
 	return
 }
 
-# Alternate implementation doesn't rely on mouseover state
+# Alternate implementation that does not rely on run-time states
 proc TreeCtrl::HelpMotion2 {w x y} {
 	variable Priv
 	set id [$w identify $x $y]

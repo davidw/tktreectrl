@@ -11,10 +11,23 @@ proc DemoOutlookFolders {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -itemheight $height -selectmode browse \
 		-showroot yes -showrootbutton no -showbuttons yes -showlines yes
 
+	#
+	# Create columns
+	#
+
 	$T column create -text Folders
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 image
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \
@@ -25,6 +38,10 @@ proc DemoOutlookFolders {} {
 	$T element create e5 image -image outlook-folder
 	$T element create e6 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
 		-showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# image + text
 	set S [$T style create s1]
@@ -55,6 +72,10 @@ proc DemoOutlookFolders {} {
 	$T style layout $S e3 -padx 4 -expand ns -squeeze x
 	$T style layout $S e4 -expand ns
 	$T style layout $S e6 -union [list e3] -iexpand ns -ipadx 2
+
+	#
+	# Create items and assign styles
+	#
 
 	$T item style set root 0 s1
 	$T item complex root [list [list e1 -image outlook-main] [list e2 -text "Outlook Express"]]

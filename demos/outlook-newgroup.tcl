@@ -13,8 +13,17 @@ proc DemoOutlookNewsgroup {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -itemheight $height -selectmode browse \
 		-showroot no -showrootbutton no -showbuttons yes -showlines no
+
+	#
+	# Create columns
+	#
 
 	$T column create -image outlook-clip -tag clip
 	$T column create -image outlook-arrow -tag arrow
@@ -33,6 +42,10 @@ proc DemoOutlookNewsgroup {} {
 	# State for a message with unread descendants
 	$T state define unread
 
+	#
+	# Create elements
+	#
+
 	$T element create elemImg image -image {
 		outlook-read-2Sel {selected read unread !open}
 		outlook-read-2 {read unread !open}
@@ -46,6 +59,10 @@ proc DemoOutlookNewsgroup {} {
 	$T element create sel.e rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open e -showfocus yes
 	$T element create sel.w rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open w -showfocus yes
 	$T element create sel.we rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open we -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# Image + text
 	set S [$T style create s1]
@@ -68,6 +85,10 @@ proc DemoOutlookNewsgroup {} {
 
 	# Set default item style
 	$T configure -defaultstyle [list "" "" "" s1 s2.we s2.we s2.w]
+
+	#
+	# Create items and assign styles
+	#
 
 	set msgCnt 100
 
@@ -176,7 +197,7 @@ proc MessageReadDelayed {} {
 	}
 }
 
-# Alternate implementation which does not rely on run-time states
+# Alternate implementation that does not rely on run-time states
 proc DemoOutlookNewsgroup2 {} {
 
 	global Message
@@ -189,8 +210,17 @@ proc DemoOutlookNewsgroup2 {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -itemheight $height -selectmode browse \
 		-showroot no -showrootbutton no -showbuttons yes -showlines no
+
+	#
+	# Create columns
+	#
 
 	$T column create -image outlook-clip -tag clip
 	$T column create -image outlook-arrow -tag arrow
@@ -202,6 +232,10 @@ proc DemoOutlookNewsgroup2 {} {
 
 	$T configure -treecolumn 3
 
+	#
+	# Create elements
+	#
+
 	$T element create image.unread image -image outlook-unread
 	$T element create image.read image -image outlook-read
 	$T element create image.read2 image -image outlook-read-2
@@ -212,6 +246,10 @@ proc DemoOutlookNewsgroup2 {} {
 	$T element create sel.e rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open e -showfocus yes
 	$T element create sel.w rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open w -showfocus yes
 	$T element create sel.we rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open we -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# Image + text
 	set S [$T style create unread]
@@ -257,6 +295,10 @@ proc DemoOutlookNewsgroup2 {} {
 	$T style elements $S {sel.w text.read}
 	$T style layout $S text.read -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand es
+
+	#
+	# Create items and assign styles
+	#
 
 	set msgCnt 100
 

@@ -5,10 +5,22 @@ proc DemoLayout {} {
 
 	set T .f2.f1.t
 
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showrootbutton yes -showbuttons yes \
 		-showlines yes -itemheight 0 -selectmode browse
 
+	#
+	# Create columns
+	#
+
 	$T column create -text Layout
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 rect -width 30 -height 30 -fill gray20
 	$T element create e2 rect -width 30 -height 30 -fill gray40 \
@@ -21,6 +33,10 @@ proc DemoLayout {} {
 	$T element create e7 rect -fill {"sky blue"} -width 30 -height 16
 	$T element create e8 rect -fill gray70 -height 1
 
+	#
+	# Create styles using the elements
+	#
+
 	set S [$T style create s1]
 	$T style elements $S {e4 e3 e1 e2 e5 e6 e7}
 	$T style layout $S e1 -padx {28 4} -pady 4
@@ -30,6 +46,10 @@ proc DemoLayout {} {
 	$T style layout $S e5 -detach yes -padx {2 0} -pady 2 -iexpand s
 	$T style layout $S e6 -detach yes -expand ws -padx {0 2} -pady {2 0}
 	$T style layout $S e7 -detach yes -expand wn -padx {0 2} -pady {0 2}
+
+	#
+	# Create items and assign styles
+	#
 
 	set I [$T item create -button yes]
 	$T item style set $I 0 $S

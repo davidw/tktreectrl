@@ -5,11 +5,23 @@ proc DemoBitmaps {} {
 
 	set T .f2.f1.t
 
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no \
 		-selectmode browse -orient horizontal -wrap "5 items" \
 		-showheader no -backgroundimage sky
 
+	#
+	# Create columns
+	#
+
 	$T column create -itembackground {gray90 {}}
+
+	#
+	# Create elements
+	#
 
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}]
 	$T element create elemSelTxt rect -fill [list $::SystemHighlight {selected focus}] \
@@ -21,6 +33,10 @@ proc DemoBitmaps {} {
 		-background linen \
 		-bitmap {question {selected}}
 
+	#
+	# Create styles using the elements
+	#
+
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSelBmp elemBmp elemSelTxt elemTxt}
 	$T style layout $S elemSelBmp -union elemBmp \
@@ -31,6 +47,10 @@ proc DemoBitmaps {} {
 
 	# Set default item style
 	$T configure -defaultstyle [list $S]
+
+	#
+	# Create items and assign styles
+	#
 
 	set bitmapNames [list error gray75 gray50 gray25 gray12 hourglass info \
 		questhead question warning]

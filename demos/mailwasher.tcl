@@ -11,9 +11,18 @@ proc DemoMailWasher {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showrootbutton no -showbuttons no \
 		-showlines no -itemheight $height -selectmode browse \
 		-xscrollincrement 1
+
+	#
+	# Create columns
+	#
 
 	set pad 4
 	$T column create -text Delete -textpadx $pad -tag delete
@@ -26,6 +35,10 @@ proc DemoMailWasher {} {
 	$T column create -text Attachments -textpadx $pad -tag attachments
 
 	$T state define CHECK
+
+	#
+	# Create elements
+	#
 
 	$T element create border rect -open nw -outline gray -outlinewidth 1 \
 		-fill [list $::SystemHighlight {selected}]
@@ -45,6 +58,10 @@ proc DemoMailWasher {} {
 	$T element create txtBlacklist text -text "Blacklisted" \
 		-fill [list $::SystemHighlightText {selected} #FF5800 {}] -lines 1
 
+	#
+	# Create styles using the elements
+	#
+
 	set S [$T style create styCheck]
 	$T style elements $S [list border imgCheck]
 	$T style layout $S border -detach yes -iexpand es
@@ -58,41 +75,46 @@ proc DemoMailWasher {} {
 		$T style layout $S border -detach yes -iexpand es
 		$T style layout $S txt$name -padx $pad -squeeze x -expand ns
 	}
-for {set i 0} {$i < 1} {incr i} {
-	foreach {from subject} {
-		baldy@spammer.com "Your hair is thinning"
-		flat@spammer.com "Your breasts are too small"
-		tiny@spammer.com "Your penis is too small"
-		dumbass@spammer.com "You are not very smart"
-		bankrobber@spammer.com "You need more money"
-		loser@spammer.com "You need better friends"
-		gossip@spammer.com "Find out what your coworkers think about you"
-		whoami@spammer.com "Find out what you think about yourself"
-		downsized@spammer.com "You need a better job"
-		poorhouse@spammer.com "Your mortgage is a joke"
-		spam4ever@spammer.com "You need more spam"
-	} {
-		set item [$T item create]
-		set status [lindex [list styNormal styPossSpam styProbSpam styBlacklist] [expr int(rand() * 4)]]
-		set delete [expr int(rand() * 2)]
-		set bounce [expr int(rand() * 2)]
-		set attachments [lindex [list styNone styYes] [expr int(rand() * 2)]]
-		$T item style set $item 0 styCheck 1 styCheck 2 $status 3 styAny \
-			4 styAny 5 styAny 6 styAny 7 $attachments
-		if {$delete} {
-			$T item state forcolumn $item delete CHECK
+
+	#
+	# Create items and assign styles
+	#
+
+	for {set i 0} {$i < 1} {incr i} {
+		foreach {from subject} {
+			baldy@spammer.com "Your hair is thinning"
+			flat@spammer.com "Your breasts are too small"
+			tiny@spammer.com "Your penis is too small"
+			dumbass@spammer.com "You are not very smart"
+			bankrobber@spammer.com "You need more money"
+			loser@spammer.com "You need better friends"
+			gossip@spammer.com "Find out what your coworkers think about you"
+			whoami@spammer.com "Find out what you think about yourself"
+			downsized@spammer.com "You need a better job"
+			poorhouse@spammer.com "Your mortgage is a joke"
+			spam4ever@spammer.com "You need more spam"
+		} {
+			set item [$T item create]
+			set status [lindex [list styNormal styPossSpam styProbSpam styBlacklist] [expr int(rand() * 4)]]
+			set delete [expr int(rand() * 2)]
+			set bounce [expr int(rand() * 2)]
+			set attachments [lindex [list styNone styYes] [expr int(rand() * 2)]]
+			$T item style set $item 0 styCheck 1 styCheck 2 $status 3 styAny \
+				4 styAny 5 styAny 6 styAny 7 $attachments
+			if {$delete} {
+				$T item state forcolumn $item delete CHECK
+			}
+			if {$bounce} {
+				$T item state forcolumn $item bounce CHECK
+			}
+			set bytes [expr {512 + int(rand() * 1024 * 12)}]
+			set size [expr {$bytes / 1024 + 1}]KB
+			set seconds [expr {[clock seconds] - int(rand() * 100000)}]
+			set received [clock format $seconds -format "%d/%m/%y %I:%M %p"]
+			$T item text $item 3 $size 4 $from 5 $subject 6 $received
+			$T item lastchild root $item
 		}
-		if {$bounce} {
-			$T item state forcolumn $item bounce CHECK
-		}
-		set bytes [expr {512 + int(rand() * 1024 * 12)}]
-		set size [expr {$bytes / 1024 + 1}]KB
-		set seconds [expr {[clock seconds] - int(rand() * 100000)}]
-		set received [clock format $seconds -format "%d/%m/%y %I:%M %p"]
-		$T item text $item 3 $size 4 $from 5 $subject 6 $received
-		$T item lastchild root $item
 	}
-}
 	if 0 {
 		$T notify bind MailWasher <Button1-ElementPress-imgOn> {
 			%T item style set %I %C styOff

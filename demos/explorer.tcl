@@ -52,11 +52,20 @@ proc DemoExplorerDetails {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode extended -xscrollincrement 20 \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
 	InitPics small-*
+
+	#
+	# Create columns
+	#
 
 	$T column create -text Name -tag name -width 200 \
 		-arrow up -arrowpad 6
@@ -65,6 +74,10 @@ proc DemoExplorerDetails {} {
 	$T column create -text Type -tag type -width 120
 	$T column create -text Modified -tag modified -width 120
 
+	#
+	# Create elements
+	#
+
 	$T element create e1 image -image {small-folderSel {selected} small-folder {}}
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
@@ -72,6 +85,10 @@ proc DemoExplorerDetails {} {
 	$T element create txtSize text -datatype integer -format "%dKB" -lines 1
 	$T element create txtDate text -datatype time -format "%d/%m/%y %I:%M %p" -lines 1
 	$T element create e4 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# image + text
 	set S [$T style create styName -orient horizontal]
@@ -106,6 +123,10 @@ proc DemoExplorerDetails {} {
 	$T notify bind $T <Edit-accept> {
 		%T item text %I 0 %t
 	}
+
+	#
+	# Create items and assign styles
+	#
 
 	set scriptDir {
 		set item [$T item create]
@@ -212,6 +233,10 @@ proc DemoExplorerLargeIcons {} {
 	# Item height is 32 for icon, 4 padding, 3 lines of text
 	set itemHeight [expr {32 + 4 + [font metrics [$T cget -font] -linespace] * 3}]
 
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no \
 		-selectmode extended -wrap window -orient horizontal \
 		-itemheight $itemHeight -showheader no \
@@ -219,12 +244,24 @@ proc DemoExplorerLargeIcons {} {
 
 	InitPics big-*
 
+	#
+	# Create columns
+	#
+
 	$T column create -width 75
+
+	#
+	# Create elements
+	#
 
 	$T element create elemImg image -image {big-folderSel {selected} big-folder {}}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
 		-justify center -lines 1 -width 71 -wrap word
 	$T element create elemSel rect -fill [list $::SystemHighlight {selected focus} gray {selected}] -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# image + text
 	set S [$T style create STYLE -orient vertical]
@@ -244,6 +281,10 @@ proc DemoExplorerLargeIcons {} {
 	$T notify bind $T <Edit-accept> {
 		%T item text %I 0 %t
 	}
+
+	#
+	# Create items and assign styles
+	#
 
 	set scriptDir {
 		set item [$T item create]
@@ -304,18 +345,35 @@ proc DemoExplorerList {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode extended -wrap window -showheader no \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
 	InitPics small-*
 
+	#
+	# Create columns
+	#
+
 	$T column create -widthhack yes
+
+	#
+	# Create elements
+	#
 
 	$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
 	$T element create elemSel rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	# image + text
 	set S [$T style create STYLE]
@@ -335,6 +393,10 @@ proc DemoExplorerList {} {
 	$T notify bind $T <Edit-accept> {
 		%T item text %I 0 %t
 	}
+
+	#
+	# Create items and assign styles
+	#
 
 	set scriptDir {
 		set item [$T item create]

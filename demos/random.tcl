@@ -13,13 +13,26 @@ proc DemoRandom {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -itemheight $height -selectmode extended \
 		-showroot yes -showrootbutton yes -showbuttons yes -showlines yes \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
+	#
+	# Create columns
+	#
+
 	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tag item
 	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag parent
 	$T column create -text Depth -justify center -itembackground {linen {}} -tag depth
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 image -image {folder-open {open} folder-closed {}}
 	$T element create e2 image -image small-file
@@ -29,6 +42,10 @@ proc DemoRandom {} {
 	$T element create e6 text
 	$T element create e5 rect -showfocus yes \
 		-fill [list $::SystemHighlight {selected focus} gray {selected !focus}]
+
+	#
+	# Create styles using the elements
+	#
 
 	$T style create s1
 	$T style elements s1 {e5 e1 e3 e4}
@@ -55,6 +72,10 @@ proc DemoRandom {} {
 		{item s1 e1 e3}
 		{item s2 e2 e3}
 	}
+
+	#
+	# Create items and assign styles
+	#
 
 	set clicks [clock clicks]
 	set items [$T index root]
@@ -138,7 +159,6 @@ proc TreeCtrl::RandomButton1 {T x y} {
 	variable Priv
 	focus $T
 	set id [$T identify $x $y]
-	puts $id
 	set Priv(buttonMode) ""
 
 	# Click outside any item

@@ -6,16 +6,29 @@ proc DemoInternetOptions {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode browse
 
 	InitPics internet-*
+
+	#
+	# Create columns
+	#
 
 	$T column create -text "Internet Options"
 
 	$T state define check
 	$T state define radio
 	$T state define on
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 image -image {
 		internet-check-on {check on}
@@ -26,11 +39,19 @@ proc DemoInternetOptions {} {
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}]
 	$T element create e3 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 
+	#
+	# Create styles using the elements
+	#
+
 	set S [$T style create s1]
 	$T style elements $S {e3 e1 e2}
 	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e2 -expand ns
 	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
+
+	#
+	# Create items and assign styles
+	#
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -136,7 +157,7 @@ proc TreeCtrl::OptionButton1 {T x y} {
 }
 
 
-# Alternate implementation that doesn't rely on run-time styles
+# Alternate implementation that does not rely on run-time states
 proc DemoInternetOptions_2 {} {
 
 	set T .f2.f1.t
@@ -145,22 +166,43 @@ proc DemoInternetOptions_2 {} {
 	if {$height < 18} {
 		set height 18
 	}
+
+	#
+	# Configure the treectrl widget
+	#
+
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode browse
 
 	InitPics internet-*
 
-	$T column configure 0 -text "Internet Options"
+	#
+	# Create columns
+	#
+
+	$T column create -text "Internet Options"
+
+	#
+	# Create elements
+	#
 
 	$T element create e1 image
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}]
 	$T element create e3 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+
+	#
+	# Create styles using the elements
+	#
 
 	set S [$T style create s1]
 	$T style elements $S {e3 e1 e2}
 	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e2 -expand ns
 	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
+
+	#
+	# Create items and assign styles
+	#
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
