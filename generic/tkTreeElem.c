@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.10 2004/07/30 21:02:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.11 2004/08/09 02:16:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -273,48 +273,6 @@ static void StringTableRestore(
 /* END custom "stringtable" option */
 
 /*****/
-
-typedef struct PerStateData PerStateData;
-typedef struct PerStateInfo PerStateInfo;
-typedef struct PerStateType PerStateType;
-
-/* There is one of these for each XColor, Tk_Font, Tk_Image etc */
-struct PerStateData
-{
-	int stateOff;
-	int stateOn;
-	/* Type-specific fields go here */
-};
-
-#define DEBUG_PSI
-
-struct PerStateInfo
-{
-#ifdef DEBUG_PSI
-	PerStateType *type;
-#endif
-	Tcl_Obj *obj;
-	int count;
-	PerStateData *data;
-};
-
-typedef int (*PerStateType_FromObjProc)(TreeCtrl *, Tcl_Obj *, PerStateData *);
-typedef void (*PerStateType_FreeProc)(TreeCtrl *, PerStateData *);
-
-struct PerStateType
-{
-#ifdef DEBUG_PSI
-	char *name;
-#endif
-	int size;
-	PerStateType_FromObjProc fromObjProc;
-	PerStateType_FreeProc freeProc;
-};
-
-#define MATCH_NONE 0
-#define MATCH_ANY 1
-#define MATCH_PARTIAL 2
-#define MATCH_EXACT 3
 
 static int StateFromObj2(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
 {
@@ -3464,3 +3422,63 @@ ElementType elemTypeText = {
 
 /*****/
 
+ElementType *elementTypeList = NULL;
+
+int TreeCtrl_RegisterElementType(Tcl_Interp *interp, ElementType *newTypePtr)
+{
+	ElementType *prevPtr, *typePtr;
+
+	for (typePtr = elementTypeList, prevPtr = NULL;
+		typePtr != NULL;
+		prevPtr = typePtr, typePtr = typePtr->next)
+	{
+		/* Remove duplicate type */
+		if (!strcmp(typePtr->name, newTypePtr->name))
+		{
+			if (prevPtr == NULL)
+				elementTypeList = typePtr->next;
+			else
+				prevPtr->next = typePtr->next;
+		}
+	}
+	newTypePtr->next = elementTypeList;
+	elementTypeList = newTypePtr;
+
+	newTypePtr->optionTable = Tk_CreateOptionTable(interp,
+		newTypePtr->optionSpecs);
+
+	return TCL_OK;
+}
+
+TreeCtrlStubs stubs = {
+	TreeCtrl_RegisterElementType,
+	PerStateInfo_Free,
+	PerStateInfo_FromObj,
+	PerStateInfo_ForState,
+	PerStateInfo_ObjForState,
+	PerStateInfo_Undefine
+};
+
+int TreeElement_Init(Tcl_Interp *interp)
+{
+	ElementType *typePtr;
+
+	elementTypeList = &elemTypeBitmap;
+	elemTypeBitmap.next = &elemTypeBorder;
+	elemTypeBorder.next = &elemTypeImage;
+	elemTypeImage.next = &elemTypeRect;
+	elemTypeRect.next = &elemTypeText;
+	elemTypeText.next = NULL;
+
+	for (typePtr = elementTypeList;
+		typePtr != NULL;
+		typePtr = typePtr->next)
+	{
+		typePtr->optionTable = Tk_CreateOptionTable(interp,
+			typePtr->optionSpecs);
+	}
+
+	Tcl_SetAssocData(interp, "TreeCtrlStubs", NULL, &stubs);
+
+	return TCL_OK;
+}
