@@ -1,3 +1,13 @@
+/* 
+ * tkTreeMarquee.c --
+ *
+ *	This module implements the selection marquee for treectrl widgets.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.3 2004/07/30 21:12:18 treectrl Exp $
+ */
+
 #include "tkTreeCtrl.h"
 
 typedef struct Marquee Marquee;
@@ -12,10 +22,12 @@ struct Marquee
 	int sx, sy;
 };
 
+#define MARQ_CONF_VISIBLE		0x0001
+
 static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
 		"0", -1, Tk_Offset(Marquee, visible),
-		0, (ClientData) NULL, 0},
+		0, (ClientData) NULL, MARQ_CONF_VISIBLE},
 	{TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 		(char *) NULL, 0, -1, 0, 0, 0}
 };
@@ -97,18 +109,45 @@ static int Marquee_Config(Marquee *marquee, int objc, Tcl_Obj *CONST objv[])
 {
 	TreeCtrl *tree = marquee->tree;
 	Tk_SavedOptions savedOptions;
-	int mask, result;
+    int error;
+    Tcl_Obj *errorResult = NULL;
+	int mask;
 
-	result = Tk_SetOptions(tree->interp, (char *) marquee, marquee->optionTable,
-		objc, objv, tree->tkwin, &savedOptions, &mask);
-	if (result != TCL_OK)
+	for (error = 0; error <= 1; error++)
 	{
-		Tk_RestoreSavedOptions(&savedOptions);
-		return TCL_ERROR;
-	}
-	Tk_FreeSavedOptions(&savedOptions);
+		if (error == 0)
+		{
+			if (Tk_SetOptions(tree->interp, (char *) marquee, marquee->optionTable,
+				objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK)
+			{
+				mask = 0;
+				continue;
+			}
 
-/*	Marquee_Redraw(marquee); */
+			/* xxx */
+
+			Tk_FreeSavedOptions(&savedOptions);
+			break;
+		}
+		else
+		{
+			errorResult = Tcl_GetObjResult(tree->interp);
+			Tcl_IncrRefCount(errorResult);
+			Tk_RestoreSavedOptions(&savedOptions);
+
+				/* xxx */
+
+			Tcl_SetObjResult(tree->interp, errorResult);
+			Tcl_DecrRefCount(errorResult);
+			return TCL_ERROR;
+		}
+	}
+
+	if (mask & MARQ_CONF_VISIBLE)
+	{
+		TreeMarquee_Undisplay((TreeMarquee) marquee);
+		TreeMarquee_Display((TreeMarquee) marquee);
+	}
 
 	return TCL_OK;
 }
@@ -119,9 +158,9 @@ int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	Marquee *marquee = (Marquee *) tree->marquee;
 	static CONST char *commandNames[] = { "anchor", "cget", "configure",
-		"coords", "corner", "identify", "visible", (char *) NULL };
+		"coords", "corner", "identify", (char *) NULL };
 	enum { COMMAND_ANCHOR, COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_COORDS,
-		COMMAND_CORNER, COMMAND_IDENTIFY, COMMAND_VISIBLE };
+		COMMAND_CORNER, COMMAND_IDENTIFY };
 	int index;
 
 	if (objc < 3)
@@ -328,31 +367,6 @@ int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			ckfree((char *) items);
 			Tcl_SetObjResult(interp, listObj);
-			break;
-		}
-
-		/* T marquee visible ?boolean? */
-		case COMMAND_VISIBLE:
-		{
-			int visible;
-
-			if (objc != 3 && objc != 4)
-			{
-				Tcl_WrongNumArgs(interp, 3, objv, "?boolean?");
-				return TCL_ERROR;
-			}
-			if (objc == 4)
-			{
-				if (Tcl_GetBooleanFromObj(interp, objv[3], &visible) != TCL_OK)
-					return TCL_ERROR;
-				if (visible != marquee->visible)
-				{
-					marquee->visible = visible;
-					TreeMarquee_Undisplay(tree->marquee);
-					TreeMarquee_Display(tree->marquee);
-				}
-			}
-			Tcl_SetObjResult(interp, Tcl_NewBooleanObj(marquee->visible));
 			break;
 		}
 	}
