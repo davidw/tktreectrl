@@ -636,6 +636,8 @@ proc ::TreeCtrl::AutoScanCheck {w x y} {
 
 proc ::TreeCtrl::AutoScanCheckAux {w} {
 	variable Priv
+	# Not quite sure how this can happen
+	if {![info exists Priv(autoscan,afterId,$w)]} return
 	unset Priv(autoscan,afterId,$w)
 	set x [winfo pointerx $w]
 	set y [winfo pointery $w]
