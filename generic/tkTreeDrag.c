@@ -1,3 +1,13 @@
+/* 
+ * tkTreeDrag.c --
+ *
+ *	This module implements outline dragging for treectrl widgets.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.7 2004/07/30 21:02:23 treectrl Exp $
+ */
+
 #include "tkTreeCtrl.h"
 
 typedef struct DragElem DragElem;
@@ -21,10 +31,12 @@ struct DragImage
 	int sx, sy; /* Window coords where displayed */
 };
 
+#define DRAG_CONF_VISIBLE		0x0001
+
 static Tk_OptionSpec optionSpecs[] = {
 	{TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
 		"0", -1, Tk_Offset(DragImage, visible),
-		0, (ClientData) NULL, 0},
+		0, (ClientData) NULL, DRAG_CONF_VISIBLE},
 	{TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 		(char *) NULL, 0, -1, 0, 0, 0}
 };
@@ -112,25 +124,46 @@ static int DragImage_Config(DragImage *dragImage, int objc, Tcl_Obj *CONST objv[
 {
 	TreeCtrl *tree = dragImage->tree;
 	Tk_SavedOptions savedOptions;
-	int mask, result;
+    int error;
+    Tcl_Obj *errorResult = NULL;
+	int mask;
 
-	result = Tk_SetOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
-		objc, objv, tree->tkwin, &savedOptions, &mask);
-	if (result != TCL_OK)
+	for (error = 0; error <= 1; error++)
 	{
-		Tk_RestoreSavedOptions(&savedOptions);
-		return TCL_ERROR;
-	}
-	Tk_FreeSavedOptions(&savedOptions);
-#if 0
-	if (mask & CONF_VISIBLE)
-	{
-		if (dragImage->visible)
-			TreeDragImage_Display();
+		if (error == 0)
+		{
+			if (Tk_SetOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
+				objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK)
+			{
+				mask = 0;
+				continue;
+			}
+
+			/* xxx */
+
+			Tk_FreeSavedOptions(&savedOptions);
+			break;
+		}
 		else
-			TreeDragImage_Unisplay();
+		{
+			errorResult = Tcl_GetObjResult(tree->interp);
+			Tcl_IncrRefCount(errorResult);
+			Tk_RestoreSavedOptions(&savedOptions);
+
+				/* xxx */
+
+			Tcl_SetObjResult(tree->interp, errorResult);
+			Tcl_DecrRefCount(errorResult);
+			return TCL_ERROR;
+		}
 	}
-#endif
+
+	if (mask & DRAG_CONF_VISIBLE)
+	{
+		TreeDragImage_Undisplay((TreeDragImage) dragImage);
+		TreeDragImage_Display((TreeDragImage) dragImage);
+	}
+
 	return TCL_OK;
 }
 
@@ -166,9 +199,9 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	DragImage *dragImage = (DragImage *) tree->dragImage;
 	static CONST char *commandNames[] = { "add", "cget", "clear", "configure",
-		"offset", "visible", (char *) NULL };
+		"offset", (char *) NULL };
 	enum { COMMAND_ADD, COMMAND_CGET, COMMAND_CLEAR, COMMAND_CONFIGURE,
-		COMMAND_OFFSET, COMMAND_VISIBLE };
+		COMMAND_OFFSET };
 	int index;
 
 	if (objc < 3)
@@ -446,31 +479,6 @@ doneAdd:
 			dragImage->x = x;
 			dragImage->y = y;
 			TreeDragImage_Display(tree->dragImage);
-			break;
-		}
-
-		/* T dragimage visible ?boolean? */
-		case COMMAND_VISIBLE:
-		{
-			int visible;
-
-			if (objc != 3 && objc != 4)
-			{
-				Tcl_WrongNumArgs(interp, 3, objv, "?boolean?");
-				return TCL_ERROR;
-			}
-			if (objc == 4)
-			{
-				if (Tcl_GetBooleanFromObj(interp, objv[3], &visible) != TCL_OK)
-					return TCL_ERROR;
-				if (visible != dragImage->visible)
-				{
-					dragImage->visible = visible;
-					TreeDragImage_Undisplay(tree->dragImage);
-					TreeDragImage_Display(tree->dragImage);
-				}
-			}
-			Tcl_SetObjResult(interp, Tcl_NewBooleanObj(dragImage->visible));
 			break;
 		}
 	}
