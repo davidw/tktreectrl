@@ -2439,7 +2439,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	if (tree->columnCount < 1)
 	{
 		FormatResult(interp, "there are no columns");
-		return TCL_OK;
+		return TCL_ERROR;
 	}
 
 	/* Defaults: sort ascii strings in column 0 only */
