@@ -9,6 +9,8 @@ proc DemoIMovie {} {
 		-selectmode browse -orient horizontal -wrap window \
 		-showheader no -background #dcdcdc
 
+	$T column create
+
 	InitPics imovie-*
 
 	switch -- $::thisPlatform {
@@ -43,6 +45,9 @@ proc DemoIMovie {} {
 	$T style layout $S elemRect -union {elemTime elemImg elemName} \
 		-ipadx 6 -padx {0 3} -pady {0 3}
 
+	# Set default item style
+	$T configure -defaultstyle [list $S]
+
 for {set i 0} {$i < 5} {incr i} {
 	foreach {time name image} {
 		15:20 "Clip 1" imovie-01
@@ -54,7 +59,7 @@ for {set i 0} {$i < 5} {incr i} {
 		07:20 "Clip 7" imovie-07
 	} {
 		set I [$T item create]
-		$T item style set $I 0 $S
+#		$T item style set $I 0 $S
 		$T item element configure $I 0 elemTime -text $time
 		$T item element configure $I 0 elemImg -image $image
 		$T item element configure $I 0 elemName -text $name

@@ -9,7 +9,7 @@ proc DemoBitmaps {} {
 		-selectmode browse -orient horizontal -wrap "5 items" \
 		-showheader no
 
-	$T column configure 0 -itembackground {gray90 {}}
+	$T column create -itembackground {gray90 {}}
 
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}]
 	$T element create elemSelTxt rect -fill [list $::SystemHighlight {selected focus}] \
@@ -29,12 +29,15 @@ proc DemoBitmaps {} {
 	$T style layout $S elemSelTxt -union elemTxt -ipadx 2
 	$T style layout $S elemTxt -expand we
 
+	# Set default item style
+	$T configure -defaultstyle [list $S]
+
 	set bitmapNames [list error gray75 gray50 gray25 gray12 hourglass info \
 		questhead question warning]
 
 	foreach name $bitmapNames {
 		set I [$T item create]
-		$T item style set $I 0 $S
+#		$T item style set $I 0 $S
 		$T item text $I 0 $name
 		$T item element configure $I 0 elemBmp -bitmap $name
 		$T item lastchild root $I

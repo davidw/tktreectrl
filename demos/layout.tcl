@@ -8,7 +8,7 @@ proc DemoLayout {} {
 	$T configure -showroot no -showrootbutton yes -showbuttons yes \
 		-showlines yes -itemheight 0 -selectmode browse
 
-	$T column configure 0 -text Layout
+	$T column create -text Layout
 
 	$T element create e1 rect -width 30 -height 30 -fill gray20
 	$T element create e2 rect -width 30 -height 30 -fill gray40 \

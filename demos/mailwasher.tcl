@@ -16,14 +16,14 @@ proc DemoMailWasher {} {
 		-xscrollincrement 1
 
 	set pad 4
-	$T column configure 0 -text Delete -textpadx $pad -tag delete
-	$T column configure 1 -text Bounce -textpadx $pad -tag bounce
-	$T column configure 2 -text Status -width 80 -textpadx $pad -tag status
-	$T column configure 3 -text Size -width 40 -textpadx $pad -justify right -tag size
-	$T column configure 4 -text From -width 140 -textpadx $pad -tag from
-	$T column configure 5 -text Subject -width 240 -textpadx $pad -tag subject
-	$T column configure 6 -text Received -textpadx $pad -arrow up -arrowpad {4 0} -tag received
-	$T column configure 7 -text Attachments -textpadx $pad -tag attachments
+	$T column create -text Delete -textpadx $pad -tag delete
+	$T column create -text Bounce -textpadx $pad -tag bounce
+	$T column create -text Status -width 80 -textpadx $pad -tag status
+	$T column create -text Size -width 40 -textpadx $pad -justify right -tag size
+	$T column create -text From -width 140 -textpadx $pad -tag from
+	$T column create -text Subject -width 240 -textpadx $pad -tag subject
+	$T column create -text Received -textpadx $pad -arrow up -arrowpad {4 0} -tag received
+	$T column create -text Attachments -textpadx $pad -tag attachments
 
 	$T element create border rect -open nw -outline gray -outlinewidth 1 \
 		-fill [list $::SystemHighlight {selected}]

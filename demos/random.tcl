@@ -17,9 +17,9 @@ proc DemoRandom {} {
 		-showroot yes -showrootbutton yes -showbuttons yes -showlines yes \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
-	$T column configure 0 -expand yes -text Item -itembackground {#e0e8f0 {}} -tag item
-	$T column configure 1 -text Parent -justify center -itembackground {gray90 {}} -tag parent
-	$T column configure 2 -text Depth -justify center -itembackground {linen {}} -tag depth
+	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tag item
+	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag parent
+	$T column create -text Depth -justify center -itembackground {linen {}} -tag depth
 
 	$T element create e1 image -image {folder-open {open} folder-closed {}}
 	$T element create e2 image -image small-file

@@ -11,7 +11,7 @@ proc DemoInternetOptions {} {
 
 	InitPics internet-*
 
-	$T column configure 0 -text "Internet Options"
+	$T column create -text "Internet Options"
 
 	$T state define check
 	$T state define radio

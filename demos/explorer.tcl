@@ -58,12 +58,12 @@ proc DemoExplorerDetails {} {
 
 	InitPics small-*
 
-	$T column configure 0 -text Name -tag name -width 200 \
+	$T column create -text Name -tag name -width 200 \
 		-arrow up -arrowpad 6
-	$T column configure 1 -text Size -tag size -justify right -width 60 \
+	$T column create -text Size -tag size -justify right -width 60 \
 		-arrowside left -arrowgravity right
-	$T column configure 2 -text Type -tag type -width 120
-	$T column configure 3 -text Modified -tag modified -width 120
+	$T column create -text Type -tag type -width 120
+	$T column create -text Modified -tag modified -width 120
 
 	$T element create e1 image -image {small-folderSel {selected} small-folder {}}
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \
@@ -219,7 +219,7 @@ proc DemoExplorerLargeIcons {} {
 
 	InitPics big-*
 
-	$T column configure 0 -width 75
+	$T column create -width 75
 
 	$T element create elemImg image -image {big-folderSel {selected} big-folder {}}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
@@ -310,7 +310,7 @@ proc DemoExplorerList {} {
 
 	InitPics small-*
 
-	$T column configure 0 -widthhack yes
+	$T column create -widthhack yes
 
 	$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \

@@ -14,7 +14,7 @@ proc DemoOutlookFolders {} {
 	$T configure -itemheight $height -selectmode browse \
 		-showroot yes -showrootbutton no -showbuttons yes -showlines yes
 
-	$T column configure 0 -text Folders
+	$T column create -text Folders
 
 	$T element create e1 image
 	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \

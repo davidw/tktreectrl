@@ -251,17 +251,17 @@ proc MakeMainWindow {} {
 	# Tree + scrollbar: demos
 	TreePlusScrollbarsInAFrame .f1 0 1
 	.f1.t configure -showbuttons no -showlines no -showroot no -height 100
-	.f1.t column configure 0 -text "List of Demos" -expand yes -button no
+	.f1.t column create -text "List of Demos" -expand yes -button no
 
 	# Tree + scrollbar: styles + elements in list
 	TreePlusScrollbarsInAFrame .f4 0 1
 	.f4.t configure -showroot no -height 140
-	.f4.t column configure 0 -text "Elements and Styles" -expand yes -button no
+	.f4.t column create -text "Elements and Styles" -expand yes -button no
 
 	# Tree + scrollbar: styles + elements in selected item
 	TreePlusScrollbarsInAFrame .f3 0 1
 	.f3.t configure -showroot no
-	.f3.t column configure 0 -text "Styles in Item" -expand yes -button no
+	.f3.t column create -text "Styles in Item" -expand yes -button no
 
 	.pw1 add .f1 .f4 .f3 -height 150
 
@@ -724,7 +724,7 @@ proc DemoClear {} {
 	$T item delete all
 
 	# Clear all bindings on the demo list added by the previous demo.
-	# This is why DontDelete it used for the <Selection> binding.
+	# This is why DontDelete is used for the <Selection> binding.
 	foreach pattern [$T notify bind $T] {
 		$T notify bind $T $pattern {}
 	}
@@ -756,7 +756,7 @@ proc DemoClear {} {
 		-yscrollincrement 0 -itemheight 0 -showheader yes \
 		-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 		-openbuttonimage "" -closedbuttonimage "" -backgroundmode row \
-		-treecolumn 0 -indent 19
+		-treecolumn 0 -indent 19 -defaultstyle {}
 
 	# Restore default bindings to the demo list
 	bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]

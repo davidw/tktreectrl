@@ -16,13 +16,13 @@ proc DemoOutlookNewsgroup {} {
 	$T configure -itemheight $height -selectmode browse \
 		-showroot no -showrootbutton no -showbuttons yes -showlines no
 
-	$T column configure 0 -image outlook-clip -tag clip
-	$T column configure 1 -image outlook-arrow -tag arrow
-	$T column configure 2 -image outlook-watch -tag watch
-	$T column configure 3 -text Subject -width 250 -tag subject
-	$T column configure 4 -text From -width 150 -tag from
-	$T column configure 5 -text Sent -width 150 -tag sent
-	$T column configure 6 -text Size -width 60 -justify right -tag size
+	$T column create -image outlook-clip -tag clip
+	$T column create -image outlook-arrow -tag arrow
+	$T column create -image outlook-watch -tag watch
+	$T column create -text Subject -width 250 -tag subject
+	$T column create -text From -width 150 -tag from
+	$T column create -text Sent -width 150 -tag sent
+	$T column create -text Size -width 60 -justify right -tag size
 
 	# Would be nice if I could specify a column -tag too
 	$T configure -treecolumn 3
@@ -65,6 +65,9 @@ proc DemoOutlookNewsgroup {} {
 	$T style elements $S {sel.w elemTxt}
 	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand es
+
+	# Set default item style
+	$T configure -defaultstyle [list "" "" "" s1 s2.we s2.we s2.w]
 
 	set msgCnt 100
 
@@ -121,7 +124,7 @@ proc DemoOutlookNewsgroup {} {
 			}
 		}
 
-		$T item style set $i 3 s1 4 s2.we 5 s2.we 6 s2.w
+#		$T item style set $i 3 s1 4 s2.we 5 s2.we 6 s2.w
 		$T item text $i 3 $subject 4 $from 5 $sent 6 $size
 	}
 
@@ -185,13 +188,13 @@ proc DemoOutlookNewsgroup2 {} {
 	$T configure -itemheight $height -selectmode browse \
 		-showroot no -showrootbutton no -showbuttons yes -showlines no
 
-	$T column configure 0 -image outlook-clip -tag clip
-	$T column configure 1 -image outlook-arrow -tag arrow
-	$T column configure 2 -image outlook-watch -tag watch
-	$T column configure 3 -text Subject -width 250 -tag subject
-	$T column configure 4 -text From -width 150 -tag from
-	$T column configure 5 -text Sent -width 150 -tag sent
-	$T column configure 6 -text Size -width 60 -justify right -tag size
+	$T column create -image outlook-clip -tag clip
+	$T column create -image outlook-arrow -tag arrow
+	$T column create -image outlook-watch -tag watch
+	$T column create -text Subject -width 250 -tag subject
+	$T column create -text From -width 150 -tag from
+	$T column create -text Sent -width 150 -tag sent
+	$T column create -text Size -width 60 -justify right -tag size
 
 	$T configure -treecolumn 3
 

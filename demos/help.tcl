@@ -14,7 +14,7 @@ proc DemoHelpContents {} {
 
 	InitPics help-*
 
-	$T column configure 0 -text "Help Contents"
+	$T column create -text "Help Contents"
 
 	# Define a new item state
 	$T state define mouseover
@@ -126,7 +126,7 @@ proc DemoHelpContents2 {} {
 
 	InitPics help-*
 
-	$T column configure 0 -text "Help Contents"
+	$T column create -text "Help Contents"
 
 	$T element create e1 image -image help-page
 	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
