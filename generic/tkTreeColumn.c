@@ -4,6 +4,7 @@ typedef struct Column Column;
 
 struct Column
 {
+	Tcl_Obj *textObj; /* -text */
 	char *text; /* -text */
 	int width; /* -width */
 	Tcl_Obj *widthObj; /* -width */
@@ -140,7 +141,7 @@ static Tk_OptionSpec columnSpecs[] = {
 		(char *) NULL, -1, Tk_Offset(Column, tag),
 		TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TAG},
 	{TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
-		(char *) NULL, -1, Tk_Offset(Column, text),
+		(char *) NULL, Tk_Offset(Column, textObj), Tk_Offset(Column, text),
 		TK_OPTION_NULL_OK, (ClientData) NULL,
 		COLU_CONF_TEXT | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 	{TK_OPTION_COLOR, "-textcolor", (char *) NULL, (char *) NULL,
@@ -406,7 +407,10 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[])
 
 	if (mask & COLU_CONF_TEXT)
 	{
-		column->textLen = column->text ? strlen(column->text) : 0;
+		if (column->textObj != NULL)
+			(void) Tcl_GetStringFromObj(column->textObj, &column->textLen);
+		else
+			column->textLen = 0;
 		if (column->textLen)
 		{
 			Tk_Font tkfont = column->tkfont ? column->tkfont : tree->tkfont;

@@ -2924,7 +2924,7 @@ static void TextUpdateLayout(ElementArgs *args)
 		flags |= TK_WHOLE_WORDS;
 
 	elemX->layout = TextLayout_Compute(tkfont, text,
-		textLen, width, justify, lines, flags);
+		Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
 
 /*if (tree->debug.enable && tree->debug.display)
 	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");*/
