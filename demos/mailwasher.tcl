@@ -25,10 +25,11 @@ proc DemoMailWasher {} {
 	$T column create -text Received -textpadx $pad -arrow up -arrowpad {4 0} -tag received
 	$T column create -text Attachments -textpadx $pad -tag attachments
 
+	$T state define CHECK
+
 	$T element create border rect -open nw -outline gray -outlinewidth 1 \
 		-fill [list $::SystemHighlight {selected}]
-	$T element create imgOff image -image unchecked
-	$T element create imgOn image -image checked
+	$T element create imgCheck image -image {checked CHECK unchecked {}}
 	$T element create txtAny text \
 		-fill [list $::SystemHighlightText {selected}] -lines 1
 	$T element create txtNone text -text "none" \
@@ -44,12 +45,10 @@ proc DemoMailWasher {} {
 	$T element create txtBlacklist text -text "Blacklisted" \
 		-fill [list $::SystemHighlightText {selected} #FF5800 {}] -lines 1
 
-	foreach name {Off On} {
-		set S [$T style create sty$name]
-		$T style elements $S [list border img$name]
-		$T style layout $S border -detach yes -iexpand es
-		$T style layout $S img$name -expand wnes
-	}
+	set S [$T style create styCheck]
+	$T style elements $S [list border imgCheck]
+	$T style layout $S border -detach yes -iexpand es
+	$T style layout $S imgCheck -expand news
 
 	set pad 4
 
@@ -75,11 +74,17 @@ for {set i 0} {$i < 1} {incr i} {
 	} {
 		set item [$T item create]
 		set status [lindex [list styNormal styPossSpam styProbSpam styBlacklist] [expr int(rand() * 4)]]
-		set delete [lindex [list styOn styOff] [expr int(rand() * 2)]]
-		set bounce [lindex [list styOn styOff] [expr int(rand() * 2)]]
+		set delete [expr int(rand() * 2)]
+		set bounce [expr int(rand() * 2)]
 		set attachments [lindex [list styNone styYes] [expr int(rand() * 2)]]
-		$T item style set $item 0 $delete 1 $bounce 2 $status 3 styAny \
+		$T item style set $item 0 styCheck 1 styCheck 2 $status 3 styAny \
 			4 styAny 5 styAny 6 styAny 7 $attachments
+		if {$delete} {
+			$T item state forcolumn $item delete CHECK
+		}
+		if {$bounce} {
+			$T item state forcolumn $item bounce CHECK
+		}
 		set bytes [expr {512 + int(rand() * 1024 * 12)}]
 		set size [expr {$bytes / 1024 + 1}]KB
 		set seconds [expr {[clock seconds] - int(rand() * 100000)}]
@@ -154,14 +159,7 @@ for {set i 0} {$i < 1} {incr i} {
 			if {$where eq "column"} {
 				set tag [%W column cget $arg1 -tag]
 				if {$tag eq "delete" || $tag eq "bounce"} {
-					set style [%W item style set $item $arg1]
-					if {$style eq "styOn"} {
-						set style styOff
-					} else {
-						set style styOn
-					}
-					%W item style set $item $arg1 $style
-					DisplayStylesInItem $item
+					%W item state forcolumn $item $arg1 ~CHECK
 #					return -code break
 				}
 			}
