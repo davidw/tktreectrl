@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.2 2002/12/24 23:29:13 krischan Exp $
+'\" $Id: treectrl.n,v 1.3 2002/12/26 12:25:48 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -203,9 +203,23 @@ command line or in the option database
 to configure aspects of the treectrl such as its background color
 and relief.  The \fBtreectrl\fR command returns the
 path name of the new window.
-.PP
-A treectrl is a widget which displays a hierarchical structure
-in one or more columns.
+At the time this command is invoked, there must not
+exist a window named \fIpathName\fR, but \fIpathName\fR's parent must exist.
+
+A treectrl is a widget which displays items one per line.
+Every item has a set of states, which are boolean properties.
+The item may be spread about one or more columns.
+For each column of an item there is a style associated,
+which determines how to display the item's column
+respecting the item's current state set.
+One column can be defined to display the data in a hierarchical structure.
+
+Normally the origin of the coordinate system is at the
+upper-left corner of the window containing the treectrl.
+It is possible to adjust the origin of the coordinate system
+relative to the origin of the window using the
+\fBxview\fR and \fByview\fR widget commands;
+this is typically used for scrolling.
 
 .SH "WIDGET COMMAND"
 .PP
@@ -221,11 +235,41 @@ the treectrl widget's path name.  \fIOption\fR and the \fIarg\fRs
 determine the exact behavior of the command.  The following
 commands are possible for treectrl widgets:
 .TP
+\fIpathName \fBactivate\fR \fIitemDesc\fR
+Sets the active item to the one described by \fIitemDesc\fR,
+and switches on the state \fBactive\fR for this item.
+From now on the item can be retrieved with the item description \fBactive\fR.
+.TP
+\fIpathName \fBcanvasx\fR \fIscreenx\fR
+Given a window x-coordinate in the treectrl \fIscreenx\fR,
+this command returns the x-coordinate that is displayed at that location.
+.TP
+\fIpathName \fBcanvasy\fR \fIscreeny\fR
+Given a window y-coordinate in the treectrl \fIscreeny\fR,
+this command returns the y-coordinate that is displayed at that location.
+.TP
 \fIpathName \fBcget\fR \fIoption\fR
 Returns the current value of the configuration option given
 by \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the \fBtree\fR
 command.
+.TP
+\fIpathName \fBcollapse\fR \fIitemDesc\fR
+Switches off the \fBopen\fR state of the item described by \fIitemDesc\fR.
+If the item has descendants, they are no longer displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options \fB\-closedbuttonimage\fR or \fB\-closedbuttonbitmap\fR,
+or a \fB\+\fR sign if no image or bitmap is configured.
+If the item is already closed, this command has no effect.
+.TP
+\fIpathName \fBcompare\fR \fIitemDesc1 op itemDesc2\fR
+From both items described by the \fIitemDesc\fRs the index is retrieved
+(as returned from the \fBitem index\fR widget command).
+Then these indexes are compared using the operator \fIop\fR, which must
+be either \fB<\fR,  \fB<=\fR,  \fB==\fR, \fB>=\fR, \fB>\fR, or \fB!=\fR.
+The return value of this command is 1 if the comparison evaulated to true,
+0 otherwise.
 .TP
 \fIpathName \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?
 Query or modify the configuration options of the widget.
@@ -294,8 +338,17 @@ Returns the type of the elements given by \fIelement\fR,
 such as \fBrect\fR or \fBtext\fR.
 .RE
 .TP
+\fIpathName \fBexpand\fR \fIitemDesc\fR
+Switches on the \fBopen\fR state of the item described by \fIitemDesc\fR.
+If the item has descendants, they are now displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options \fB\-openbuttonimage\fR or \fB\-openbuttonbitmap\fR,
+or a \fB\-\fR sign if no image or bitmap is configured.
+If the item is already open, this command has no effect.
+.TP
 \fIpathName \fBindex \fIitemDesc\fR
-This command returns a decimal string giving the numerical index
+This command returns a decimal string giving the numerical id
 of the item specified by \fIitemDesc\fR (see ITEM DESCRIPTION below).
 .TP
 \fIpathName \fBitem \fIoption\fR ?\fIarg ...\fR?
@@ -335,6 +388,9 @@ one column in this item.
 .TP
 \fIpathName \fBitem create\fR
 Creates a new item and returns its numerical indexes.
+The new item has set the states \fBopen\fR and \fBenabled\fR.
+If the treectrl widget has currently the focus,
+also the state \fBfocus\fR is set.
 .TP
 \fIpathName \fBitem delete \fIfirst\fR ?\fIlast\fR?
 Deletes the specified item(s).
@@ -406,11 +462,12 @@ If \fIboolean\fR is specified, it must be a valid boolean value
 specifying if a button should be displayed to the left of this item. 
 .TP
 \fIpathName \fBitem index \fIitemDesc\fR
-Returns the index of the item described by \fIitemDesc\fR.
-This should not be confused with the \fBindex\fR widget command,
+Returns a list of two integers, which corresponds to the row 
+of the item described by \fIitemDesc\fR,
+if all items above are counted and if only the displayed items are counted.
+This command should not be confused with the \fBindex\fR widget command,
 which return the invariable item id.
-The index here is basically the row of the item,
-if the treectrl is vertical oriented, or the column otherwise.
+The index here is basically the row of the item.
 .TP
 \fIpathName \fBitem isancestor \fIitemDesc\fR \fIdescendant\fR
 Returns 1 if the item described by \fIitemDesc\fR is a direct or indirect
@@ -506,7 +563,14 @@ Does no real comparison; instead just turn the items upside-down.
 Convert to floating-point values and use floating comparison.
 .RE
 .TP
-\fIpathName \fBitem state \fIitemDesc\fR ?\fIstate\fR ...?
+\fIpathName \fBitem state \fIitemDesc\fR ?\fIstateDesc\fR ...?
+If no \fIstateDesc\fR is specified, returns a list containing
+the names of all (predefined and user defined) states
+which are currently switched on for the item described by \fIitemDesc\fR.
+If there are one or more \fIstateDesc\fRs are specified,
+each must describe a user defined state (see STATES below).
+Every state with an leading \fB!\fR will be switched off for the
+given item, every state without leading \fB!\fR will be switched on.
 .TP
 \fIpathName \fBitem style \fIcommand itemDesc\fR ?\fIarg\fR ...?
 This command is used to manipulate the style of the item.
@@ -553,6 +617,26 @@ specifying if the item should be visible.
 The visibility of an item is independend from the state of its ancestors.
 So if the state of one of the ancestors is currently not opened,
 the item may be considered visible although it is not displayed on the screen.
+.RE
+.TP
+\fIpathName \fBstate \fIoption\fR ?\fIstateName\fR?
+This command is used to manipulate the list of user defined states,
+see section STATES below.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBstate\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBstate define\fR \fIstateName\fR
+Defines a new state with the name \fIstateName\fR,
+which must not be the name of a predefined or already user defined state.
+.TP
+\fIpathName \fBstate names\fR
+Returns a list containing the names of all user defined states.
+.TP
+\fIpathName \fBstate undefine\fR \fIstateName\fR
+\fIStateName\fR must be the name of a user defined state.
+Removes this state from the list of user defined states.
 .RE
 .TP
 \fIpathName \fBstyle \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
@@ -700,6 +784,12 @@ i.e. independent from the other elements.
 Returns a list containing the names of all existing styles.
 .RE
 .TP
+\fIpathName \fBtoggle\fR \fIitemDesc\fR
+Changes the \fBopen\fR state of the item described by \fIitemDesc\fR.
+If the state is currently switched off,
+this command does the same as the \fBexpand\fR widget command,
+otherwise the same as the \fBcollapse\fR widget command.
+.TP
 \fIpathName \fBxview  \fR?\fIargs\fR?
 This command is used to query and change the horizontal position of the
 information displayed in the treectrl's window.
@@ -773,6 +863,60 @@ visible;  if it is positive then lower information
 becomes visible.
 .RE
 
+.SH STATES
+.PP
+A state consists basically of just a string: its \fIstateName\fR.
+For every item a set of these states is managed,
+which means that every item can have every state on or off.
+The following states are predefined for every item:
+.TP 10
+\fBactive\fR
+At every time this state is set for exactly one item,
+which therefore is called the active item.
+When the treectrl widget is created or when the active item is deleted,
+the root item will become the active element.
+This state can be modified by means of the widget command \fBactivate\fR.
+.TP 10
+\fBenabled\fR
+This state is set for every item, when it is created.
+It cannot be modified.
+.TP 10
+\fBfocus\fR
+This state is set for every item,
+if the treectrl widget has currently the focus.
+It cannot be modified by means of a widget command,
+but is maintained as reaction of a <FocusIn> or <FocusOut> event.
+.TP 10
+\fBopen\fR
+If this state is switched on,
+the descendants of the item are displayed
+- the item is expanded.
+If this state is switched off,
+the descendants of the item are not displayed
+- the item is collapsed.
+For a new item this state is switched on.
+It can be modified by means of the widget commands
+\fBexpand\fR, \fBcollapse\fR, or \fBtoggle\fR.
+.TP 10
+\fBselected\fR
+This state is set for every item, which is included in the selection.
+It can be modified by means of the widget command \fBselection\fR.
+.PP
+By means of the \fBstate define\fR widget command
+upto 27 additional \fIstateName\fRs can be defined.
+
+Some widget commands expect a \fIstateDesc\fR argument,
+which is a \fIstateName\fR
+optionally preceded by an exclamation mark (\fB!\fR).
+If the \fIstateName\fR has no leading \fB!\fR
+it describes a currently switched on state,
+if it has a leading \fB!\fR it describes a currently switched off state.
+
+Some widget commands expect a \fIstatePattern\fR argument,
+which should be a non empty list of \fIstateDesc\fRs.
+The pattern matches, if for every element of the list
+the \fIstateDesc\fR describes the same state as the item currently has.
+
 .SH ELEMENTS
 .PP
 Elements are the smallest building block
@@ -790,11 +934,10 @@ There are some options which can be configured to get different values
 dependent on the state of the item in which their element is included.
 The values of these options are basically a list.
 If the list has one element, the value is valid regardless of the item state.
-A list with an even number of elements (\fIvalue stateList\fR pairs)
+A list with an even number of elements (\fIvalue statePattern\fR pairs)
 specifies different values for different states.
-\fIStateList\fR is a list of \fIstate\fRs,
-for acceptable values of \fIstate\fRs see the section ITEM STATES below.
-The last \fIstateList\fR can be empty,
+For acceptable values of \fIstatePattern\fR see the section STATES above.
+The last \fIstatePattern\fR can be empty,
 implementing a sort of "otherwise clause".
 The options with this behaviour are called \fIper state options\fR.
 
