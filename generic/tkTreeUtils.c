@@ -5,12 +5,17 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.9 2004/10/09 22:54:31 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.10 2004/10/24 18:34:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #ifdef WIN32
 #include "tkWinInt.h"
+#endif
+
+/* OffsetRgn() on Mac */
+#ifdef TARGET_OS_MAC
+#include <Carbon/Carbon.h>
 #endif
 
 /*
@@ -452,8 +457,7 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 	FillRgn(dc, (HRGN) rgn, brush);
 	DeleteObject(brush);
 	TkWinReleaseDrawableDC(drawable, dc, &dcState);
-#elif defined(TARGET_OS_MAC)
-#error "Mac developer: implement Tk_FillRegion please!"
+/* Apparently this works on Mac Aqua as well as Unix */
 #else
 	XRectangle box;
 
@@ -469,7 +473,7 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 #ifdef WIN32
 	OffsetRgn((HRGN) region, xOffset, yOffset);
 #elif defined(TARGET_OS_MAC)
-#error "Mac developer: implement Tk_OffsetRegion please!"
+	OffsetRgn((RgnHandle) region, (short) xOffset, (short) yOffset);
 #else
 	XOffsetRegion((Region) region, xOffset, yOffset);
 #endif
