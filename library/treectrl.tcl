@@ -141,11 +141,20 @@ bind TreeCtrl <KeyPress-Return> {
 
 # Additional Tk bindings that aren't part of the Motif look and feel:
 
-bind TreeCtrl <KeyPress-2> {
-    %W scan mark %x %y
+bind TreeCtrl <ButtonPress-2> {
+    TreeCtrl::ScanMark %W %x %y
 }
 bind TreeCtrl <Button2-Motion> {
-    %W scan dragto %x %y
+    TreeCtrl::ScanDrag %W %x %y
+}
+
+if {$tcl_platform(platform) eq "windows"} {
+	bind TreeCtrl <Control-ButtonPress-3> {
+		TreeCtrl::ScanMark %W %x %y
+	}
+	bind TreeCtrl <Control-Button3-Motion> {
+		TreeCtrl::ScanDrag %W %x %y
+	}
 }
 
 # The MouseWheel will typically only fire on Windows.  However,
@@ -837,3 +846,24 @@ proc ::TreeCtrl::MarqueeEnd {w x y} {
 	return
 }
 
+proc ::TreeCtrl::ScanMark {w x y} {
+	variable Priv
+	$w scan mark $x $y
+	set Priv(x) $x
+	set Priv(y) $y
+	set Priv(mouseMoved) 0
+	return
+}
+
+proc ::TreeCtrl::ScanDrag {w x y} {
+	variable Priv
+	if {![info exists Priv(x)]} { set Priv(x) $x }
+	if {![info exists Priv(y)]} { set Priv(y) $y }
+	if {($x != $Priv(x)) || ($y != $Priv(y))} {
+		set Priv(mouseMoved) 1
+	}
+	if {[info exists Priv(mouseMoved)] && $Priv(mouseMoved)} {
+		$w scan dragto $x $y
+	}
+	return
+}
