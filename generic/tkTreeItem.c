@@ -5,16 +5,25 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.19 2004/07/30 21:10:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.20 2004/08/09 02:23:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
+
+#ifdef ITEM_ID_IS_STRING
+char *itemPrefix = "item";
+int itemPrefixLen = 4;
+#else /* ITEM_ID_IS_STRING */
+char *itemPrefix = "";
+int itemPrefixLen = 0;
+#endif /* ITEM_ID_IS_STRING */
 
 typedef struct Column Column;
 typedef struct Item Item;
 
 struct Column
 {
+	int cstate;
 	int neededWidth;
 	int neededHeight;
 	TreeStyle style;
@@ -81,7 +90,8 @@ int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_, TreeItemColumn co
 	Column *self = (Column *) column_;
 
 	if (self->style != NULL)
-		return TreeStyle_NeededWidth(tree, self->style, item->state);
+		return TreeStyle_NeededWidth(tree, self->style,
+			item->state | self->cstate);
 	return 0;
 }
 
@@ -216,11 +226,52 @@ int TreeItem_GetState(TreeCtrl *tree, TreeItem item_)
 	return ((Item *) item_)->state;
 }
 
+static int Column_ChangeState(TreeCtrl *tree, Item *item, Column *column, int columnIndex, int stateOff, int stateOn)
+{
+	int cstate, state;
+	int sMask, iMask = 0;
+
+	cstate = column->cstate;
+	cstate &= ~stateOff;
+	cstate |= stateOn;
+
+	if (cstate == column->cstate)
+		return 0;
+
+	state = item->state | column->cstate;
+	state &= ~stateOff;
+	state |= stateOn;
+
+	if (column->style != NULL)
+	{
+		sMask = TreeStyle_ChangeState(tree, column->style,
+			item->state | column->cstate, state);
+		if (sMask)
+		{
+			if (sMask & CS_LAYOUT)
+				Tree_InvalidateColumnWidth(tree, columnIndex);
+			iMask |= sMask;
+		}
+
+		if (iMask & CS_LAYOUT)
+		{
+			TreeItem_InvalidateHeight(tree, (TreeItem) item);
+			Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+		}
+		if (iMask & CS_DISPLAY)
+			Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+	}
+
+	column->cstate = cstate;
+
+	return iMask;
+}
+
 int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff, int stateOn)
 {
 	Item *item = (Item *) item_;
 	Column *column;
-	int columnIndex = 0, state;
+	int columnIndex = 0, state, cstate;
 	int sMask, iMask = 0;
 
 	state = item->state;
@@ -235,7 +286,11 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff, int state
 	{
 		if (column->style != NULL)
 		{
-			sMask = TreeStyle_ChangeState(tree, column->style, item->state, state);
+			cstate = item->state | column->cstate;
+			cstate &= ~stateOff;
+			cstate |= stateOn;
+			sMask = TreeStyle_ChangeState(tree, column->style,
+				item->state | column->cstate, cstate);
 			if (sMask)
 			{
 				if (sMask & CS_LAYOUT)
@@ -279,6 +334,14 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff, int state
 void TreeItem_Undefine(TreeCtrl *tree, TreeItem item_, int state)
 {
 	Item *item = (Item *) item_;
+	Column *column = item->columns;
+
+	while (column != NULL)
+	{
+		column->cstate &= ~state;
+		column = column->next;
+	}
+
 	item->state &= ~state;
 }
 
@@ -680,6 +743,28 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 			}
 		}
 	}
+#ifdef ITEM_ID_IS_STRING
+	else
+	{
+		char *end, *t = Tcl_GetString(elemPtr);
+		if (strncmp(t, itemPrefix, itemPrefixLen) != 0)
+			goto baditem;
+		t += itemPrefixLen;
+		id = strtoul(t, &end, 10);
+		if ((end == t) || (*end != '\0'))
+			goto baditem;
+
+		hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
+		if (!hPtr)
+		{
+			if (!(flags & IFO_NULLOK))
+				goto noitem;
+			(*itemPtr) = NULL;
+			return TCL_OK;
+		}
+		item = (Item *) Tcl_GetHashValue(hPtr);
+	}
+#else /* ITEM_ID_IS_STRING */
 	else if (Tcl_GetIntFromObj(NULL, elemPtr, &id) == TCL_OK)
 	{
 		hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
@@ -696,6 +781,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int fla
 	{
 		goto baditem;
 	}
+#endif /* ITEM_ID_IS_STRING */
 	/* This means a valid specification was given, but there is no such item */
 	if (item == NULL)
 	{
@@ -1267,7 +1353,8 @@ int TreeItem_NeededHeight(TreeCtrl *tree, TreeItem item_)
 		if (column->style != NULL)
 		{
 			self->neededHeight = MAX(self->neededHeight,
-				TreeStyle_NeededHeight(tree, column->style, self->state));
+				TreeStyle_NeededHeight(tree, column->style,
+					self->state | column->cstate));
 		}
 	}
 	return self->neededHeight;
@@ -1282,14 +1369,15 @@ int TreeItem_UseHeight(TreeCtrl *tree, TreeItem item_)
 	int height = 0;
 
 	drawArgs.tree = tree;
-	drawArgs.state = item->state;
 
 	while (column != NULL)
 	{
 		if (TreeColumn_Visible(treeColumn) && (column->style != NULL))
 		{
+			drawArgs.state = item->state | column->cstate;
 			drawArgs.style = column->style;
-			if (TreeColumn_FixedWidth(treeColumn) != -1)
+			if ((TreeColumn_FixedWidth(treeColumn) != -1) ||
+				TreeColumn_Squeeze(treeColumn))
 			{
 				drawArgs.width = TreeColumn_UseWidth(treeColumn);
 				if (TreeColumn_Index(treeColumn) == tree->columnTree)
@@ -1374,8 +1462,9 @@ static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
 	(*column) = Item_FindColumn(tree, item, columnIndex);
 	if ((*column) == NULL)
 	{
-		FormatResult(tree->interp, "item %d doesn't have column %d",
-			item->id, columnIndex);
+		FormatResult(tree->interp,
+			"item %s%d doesn't have column %d",
+			itemPrefix, item->id, columnIndex);
 		return TCL_ERROR;
 	}
 	if (indexPtr != NULL)
@@ -1449,7 +1538,6 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 
 	drawArgs.tree = tree;
 	drawArgs.drawable = drawable;
-	drawArgs.state = self->state;
 
 	totalWidth = 0;
 	treeColumn = tree->columns;
@@ -1489,6 +1577,7 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 					index);
 				if ((column != NULL) && (column->style != NULL))
 				{
+					drawArgs.state = self->state | column->cstate;
 					drawArgs.style = column->style;
 					drawArgs.x = x + indent + totalWidth;
 					drawArgs.y = y;
@@ -1773,7 +1862,13 @@ int TreeItem_IsAncestor(TreeCtrl *tree, TreeItem item1, TreeItem item2)
 
 Tcl_Obj *TreeItem_ToObj(TreeCtrl *tree, TreeItem item_)
 {
+#ifdef ITEM_ID_IS_STRING
+	char buf[10 + TCL_INTEGER_SPACE];
+	(void) sprintf(buf, "%s%d", itemPrefix, ((Item *) item_)->id);
+	return Tcl_NewStringObj(buf, -1);
+#else /* ITEM_ID_IS_STRING */
 	return Tcl_NewIntObj(((Item *) item_)->id);
+#endif /* ITEM_ID_IS_STRING */
 }
 
 static int Item_Configure(TreeCtrl *tree, Item *item, int objc,
@@ -1867,8 +1962,9 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (column->style == NULL)
 	{
-		FormatResult(interp, "item %d column %d has no style",
-			item->id, columnIndex);
+		FormatResult(interp,
+			"item %s%d column %d has no style",
+			itemPrefix, item->id, columnIndex);
 		return TCL_ERROR;
 	}
 
@@ -1883,7 +1979,8 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					"item column element option");
 				return TCL_ERROR;
 			}
-			return TreeStyle_ElementActual(tree, column->style, item->state,
+			return TreeStyle_ElementActual(tree, column->style,
+				item->state | column->cstate,
 				objv[6], objv[7]);
 		}
 
@@ -1964,8 +2061,9 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			if (column->style == NULL)
 			{
-				FormatResult(interp, "item %d column %d has no style",
-					item->id, columnIndex);
+				FormatResult(interp,
+					"item %s%d column %d has no style",
+					itemPrefix, item->id, columnIndex);
 				return TCL_ERROR;
 			}
 			TreeStyle_ListElements(tree, column->style);
@@ -2673,8 +2771,9 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					return TCL_ERROR;
 				if (first->parent != item)
 				{
-					FormatResult(interp, "item %d is not a child of item %d",
-						first->id, item->id);
+					FormatResult(interp,
+						"item %s%d is not a child of item %s%d",
+						itemPrefix, first->id, itemPrefix, item->id);
 					return TCL_ERROR;
 				}
 				break;
@@ -2689,8 +2788,9 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					return TCL_ERROR;
 				if (last->parent != item)
 				{
-					FormatResult(interp, "item %d is not a child of item %d",
-						last->id, item->id);
+					FormatResult(interp,
+						"item %s%d is not a child of item %s%d",
+						itemPrefix, last->id, itemPrefix, item->id);
 					return TCL_ERROR;
 				}
 				break;
@@ -2795,15 +2895,15 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			column = Item_FindColumn(tree, walk, sortData.columns[i].column);
 			if (column == NULL)
 			{
-				FormatResult(interp, "item %d doesn't have column %d",
-					walk->id, sortData.columns[i].column);
+				FormatResult(interp, "item %s%d doesn't have column %d",
+					itemPrefix, walk->id, sortData.columns[i].column);
 				result = TCL_ERROR;
 				goto done;
 			}
 			if (column->style == NULL)
 			{
-				FormatResult(interp, "item %d column %d has no style",
-					walk->id, sortData.columns[i].column);
+				FormatResult(interp, "item %s%d column %d has no style",
+					itemPrefix, walk->id, sortData.columns[i].column);
 				result = TCL_ERROR;
 				goto done;
 			}
@@ -2979,8 +3079,12 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
-	static CONST char *commandNames[] = { "get", "set", (char *) NULL };
-	enum { COMMAND_GET, COMMAND_SET };
+	static CONST char *commandNames[] = {
+		"forcolumn", "get", "set", (char *) NULL
+	};
+	enum {
+		COMMAND_FORCOLUMN, COMMAND_GET, COMMAND_SET
+	};
 	int index;
 	Item *item;
 
@@ -2990,6 +3094,64 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	switch (index)
 	{
+		/* T item state forcolumn I C ?stateList? */
+		case COMMAND_FORCOLUMN:
+		{
+			Tcl_Obj *listObj;
+			Column *column;
+			int columnIndex;
+			int i, states[3], stateOn, stateOff;
+			int listObjc;
+			Tcl_Obj **listObjv;
+
+			if (objc < 6 || objc > 7)
+			{
+				Tcl_WrongNumArgs(interp, 5, objv, "column ?stateList?");
+				return TCL_ERROR;
+			}
+			if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0)
+					!= TCL_OK)
+				return TCL_ERROR;
+			if (Item_FindColumnFromObj(tree, item, objv[5], &column,
+					&columnIndex) != TCL_OK)
+				return TCL_ERROR; 
+			if (objc == 6)
+			{
+				listObj = Tcl_NewListObj(0, NULL);
+				for (i = 0; i < 32; i++)
+				{
+					if (tree->stateNames[i] == NULL)
+						continue;
+					if (column->cstate & (1L << i))
+					{
+						Tcl_ListObjAppendElement(interp, listObj,
+							Tcl_NewStringObj(tree->stateNames[i], -1));
+					}
+				}
+				Tcl_SetObjResult(interp, listObj);
+				break;
+			}
+			states[0] = states[1] = states[2] = 0;
+			if (Tcl_ListObjGetElements(interp, objv[6], &listObjc, &listObjv)
+				!= TCL_OK)
+				return TCL_ERROR;
+			if (listObjc == 0)
+				break;
+			for (i = 0; i < listObjc; i++)
+			{
+				if (StateFromObj(tree, listObjv[i], states, NULL,
+					SFO_NOT_STATIC) != TCL_OK)
+					return TCL_ERROR;
+			}
+			stateOn = states[STATE_OP_ON];
+			stateOff = states[STATE_OP_OFF];
+			stateOn |= ~column->cstate & states[STATE_OP_TOGGLE];
+			stateOff |= column->cstate & states[STATE_OP_TOGGLE];
+			Column_ChangeState(tree, item, column, columnIndex,
+				stateOff, stateOn);
+			break;
+		}
+
 		/* T item state get I ?state? */
 		case COMMAND_GET:
 		{
@@ -3090,9 +3252,9 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					TreeItem_RootAncestor(tree,itemLast))
 				{
 					FormatResult(interp,
-						"item %d and item %d don't share a common ancestor",
-						TreeItem_GetID(tree, itemFirst),
-						TreeItem_GetID(tree, itemLast));
+						"item %s%d and item %s%d don't share a common ancestor",
+						itemPrefix, TreeItem_GetID(tree, itemFirst),
+						itemPrefix, TreeItem_GetID(tree, itemLast));
 					return TCL_ERROR;
 				}
 				TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -3121,6 +3283,77 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	}
 
 	return TCL_OK;
+}
+
+/* Basically same as "selection clear" */
+static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
+{
+    int indexFirst, indexLast, count;
+    TreeItem staticItems[STATIC_SIZE], *items = staticItems;
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
+    TreeItem item;
+
+    if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
+	count = tree->selectCount;
+	STATIC_ALLOC(items, TreeItem, count + 1);
+	count = 0;
+
+	/* Include detached items */
+	hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	while (hPtr != NULL) {
+	    item = (TreeItem) Tcl_GetHashValue(hPtr);
+	    if (item == tree->root)
+	    {
+		hPtr = Tcl_NextHashEntry(&search);
+		if (hPtr == NULL)
+		    break;
+		item = (TreeItem) Tcl_GetHashValue(hPtr);
+	    }
+	    if (TreeItem_GetSelected(tree, item)) {
+		Tree_RemoveFromSelection(tree, item);
+		items[count++] = item;
+	    }
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+	goto doneCLEAR;
+    }
+    if (itemFirst == itemLast) {
+	count = 1;
+    } else {
+	TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
+	TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
+	if (indexFirst > indexLast) {
+		int index;
+
+	    item = itemFirst;
+	    itemFirst = itemLast;
+	    itemLast = item;
+
+	    index = indexFirst;
+	    indexFirst = indexLast;
+	    indexLast = index;
+	}
+	count = indexLast - indexFirst + 1;
+    }
+    STATIC_ALLOC(items, TreeItem, count + 1);
+    count = 0;
+    item = itemFirst;
+    while (item != NULL) {
+	if (TreeItem_GetSelected(tree, item)) {
+	    Tree_RemoveFromSelection(tree, item);
+	    items[count++] = item;
+	}
+	if (item == itemLast)
+	    break;
+	item = TreeItem_Next(tree, item);
+    }
+doneCLEAR:
+    if (count) {
+	items[count] = NULL;
+	TreeNotify_Selection(tree, NULL, items);
+    }
+    STATIC_FREE2(items, staticItems);
 }
 
 int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
@@ -3255,7 +3488,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		if ((argInfo[index].flags & AF_PARENT) && (item->parent == NULL))
 		{
-			FormatResult(interp, "item %d must have a parent", item->id);
+			FormatResult(interp, "item %s%d must have a parent", itemPrefix,
+				item->id);
 			return TCL_ERROR;
 		}
 	}
@@ -3268,26 +3502,28 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		if ((argInfo[index].flags2 & AF_NOT_EQUAL) && (item == item2))
 		{
-			FormatResult(interp, "item %d same as second item", item->id);
+			FormatResult(interp, "item %s%d same as second item", itemPrefix,
+				item->id);
 			return TCL_ERROR;
 		}
 		if ((argInfo[index].flags2 & AF_PARENT) && (item2->parent == NULL))
 		{
-			FormatResult(interp, "item %d must have a parent", item2->id);
+			FormatResult(interp, "item %s%d must have a parent", itemPrefix,
+				item2->id);
 			return TCL_ERROR;
 		}
 		if ((argInfo[index].flags & AF_NOTANCESTOR) &&
 			TreeItem_IsAncestor(tree, (TreeItem) item, (TreeItem) item2))
 		{
-			FormatResult(interp, "item %d is ancestor of item %d",
-				item->id, item2->id);
+			FormatResult(interp, "item %s%d is ancestor of item %s%d",
+				itemPrefix, item->id, itemPrefix, item2->id);
 			return TCL_ERROR;
 		}
 		if ((argInfo[index].flags2 & AF_NOTANCESTOR) &&
 			TreeItem_IsAncestor(tree, (TreeItem) item2, (TreeItem) item))
 		{
-			FormatResult(interp, "item %d is ancestor of item %d",
-				item2->id, item->id);
+			FormatResult(interp, "item %s%d is ancestor of item %s%d",
+				itemPrefix, item2->id, itemPrefix, item->id);
 			return TCL_ERROR;
 		}
 		if ((argInfo[index].flags2 & AF_SAMEROOT) &&
@@ -3295,8 +3531,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			TreeItem_RootAncestor(tree, (TreeItem) item2))
 		{
 			FormatResult(interp,
-				"item %d and item %d don't share a common ancestor",
-				item->id, item2->id);
+				"item %s%d and item %s%d don't share a common ancestor",
+				itemPrefix, item->id, itemPrefix, item2->id);
 			return TCL_ERROR;
 		}
 	}
@@ -3359,8 +3595,9 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
 				if (drawArgs.style == NULL)
 				{
-					FormatResult(interp, "item %d column %d has no style",
-						TreeItem_GetID(tree, item_), columnIndex);
+					FormatResult(interp,
+						"item %s%d column %d has no style",
+						itemPrefix, TreeItem_GetID(tree, item_), columnIndex);
 					return TCL_ERROR;
 				}
 				drawArgs.tree = tree;
@@ -3432,8 +3669,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				column = Item_FindColumn(tree, item, columnIndex);
 				if (column == NULL)
 				{
-					FormatResult(interp, "item %d doesn't have column %d",
-						item->id, columnIndex);
+					FormatResult(interp, "item %s%d doesn't have column %d",
+						itemPrefix, item->id, columnIndex);
 					result = TCL_ERROR;
 					goto doneComplex;
 				}
@@ -3448,8 +3685,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					continue;
 				if (column->style == NULL)
 				{
-					FormatResult(interp, "item %d column %d has no style",
-						item->id, columnIndex);
+					FormatResult(interp, "item %s%d column %d has no style",
+						itemPrefix, item->id, columnIndex);
 					result = TCL_ERROR;
 					goto doneComplex;
 				}
@@ -3545,6 +3782,49 @@ doneComplex:
 		{
 			int index1, index2;
 
+			/* Generate <Select> event for selected items being deleted */
+			if (tree->selectCount)
+			{
+				Item *itemFirst, *itemLast;
+
+				if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL)
+				{
+					itemFirst = (Item *) ITEM_ALL;
+					itemLast = NULL;
+				}
+				else if ((item2 != NULL) && (item != item2))
+				{
+					Item *last, *last2;
+
+					TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
+					TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
+					if (index1 < index2)
+						itemFirst = item;
+					else
+						itemFirst = item2;
+
+					last = item;
+					while (last->lastChild != NULL)
+						last = last->lastChild;
+					last2 = item2;
+					while (last2->lastChild != NULL)
+						last2 = last2->lastChild;
+					TreeItem_ToIndex(tree, (TreeItem) last, &index1, NULL);
+					TreeItem_ToIndex(tree, (TreeItem) last2, &index2, NULL);
+					if (index1 < index2)
+						itemLast = last2;
+					else
+						itemLast = last;
+				}
+				else
+				{
+					itemFirst = item;
+					itemLast = item;
+					while (itemLast->lastChild != NULL)
+						itemLast = itemLast->lastChild;
+				}
+				ItemDeleteDeselect(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
+			}
 			if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL)
 			{
 				/* Do it this way so any detached items are deleted */
@@ -3555,14 +3835,16 @@ doneComplex:
 					hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 					item = (Item *) Tcl_GetHashValue(hPtr);
 					if (item == (Item *) tree->root)
+					{
 						hPtr = Tcl_NextHashEntry(&search);
-					if (hPtr == NULL)
-						break;
-					item = (Item *) Tcl_GetHashValue(hPtr);
+						if (hPtr == NULL)
+							break;
+						item = (Item *) Tcl_GetHashValue(hPtr);
+					}
 					TreeItem_Delete(tree, (TreeItem) item);
 				}
 			}
-			else if (item2 != NULL)
+			else if ((item2 != NULL) && (item != item2))
 			{
 				TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
 				TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
@@ -3778,8 +4060,8 @@ doneComplex:
 					return TCL_ERROR;
 				if (column->style == NULL)
 				{
-					FormatResult(interp, "item %d column %d has no style",
-						item->id, columnIndex);
+					FormatResult(interp, "item %s%d column %d has no style",
+						itemPrefix, item->id, columnIndex);
 					return TCL_ERROR;
 				}
 				TreeStyle_SetText(tree, column->style, objv[i + 1]);
@@ -3999,7 +4281,6 @@ char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 #endif
 	drawArgs.tree = tree;
 	drawArgs.drawable = None;
-	drawArgs.state = self->state;
 
 	totalWidth = 0;
 	treeColumn = tree->columns;
@@ -4022,6 +4303,7 @@ char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 			{
 				if (column->style != NULL)
 				{
+					drawArgs.state = self->state | column->cstate;
 					drawArgs.style = column->style;
 					drawArgs.x = indent + totalWidth;
 					drawArgs.y = 0;
@@ -4055,7 +4337,6 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 
 	drawArgs.tree = tree;
 	drawArgs.drawable = None;
-	drawArgs.state = self->state;
 
 	totalWidth = 0;
 	treeColumn = tree->columns;
@@ -4081,6 +4362,7 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 					Tcl_NewIntObj(TreeColumn_Index(treeColumn)));
 				if ((column != NULL) && (column->style != NULL))
 				{
+					drawArgs.state = self->state | column->cstate;
 					drawArgs.style = column->style;
 					drawArgs.x = x + totalWidth + indent;
 					drawArgs.y = y;
