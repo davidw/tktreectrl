@@ -2,7 +2,12 @@
 #include "default.h"
 #include "tkInt.h"
 #include "qebind.h"
+
+#ifdef HAVE_DBWIN_H
 #include "dbwin.h"
+#else /* HAVE_DBWIN_H */
+#define dbwin printf
+#endif /* HAVE_DBWIN_H */
 
 #ifndef TRUE
 #define TRUE 1
