@@ -1496,7 +1496,7 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 /*
  * qegenerate -- Generate events from scripts.
- * Usage: qegenerate pattern ?field value ...?
+ * Usage: qegenerate pattern {char value ...}
  * Desciption: Scripts can generate "fake" quasi-events by providing
  * a quasi-event pattern and option field/value pairs.
  */
@@ -1556,19 +1556,20 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
 	QE_Event fakeEvent;
 	QE_ExpandProc oldExpandProc;
-	Tcl_Obj *CONST *objPtr;
 	EventInfo *eiPtr;
 	Detail *dPtr;
 	GenerateData genData;
 	GenerateField *fieldPtr;
 	char *p, *t;
+	int listObjc;
+	Tcl_Obj **listObjv;
 	Pattern pats;
 	int result;
 
-	if (objc - objOffset < 2)
+	if (objc - objOffset < 2 || objc - objOffset > 3)
 	{
 		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
-			"pattern ?field value ...?");
+			"pattern ?charMap?");
 		return TCL_ERROR;
 	}
 
@@ -1576,7 +1577,7 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	if (ParseEventDescription(bindPtr, p, &pats, &eiPtr, &dPtr) != TCL_OK)
 		return TCL_ERROR;
 
-	/* Can't generate an event without a detail*/
+	/* Can't generate an event without a detail */
 	if ((dPtr == NULL) && (eiPtr->detailList != NULL))
 	{
 		Tcl_AppendResult(bindPtr->interp, "cannot generate \"", p,
@@ -1584,43 +1585,52 @@ QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		return TCL_ERROR;
 	}
 
-	objPtr = objv + objOffset + 2;
-	objc -= objOffset + 2;
-
-	genData.count = objc / 2;
-	genData.field = genData.staticField;
-	if (genData.count > sizeof(genData.staticField) /
-		sizeof(genData.staticField[0]))
+	if (objc - objOffset == 3)
 	{
-		genData.field = (GenerateField *) Tcl_Alloc(sizeof(GenerateField) *
-			genData.count);
-	}
-	fieldPtr = &genData.field[0];
+		if (Tcl_ListObjGetElements(bindPtr->interp, objv[objOffset + 2],
+			&listObjc, &listObjv) != TCL_OK)
+			return TCL_ERROR;
 
-	while (objc > 1)
-	{
-		int length;
-
-		t = Tcl_GetStringFromObj(objPtr[0], &length);
-		if ((length != 2) || (t[0] != '-'))
+		if (listObjc & 1)
 		{
-			Tcl_AppendResult(bindPtr->interp, "invalid percent char \"", t,
-				"\"", NULL);
-			result = TCL_ERROR;
-			goto done;
+			Tcl_AppendResult(bindPtr->interp,
+				"char map must have even number of elements", (char *) NULL);
+			return TCL_ERROR;
 		}
-		fieldPtr->which = t[1];
-		fieldPtr->string = Tcl_GetStringFromObj(objPtr[1], NULL);
-		fieldPtr++;
-		objPtr += 2;
-		objc -= 2;
-	}
 
-	if (objc != 0)
+		genData.count = listObjc / 2;
+		genData.field = genData.staticField;
+		if (genData.count > sizeof(genData.staticField) /
+			sizeof(genData.staticField[0]))
+		{
+			genData.field = (GenerateField *) Tcl_Alloc(sizeof(GenerateField) *
+				genData.count);
+		}
+		fieldPtr = &genData.field[0];
+
+		while (listObjc > 1)
+		{
+			int length;
+
+			t = Tcl_GetStringFromObj(listObjv[0], &length);
+			if (length != 1)
+			{
+				Tcl_AppendResult(bindPtr->interp, "invalid percent char \"", t,
+					"\"", NULL);
+				result = TCL_ERROR;
+				goto done;
+			}
+			fieldPtr->which = t[0];
+			fieldPtr->string = Tcl_GetStringFromObj(listObjv[1], NULL);
+			fieldPtr++;
+			listObjv += 2;
+			listObjc -= 2;
+		}
+	}
+	else
 	{
-		Tcl_WrongNumArgs(bindPtr->interp, 2, objv, "pattern ?field value ...?");
-		result = TCL_ERROR;
-		goto done;
+		genData.count = 0;
+		genData.field = genData.staticField;
 	}
 
 	/*
@@ -1747,7 +1757,7 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 
 qeinstall detail <Setting> show_icons 500 QEExpandCmd_Setting
 
-proc QEExpandCmd_Setting {char object event detail} {
+proc QEExpandCmd_Setting {char object event detail charMap} {
 
 	switch -- $char {
 		c {
@@ -1791,6 +1801,7 @@ static void Percents_Install(QE_ExpandArgs *args)
 		Tcl_DStringAppend(&command, dPtr->name, -1);
 	else
 		Tcl_DStringAppend(&command, "{}", -1);
+	Tcl_DStringStartSublist(&command);
 	if ((eiPtr->expandProc == Percents_Generate) ||
 		((dPtr != NULL) && (dPtr->expandProc == Percents_Generate)))
 	{
@@ -1799,12 +1810,14 @@ static void Percents_Install(QE_ExpandArgs *args)
 		for (i = 0; i < genData->count; i++)
 		{
 			GenerateField *genField = &genData->field[i];
-			Tcl_DStringAppend(&command, " ", 1);
-			Tcl_DStringAppend(&command, &genField->which, 1);
-			Tcl_DStringAppend(&command, " ", 1);
-			Tcl_DStringAppend(&command, genField->string, -1);
+			char string[2];
+			string[0] = genField->which;
+			string[1] = '\0';
+			Tcl_DStringAppendElement(&command, string);
+			Tcl_DStringAppendElement(&command, genField->string);
 		}
 	}
+	Tcl_DStringEndSublist(&command);
 	Tcl_SaveResult(interp, &state);
 	if (Tcl_EvalEx(interp, Tcl_DStringValue(&command),
 		Tcl_DStringLength(&command), TCL_EVAL_GLOBAL) == TCL_OK)
