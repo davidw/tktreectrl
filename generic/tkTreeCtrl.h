@@ -361,11 +361,12 @@ extern void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT);
 #define SORT_COMMAND 4
 extern int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int type, long *lv, double *dv, char **sv);
 extern int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[]);
-extern int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[], XRectangle rects[20]);
+extern int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[], XRectangle rects[]);
 extern int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, int state2);
 extern void TreeStyle_UndefineState(TreeCtrl *tree, int state);
+extern int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_);
 
 /* tkTreeNotify.c */
 extern int TreeNotify_Init(TreeCtrl *tree);
