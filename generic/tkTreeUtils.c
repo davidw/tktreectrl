@@ -114,7 +114,7 @@ void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2)
 	int wy = y1 + tree->drawableYOrigin;
 
 	dc = TkWinGetDrawableDC(tree->display, drawable, &state);
-/*	SetROP2(dc, R2_NOT); */
+	SetROP2(dc, R2_COPYPEN);
 
 	pen = CreatePen(PS_SOLID, 1, gc->foreground);
 	oldPen = SelectObject(dc, pen);
@@ -155,7 +155,7 @@ void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2)
 	int wy = y1 + tree->drawableYOrigin;
 
 	dc = TkWinGetDrawableDC(tree->display, drawable, &state);
-/*	SetROP2(dc, R2_NOT); */
+	SetROP2(dc, R2_COPYPEN);
 
 	pen = CreatePen(PS_SOLID, 1, gc->foreground);
 	oldPen = SelectObject(dc, pen);
@@ -198,7 +198,6 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	int i;
 	TkWinDCState state;
 	HDC dc;
-	int ROP2;
 
 	/* Dots on even pixels only */
 	nw = !(wx & 1) == !(wy & 1);
@@ -207,8 +206,8 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
 
 	dc = TkWinGetDrawableDC(tree->display, drawable, &state);
-	ROP2 = GetROP2(dc);
 	SetROP2(dc, R2_NOT);
+
 	if (w) /* left */
 	{
 		for (i = !nw; i < height; i += 2)
@@ -241,7 +240,6 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 			LineTo(dc, x + i + 1, y + height - 1);
 		}
 	}
-	SetROP2(dc, ROP2);
 	TkWinReleaseDrawableDC(drawable, dc, &state);
 #else
 	int wx = x + tree->drawableXOrigin;
@@ -312,7 +310,6 @@ struct DotStatePriv
 	HDC dc;
 	TkWinDCState dcState;
 	HRGN rgn;
-	int ROP2;
 #else
 	GC gc;
 	TkRegion rgn;
@@ -338,7 +335,6 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 	dotState->dc = TkWinGetDrawableDC(tree->display, drawable, &dotState->dcState);
 
 	/* XOR drawing */
-	dotState->ROP2 = GetROP2(dotState->dc);
 	SetROP2(dotState->dc, R2_NOT);
 
 	/* Keep drawing inside the contentbox */
@@ -424,13 +420,37 @@ void DotRect_Restore(DotState *p)
 {
 	struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
-	SetROP2(dotState->dc, dotState->ROP2);
 	SelectClipRgn(dotState->dc, NULL);
 	DeleteObject(dotState->rgn);
 	TkWinReleaseDrawableDC(dotState->drawable, dotState->dc, &dotState->dcState);
 #else
 	XSetClipMask(dotState->tree->display, dotState->gc, None);
 	Tk_FreeGC(dotState->tree->display, dotState->gc);
+#endif
+}
+
+void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
+{
+#ifdef WIN32
+	HDC dc;
+	TkWinDCState dcState;
+	HBRUSH brush;
+
+	dc = TkWinGetDrawableDC(display, drawable, &dcState);
+	SetROP2(dc, R2_COPYPEN);
+	brush = CreateSolidBrush(gc->foreground);
+	FillRgn(dc, (HRGN) rgn, brush);
+	DeleteObject(brush);
+	TkWinReleaseDrawableDC(drawable, dc, &dcState);
+#elif defined(TARGET_OS_MAC)
+#error "Mac developer: implement Tk_FillRegion please!"
+#else
+	XRectangle box;
+
+	TkClipBox(rgn, &box);
+	TkSetRegion(display, gc, rgn);
+	XFillRectangle(display, drawable, gc, box.x, box.y, box.width, box.height);
+	XSetClipMask(display, gc, None);
 #endif
 }
 
