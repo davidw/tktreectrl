@@ -7,7 +7,7 @@
 # Copyright (c) 1998-2000 by Scriptics Corporation.
 # All rights reserved.
 # 
-# RCS: @(#) $Id: all.tcl,v 1.3 2004/10/09 22:57:44 hobbs2 Exp $
+# RCS: @(#) $Id: all.tcl,v 1.4 2005/03/29 20:39:08 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -42,7 +42,6 @@ if {[llength $::tcltest::matchFiles] > 0} {
 set timeCmd {clock format [clock seconds]}
 puts $chan "Tests began at [eval $timeCmd]"
 
-interp alias {} package_require {} package require
 package require treectrl
 
 # source each of the specified tests
