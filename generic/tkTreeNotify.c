@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.4 2004/08/09 02:24:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.5 2005/03/29 21:07:43 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -39,14 +39,37 @@ static void ExpandItem(int id, Tcl_DString *result)
 #endif /* ITEM_ID_IS_STRING */
 }
 
+/* Handle %? */
+static void DumpPercents(QE_ExpandArgs *args, QE_ExpandProc proc, CONST char *chars)
+{
+	char which = args->which;
+	char buf[2];
+	int i;
+
+	buf[1] = '\0';
+
+	Tcl_DStringStartSublist(args->result);
+	for (i = 0; chars[i]; i++)
+	{
+		args->which = chars[i];
+		buf[0] = chars[i];
+		Tcl_DStringAppendElement(args->result, buf);
+		Tcl_DStringAppend(args->result, " ", 1);
+		(*proc)(args);
+	}
+	Tcl_DStringEndSublist(args->result);
+	args->which = which;
+}
+
 /*
  * %-substitution for any event
  */
-static void Percents_Any(QE_ExpandArgs *args)
+static void Percents_Any(QE_ExpandArgs *args, QE_ExpandProc proc, CONST char *chars)
 {
 	struct {
 		TreeCtrl *tree;
 	} *data = args->clientData;
+	char chars2[64];
 
 	switch (args->which)
 	{
@@ -59,12 +82,22 @@ static void Percents_Any(QE_ExpandArgs *args)
 			QE_ExpandEvent(args->bindingTable, args->event, args->result);
 			break;
 
+		case 'P': /* pattern */
+			QE_ExpandPattern(args->bindingTable, args->event, args->detail, args->result);
+			break;
+
 		case 'W': /* object */
 			QE_ExpandString((char *) args->object, args->result);
 			break;
 
 		case 'T': /* tree */
 			QE_ExpandString(Tk_PathName(data->tree->tkwin), args->result);
+			break;
+
+		case '?':
+			strcpy(chars2, "TWPed");
+			strcat(chars2, chars);
+			DumpPercents(args, proc, chars2);
 			break;
 
 		default:
@@ -87,7 +120,7 @@ static void Percents_Expand(QE_ExpandArgs *args)
 			break;
 
 		default:
-			Percents_Any(args);
+			Percents_Any(args, Percents_Expand, "I");
 			break;
 	}
 }
@@ -134,7 +167,7 @@ static void Percents_Selection(QE_ExpandArgs *args)
 			break;
 
 		default:
-			Percents_Any(args);
+			Percents_Any(args, Percents_Selection, "cSD");
 			break;
 	}
 }
@@ -158,7 +191,7 @@ static void Percents_ActiveItem(QE_ExpandArgs *args)
 			break;
 
 		default:
-			Percents_Any(args);
+			Percents_Any(args, Percents_ActiveItem, "cp");
 			break;
 	}
 }
@@ -182,7 +215,7 @@ static void Percents_Scroll(QE_ExpandArgs *args)
 			break;
 
 		default:
-			Percents_Any(args);
+			Percents_Any(args, Percents_Scroll, "lu");
 			break;
 	}
 }
