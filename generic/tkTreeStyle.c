@@ -2935,10 +2935,19 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					switch (expand[k])
 					{
-						case 'w': eLink->flags |= ELF_eEXPAND_W; break;
-						case 'n': eLink->flags |= ELF_eEXPAND_N; break;
-						case 'e': eLink->flags |= ELF_eEXPAND_E; break;
-						case 's': eLink->flags |= ELF_eEXPAND_S; break;
+						case 'w': case 'W': eLink->flags |= ELF_eEXPAND_W; break;
+						case 'n': case 'N': eLink->flags |= ELF_eEXPAND_N; break;
+						case 'e': case 'E': eLink->flags |= ELF_eEXPAND_E; break;
+						case 's': case 'S': eLink->flags |= ELF_eEXPAND_S; break;
+						default:
+						{
+							Tcl_ResetResult(tree->interp);
+							Tcl_AppendResult(tree->interp, "bad expand value \"",
+								expand, "\": must be a string ",
+								"containing zero or more of n, e, s, and w",
+								(char *) NULL);
+							return TCL_ERROR;
+						}
 					}
 				}
 				break;
@@ -2953,10 +2962,19 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					switch (expand[k])
 					{
-						case 'w': eLink->flags |= ELF_iEXPAND_W; break;
-						case 'n': eLink->flags |= ELF_iEXPAND_N; break;
-						case 'e': eLink->flags |= ELF_iEXPAND_E; break;
-						case 's': eLink->flags |= ELF_iEXPAND_S; break;
+						case 'w': case 'W': eLink->flags |= ELF_iEXPAND_W; break;
+						case 'n': case 'N': eLink->flags |= ELF_iEXPAND_N; break;
+						case 'e': case 'E': eLink->flags |= ELF_iEXPAND_E; break;
+						case 's': case 'S': eLink->flags |= ELF_iEXPAND_S; break;
+						default:
+						{
+							Tcl_ResetResult(tree->interp);
+							Tcl_AppendResult(tree->interp, "bad iexpand value \"",
+								expand, "\": must be a string ",
+								"containing zero or more of n, e, s, and w",
+								(char *) NULL);
+							return TCL_ERROR;
+						}
 					}
 				}
 				break;
@@ -2971,8 +2989,17 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					switch (string[k])
 					{
-						case 'x': eLink->flags |= ELF_SQUEEZE_X; break;
-						case 'y': eLink->flags |= ELF_SQUEEZE_Y; break;
+						case 'x': case 'X': eLink->flags |= ELF_SQUEEZE_X; break;
+						case 'y': case 'Y': eLink->flags |= ELF_SQUEEZE_Y; break;
+						default:
+						{
+							Tcl_ResetResult(tree->interp);
+							Tcl_AppendResult(tree->interp, "bad squeeze value \"",
+								string, "\": must be a string ",
+								"containing zero or more of x and y",
+								(char *) NULL);
+							return TCL_ERROR;
+						}
 					}
 				}
 				break;
