@@ -1044,7 +1044,7 @@ int B_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
 		int totWidth = Tree_TotalWidth(tree);
 
-		if ((totWidth == 0) || (visWidth <= 0) || (totWidth <= visWidth))
+		if (totWidth <= abs(visWidth))
 			return TCL_OK;
 
 		if (visWidth > 1)
@@ -1131,7 +1131,7 @@ int B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
 		int totHeight = Tree_TotalHeight(tree);
 
-		if ((totHeight == 0) || (visHeight <= 0) || (totHeight <= visHeight))
+		if (totHeight <= abs(visHeight))
 			return TCL_OK;
 
 		if (visHeight > 1)
