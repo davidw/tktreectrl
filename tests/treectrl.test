@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.6 2002/12/27 19:26:14 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.7 2002/12/28 13:43:46 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -1678,6 +1678,389 @@ test tree-13.5 {depth of the tree} -constraints knownBug -body {
     foreach i [.t item children root] {.t item remove $i}
     .t depth
 } -result {0}
+
+# disabled since it generates a segfault.
+test tree-14.1 {column: missing args} -constraints knownBug -body {
+    .t column
+} -returnCodes error -result {wrong # args: should be ".t column command ?arg arg...?"}
+
+test tree-14.2 {column: unknown command} -body {
+    .t column foo
+} -returnCodes error -result {bad command "foo": must be bbox, cget, configure, delete, index, move, neededwidth, or width}
+
+test tree-14.3 {column bbox: missing args} -body {
+    .t column bbox
+} -returnCodes error -result {wrong # args: should be ".t column bbox column"}
+
+test tree-14.4 {column bbox: invalid column} -body {
+    .t column bbox foo
+} -returnCodes error -result {column with tag "foo" doesn't exist}
+
+test tree-14.5 {column bbox: tree doesn't show headers} -body {
+    .t configure -showheader 0
+    .t column bbox column0
+} -result {}
+
+test tree-14.6 {column bbox} -body {
+    .t configure -showheader 1
+    .t column bbox 0
+} -result {3 3 501 7}
+
+# disabled since it generates a segfault.
+test tree-14.7 {column bbox: tail column not allowed} -constraints knownBug -body {
+    .t column bbox tail
+} -returnCodes error -result {can't specify "tail" for this command}
+
+test tree-14.8 {column configure: missing args} -body {
+    .t column configure
+} -returnCodes error -result {wrong # args: should be ".t column configure column ?option? ?value?"}
+
+test tree-14.9 {column configure: invalid column} -body {
+    .t column configure foo
+} -returnCodes error -result {column with tag "foo" doesn't exist}
+
+test tree-14.10 {column configure: list all options} -body {
+    .t column configure column1
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+
+test tree-14.10 {column configure: list all options} -body {
+    .t column configure column1
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+
+test tree-14.11 {column configure: tail column} -body {
+    .t column configure tail
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpadw {} {} 6 6} {-arrowpade {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} {}} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+
+test tree-4.12 {column configure: invalid -arrow} -body {
+    .t column configure column1 -arrow straight
+} -returnCodes error -result {bad arrow "straight": must be none, up, or down}
+
+test tree-4.13 {column configure/cget: -arrow} -body {
+    .t column configure column1 -arrow up
+    .t column cget column1 -arrow
+} -result {up}
+
+test tree-4.14 {column configure: invalid -arrowside} -body {
+    .t column configure column1 -arrowside up
+} -returnCodes error -result {bad arrowside "up": must be left or right}
+
+test tree-4.15 {column configure/cget: -arrowside} -body {
+    .t column configure column1 -arrowside left
+    .t column cget column1 -arrowside
+} -result {left}
+
+test tree-4.16 {column configure: invalid -arrowgravity} -body {
+    .t column configure column1 -arrowgravity both
+} -returnCodes error -result {bad arrowgravity "both": must be left or right}
+
+test tree-4.17 {column configure/cget: -arrowgravity} -body {
+    .t column configure column1 -arrowgravity right
+    .t column cget column1 -arrowgravity
+} -result {right}
+
+test tree-4.18 {column configure: invalid -arrowpadw} -body {
+    .t column configure column1 -arrowpadw x
+} -returnCodes error -result {bad screen distance "x"}
+
+test tree-4.19 {column configure/cget: -arrowpadw/e} -body {
+    .t column configure column1 -arrowpadw 8 -arrowpade 5
+    list [.t column cget column1 -arrowpadw] \
+	 [.t column cget column1 -arrowpade]
+} -result {8 5}
+
+test tree-4.20 {column configure: invalid -bitmap} -body {
+    .t column configure column1 -bitmap foo
+} -returnCodes error -result {bitmap "foo" not defined}
+
+test tree-4.21 {column configure/cget: -bitmap} -body {
+    .t column configure column1 -bitmap questhead
+    .t column cget column1 -bitmap
+} -result {questhead}
+
+test tree-4.22 {column configure: invalid -background} -body {
+    .t column configure column1 -background foo
+} -returnCodes error -result {unknown color name "foo"}
+
+test tree-4.23 {column configure/cget: -background} -body {
+    .t column configure column1 -background magenta
+    .t column cget column1 -background
+} -result {magenta}
+
+test tree-4.24 {column configure: invalid -borderwidth} -body {
+    .t column configure column1 -borderwidth x
+} -returnCodes error -result {bad screen distance "x"}
+
+test tree-4.25 {column configure/cget: -borderwidth} -body {
+    .t column configure column1 -borderwidth 4
+    .t column cget column1 -borderwidth
+} -result {4}
+
+test tree-4.26 {column configure: invalid -button} -body {
+    .t column configure column1 -button ""
+} -returnCodes error -result {expected boolean value but got ""}
+
+test tree-4.27 {column configure/cget: -button} -body {
+    .t column configure column1 -button off
+    .t column cget column1 -button
+} -result {0}
+
+test tree-4.28 {column configure: invalid -expand} -body {
+    .t column configure column1 -expand ew
+} -returnCodes error -result {expected boolean value but got "ew"}
+
+test tree-4.29 {column configure/cget: -expand} -body {
+    .t column configure column1 -expand true
+    .t column cget column1 -expand
+} -result {1}
+
+test tree-4.30 {column configure: invalid -image} -body {
+    .t column configure column1 -image questhead
+} -returnCodes error -result {image "questhead" doesn't exist}
+
+test tree-4.31 {column configure/cget: -image} -body {
+    .t column configure column1 -image emptyImg
+    .t column cget column1 -image
+} -result {emptyImg}
+
+test tree-4.32 {column configure: invalid -imagepade} -body {
+    .t column configure column1 -imagepade y
+} -returnCodes error -result {bad screen distance "y"}
+
+test tree-4.33 {column configure/cget: -imagepadw/e} -body {
+    .t column configure column1 -imagepadw 9 -imagepade 4
+    list [.t column cget column1 -imagepadw] \
+	 [.t column cget column1 -imagepade]
+} -result {9 4}
+
+test tree-4.34 {column configure: invalid -itembackground} -body {
+    .t column configure column1 -itembackground no
+} -returnCodes error -result {unknown color name "no"}
+
+test tree-4.35 {column configure/cget: simple -itembackground} -body {
+    .t column configure column1 -itembackground blue
+    .t column cget column1 -itembackground
+} -result {blue}
+
+test tree-4.36 {column configure: invalid -itembackground list} -body {
+    .t column configure column1 -itembackground {blue selected green active}
+} -returnCodes error -result {unknown color name "selected"}
+
+test tree-4.37 {column configure/cget: -itembackground list} -body {
+    .t column configure column1 -itembackground {blue green magenta red}
+    .t column cget column1 -itembackground
+} -result {blue green magenta red}
+
+test tree-4.38 {column configure: invalid -justify} -body {
+    .t column configure column1 -justify no
+} -returnCodes error -result {bad justification "no": must be left, right, or center}
+
+test tree-4.39 {column configure/cget: simple -justify} -body {
+    .t column configure column1 -justify center
+    .t column cget column1 -justify
+} -result {center}
+
+test tree-4.40 {column configure: invalid -minwidth} -body {
+    .t column configure column1 -minwidth z
+} -returnCodes error -result {bad screen distance "z"}
+
+test tree-4.41 {column configure/cget: -minwidth} -body {
+    .t column configure column1 -minwidth 25
+    .t column cget column1 -minwidth
+} -result {25}
+
+test tree-4.42 {column configure: invalid -relief} -body {
+    .t column configure column1 -relief yes
+} -returnCodes error -result {bad relief "yes": must be flat, groove, raised, ridge, solid, or sunken}
+
+test tree-4.43 {column configure/cget: -relief} -body {
+    .t column configure column1 -relief sunken
+    .t column cget column1 -relief
+} -result {sunken}
+
+test tree-4.44 {column configure: invalid -stepwidth} -body {
+    .t column configure column1 -stepwidth "\t"
+} -returnCodes error -result {bad screen distance "	"}
+
+test tree-4.45 {column configure/cget: -stepwidth} -body {
+    .t column configure column1 -stepwidth 125
+    .t column cget column1 -stepwidth
+} -result {125}
+
+test tree-4.46 {column configure: invalid -sunken} -body {
+    .t column configure column1 -sunken groove
+} -returnCodes error -result {expected boolean value but got "groove"}
+
+test tree-4.47 {column configure/cget: -sunken} -body {
+    .t column configure column1 -sunken on
+    .t column cget column1 -sunken
+} -result {1}
+
+test tree-4.48 {column configure: -text} -body {
+    .t column configure column1 -text "Text above Column 1"
+    .t column cget column1 -text
+} -result {Text above Column 1}
+
+test tree-4.49 {column configure: invalid -textpadw} -body {
+    .t column configure column1 -textpadw baz
+} -returnCodes error -result {bad screen distance "baz"}
+
+test tree-4.50 {column configure/cget: -textpadw/e} -body {
+    .t column configure column1 -textpadw 8 -textpade 5
+    list [.t column cget column1 -textpadw] \
+	 [.t column cget column1 -textpade]
+} -result {8 5}
+
+test tree-4.51 {column configure: invalid -width} -body {
+    .t column configure column1 -width all
+} -returnCodes error -result {bad screen distance "all"}
+
+test tree-4.52 {column configure/cget: -width} -body {
+    .t column configure column1 -width 250
+    .t column cget column1 -width
+} -result {250}
+
+test tree-4.53 {column configure: invalid -visible} -body {
+    .t column configure column1 -visible never
+} -returnCodes error -result {expected boolean value but got "never"}
+
+test tree-4.54 {column configure/cget: -visible} -body {
+    .t column configure column1 -visible no
+    .t column cget column1 -visible
+} -result {0}
+
+test tree-4.55 {column configure: invalid -widthhack} -body {
+    .t column configure column1 -widthhack ok
+} -returnCodes error -result {expected boolean value but got "ok"}
+
+test tree-4.56 {column configure/cget: -widthhack} -body {
+    .t column configure column1 -widthhack yes
+    .t column cget column1 -widthhack
+} -result {1}
+
+test tree-4.57 {column configure: -tag} -body {
+    .t column configure column1 -tag column2
+    .t column cget column1 -tag
+} -returnCodes error -result {column with tag "column1" doesn't exist}
+
+test tree-4.58 {column configure: -tag} -body {
+    .t column cget column2 -tag
+} -result {column2}
+
+test tree-4.59 {column cget: -tag of tail} -body {
+    # I think this should return tail...
+    .t column cget tail -tag
+} -result {}
+
+test tree-4.60 {column configure/cget: -tag of tail} -body {
+    # I think this should be forbidden...
+    .t column configure tail -tag head
+    .t column cget tail -tag
+} -result {head}
+
+test tree-4.61 {column cget: specify tail by its tag} -body {
+    .t column cget head -tag
+} -returnCodes error -result {column with tag "head" doesn't exist}
+
+test tree-4.62 {column delete: missing args} -body {
+    .t column delete
+} -returnCodes error -result {wrong # args: should be ".t column delete column"}
+
+test tree-4.63 {column delete: column tail} -body {
+    .t column delete tail
+} -returnCodes error -result {can't specify "tail" for this command}
+
+test tree-4.64 {column delete: first column} -body {
+    .t column delete 0
+} -result {}
+
+test tree-4.65 {suprise, surprise: column 0 still exists} -body {
+    .t column cget 0 -tag
+} -result {column2}
+
+test tree-4.66 {column index: missing args} -body {
+    .t column index
+} -returnCodes error -result {wrong # args: should be ".t column index column"}
+
+test tree-4.67 {column index: the easy case} -body {
+    .t column index 0
+} -result {0}
+
+test tree-4.68 {column index} -body {
+    .t column index column2
+} -result {0}
+
+test tree-4.69 {column index: tail column} -body {
+    .t column index tail
+} -result {1}
+
+test tree-4.70 {column move: missing args} -body {
+    .t column move
+} -returnCodes error -result {wrong # args: should be ".t column move column before"}
+
+test tree-4.71 {column move: invalid column} -body {
+    .t column move 0 2
+} -returnCodes error -result {bad column index "2": must be from 0 to 0}
+
+test tree-4.72 {column move: invalid column} -body {
+    .t column configure 1 -tag column1
+    .t column configure 2 -tag column3
+    .t column move 0 2
+    .t column index column2
+} -result {1}
+
+test tree-4.73 {correct moved?} -body {
+    set res {}
+    for {set x 0} {$x < [.t numcolumns]} {incr x} {
+	lappend res [.t column cget $x -tag]
+    }
+    set res
+} -result {column1 column2 column3}
+
+test tree-4.74 {column move: tail to the left} -body {
+    .t column move tail 0
+} -returnCodes error -result {can't specify "tail" for this command}
+
+test tree-4.75 {column move: tail as before is ok} -body {
+    .t column move 0 tail
+    .t column index column1
+} -result {2}
+
+test tree-4.76 {column width: missing args} -body {
+    .t column width
+} -returnCodes error -result {wrong # args: should be ".t column width column"}
+
+test tree-4.77 {column width: invalid column} -body {
+    .t column width foo
+} -returnCodes error -result {column with tag "foo" doesn't exist}
+
+test tree-4.78 {column width: tail column returns always 0} -body {
+    .t column width tail
+} -result {0}
+
+test tree-4.79 {column width} -body {
+    .t element create eText2 text -font {{courier -12}} -text "Hello World"
+    .t style create testStyle3
+    .t style elements testStyle3 eText2
+    .t item style set 1 column1 testStyle3
+    update idletasks
+    .t column width column1
+} -result {136}
+
+test tree-4.80 {column neededwidth: missing args} -body {
+    .t column neededwidth
+} -returnCodes error -result {wrong # args: should be ".t column neededwidth column"}
+
+test tree-4.81 {column neededwidth: invalid column} -body {
+    .t column neededwidth foo
+} -returnCodes error -result {column with tag "foo" doesn't exist}
+
+test tree-4.82 {column neededwidth: tail column returns always 0} -body {
+    .t column neededwidth tail
+} -result {0}
+
+test tree-4.83 {column neededwidth} -body {
+    .t column neededwidth column1
+} -result {136}
 
 # cleanup
 image delete emptyImg
