@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.13 2004/07/30 20:59:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.14 2004/08/09 02:14:03 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1968,7 +1968,7 @@ if (tree->debug.enable && tree->debug.display)
 			dItemHead = UpdateDInfoForRange(tree, dItemHead, range, rItem, x, y);
 		}
 
-		/* Track this range even if it has no DItems, so we whitespace is
+		/* Track this range even if it has no DItems, so whitespace is
 		 * erased */
 		if (dInfo->rangeFirstD == NULL)
 			dInfo->rangeFirstD = range;
@@ -2263,6 +2263,24 @@ if (y < maxY)
 			dItem->oldX = dItem->x;
 		}
 
+#if 1
+		{
+		TkRegion rgn;
+		XRectangle rect;
+
+		/* Offset and clip the whitespace region */
+		Tk_OffsetRegion(dInfo->wsRgn, offset, 0);
+		rgn = TkCreateRegion();
+		rect.x = minX;
+		rect.y = minY;
+		rect.width = maxX - minX;
+		rect.height = maxY - minY;
+		TkUnionRectWithRegion(&rect, rgn, damageRgn);
+		TkIntersectRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+		TkDestroyRegion(rgn);
+		}
+#endif
+
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
 			XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
@@ -2345,6 +2363,24 @@ if (x < maxX)
 		{
 			dItem->oldY = dItem->y;
 		}
+
+#if 1
+		{
+		TkRegion rgn;
+		XRectangle rect;
+
+		/* Offset and clip the whitespace region */
+		Tk_OffsetRegion(dInfo->wsRgn, 0, offset);
+		rgn = TkCreateRegion();
+		rect.x = minX;
+		rect.y = minY;
+		rect.width = maxX - minX;
+		rect.height = maxY - minY;
+		TkUnionRectWithRegion(&rect, rgn, damageRgn);
+		TkIntersectRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+		TkDestroyRegion(rgn);
+		}
+#endif
 
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
@@ -2689,9 +2725,9 @@ if (tree->debug.enable && tree->debug.display && 0)
 		TreeColumn treeColumn = tree->columns;
 		int columnIndex = 0;
 
-		while (dInfo->columnWidthSize < tree->columnCount)
+		if (dInfo->columnWidthSize < tree->columnCount)
 		{
-			dInfo->columnWidthSize *= 2;
+			dInfo->columnWidthSize = tree->columnCount + 10;
 			dInfo->columnWidth = (int *) ckrealloc((char *) dInfo->columnWidth,
 				sizeof(int) * dInfo->columnWidthSize);
 		}
