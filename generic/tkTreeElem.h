@@ -1,3 +1,13 @@
+/* 
+ * tkTreeElem.h --
+ *
+ *	This module is the header for elements in treectrl widgets.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.4 2004/07/30 21:03:33 treectrl Exp $
+ */
+
 typedef struct ElementType ElementType;
 typedef struct Element Element;
 typedef struct ElementArgs ElementArgs;

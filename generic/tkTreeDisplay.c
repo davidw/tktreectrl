@@ -1,3 +1,13 @@
+/* 
+ * tkTreeColumn.c --
+ *
+ *	This module implements treectrl widget's columns.
+ *
+ * Copyright (c) 2002-2004 Tim Baker
+ *
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.13 2004/07/30 20:59:31 treectrl Exp $
+ */
+
 #include "tkTreeCtrl.h"
 
 typedef struct RItem RItem;
