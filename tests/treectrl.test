@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.5 2002/12/27 11:52:16 krischan Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.6 2002/12/27 19:26:14 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest
@@ -1192,6 +1192,16 @@ test tree-6.9 {item delete: item range without common ancestor} -body {
     .t item delete 10 11
 } -result {}
 
+test tree-6.9a {item delete: don't allow to delete "root" itemDesc} -body {
+    .t item delete root
+} -returnCodes error -result {can't specify "root" for this command}
+
+# disabled since it generates a segfault
+test tree-6.9b {item delete: deleting root should be ignored} -constraints knownBug -body {
+    .t item delete [.t index root]
+    update idletasks
+} -result {}
+
 test tree-6.10 {item ancestors: no ancestor yet} -body {
     .t item create
     .t item ancestors 12
@@ -1550,6 +1560,7 @@ test tree-8.8 {selection add: all items and then some} -constraints knownBug -bo
 } -result {10 {0 1 2 3 4 5 6 7 8 12}}
 
 test tree-8.9 {selection clear} -body {
+    .t selection add all
     .t selection clear "root firstchild"
     list [.t selection count] [.t selection get]
 } -result {9 {0 2 3 4 5 6 7 8 12}}
@@ -1588,6 +1599,84 @@ test tree-8.15 {selection includes: item is selected} -body {
 
 test tree-8.16 {selection includes: item is not selected} -body {
     .t selection includes {root child 0 firstchild}
+} -result {0}
+
+test tree-9.1 {see: missing args} -body {
+    .t see
+} -returnCodes error -result {wrong # args: should be ".t see item"}
+
+test tree-9.2 {see: too many args} -body {
+    .t see foo bar
+} -returnCodes error -result {wrong # args: should be ".t see item"}
+
+test tree-9.3 {see: invalid item} -body {
+    .t see foo
+} -returnCodes error -result {bad item description "foo"}
+
+test tree-9.4 {see: bottom most item} -body {
+    .t see "root bottom"
+} -result {}
+
+test tree-10.1 {range: missing args} -body {
+    .t range
+} -returnCodes error -result {wrong # args: should be ".t range first last"}
+
+test tree-10.2 {range: too many args} -body {
+    .t range foo bar baz
+} -returnCodes error -result {wrong # args: should be ".t range first last"}
+
+test tree-10.3 {range: select all from top to bottom} -body {
+    .t range "root top" "root bottom"
+} -result {0 1 2 3 4 5 6 7 8}
+
+test tree-10.4 {range: select all from bottom to top} -body {
+    .t range "root bottom" "root top"
+} -result {0 1 2 3 4 5 6 7 8}
+
+test tree-11.1 {orphans: too many args} -constraints knownBug -body {
+    .t orphans foo
+} -returnCodes error -result {wrong # args: should be ".t orphans"}
+
+test tree-11.2 {orphans: 12 from above} -body {
+    .t orphans
+} -result {12}
+
+test tree-11.3 {orphans: no orphans} -body {
+    .t item lastchild 0 12
+    .t orphans
+} -result {}
+
+test tree-12.1 {numitems: too many args} -constraints knownBug -body {
+    .t numitems foo
+} -returnCodes error -result {wrong # args: should be ".t numitems"}
+
+test tree-12.2 {numitems} -body {
+    .t numitems
+} -result {10}
+
+test tree-12.3 {numitems: simple double check with range} -body {
+    expr {[.t numitems] == [llength [.t range first last]]}
+} -result {1}
+
+test tree-13.1 {depth: too many args} -constraints knownBug -body {
+    .t depth foo bar
+} -returnCodes error -result {wrong # args: should be ".t depth ?item?"}
+
+test tree-13.2 {depth of the root item} -body {
+    .t depth root
+} -result {0}
+
+test tree-13.3 {depth of a deeper item} -body {
+    .t depth "root firstchild lastchild"
+} -result {2}
+
+test tree-13.4 {depth of the tree} -body {
+    .t depth
+} -result {3}
+
+test tree-13.5 {depth of the tree} -constraints knownBug -body {
+    foreach i [.t item children root] {.t item remove $i}
+    .t depth
 } -result {0}
 
 # cleanup
