@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.5 2004/07/26 17:16:52 treectrl Exp $}
+  $Id: treectrl.man,v 1.6 2004/07/30 21:21:01 treectrl Exp $}
 ][manpage_begin treectrl n 1.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -119,9 +119,11 @@ during column resizing.
 
 [tkoption_def -defaultstyle defaultStyle DefaultStyle]
 Specifies a list of styles, one per column, to apply to each item created by
-the [cmd "item create"] command.
-Each element in the list should be a valid style name or an empty string to
-indicate no style should be applied to a specific column.
+the [cmd "item create"] command. The number of styles in the list can be
+different from the number of tree columns.
+Each list element should be a valid style name or an empty string to
+indicate no style should be applied to a specific column. The list of styles
+is updated if a style is deleted or if a column is moved.
 
 [tkoption_def -doublebuffer doubleBuffer DoubleBuffer]
 Specifies if double-buffering should be used to improve displaying.
@@ -148,10 +150,11 @@ Indentation is the screen distance an item is displayed more to
 the right than its father.
 
 [tkoption_def -itemheight itemHeight ItemHeight]
-Specifies the minimal height of an item
+Specifies a fixed height for every item
 in any of the forms acceptable to [fun Tk_GetPixels].
 The default is 0, which means that
-every item has exactly the height of it stallest element.
+every item has the height requested by the arrangement of elements
+in each column.
 
 [tkoption_def -linecolor lineColor LineColor]
 Specifies the color which should be used for drawing
@@ -415,9 +418,9 @@ The needed width is the maximum of the width of the column header
 and the width of the [emph widest] currently visible item.
 
 [call [arg pathName] [cmd {column width}] [arg column]]
-This command returns a decimal string giving the width
+This command returns a decimal string giving the width in pixels
 of the column specified by [arg column],
-even if the treectrl is configured to don't display the column headers
+even if the treectrl is configured to not display the column headers
 by means of the [option -showheader] option.
 [list_end]
 
@@ -586,9 +589,6 @@ The following dragimage options are supported:
 [opt_def [option -visible] [arg boolean]]
 Specifies a boolean value which determines
 whether the dragimage should currently be visible.
-This option should not be modified by means of the
-[cmd {dragimage configure}] widget command;
-instead use the [cmd {dragimage visible}] widget command.
 [list_end]
 
 [call [arg pathName] [cmd {dragimage offset}] [opt [arg {x y}]]]
@@ -599,13 +599,6 @@ relative to the item its shape is derived from.
 If two coordinates are specified,
 sets the dragimage offset to the given coordinates [arg x] and [arg y].
 
-[call [arg pathName] [cmd {dragimage visible}] [opt [arg boolean]]]
-If the additional argument specifies true, the dotted lines will become
-visible and the dragimage option [option -visible] becomes 1;
-if it specifies false, the dotted lines will be hidden
-and the dragimage option [option -visible] becomes 0.
-Returns 1 if the dragimage is currently visible,
-0 otherwise.
 [list_end]
 
 [call [arg pathName] [cmd element] [arg option] [opt [arg element]] \
@@ -744,6 +737,11 @@ in this column is considered, if an additional [arg element] is specified,
 the area of this [arg element] in [arg column] of the specified item is
 returned.
 
+[call [arg pathName] [cmd {item cget}] [arg itemDesc] [arg option]]
+Returns the current value of the configuration option for the item specified by
+[arg itemDesc] whose name is [arg option]. [arg Option] may have any of the
+values accepted by the [cmd "item create"] command when the item was created.
+
 [call [arg pathName] [cmd {item children}] [arg itemDesc]]
 Returns a list containing the numerical indexes of all children
 of the item specified by [arg itemDesc] in the correct order from
@@ -759,11 +757,47 @@ Every [arg option] must be known by the element's type
 The corresponding [arg value] will overwrite the value of the element for this
 one column in this item.
 
-[call [arg pathName] [cmd {item create}]]
-Creates a new item and returns its numerical indexes.
-The new item has set the states [const open] and [const enabled].
-If the treectrl widget has currently the focus,
-also the state [const focus] is set.
+[call [arg pathName] [cmd {item configure}] [arg itemDesc] [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
+If no [arg option] is specified, returns a list describing all of the available
+options for the item given by [arg itemDesc] (see [fun Tk_ConfigureInfo] for
+information on the format of this list). If [arg option] is specified with no
+value, then the command returns a list describing the one named option (this
+list will be identical to the corresponding sublist of the value returned if
+no [arg option] is specified). If one or more [arg option]-[arg value] pairs
+are specified, then the command modifies the given widget option(s) to have the
+given value(s); in this case the command returns an empty string. The options
+and values are the same as those permissible in the [cmd "item create"] command
+when the item was created.
+
+[call [arg pathName] [cmd {item create}] [opt [arg {option value ...}]]]
+Creates a new item and returns its unique identifier.
+The new item has the states [const open] and [const enabled] set by default.
+If the treectrl widget currently has the focus,
+the state [const focus] is also set. Each [arg option]-[arg value] pair sets one
+of the configuration options for the item. These same [arg option]-[arg value]
+pairs may be used in the [cmd "item configure"] command to change the item's
+configuration.
+[nl]
+The following options are supported by items:
+
+[list_begin opt]
+
+[opt_def [option -button] [arg boolean]]
+[arg Boolean] must have one of the forms accepted by [fun Tk_GetBoolean]. It
+indicates whether or not an expand/collapse button should be drawn next to this
+item, typically to indicate the item has children. The button will only be
+displayed if:
+a) the column specified by the widget option [option -treecolumn] is visible;
+and b) the widget option [option -showbuttons] is true
+
+[opt_def [option -visible] [arg boolean]]
+[arg Boolean] must have one of the forms accepted by [fun Tk_GetBoolean]. It
+indicates that the item should be displayed in the list. The item will only be
+displayed if:
+a) each ancestor is a descendant of the root item (not an orphan);
+and b) each ancestor's [option -visible] option is true 
+
+[list_end]
 
 [call [arg pathName] [cmd {item delete}] [arg first] [opt [arg last]]]
 Deletes the specified item(s).
@@ -774,7 +808,7 @@ specified, the item described by [arg first] is deleted.
 If both [arg first] and [arg last] are specified,
 they must decribe items with a common ancestor;
 then the range of items between [arg first] and [arg last] is deleted.
-[nl][nl]
+[nl]
 Deleting an item deletes any child items of the deleted item recursively.
 If the current [const active] item is deleted, the root item becomes the new active item.
 If the current selection [const anchor] item is deleted, the root item becomes the new anchor item.
@@ -796,11 +830,12 @@ The following forms of the command are supported:
 [list_begin definitions]
 [call [arg pathName] [cmd {item element actual}] [arg itemDesc] [arg column] \
      [arg element] [arg option]]
-This command returns the current value of the option named [arg option]
+This command returns the current value of the configuration option named [arg option]
 associated with [arg element] inside [arg column] of the item described by
-[arg itemDesc]; if it was already configured for the actual item, the
-return value is the same as if the [cmd {item element actual}] widget command
-was used; otherwise the option value of the underlynig element is returned.
+[arg itemDesc]. If [arg option] was configured using the
+[cmd "item element configure"] command, the
+return value is the same as if the [cmd {item element cget}] command
+was used. Otherwise the value of the configuration option of the underlying element is returned.
 [arg Option] may have any of the values accepted by the type of the
 specified element (see [sectref ELEMENTS] below)
 
@@ -838,12 +873,6 @@ child of the item described by [arg parent].
 If [arg child] is specified, it must described an item
 that is not an ancestor of [arg parent].
 Then it will become the new first child of [arg parent].
-
-[call [arg pathName] [cmd {item hasbutton}] [arg itemDesc] [opt [arg boolean]]]
-If [arg boolean] is not specified, returns 1 if to the left of
-the item described by [arg itemDesc] a button should be drawn, 0 otherwise.
-If [arg boolean] is specified, it must be a valid boolean value
-specifying if a button should be displayed to the left of this item. 
 
 [call [arg pathName] [cmd {item index}] [arg itemDesc]]
 Returns a list of two integers, which corresponds to the row 
@@ -922,8 +951,6 @@ instead the sorted items are returned as result of the command.
 [nl]
 
 By default ASCII sorting is used with the result returned in increasing order.
-The order can be modified by means of the [option -increasing] (the default)
-or [option -decreasing] flag.
 Any of the following options may be specified to control
 the sorting process of the previously specified column
 (unique abbreviations are accepted):
@@ -941,6 +968,9 @@ equal to, or greater than zero if the first item is to
 be considered less than, equal to, or greater than the second,
 respectively.
 
+[opt_def [option -decreasing]]
+Sort the items in decreasing order ("largest" items first).
+
 [opt_def [option -dictionary]]
 Use dictionary-style comparison. This is the same as [option -ascii]
 except (a) case is ignored except as a tie-breaker and (b) if two
@@ -949,12 +979,24 @@ not characters.  For example, in [option -dictionary] mode, [term bigBoy]
 sorts between [term bigbang] and [term bigboy], and [term x10y]
 sorts between [term x9y] and [term x11y].
 
+[opt_def [option -increasing]]
+Sort the items in increasing order ("smallest" items first). This is the default.
+
 [opt_def [option -integer]]
 Convert to integers and use integer comparison.
 
 [opt_def [option -real]]
 Convert to floating-point values and use floating comparison.
 [list_end]
+
+[call [arg pathName] [cmd {item state}] [arg command] [arg itemDesc] \
+     [opt [arg {arg ...}]]]
+This command is used to manipulate the states of an item.
+The exact behavior of the command depends on the [arg command] argument
+that follows the [cmd style] argument.
+The following forms of the command are supported:
+
+[list_begin definitions]
 
 [call [arg pathName] [cmd {item state get}] [arg itemDesc] \
      [opt [arg {stateName ...}]]]
@@ -979,9 +1021,11 @@ in the range betwen [arg itemDesc] and [arg lastItem].
 [arg ItemDesc] may be the string [const all],
 then the state changes are made for all items of the treectrl widget.
 
+[list_end]
+
 [call [arg pathName] [cmd {item style}] [arg command] [arg itemDesc] \
      [opt [arg {arg ...}]]]
-This command is used to manipulate the style of the item.
+This command is used to manipulate the styles of an item.
 The exact behavior of the command depends on the [arg command] argument
 that follows the [cmd style] argument.
 The following forms of the command are supported:
@@ -994,11 +1038,15 @@ which is set for the item described by [arg itemDesc] in [arg column].
 
 [call [arg pathName] [cmd {item style map}] [arg itemDesc] [arg column] \
      [arg style] [arg map]]
-[arg Map] must be a list with an even number of elements,
-and each element must be the name of an element created by the
-[cmd {element create}] widget command.
-Replaces elements in the style of the item described by [arg itemDesc]
-in [arg column] based on the from-to pairs in [arg map].
+Like the [cmd "item style set"] command, this command may be used to assign a
+style to a specific column of an item. Unlike [cmd "item style set"], this
+command can transfer configuration values of elements in the current style
+to elements in the new style specified by [arg style].
+
+[arg Map] must be a list of [arg elementOld]-[arg elementNew] pairs, where
+[arg elementOld] is an element in the current style, and [arg elementNew] is
+an element in the style specified by [arg style]. Both [arg elementOld] and
+[arg elementNew] must be of the same type ([const bitmap], [const text] etc).
 
 [call [arg pathName] [cmd {item style set}] [arg itemDesc] [opt [arg column]] \
      [opt [arg style]] [opt [arg {column style ...}]]]
@@ -1024,14 +1072,6 @@ this command is provided as a convenience. Use the
 [cmd "item element configure"] command if you want to set the text of a
 specific text element.
 
-[call [arg pathName] [cmd {item visible}] [arg itemDesc] [opt [arg boolean]]]
-If [arg boolean] is not specified, returns 1 if the item
-described by [arg itemDesc] is currently visible, 0 otherwise.
-If [arg boolean] is specified, it must be a valid boolean value
-specifying if the item should be visible.
-The visibility of an item is independend from the state of its ancestors.
-So if the state of one of the ancestors is currently not opened,
-the item may be considered visible although it is not displayed on the screen.
 [list_end]
 
 [call [arg pathName] [cmd marquee] [arg option] [opt [arg {arg ...}]]]
@@ -1085,9 +1125,6 @@ The following marquee options are supported:
 Specifies a boolean value which determines
 whether the dotted line surrounding the region of the marquee
 should currently be visible.
-This option should not be modified by means of the
-[cmd {marquee configure}] widget command;
-instead use the [cmd {marquee visible}] widget command.
 [list_end]
 
 [call [arg pathName] [cmd {marquee coords}] [opt [arg {x1 y1 x2 y2}]]]
@@ -1115,13 +1152,6 @@ These lists start with the column number,
 followed by the elements of the style defined for the item in this column
 if there are any.
 
-[call [arg pathName] [cmd {marquee visible}] [opt [arg boolean]]]
-If the additional argument specifies true, the dotted line will become
-visible and the marquee option [option -visible] becomes 1;
-if it specifies false, the dotted line will be hidden
-and the marquee option [option -visible] becomes 0.
-Returns 1 if the dotted line surrounding the marquee is currently visible,
-0 otherwise.
 [list_end]
 
 [call [arg pathName] [cmd notify] [arg option] [opt [arg {arg ...}]]]
@@ -1507,7 +1537,6 @@ It can happen that the element's space is larger than its requested dimensions.
 These options may be used to position (or stretch) the slave within its cell.
 [arg Style]  is a string that contains zero or more of the characters
 [const n], [const s], [const e] or [const w].
-The string can contain other characters, but they are ignored.
 Each letter refers to a side (north, south,
 east, or west) in which direction the element will grow in.
 
@@ -1516,7 +1545,6 @@ If an element's area is smaller than its requested dimensions, this
 option may be used to allow shrinking of the element.
 [arg Style] is a string that contains zero or more of the characters
 [const x] or [const y].
-The string can contain other characters, but they are ignored.
 [const x] shrinks the element horizontally,
 [const y] shrinks it vertically.
 
@@ -1687,9 +1715,9 @@ Indicates whether or not a mouse click on the column header should
 change the sorting order of the tree.
 
 [opt_def [option -expand] [arg boolean]]
-Indicates whether or not any extra spaces should be distributed
+Indicates whether or not any extra horizontal space should be distributed
 to this column.
-This option will actually only work, if the column has no fix width defined
+This option will actually only work if the column has no fixed width defined
 by means of the [option -width] column option.
 
 [opt_def [option -font] [arg fontName]]
@@ -1758,16 +1786,26 @@ or top and bottom (for [option -textpady]) side of the text.
 of two values to specify padding for the two sides separately,
 it defaults to 0.
 
-[opt_def [option -width] [arg size]]
-Specifies the width of the column.
-
 [opt_def [option -visible] [arg boolean]]
 Indicates whether or not the column should be displayed.
 
+[opt_def [option -width] [arg size]]
+Specifies a fixed width for the column. If this value is zero, the column width
+is calculated as the maximum of:
+a) the width requested by items;
+b) the width requested the column header;
+c) and the column [option -minwidth].
+This calculated width is also affected by the [option -expand] option of all
+columns.
+
 [opt_def [option -widthhack] [arg boolean]]
-Indicates whether or not all items inside the column
-should have the same width
-(typically in a treectrl widget with horizontal orientation).
+Indicates whether or not all items should have the same width. This option only
+has effect when all of these conditions are met:
+a) the tree [option -orientation] option is [const vertical];
+b) only a single tree column is visible;
+c) the single visible tree column [option -width] option is zero;
+d) and the tree [option -wrap] option results in wrapping.
+
 [list_end]
 
 [section STATES]
@@ -2076,8 +2114,7 @@ Indicates the root item of the treectrl.
 The [arg itemDesc] may be followed by one or more [arg modifier]s.
 A modifier changes the item described by the [arg itemDesc] relative to
 the description upto this point.
-It may be specified in any of the following forms,
-all optionally followed by [const visible]:
+It may be specified in any of the following forms:
 
 [list_begin definitions]
 [lst_item [const above]]
@@ -2089,13 +2126,13 @@ Use the item one row below in this column.
 [lst_item [const bottom]]
 Use the item in the last row of this column.
 
-[lst_item "[const child] [arg n]"]
+[lst_item "[const child] [arg n] [opt [const visible]]"]
 Use the [arg n]th child of the item.
 
-[lst_item [const firstchild]]
+[lst_item "[const firstchild] [opt [const visible]]"]
 Use the first child of the item.
 
-[lst_item [const lastchild]]
+[lst_item "[const lastchild] [opt [const visible]]"]
 Use the last child of the item.
 
 [lst_item [const left]]
@@ -2104,22 +2141,22 @@ Use the item one column to the left in the same row.
 [lst_item [const leftmost]]
 Use the item of the first column in the same row.
 
-[lst_item [const next]]
+[lst_item "[const next] [opt [const visible]]"]
 Use the next item, which is the first existant (or visible) item of the
 following list: the first child, the next sibling or the next sibling of
 the nearest parent which has one.
 
-[lst_item [const nextsibling]]
+[lst_item "[const nextsibling] [opt [const visible]]"]
 Use the next sibling of the item.
 
 [lst_item [const parent]]
 Use the parent of the item.
 
-[lst_item [const prev]]
+[lst_item "[const prev] [opt [const visible]]"]
 Use the last child of the previous sibling,
 or the parent if there is no previos sibling.
 
-[lst_item [const prevsibling]]
+[lst_item "[const prevsibling] [opt [const visible]]"]
 Use the previous sibling of the item.
 
 [lst_item [const right]]
@@ -2128,7 +2165,7 @@ Use the item one column to the right in the same row.
 [lst_item [const rightmost]]
 Use the item of the last column in the same row.
 
-[lst_item "[const sibling] [arg n]"]
+[lst_item "[const sibling] [arg n] [opt [const visible]]"]
 Use the [arg n]th child of the item's parent.
 
 [lst_item [const top]]

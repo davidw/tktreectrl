@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.22 2004/07/26 17:16:52 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.23 2004/07/30 21:21:01 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 1.0  "Tk Commands"
 .BS
@@ -77,8 +77,6 @@ package require \fBtreectrl  1.0\fR
 .sp
 \fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?\fR
 .sp
-\fIpathName\fR \fBdragimage visible\fR ?\fIboolean\fR?\fR
-.sp
 \fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
 .sp
 \fIpathName\fR \fBelement cget\fR \fIelement\fR \fIoption\fR\fR
@@ -105,11 +103,15 @@ package require \fBtreectrl  1.0\fR
 .sp
 \fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?\fR
 .sp
+\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR\fR
+.sp
 \fIpathName\fR \fBitem children\fR \fIitemDesc\fR\fR
 .sp
 \fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
 .sp
-\fIpathName\fR \fBitem create\fR\fR
+\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+.sp
+\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
 .sp
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?\fR
 .sp
@@ -124,8 +126,6 @@ package require \fBtreectrl  1.0\fR
 \fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
 .sp
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
-.sp
-\fIpathName\fR \fBitem hasbutton\fR \fIitemDesc\fR ?\fIboolean\fR?\fR
 .sp
 \fIpathName\fR \fBitem index\fR \fIitemDesc\fR\fR
 .sp
@@ -149,6 +149,8 @@ package require \fBtreectrl  1.0\fR
 .sp
 \fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?\fR
 .sp
+\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+.sp
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName ...\fR?\fR
 .sp
 \fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?\fR
@@ -163,8 +165,6 @@ package require \fBtreectrl  1.0\fR
 .sp
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR \fIcolumn\fR ?\fItext\fR? ?\fIcolumn text ...\fR?\fR
 .sp
-\fIpathName\fR \fBitem visible\fR \fIitemDesc\fR ?\fIboolean\fR?\fR
-.sp
 \fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
 .sp
 \fIpathName\fR \fBmarquee anchor\fR ?\fIx y\fR?\fR
@@ -178,8 +178,6 @@ package require \fBtreectrl  1.0\fR
 \fIpathName\fR \fBmarquee corner\fR ?\fIx y\fR?\fR
 .sp
 \fIpathName\fR \fBmarquee identify\fR\fR
-.sp
-\fIpathName\fR \fBmarquee visible\fR ?\fIboolean\fR?\fR
 .sp
 \fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?\fR
 .sp
@@ -436,9 +434,11 @@ Database Class:	\fBDefaultStyle\fR
 .fi
 .IP
 Specifies a list of styles, one per column, to apply to each item created by
-the \fBitem create\fR command.
-Each element in the list should be a valid style name or an empty string to
-indicate no style should be applied to a specific column.
+the \fBitem create\fR command. The number of styles in the list can be
+different from the number of tree columns.
+Each list element should be a valid style name or an empty string to
+indicate no style should be applied to a specific column. The list of styles
+is updated if a style is deleted or if a column is moved.
 .LP
 .nf
 .ta 6c
@@ -489,10 +489,11 @@ Database Name:	\fBitemHeight\fR
 Database Class:	\fBItemHeight\fR
 .fi
 .IP
-Specifies the minimal height of an item
+Specifies a fixed height for every item
 in any of the forms acceptable to \fBTk_GetPixels\fR.
 The default is 0, which means that
-every item has exactly the height of it stallest element.
+every item has the height requested by the arrangement of elements
+in each column.
 .LP
 .nf
 .ta 6c
@@ -860,9 +861,9 @@ The needed width is the maximum of the width of the column header
 and the width of the \fIwidest\fR currently visible item.
 .TP
 \fIpathName\fR \fBcolumn width\fR \fIcolumn\fR\fR
-This command returns a decimal string giving the width
+This command returns a decimal string giving the width in pixels
 of the column specified by \fIcolumn\fR,
-even if the treectrl is configured to don't display the column headers
+even if the treectrl is configured to not display the column headers
 by means of the \fB-showheader\fR option.
 .RE
 .TP
@@ -1026,9 +1027,6 @@ The following dragimage options are supported:
 \fB\fB-visible\fR\fR \fIboolean\fR
 Specifies a boolean value which determines
 whether the dragimage should currently be visible.
-This option should not be modified by means of the
-\fBdragimage configure\fR widget command;
-instead use the \fBdragimage visible\fR widget command.
 .RE
 .TP
 \fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?\fR
@@ -1038,14 +1036,6 @@ The dragimage offset is the screen distance, the image is displayed
 relative to the item its shape is derived from.
 If two coordinates are specified,
 sets the dragimage offset to the given coordinates \fIx\fR and \fIy\fR.
-.TP
-\fIpathName\fR \fBdragimage visible\fR ?\fIboolean\fR?\fR
-If the additional argument specifies true, the dotted lines will become
-visible and the dragimage option \fB-visible\fR becomes 1;
-if it specifies false, the dotted lines will be hidden
-and the dragimage option \fB-visible\fR becomes 0.
-Returns 1 if the dragimage is currently visible,
-0 otherwise.
 .RE
 .TP
 \fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
@@ -1177,6 +1167,11 @@ in this column is considered, if an additional \fIelement\fR is specified,
 the area of this \fIelement\fR in \fIcolumn\fR of the specified item is
 returned.
 .TP
+\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR\fR
+Returns the current value of the configuration option for the item specified by
+\fIitemDesc\fR whose name is \fIoption\fR. \fIOption\fR may have any of the
+values accepted by the \fBitem create\fR command when the item was created.
+.TP
 \fIpathName\fR \fBitem children\fR \fIitemDesc\fR\fR
 Returns a list containing the numerical indexes of all children
 of the item specified by \fIitemDesc\fR in the correct order from
@@ -1192,11 +1187,45 @@ Every \fIoption\fR must be known by the element's type
 The corresponding \fIvalue\fR will overwrite the value of the element for this
 one column in this item.
 .TP
-\fIpathName\fR \fBitem create\fR\fR
-Creates a new item and returns its numerical indexes.
-The new item has set the states \fBopen\fR and \fBenabled\fR.
-If the treectrl widget has currently the focus,
-also the state \fBfocus\fR is set.
+\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+If no \fIoption\fR is specified, returns a list describing all of the available
+options for the item given by \fIitemDesc\fR (see \fBTk_ConfigureInfo\fR for
+information on the format of this list). If \fIoption\fR is specified with no
+value, then the command returns a list describing the one named option (this
+list will be identical to the corresponding sublist of the value returned if
+no \fIoption\fR is specified). If one or more \fIoption\fR-\fIvalue\fR pairs
+are specified, then the command modifies the given widget option(s) to have the
+given value(s); in this case the command returns an empty string. The options
+and values are the same as those permissible in the \fBitem create\fR command
+when the item was created.
+.TP
+\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
+Creates a new item and returns its unique identifier.
+The new item has the states \fBopen\fR and \fBenabled\fR set by default.
+If the treectrl widget currently has the focus,
+the state \fBfocus\fR is also set. Each \fIoption\fR-\fIvalue\fR pair sets one
+of the configuration options for the item. These same \fIoption\fR-\fIvalue\fR
+pairs may be used in the \fBitem configure\fR command to change the item's
+configuration.
+.sp
+The following options are supported by items:
+.RS
+.TP
+\fB\fB-button\fR\fR \fIboolean\fR
+\fIBoolean\fR must have one of the forms accepted by \fBTk_GetBoolean\fR. It
+indicates whether or not an expand/collapse button should be drawn next to this
+item, typically to indicate the item has children. The button will only be
+displayed if:
+a) the column specified by the widget option \fB-treecolumn\fR is visible;
+and b) the widget option \fB-showbuttons\fR is true
+.TP
+\fB\fB-visible\fR\fR \fIboolean\fR
+\fIBoolean\fR must have one of the forms accepted by \fBTk_GetBoolean\fR. It
+indicates that the item should be displayed in the list. The item will only be
+displayed if:
+a) each ancestor is a descendant of the root item (not an orphan);
+and b) each ancestor's \fB-visible\fR option is true
+.RE
 .TP
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?\fR
 Deletes the specified item(s).
@@ -1227,11 +1256,12 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
-This command returns the current value of the option named \fIoption\fR
+This command returns the current value of the configuration option named \fIoption\fR
 associated with \fIelement\fR inside \fIcolumn\fR of the item described by
-\fIitemDesc\fR; if it was already configured for the actual item, the
-return value is the same as if the \fBitem element actual\fR widget command
-was used; otherwise the option value of the underlynig element is returned.
+\fIitemDesc\fR. If \fIoption\fR was configured using the
+\fBitem element configure\fR command, the
+return value is the same as if the \fBitem element cget\fR command
+was used. Otherwise the value of the configuration option of the underlying element is returned.
 \fIOption\fR may have any of the values accepted by the type of the
 specified element (see \fBELEMENTS\fR below)
 .TP
@@ -1266,12 +1296,6 @@ child of the item described by \fIparent\fR.
 If \fIchild\fR is specified, it must described an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new first child of \fIparent\fR.
-.TP
-\fIpathName\fR \fBitem hasbutton\fR \fIitemDesc\fR ?\fIboolean\fR?\fR
-If \fIboolean\fR is not specified, returns 1 if to the left of
-the item described by \fIitemDesc\fR a button should be drawn, 0 otherwise.
-If \fIboolean\fR is specified, it must be a valid boolean value
-specifying if a button should be displayed to the left of this item.
 .TP
 \fIpathName\fR \fBitem index\fR \fIitemDesc\fR\fR
 Returns a list of two integers, which corresponds to the row
@@ -1346,8 +1370,6 @@ no rearranging of the items is done;
 instead the sorted items are returned as result of the command.
 .sp
 By default ASCII sorting is used with the result returned in increasing order.
-The order can be modified by means of the \fB-increasing\fR (the default)
-or \fB-decreasing\fR flag.
 Any of the following options may be specified to control
 the sorting process of the previously specified column
 (unique abbreviations are accepted):
@@ -1365,6 +1387,9 @@ equal to, or greater than zero if the first item is to
 be considered less than, equal to, or greater than the second,
 respectively.
 .TP
+\fB\fB-decreasing\fR\fR
+Sort the items in decreasing order ("largest" items first).
+.TP
 \fB\fB-dictionary\fR\fR
 Use dictionary-style comparison. This is the same as \fB-ascii\fR
 except (a) case is ignored except as a tie-breaker and (b) if two
@@ -1373,12 +1398,22 @@ not characters.  For example, in \fB-dictionary\fR mode, \fIbigBoy\fR
 sorts between \fIbigbang\fR and \fIbigboy\fR, and \fIx10y\fR
 sorts between \fIx9y\fR and \fIx11y\fR.
 .TP
+\fB\fB-increasing\fR\fR
+Sort the items in increasing order ("smallest" items first). This is the default.
+.TP
 \fB\fB-integer\fR\fR
 Convert to integers and use integer comparison.
 .TP
 \fB\fB-real\fR\fR
 Convert to floating-point values and use floating comparison.
 .RE
+.TP
+\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+This command is used to manipulate the states of an item.
+The exact behavior of the command depends on the \fIcommand\fR argument
+that follows the \fBstyle\fR argument.
+The following forms of the command are supported:
+.RS
 .TP
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName ...\fR?\fR
 If no \fIstateName\fR is specified, returns a list containing
@@ -1400,9 +1435,10 @@ If \fIlastItem\fR is specified, the state changes will be made for all items
 in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
 \fIItemDesc\fR may be the string \fBall\fR,
 then the state changes are made for all items of the treectrl widget.
+.RE
 .TP
 \fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
-This command is used to manipulate the style of the item.
+This command is used to manipulate the styles of an item.
 The exact behavior of the command depends on the \fIcommand\fR argument
 that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
@@ -1414,11 +1450,14 @@ containing the currently defined elements of the style,
 which is set for the item described by \fIitemDesc\fR in \fIcolumn\fR.
 .TP
 \fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR\fR
-\fIMap\fR must be a list with an even number of elements,
-and each element must be the name of an element created by the
-\fBelement create\fR widget command.
-Replaces elements in the style of the item described by \fIitemDesc\fR
-in \fIcolumn\fR based on the from-to pairs in \fImap\fR.
+Like the \fBitem style set\fR command, this command may be used to assign a
+style to a specific column of an item. Unlike \fBitem style set\fR, this
+command can transfer configuration values of elements in the current style
+to elements in the new style specified by \fIstyle\fR.
+\fIMap\fR must be a list of \fIelementOld\fR-\fIelementNew\fR pairs, where
+\fIelementOld\fR is an element in the current style, and \fIelementNew\fR is
+an element in the style specified by \fIstyle\fR. Both \fIelementOld\fR and
+\fIelementNew\fR must be of the same type (\fBbitmap\fR, \fBtext\fR etc).
 .TP
 \fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?\fR
 If no \fIcolumn\fR is specified, returns a list containing the names of the
@@ -1441,15 +1480,6 @@ then the text(s) of item in \fIcolumn\fR will be set to \fItext\fR. Note that
 this command is provided as a convenience. Use the
 \fBitem element configure\fR command if you want to set the text of a
 specific text element.
-.TP
-\fIpathName\fR \fBitem visible\fR \fIitemDesc\fR ?\fIboolean\fR?\fR
-If \fIboolean\fR is not specified, returns 1 if the item
-described by \fIitemDesc\fR is currently visible, 0 otherwise.
-If \fIboolean\fR is specified, it must be a valid boolean value
-specifying if the item should be visible.
-The visibility of an item is independend from the state of its ancestors.
-So if the state of one of the ancestors is currently not opened,
-the item may be considered visible although it is not displayed on the screen.
 .RE
 .TP
 \fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
@@ -1501,9 +1531,6 @@ The following marquee options are supported:
 Specifies a boolean value which determines
 whether the dotted line surrounding the region of the marquee
 should currently be visible.
-This option should not be modified by means of the
-\fBmarquee configure\fR widget command;
-instead use the \fBmarquee visible\fR widget command.
 .RE
 .TP
 \fIpathName\fR \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?\fR
@@ -1530,14 +1557,6 @@ item inside the marque.
 These lists start with the column number,
 followed by the elements of the style defined for the item in this column
 if there are any.
-.TP
-\fIpathName\fR \fBmarquee visible\fR ?\fIboolean\fR?\fR
-If the additional argument specifies true, the dotted line will become
-visible and the marquee option \fB-visible\fR becomes 1;
-if it specifies false, the dotted line will be hidden
-and the marquee option \fB-visible\fR becomes 0.
-Returns 1 if the dotted line surrounding the marquee is currently visible,
-0 otherwise.
 .RE
 .TP
 \fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?\fR
@@ -1908,7 +1927,6 @@ It can happen that the element's space is larger than its requested dimensions.
 These options may be used to position (or stretch) the slave within its cell.
 \fIStyle\fR  is a string that contains zero or more of the characters
 \fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
-The string can contain other characters, but they are ignored.
 Each letter refers to a side (north, south,
 east, or west) in which direction the element will grow in.
 .TP
@@ -1917,7 +1935,6 @@ If an element's area is smaller than its requested dimensions, this
 option may be used to allow shrinking of the element.
 \fIStyle\fR is a string that contains zero or more of the characters
 \fBx\fR or \fBy\fR.
-The string can contain other characters, but they are ignored.
 \fBx\fR shrinks the element horizontally,
 \fBy\fR shrinks it vertically.
 .TP
@@ -2081,9 +2098,9 @@ Indicates whether or not a mouse click on the column header should
 change the sorting order of the tree.
 .TP
 \fB\fB-expand\fR\fR \fIboolean\fR
-Indicates whether or not any extra spaces should be distributed
+Indicates whether or not any extra horizontal space should be distributed
 to this column.
-This option will actually only work, if the column has no fix width defined
+This option will actually only work if the column has no fixed width defined
 by means of the \fB-width\fR column option.
 .TP
 \fB\fB-font\fR\fR \fIfontName\fR
@@ -2154,16 +2171,25 @@ or top and bottom (for \fB-textpady\fR) side of the text.
 of two values to specify padding for the two sides separately,
 it defaults to 0.
 .TP
-\fB\fB-width\fR\fR \fIsize\fR
-Specifies the width of the column.
-.TP
 \fB\fB-visible\fR\fR \fIboolean\fR
 Indicates whether or not the column should be displayed.
 .TP
+\fB\fB-width\fR\fR \fIsize\fR
+Specifies a fixed width for the column. If this value is zero, the column width
+is calculated as the maximum of:
+a) the width requested by items;
+b) the width requested the column header;
+c) and the column \fB-minwidth\fR.
+This calculated width is also affected by the \fB-expand\fR option of all
+columns.
+.TP
 \fB\fB-widthhack\fR\fR \fIboolean\fR
-Indicates whether or not all items inside the column
-should have the same width
-(typically in a treectrl widget with horizontal orientation).
+Indicates whether or not all items should have the same width. This option only
+has effect when all of these conditions are met:
+a) the tree \fB-orientation\fR option is \fBvertical\fR;
+b) only a single tree column is visible;
+c) the single visible tree column \fB-width\fR option is zero;
+d) and the tree \fB-wrap\fR option results in wrapping.
 .SH "STATES"
 A state consists basically of just a string: its \fIstateName\fR.
 For every item a set of these states is managed,
@@ -2456,13 +2482,13 @@ Use the item one row below in this column.
 \fBbottom\fR
 Use the item in the last row of this column.
 .TP
-\fBchild\fR \fIn\fR
+\fBchild\fR \fIn\fR ?\fBvisible\fR?
 Use the \fIn\fRth child of the item.
 .TP
-\fBfirstchild\fR
+\fBfirstchild\fR ?\fBvisible\fR?
 Use the first child of the item.
 .TP
-\fBlastchild\fR
+\fBlastchild\fR ?\fBvisible\fR?
 Use the last child of the item.
 .TP
 \fBleft\fR
@@ -2471,22 +2497,22 @@ Use the item one column to the left in the same row.
 \fBleftmost\fR
 Use the item of the first column in the same row.
 .TP
-\fBnext\fR
+\fBnext\fR ?\fBvisible\fR?
 Use the next item, which is the first existant (or visible) item of the
 following list: the first child, the next sibling or the next sibling of
 the nearest parent which has one.
 .TP
-\fBnextsibling\fR
+\fBnextsibling\fR ?\fBvisible\fR?
 Use the next sibling of the item.
 .TP
 \fBparent\fR
 Use the parent of the item.
 .TP
-\fBprev\fR
+\fBprev\fR ?\fBvisible\fR?
 Use the last child of the previous sibling,
 or the parent if there is no previos sibling.
 .TP
-\fBprevsibling\fR
+\fBprevsibling\fR ?\fBvisible\fR?
 Use the previous sibling of the item.
 .TP
 \fBright\fR
@@ -2495,7 +2521,7 @@ Use the item one column to the right in the same row.
 \fBrightmost\fR
 Use the item of the last column in the same row.
 .TP
-\fBsibling\fR \fIn\fR
+\fBsibling\fR \fIn\fR ?\fBvisible\fR?
 Use the \fIn\fRth child of the item's parent.
 .TP
 \fBtop\fR
