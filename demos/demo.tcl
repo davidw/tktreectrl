@@ -12,7 +12,7 @@ set ScriptDir [file normalize [file dirname [info script]]]
 
 # Command to create a full pathname in this file's directory
 proc Path {args} {
-    return [file normalize [eval file join [list $::ScriptDir] $args]]
+    return [file normalize [eval [list file join $::ScriptDir] $args]]
 }
 
 # Create some photo images on demand
@@ -44,7 +44,7 @@ if {[catch {
     proc dbwin s {puts -nonewline $s}
 }
 
-# package require treectrl
+set code [catch {package require treectrl 1.1}]
 
 # Return TRUE if we are running from the development directory
 proc IsDevelopment {} {
@@ -56,7 +56,7 @@ proc IsDevelopment {} {
 # find our treectrl.tcl file. When *not* using configure/make, we set the value
 # of TREECTRL_LIBRARY and load the shared library manually. Note that
 # tcl_findLibrary is called by the Treectrl_Init() routine in C.
-if {[IsDevelopment]} {
+if {$code && [IsDevelopment]} {
     set ::env(TREECTRL_LIBRARY) [Path .. library]
     switch -- $::thisPlatform {
 	macintosh {
