@@ -341,6 +341,11 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		/* T dragimage clear */
 		case COMMAND_CLEAR:
 		{
+			if (objc != 3)
+			{
+				Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
+				return TCL_ERROR;
+			}
 			if (dragImage->elem != NULL)
 			{
 				DragElem *elem = dragImage->elem;
