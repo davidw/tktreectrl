@@ -901,7 +901,8 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
 				goto error;
-			if (!TreeItem_ReallyVisible(tree, item))
+			if (!TreeItem_ReallyVisible(tree, item) ||
+				(tree->columnCountVis < 1))
 				break;
 
 			/* Canvas coords */
