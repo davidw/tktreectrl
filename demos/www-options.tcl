@@ -28,9 +28,9 @@ proc DemoInternetOptions {} {
 
 	set S [$T style create s1]
 	$T style elements $S {e3 e1 e2}
-	$T style layout $S e1 -pade 4 -expand ns
+	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e2 -expand ns
-	$T style layout $S e3 -union [list e2] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -158,9 +158,9 @@ proc DemoInternetOptions_2 {} {
 
 	set S [$T style create s1]
 	$T style elements $S {e3 e1 e2}
-	$T style layout $S e1 -pade 4 -expand ns
+	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e2 -expand ns
-	$T style layout $S e3 -union [list e2] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root

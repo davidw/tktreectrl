@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: style.test,v 1.1 2002/12/30 21:42:22 krischan Exp $
+# CVS: @(#) $Id: style.test,v 1.2 2003/01/02 02:27:50 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -125,57 +125,74 @@ test style-6.1 {style layout: missing args} -body {
 
 test style-6.2 {style layout: no options specified} -body {
     .t style layout testStyle eText
-} -result {-padw 0 -padn 0 -pade 0 -pads 0 -ipadw 0 -ipadn 0 -ipade 0 -ipads 0 -expand {} -iexpand {} -detach no -squeeze {} -union {}}
+} -result {-padx 0 -pady 0 -ipadx 0 -ipady 0 -expand {} -iexpand {} -detach no -squeeze {} -union {}}
 
-test style-6.3 {style layout: option -pads} -body {
-    .t style layout testStyle eText -pads 3
-    .t style layout testStyle eText -pads
+test style-6.3 {style layout: option -padx} -body {
+    .t style layout testStyle eText -padx 3
+    .t style layout testStyle eText -padx
 } -result {3}
 
-test style-6.4 {style layout: option -expand} -body {
+test style-6.4 {style layout: invalid 2 element -pady} -body {
+    .t style layout testStyle eText -pady {3 ""}
+} -returnCodes error -result {bad pad amount "3 """: must be a list of 1 or 2 positive screen distances}
+
+test style-6.5 {style layout: invalid 2 element -pady} -body {
+    .t style layout testStyle eText -pady "\{"
+} -returnCodes error -result {unmatched open brace in list}
+
+test style-6.6 {style layout: invalid 2 element -pady} -body {
+    .t style layout testStyle eText -pady {3 -7}
+} -returnCodes error -result {bad pad amount "3 -7": must be a list of 1 or 2 positive screen distances}
+
+test style-6.7 {style layout: invalid 2 element -pady} -body {
+    .t style layout testStyle eText -pady {3 7}
+    .t style layout testStyle eText -pady
+} -result {3 7}
+
+test style-6.8 {style layout: option -expand} -body {
     .t style layout testStyle eText -expand "hello world"
 } -returnCodes error -result {bad expand value "hello world": must be a string containing zero or more of n, e, s, and w}
 
-test style-6.5 {style layout: option -expand} -body {
+test style-6.9 {style layout: option -expand} -body {
     .t style layout testStyle eText -expand ew
     .t style layout testStyle eText -expand
 } -result {we}
 
-test style-6.6 {style layout: option -squeeze} -body {
+test style-6.10 {style layout: option -squeeze} -body {
     .t style layout testStyle eText -squeeze xyzzy
 } -returnCodes error -result {bad squeeze value "xyzzy": must be a string containing zero or more of x and y}
 
-test style-6.7 {style layout: option -squeeze} -body {
+test style-6.11 {style layout: option -squeeze} -body {
     .t style layout testStyle eText -squeeze xy
     .t style layout testStyle eText -squeeze
 } -result {xy}
 
-test style-6.8 {style layout: option -union invalid list} -body {
+test style-6.12 {style layout: option -union invalid list} -body {
     .t style layout testStyle eText -union "\{"
 } -returnCodes error -result {unmatched open brace in list}
 
-test style-6.9 {style layout: option -union unknown elements} -body {
+test style-6.13 {style layout: option -union unknown elements} -body {
     .t style layout testStyle eText -union {foo bar}
 } -returnCodes error -result {element "foo" doesn't exist}
 
-test style-6.10 {style layout: option -union element not in style} -body {
+test style-6.14 {style layout: option -union element not in style} -body {
     .t style layout testStyle eText -union {eBorder eRect}
 } -returnCodes error -result {style testStyle does not use element eRect}
 
-test style-6.11 {style layout: option -union with itself} -body {
+test style-6.15 {style layout: option -union with itself} -body {
     .t style layout testStyle eText -union {eBorder eText}
 } -returnCodes error -result {element eText can't form union with itself}
 
-test style-6.12 {style layout: option -union} -body {
+test style-6.16 {style layout: option -union} -body {
     .t style layout testStyle eText -union {eBorder eImage}
     .t style layout testStyle eText -union
 } -result {eBorder eImage}
 
-test style-6.13 {style layout: option invalid -detach} -body {
+test style-6.17 {style layout: option invalid -detach} -body {
     .t style layout testStyle eText -detach {x y}
 } -returnCodes error -result {expected boolean value but got "x y"}
 
-test style-6.14 {style layout: option -detach} -body {
+test style-6.18 {style layout: option -detach} -body {
     .t style layout testStyle eText -detach true
     .t style layout testStyle eText -detach
 } -result {1}

@@ -59,7 +59,7 @@ proc DemoExplorerDetails {} {
 	InitPics small-*
 
 	$T column configure 0 -text Name -tag name -width 200 \
-		-arrow up -arrowpadw 6 -arrowpade 6
+		-arrow up -arrowpad 6
 	$T column configure 1 -text Size -tag size -justify right -width 60 \
 		-arrowside left -arrowgravity right
 	$T column configure 2 -text Type -tag type -width 120
@@ -77,23 +77,23 @@ proc DemoExplorerDetails {} {
 	set S [$T style create styName -orient horizontal]
 	$T style elements $S {e4 e1 e2}
 	$T style layout $S e1 -expand ns
-	$T style layout $S e2 -padw 2 -squeeze x -expand ns
-	$T style layout $S e4 -union [list e2] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e2 -padx {2 0} -squeeze x -expand ns
+	$T style layout $S e4 -union [list e2] -iexpand ns -ipadx 2
 
 	# column 1: text
 	set S [$T style create stySize]
 	$T style elements $S txtSize
-	$T style layout $S txtSize -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S txtSize -padx 6 -squeeze x -expand ns
 
 	# column 2: text
 	set S [$T style create styType]
 	$T style elements $S txtType
-	$T style layout $S txtType -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S txtType -padx 6 -squeeze x -expand ns
 
 	# column 3: text
 	set S [$T style create styDate]
 	$T style elements $S txtDate
-	$T style layout $S txtDate -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S txtDate -padx 6 -squeeze x -expand ns
 
 	set ::TreeCtrl::Priv(edit,$T) {e2}
 	set ::TreeCtrl::Priv(sensitive,$T) {
@@ -230,7 +230,7 @@ proc DemoExplorerLargeIcons {} {
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSel elemImg elemTxt}
 	$T style layout $S elemImg -expand we
-	$T style layout $S elemTxt -padn 4 -padw 2 -pade 2 -squeeze x -expand we
+	$T style layout $S elemTxt -pady {4 0} -padx 2 -squeeze x -expand we
 	$T style layout $S elemSel -union [list elemTxt]
 
 	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
@@ -321,8 +321,8 @@ proc DemoExplorerList {} {
 	set S [$T style create STYLE]
 	$T style elements $S {elemSel elemImg elemTxt}
 	$T style layout $S elemImg -expand ns
-	$T style layout $S elemTxt -squeeze x -expand ns -padw 2
-	$T style layout $S elemSel -union [list elemTxt] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S elemTxt -squeeze x -expand ns -padx {2 0}
+	$T style layout $S elemSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
 	set ::TreeCtrl::Priv(sensitive,$T) {

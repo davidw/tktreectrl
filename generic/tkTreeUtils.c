@@ -3,6 +3,37 @@
 #include "tkWinInt.h"
 #endif
 
+/*
+ * Forward declarations for procedures defined later in this file:
+ */
+
+static int	PadAmountOptionSet _ANSI_ARGS_((ClientData clientData,
+			Tcl_Interp *interp, Tk_Window tkwin,
+			Tcl_Obj **value, char *recordPtr, int internalOffset,
+			char *saveInternalPtr, int flags));
+static Tcl_Obj *PadAmountOptionGet _ANSI_ARGS_((ClientData clientData,
+			Tk_Window tkwin, char *recordPtr, int internalOffset));
+static void	PadAmountOptionRestore _ANSI_ARGS_((ClientData clientData,
+			Tk_Window tkwin, char *internalPtr,
+			char *saveInternalPtr));
+static void	PadAmountOptionFree _ANSI_ARGS_((ClientData clientData,
+			Tk_Window tkwin, char *internalPtr));
+
+/*
+ * The following Tk_ObjCustomOption structure can be used as clientData entry
+ * of a Tk_OptionSpec record with a TK_OPTION_CUSTOM type in the form
+ * "(ClientData) &PadAmountOption"; the option will then parse list with
+ * one or two screen distances.
+ */
+
+Tk_ObjCustomOption PadAmountOption = {
+    "pad amount",
+    PadAmountOptionSet,
+    PadAmountOptionGet,
+    PadAmountOptionRestore,
+    PadAmountOptionFree
+};
+
 void wipefree(char *memPtr, int size)
 {
 	memset(memPtr, 0xAA, size);
@@ -878,4 +909,236 @@ void TextLayout_Draw(
 			break;
 		chunkPtr++;
 	}
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeCtrl_GetPadAmountFromObj --
+ *
+ *	Parse a pad amount configuration options.
+ *	A pad amount (typically the value of an option -XXXpadx or
+ *	-XXXpady, where XXX may be a possibly empty string) can
+ *	be either a single pixel width, or a list of two pixel widths.
+ *	If a single pixel width, the amount specified is used for 
+ *	padding on both sides.  If two amounts are specified, then
+ *	they specify the left/right or top/bottom padding.
+ *
+ * Results:
+ *	Standard Tcl Result.
+ *
+ * Side effects:
+ *	Sets internal representation of the object. In case of an error
+ *	the result of the interpreter is modified.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeCtrl_GetPadAmountFromObj(interp, tkwin, padObj, topLeftPtr, bottomRightPtr)
+    Tcl_Interp *interp;		/* Interpreter for error reporting, or NULL,
+				 * if no error message is wanted. */
+    Tk_Window tkwin;		/* A window.  Needed by Tk_GetPixels() */
+    Tcl_Obj *padObj;		/* Object containing a pad amount. */
+    int *topLeftPtr;		/* Pointer to the location, where to store the
+				   first component of the padding. */
+    int *bottomRightPtr;	/* Pointer to the location, where to store the
+				   second component of the padding. */
+{
+    int padc;			/* Number of element objects in padv. */
+    Tcl_Obj **padv;		/* Pointer to the element objects of the
+				 * parsed pad amount value. */
+
+    if (Tcl_ListObjGetElements(interp, padObj, &padc, &padv) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    /*
+     * The value specifies a non empty string.
+     * Check that this string is indeed a valid pad amount.
+     */
+
+    if (padc < 1 || padc > 2) {
+	if (interp != NULL) {
+	error:
+	    Tcl_ResetResult(interp);
+	    Tcl_AppendResult(interp, "bad pad amount \"",
+		Tcl_GetString(padObj), "\": must be a list of ",
+		"1 or 2 positive screen distances", (char *) NULL);
+	}
+	return TCL_ERROR;
+    }
+    if ((Tk_GetPixelsFromObj(interp, tkwin, padv[0], topLeftPtr)
+	     != TCL_OK) || (*topLeftPtr < 0)) {
+	goto error;
+    }
+    if (padc == 2) {
+	if ((Tk_GetPixelsFromObj(interp, tkwin, padv[1], bottomRightPtr)
+		!= TCL_OK) || (*bottomRightPtr < 0)) {
+	    goto error;
+	}
+    } else {
+	*bottomRightPtr = *topLeftPtr;
+    }
+    return TCL_OK;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeCtrl_NewPadAmountObj --
+ *
+ *	Create a Tcl object with an internal representation, that
+ *	corresponds to a pad amount, i.e. an integer Tcl_Obj or a
+ *	list Tcl_Obj with 2 elements.
+ *
+ * Results:
+ *	The created object.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+TreeCtrl_NewPadAmountObj(padAmounts)
+    int *padAmounts;		/* Internal form of a pad amount. */
+{
+    Tcl_Obj *newObj;
+
+    /*
+     * If both values are the same, create a list with one value,
+     * otherwise create a two element list with the top/left value
+     * first followed by the bottom/right value.
+     */
+
+    if (padAmounts[PAD_TOP_LEFT] == padAmounts[PAD_BOTTOM_RIGHT]) {
+	newObj = Tcl_NewIntObj(padAmounts[PAD_TOP_LEFT]);
+    } else {
+	newObj = Tcl_NewObj();
+	Tcl_ListObjAppendElement((Tcl_Interp *) NULL, newObj,
+	    Tcl_NewIntObj(padAmounts[PAD_TOP_LEFT]));
+	Tcl_ListObjAppendElement((Tcl_Interp *) NULL, newObj,
+	    Tcl_NewIntObj(padAmounts[PAD_BOTTOM_RIGHT]));
+    }
+    return newObj;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * PadAmountOptionSet --
+ * PadAmountOptionGet --
+ * PadAmountOptionRestore --
+ * PadAmountOptionFree --
+ *
+ *	Handlers for object-based pad amount configuration options.
+ *	A pad amount (typically the value of an option -XXXpadx or
+ *	-XXXpady, where XXX may be a possibly empty string) can
+ *	be either a single pixel width, or a list of two pixel widths.
+ *	If a single pixel width, the amount specified is used for 
+ *	padding on both sides.  If two amounts are specified, then
+ *	they specify the left/right or top/bottom padding.
+ *
+ * Results:
+ *	See user documentation for expected results from these functions.
+ *		PadAmountOptionSet	Standard Tcl Result.
+ *		PadAmountOptionGet	Tcl_Obj * containing a valid internal
+ *					representation of the pad amount.
+ *		PadAmountOptionRestore	None.
+ *		PadAmountOptionFree	None.
+ *
+ * Side effects:
+ *	Depends on the function.
+ *		PadAmountOptionSet	Sets option value to new setting,
+ *					allocating a new integer array.
+ *		PadAmountOptionGet	Creates a new Tcl_Obj.
+ *		PadAmountOptionRestore	Resets option value to original value.
+ *		PadAmountOptionFree	Free storage for internal rep.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+PadAmountOptionSet(clientData, interp, tkwin, valuePtr, recordPtr,
+		   internalOffset, saveInternalPtr, flags)
+    ClientData clientData;	/* unused. */
+    Tcl_Interp *interp;		/* Interpreter for error reporting, or NULL,
+				 * if no error message is wanted. */
+    Tk_Window tkwin;		/* A window.  Needed by Tk_GetPixels() */
+    Tcl_Obj **valuePtr;		/* The argument to "-padx", "-pady", "-ipadx",
+				 * or "-ipady".  The thing to be parsed. */
+    char *recordPtr;		/* Pointer to start of widget record. */
+    int internalOffset;		/* Offset of internal representation or
+				 * -1, if no internal repr is wanted. */
+    char *saveInternalPtr;	/* Pointer to the place, where the saved
+				 * internal form (of type "int *") resides. */
+    int flags;			/* Flags as specified in Tk_OptionSpec. */
+{
+    int topLeft, bottomRight;	/* The two components of the padding. */
+    int *new;			/* Pointer to the allocated array of integers
+				 * containing the parsed pad amounts. */
+    int **internalPtr;		/* Pointer to the place, where the internal
+				 * form (of type "int *") resides. */
+
+    /*
+     * Check that the given object indeed specifies a valid pad amount.
+     */
+
+    if (TreeCtrl_GetPadAmountFromObj(interp, tkwin, *valuePtr,
+	    &topLeft, &bottomRight) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    /*
+     * Store a pointer to an allocated array of the two padding values
+     * into the widget record at the specified offset.
+     */
+
+    if (internalOffset >= 0) {
+	internalPtr = (int **) (recordPtr + internalOffset);
+	*(int **) saveInternalPtr = *internalPtr;
+	new = (int *) ckalloc(2 * sizeof(int));
+	new[PAD_TOP_LEFT]     = topLeft;
+	new[PAD_BOTTOM_RIGHT] = bottomRight;
+	*internalPtr = new;
+    }
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+PadAmountOptionGet(clientData, tkwin, recordPtr, internalOffset)
+    ClientData clientData;	/* unused. */
+    Tk_Window tkwin;		/* A window; unused. */
+    char *recordPtr;		/* Pointer to start of widget record. */
+    int internalOffset;		/* Offset of internal representation. */
+{
+    int *padAmounts = *(int **)(recordPtr + internalOffset);
+
+    return TreeCtrl_NewPadAmountObj(padAmounts);
+}
+
+static void
+PadAmountOptionRestore(clientData, tkwin, internalPtr, saveInternalPtr)
+    ClientData clientData;	/* unused. */
+    Tk_Window tkwin;		/* A window; unused. */
+    char *internalPtr;		/* Pointer to the place, where the internal
+				 * form (of type "int *") resides. */
+    char *saveInternalPtr;	/* Pointer to the place, where the saved
+				 * internal form (of type "int *") resides. */
+{
+    *(int **) internalPtr = *(int **) saveInternalPtr;
+}
+
+static void
+PadAmountOptionFree(clientData, tkwin, internalPtr)
+    ClientData clientData;	/* unused. */
+    Tk_Window tkwin;		/* A window; unused */
+    char *internalPtr;		/* Pointer to the place, where the internal
+				 * form (of type "int *") resides. */
+{
+    if (*(int **)internalPtr != NULL) {
+	ckfree((char *) *(int **)internalPtr);
+    }
 }

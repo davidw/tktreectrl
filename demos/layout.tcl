@@ -23,13 +23,13 @@ proc DemoLayout {} {
 
 	set S [$T style create s1]
 	$T style elements $S {e4 e3 e1 e2 e5 e6 e7}
-	$T style layout $S e1 -padw 28 -pade 4 -padn 4 -pads 4
-	$T style layout $S e2 -expand es -pade 38
-	$T style layout $S e3 -union [list e1 e2] -ipadw 4 -ipade 4 -ipadn 4 -ipads 4 -padn 2 -pads 2
+	$T style layout $S e1 -padx {28 4} -pady 4
+	$T style layout $S e2 -expand es -padx {0 38}
+	$T style layout $S e3 -union [list e1 e2] -ipadx 4 -ipady 4 -pady 2
 	$T style layout $S e4 -detach yes -iexpand es
-	$T style layout $S e5 -detach yes -padw 2 -padn 2 -pads 2 -iexpand s
-	$T style layout $S e6 -detach yes -expand ws -pade 2 -padn 2
-	$T style layout $S e7 -detach yes -expand wn -pade 2 -pads 2
+	$T style layout $S e5 -detach yes -padx {2 0} -pady 2 -iexpand s
+	$T style layout $S e6 -detach yes -expand ws -padx {0 2} -pady {2 0}
+	$T style layout $S e7 -detach yes -expand wn -padx {0 2} -pady {0 2}
 
 	set I [$T item create]
 	$T item hasbutton $I yes
@@ -46,8 +46,8 @@ proc DemoLayout {} {
 
 	set S [$T style create s2]
 	$T style elements $S {e4 e3 e1}
-	$T style layout $S e1 -padw 8 -pade 8 -padn 8 -pads 8 -iexpand e
-	$T style layout $S e3 -union e1 -ipadw 20 -ipade 4 -ipadn 4 -ipads 12
+	$T style layout $S e1 -padx 8 -pady 8 -iexpand e
+	$T style layout $S e3 -union e1 -ipadx {20 4} -ipady {4 12}
 	$T style layout $S e4 -detach yes -iexpand es
 
 	set I [$T item create]
@@ -64,9 +64,9 @@ proc DemoLayout {} {
 
 	set S [$T style create s3]
 	$T style elements $S {e4 e3 e1 e5 e6}
-	$T style layout $S e4 -union {e1 e6} -ipadw 8 -ipadn 8 -ipade 8
-	$T style layout $S e3 -union {e1 e5} -ipadw 4 -ipadn 4 -ipade 4 -ipads 4
-	$T style layout $S e5 -ipads 20
+	$T style layout $S e4 -union {e1 e6} -ipadx 8 -ipady {8 0}
+	$T style layout $S e3 -union {e1 e5} -ipadx 4 -ipady 4
+	$T style layout $S e5 -ipady {0 20}
 
 	set I [$T item create]
 	$T item hasbutton $I yes
@@ -88,7 +88,7 @@ proc DemoLayout {} {
 
 	set S [$T style create s4]
 	$T style elements $S {eb et}
-	$T style layout $S eb -union et -ipadw 2 -ipadn 2 -ipade 2 -ipads 2
+	$T style layout $S eb -union et -ipadx 2 -ipady 2
 	$T style layout $S et -squeeze x
 
 	set I [$T item create]

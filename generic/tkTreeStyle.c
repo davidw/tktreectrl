@@ -51,8 +51,10 @@ struct ElementLink
 	int neededHeight;
 	int layoutWidth;
 	int layoutHeight;
-	int ePad[4]; /* external padding */
-	int iPad[4]; /* internal padding */
+	int ePadX[2]; /* external horizontal padding */
+	int ePadY[2]; /* external vertical padding */
+	int iPadX[2]; /* internal horizontal padding */
+	int iPadY[2]; /* internal vertical padding */
 	int flags; /* ELF_xxx */
 	int *onion, onionCount; /* -union option info */
 };
@@ -83,15 +85,18 @@ struct Layout
 	int eHeight; /* ePad + iPad + useHeight + iPad + ePad */
 	int iWidth; /* iPad + useWidth + iPad */
 	int iHeight; /* iPad + useHeight + iPad */
-	int ePad[4]; /* external padding */
-	int iPad[4]; /* internal padding */
-	int uPad[4]; /* padding due to -union */
+	int ePadX[2]; /* external horizontal padding */
+	int ePadY[2]; /* external vertical padding */
+	int iPadX[2]; /* internal horizontal padding */
+	int iPadY[2]; /* internal vertical padding */
+	int uPadX[2]; /* padding due to -union */
+	int uPadY[2]; /* padding due to -union */
 };
 
 static void Style_DoExpandH(struct Layout *layout, int flags, int width)
 {
 	int extraWidth;
-	int *ePad, *iPad;
+	int *ePadX, *iPadX;
 	int eW, eE, iW, iE, eLeft, eRight, iLeft, iRight, eMax, iMax;
 
 	if (!(flags & ELF_EXPAND_WE))
@@ -108,40 +113,41 @@ static void Style_DoExpandH(struct Layout *layout, int flags, int width)
 	eRight = width - (layout->x + layout->eWidth);
 	eMax = eLeft + eRight;
 
-	/* Internal: can expand to max of ePad[] or uPad[] */
-	iW = MAX(layout->ePad[LEFT], layout->uPad[LEFT]);
-	iE = width - MAX(layout->ePad[RIGHT], layout->uPad[RIGHT]);
-	iLeft = layout->x + layout->ePad[LEFT] - iW;
-	iRight = iE - (layout->x + layout->eWidth - layout->ePad[RIGHT]);
+	/* Internal: can expand to max of ePadX[] or uPadX[] */
+	iW = MAX(layout->ePadX[PAD_TOP_LEFT], layout->uPadX[PAD_TOP_LEFT]);
+	iE = width - MAX(layout->ePadX[PAD_BOTTOM_RIGHT],
+			 layout->uPadX[PAD_BOTTOM_RIGHT]);
+	iLeft = layout->x + layout->ePadX[PAD_TOP_LEFT] - iW;
+	iRight = iE - (layout->x + layout->eWidth - layout->ePadX[PAD_BOTTOM_RIGHT]);
 	iMax = iLeft + iRight;
 
-	ePad = layout->ePad;
-	iPad = layout->iPad;
+	ePadX = layout->ePadX;
+	iPadX = layout->iPadX;
 
 	/* Internal expansion */
 	if (flags & ELF_iEXPAND_WE)
 	{
 		if ((flags & ELF_iEXPAND_WE) == ELF_iEXPAND_WE)
 		{
-			iPad[LEFT] += MIN(iMax / 2, iLeft);
-			layout->x = iW - ePad[LEFT];
+			iPadX[PAD_TOP_LEFT] += MIN(iMax / 2, iLeft);
+			layout->x = iW - ePadX[PAD_TOP_LEFT];
 			layout->iWidth += iMax;
 			layout->eWidth += iMax;
-			iPad[RIGHT] = layout->iWidth - layout->eLink->neededWidth - iPad[LEFT];
+			iPadX[PAD_BOTTOM_RIGHT] = layout->iWidth - layout->eLink->neededWidth - iPadX[PAD_TOP_LEFT];
 		}
 		else if (flags & ELF_iEXPAND_W)
 		{
-			layout->x = iW - ePad[LEFT];
+			layout->x = iW - ePadX[PAD_TOP_LEFT];
 			layout->iWidth += iMax;
 			layout->eWidth += iMax;
-			iPad[LEFT] = layout->iWidth - layout->eLink->neededWidth - iPad[RIGHT];
+			iPadX[PAD_TOP_LEFT] = layout->iWidth - layout->eLink->neededWidth - iPadX[PAD_BOTTOM_RIGHT];
 		}
 		else
 		{
-			layout->x = iW - ePad[LEFT];
+			layout->x = iW - ePadX[PAD_TOP_LEFT];
 			layout->iWidth += iMax;
 			layout->eWidth += iMax;
-			iPad[RIGHT] = layout->iWidth - layout->eLink->neededWidth - iPad[LEFT];
+			iPadX[PAD_BOTTOM_RIGHT] = layout->iWidth - layout->eLink->neededWidth - iPadX[PAD_TOP_LEFT];
 		}
 		return;
 	}
@@ -155,22 +161,22 @@ static void Style_DoExpandH(struct Layout *layout, int flags, int width)
 
 			layout->x = 0;
 			layout->eWidth = width;
-			if (ePad[LEFT] + amt + layout->iWidth > iE)
-				amt -= (ePad[LEFT] + amt + layout->iWidth) - iE;
-			ePad[LEFT] += amt;
-			ePad[RIGHT] += extraWidth - amt;
+			if (ePadX[PAD_TOP_LEFT] + amt + layout->iWidth > iE)
+				amt -= (ePadX[PAD_TOP_LEFT] + amt + layout->iWidth) - iE;
+			ePadX[PAD_TOP_LEFT] += amt;
+			ePadX[PAD_BOTTOM_RIGHT] += extraWidth - amt;
 		}
 		else if (flags & ELF_eEXPAND_W)
 		{
 			layout->x = 0;
-			layout->eWidth = iE + ePad[RIGHT];
-			ePad[LEFT] = layout->eWidth - layout->iWidth - ePad[RIGHT];
+			layout->eWidth = iE + ePadX[PAD_BOTTOM_RIGHT];
+			ePadX[PAD_TOP_LEFT] = layout->eWidth - layout->iWidth - ePadX[PAD_BOTTOM_RIGHT];
 		}
 		else
 		{
-			layout->x = iW - ePad[LEFT];
+			layout->x = iW - ePadX[PAD_TOP_LEFT];
 			layout->eWidth = width - layout->x;
-			ePad[RIGHT] = layout->eWidth - layout->iWidth - ePad[LEFT];
+			ePadX[PAD_BOTTOM_RIGHT] = layout->eWidth - layout->iWidth - ePadX[PAD_TOP_LEFT];
 		}
 	}
 }
@@ -178,7 +184,7 @@ static void Style_DoExpandH(struct Layout *layout, int flags, int width)
 static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 {
 	int extraHeight;
-	int *ePad, *iPad;
+	int *ePadY, *iPadY;
 	int eN, eS, iN, iS, eAbove, eBelow, iAbove, iBelow, eMax, iMax;
 
 	if (!(flags & ELF_EXPAND_NS))
@@ -188,8 +194,8 @@ static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 	if (extraHeight <= 0)
 		return;
 
-	ePad = layout->ePad;
-	iPad = layout->iPad;
+	ePadY = layout->ePadY;
+	iPadY = layout->iPadY;
 
 	/* External: can expand to top and bottom */
 	eN = 0;
@@ -198,11 +204,11 @@ static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 	eBelow = height - (layout->y + layout->eHeight);
 	eMax = eAbove + eBelow;
 
-	/* Internal: can expand to max of ePad[] or uPad[] */
-	iN = MAX(ePad[TOP], layout->uPad[TOP]);
-	iS = height - MAX(ePad[BOTTOM], layout->uPad[BOTTOM]);
-	iAbove = layout->y + ePad[TOP] - iN;
-	iBelow = iS - (layout->y + layout->eHeight - ePad[BOTTOM]);
+	/* Internal: can expand to max of ePadY[] or uPadY[] */
+	iN = MAX(ePadY[PAD_TOP_LEFT], layout->uPadY[PAD_TOP_LEFT]);
+	iS = height - MAX(ePadY[PAD_BOTTOM_RIGHT], layout->uPadY[PAD_BOTTOM_RIGHT]);
+	iAbove = layout->y + ePadY[PAD_TOP_LEFT] - iN;
+	iBelow = iS - (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT]);
 	iMax = iAbove + iBelow;
 
 	/* Internal expansion */
@@ -210,25 +216,25 @@ static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 	{
 		if ((flags & ELF_iEXPAND_NS) == ELF_iEXPAND_NS)
 		{
-			iPad[TOP] += MIN(iMax / 2, iAbove);
-			layout->y = iN - ePad[TOP];
+			iPadY[PAD_TOP_LEFT] += MIN(iMax / 2, iAbove);
+			layout->y = iN - ePadY[PAD_TOP_LEFT];
 			layout->iHeight += iMax;
 			layout->eHeight += iMax;
-			iPad[BOTTOM] = layout->iHeight - layout->eLink->neededHeight - iPad[TOP];
+			iPadY[PAD_BOTTOM_RIGHT] = layout->iHeight - layout->eLink->neededHeight - iPadY[PAD_TOP_LEFT];
 		}
 		else if (flags & ELF_iEXPAND_N)
 		{
-			layout->y = iN - ePad[TOP];
+			layout->y = iN - ePadY[PAD_TOP_LEFT];
 			layout->iHeight += iMax;
 			layout->eHeight += iMax;
-			iPad[TOP] = layout->iHeight - layout->eLink->neededHeight - iPad[BOTTOM];
+			iPadY[PAD_TOP_LEFT] = layout->iHeight - layout->eLink->neededHeight - iPadY[PAD_BOTTOM_RIGHT];
 		}
 		else
 		{
-			layout->y = iN - ePad[TOP];
+			layout->y = iN - ePadY[PAD_TOP_LEFT];
 			layout->iHeight += iMax;
 			layout->eHeight += iMax;
-			iPad[BOTTOM] = layout->iHeight - layout->eLink->neededHeight - iPad[TOP];
+			iPadY[PAD_BOTTOM_RIGHT] = layout->iHeight - layout->eLink->neededHeight - iPadY[PAD_TOP_LEFT];
 		}
 		return;
 	}
@@ -242,22 +248,22 @@ static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 
 			layout->y = 0;
 			layout->eHeight = height;
-			if (ePad[TOP] + amt + layout->iHeight > iS)
-				amt -= (ePad[TOP] + amt + layout->iHeight) - iS;
-			ePad[TOP] += amt;
-			ePad[BOTTOM] += extraHeight - amt;
+			if (ePadY[PAD_TOP_LEFT] + amt + layout->iHeight > iS)
+				amt -= (ePadY[PAD_TOP_LEFT] + amt + layout->iHeight) - iS;
+			ePadY[PAD_TOP_LEFT] += amt;
+			ePadY[PAD_BOTTOM_RIGHT] += extraHeight - amt;
 		}
 		else if (flags & ELF_eEXPAND_N)
 		{
 			layout->y = 0;
-			layout->eHeight = iS + ePad[BOTTOM];
-			ePad[TOP] = layout->eHeight - layout->iHeight - ePad[BOTTOM];
+			layout->eHeight = iS + ePadY[PAD_BOTTOM_RIGHT];
+			ePadY[PAD_TOP_LEFT] = layout->eHeight - layout->iHeight - ePadY[PAD_BOTTOM_RIGHT];
 		}
 		else
 		{
-			layout->y = iN - ePad[TOP];
+			layout->y = iN - ePadY[PAD_TOP_LEFT];
 			layout->eHeight = height - layout->y;
-			ePad[BOTTOM] = layout->eHeight - layout->iHeight - ePad[TOP];
+			ePadY[PAD_BOTTOM_RIGHT] = layout->eHeight - layout->iHeight - ePadY[PAD_TOP_LEFT];
 		}
 	}
 }
@@ -269,10 +275,10 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 	ElementLink *eLinks1, *eLinks2, *eLink1, *eLink2;
 	int x = 0;
 	int w, e;
-	int *ePad, *iPad, *uPad;
+	int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
 	int numExpandWE = 0;
 	int numSqueezeX = 0;
-	int i, j, k, eLinkCount = 0;
+	int i, j, eLinkCount = 0;
 
 	eLinks1 = masterStyle->elements;
 	eLinks2 = style->elements;
@@ -289,8 +295,10 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		layout->useWidth = eLink2->neededWidth;
 
 		/* No -union padding yet */
-		for (j = 0; j < 4; j++)
-			layout->uPad[j] = 0;
+		layout->uPadX[PAD_TOP_LEFT]     = 0;
+		layout->uPadX[PAD_BOTTOM_RIGHT] = 0;
+		layout->uPadY[PAD_TOP_LEFT]     = 0;
+		layout->uPadY[PAD_BOTTOM_RIGHT] = 0;
 
 		/* Count all non-union, non-detach squeezeable items */
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
@@ -307,16 +315,21 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (eLink1->onion == NULL)
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
+		ePadX = eLink1->ePadX;
+		ePadY = eLink1->ePadY;
+		iPadX = eLink1->iPadX;
+		iPadY = eLink1->iPadY;
 
 		for (j = 0; j < eLink1->onionCount; j++)
 		{
 			struct Layout *layout = &layouts[eLink1->onion[j]];
 
-			uPad = layout->uPad;
-			for (k = 0; k < 4; k++)
-				uPad[k] = MAX(uPad[k], iPad[k] + ePad[k]);
+			uPadX = layout->uPadX;
+			uPadY = layout->uPadY;
+			uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
+			uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
+			uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
+			uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 		}
 	}
 
@@ -364,18 +377,18 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			if (eLink1->onion != NULL)
 				continue;
 
-			ePad = eLink1->ePad;
-			iPad = eLink1->iPad;
-			uPad = layout->uPad;
+			ePadX = eLink1->ePadX;
+			iPadX = eLink1->iPadX;
+			uPadX = layout->uPadX;
 
 			if ((eLink1->flags & ELF_SQUEEZE_X) &&
 				((eLink1->flags & ELF_DETACH) ||
 				masterStyle->vertical))
 			{
 				int width =
-					MAX(ePad[LEFT], uPad[LEFT]) +
-					iPad[LEFT] + layout->useWidth + iPad[RIGHT] +
-					MAX(ePad[RIGHT], uPad[RIGHT]);
+					MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]) +
+					iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT] +
+					MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
 				if (width > drawArgs->width)
 					layout->useWidth -= (width - drawArgs->width);
 			}
@@ -390,22 +403,24 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		eLink1 = &eLinks1[i];
 		eLink2 = &eLinks2[i];
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadX = eLink1->ePadX;
+		iPadX = eLink1->iPadX;
+		uPadX = layout->uPadX;
 
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
 		layout->eLink = eLink2;
 		layout->master = eLink1;
-		layout->x = MAX(x, abs(ePad[LEFT] - MAX(ePad[LEFT], uPad[LEFT])));
-		layout->iWidth = iPad[LEFT] + layout->useWidth + iPad[RIGHT];
-		layout->eWidth = ePad[LEFT] + layout->iWidth + ePad[RIGHT];
-		for (j = 0; j < 4; j++)
-		{
-			layout->ePad[j] = ePad[j];
-			layout->iPad[j] = iPad[j];
+		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
+		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
+		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
+
+		for (j = 0; j < 2; j++) {
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
 		}
 
 		if (!masterStyle->vertical)
@@ -448,8 +463,8 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				if (layouts[j].eLink != NULL)
 					layouts[j].x += extraWidth;
 
-			ePad = layout->ePad;
-			iPad = layout->iPad;
+			ePadX = layout->ePadX;
+			iPadX = layout->iPadX;
 
 			/* External and internal expansion */
 			if ((eLink1->flags & ELF_eEXPAND_WE) && (eLink1->flags & ELF_iEXPAND_WE))
@@ -468,13 +483,13 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			{
 				if ((eLink1->flags & ELF_eEXPAND_WE) == ELF_eEXPAND_WE)
 				{
-					ePad[LEFT] += eExtra / 2;
-					ePad[RIGHT] += eExtra - eExtra / 2;
+					ePadX[PAD_TOP_LEFT] += eExtra / 2;
+					ePadX[PAD_BOTTOM_RIGHT] += eExtra - eExtra / 2;
 				}
 				else if (eLink1->flags & ELF_eEXPAND_W)
-					ePad[LEFT] += eExtra;
+					ePadX[PAD_TOP_LEFT] += eExtra;
 				else
-					ePad[RIGHT] += eExtra;
+					ePadX[PAD_BOTTOM_RIGHT] += eExtra;
 			}
 
 			/* Internal expansion */
@@ -482,13 +497,13 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			{
 				if ((eLink1->flags & ELF_iEXPAND_WE) == ELF_iEXPAND_WE)
 				{
-					iPad[LEFT] += iExtra / 2;
-					iPad[RIGHT] += iExtra - iExtra / 2;
+					iPadX[PAD_TOP_LEFT] += iExtra / 2;
+					iPadX[PAD_BOTTOM_RIGHT] += iExtra - iExtra / 2;
 				}
 				else if (eLink1->flags & ELF_iEXPAND_W)
-					iPad[LEFT] += iExtra;
+					iPadX[PAD_TOP_LEFT] += iExtra;
 				else
-					iPad[RIGHT] += iExtra;
+					iPadX[PAD_BOTTOM_RIGHT] += iExtra;
 				layout->iWidth += iExtra;
 			}
 			layout->eWidth += extraWidth;
@@ -548,19 +563,22 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (!(eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadX = eLink1->ePadX;
+		iPadX = eLink1->iPadX;
+		uPadX = layout->uPadX;
 
 		layout->eLink = eLink2;
 		layout->master = eLink1;
-		layout->x = abs(ePad[LEFT] - MAX(ePad[LEFT], uPad[LEFT]));
-		layout->iWidth = iPad[LEFT] + layout->useWidth + iPad[RIGHT];
-		layout->eWidth = ePad[LEFT] + layout->iWidth + ePad[RIGHT];
-		for (j = 0; j < 4; j++)
+		layout->x = abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
+		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
+		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
+
+		for (j = 0; j < 2; j++)
 		{
-			layout->ePad[j] = ePad[j];
-			layout->iPad[j] = iPad[j];
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
 		}
 
 		Style_DoExpandH(layout, eLink1->flags, drawArgs->width);
@@ -577,8 +595,8 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (eLink1->onion == NULL)
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
+		ePadX = eLink1->ePadX;
+		iPadX = eLink1->iPadX;
 
 		w = 10000, e = -10000;
 
@@ -586,19 +604,22 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		{
 			struct Layout *layout2 = &layouts[eLink1->onion[j]];
 
-			w = MIN(w, layout2->x + layout2->ePad[LEFT]);
-			e = MAX(e, layout2->x + layout2->ePad[LEFT] + layout2->iWidth);
+			w = MIN(w, layout2->x + layout2->ePadX[PAD_TOP_LEFT]);
+			e = MAX(e, layout2->x + layout2->ePadX[PAD_TOP_LEFT] + layout2->iWidth);
 		}
 
 		layout->eLink = eLink2;
 		layout->master = eLink1;
-		layout->x = w - iPad[LEFT] - ePad[LEFT];
-		layout->iWidth = iPad[LEFT] + (e - w) + iPad[RIGHT];
-		layout->eWidth = ePad[LEFT] + layout->iWidth + ePad[RIGHT];
-		for (j = 0; j < 4; j++)
+		layout->x = w - iPadX[PAD_TOP_LEFT] - ePadX[PAD_TOP_LEFT];
+		layout->iWidth = iPadX[PAD_TOP_LEFT] + (e - w) + iPadX[PAD_BOTTOM_RIGHT];
+		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
+
+		for (j = 0; j < 2; j++)
 		{
-			layout->ePad[j] = ePad[j];
-			layout->iPad[j] = iPad[j];
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
 		}
 	}
 
@@ -627,19 +648,19 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				int iExtra = extraWidth - extraWidth / 2;
 
 				/* External expansion */
-				layout->ePad[LEFT] += eExtra;
+				layout->ePadX[PAD_TOP_LEFT] += eExtra;
 				layout->x = 0;
 				layout->eWidth += extraWidth;
 
 				/* Internal expansion */
-				layout->iPad[LEFT] += iExtra;
+				layout->iPadX[PAD_TOP_LEFT] += iExtra;
 				layout->iWidth += iExtra;
 			}
 
 			/* External expansion only: W */
 			else if (eLink1->flags & ELF_eEXPAND_W)
 			{
-				layout->ePad[LEFT] += extraWidth;
+				layout->ePadX[PAD_TOP_LEFT] += extraWidth;
 				layout->x = 0;
 				layout->eWidth += extraWidth;
 			}
@@ -647,7 +668,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			/* Internal expansion only: W */
 			else
 			{
-				layout->iPad[LEFT] += extraWidth;
+				layout->iPadX[PAD_TOP_LEFT] += extraWidth;
 				layout->x = 0;
 				layout->iWidth += extraWidth;
 				layout->eWidth += extraWidth;
@@ -664,25 +685,25 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				int iExtra = extraWidth - extraWidth / 2;
 
 				/* External expansion */
-				layout->ePad[RIGHT] += eExtra;
+				layout->ePadX[PAD_BOTTOM_RIGHT] += eExtra;
 				layout->eWidth += extraWidth; /* all the space */
 
 				/* Internal expansion */
-				layout->iPad[RIGHT] += iExtra;
+				layout->iPadX[PAD_BOTTOM_RIGHT] += iExtra;
 				layout->iWidth += iExtra;
 			}
 
 			/* External expansion only: E */
 			else if (eLink1->flags & ELF_eEXPAND_E)
 			{
-				layout->ePad[RIGHT] += extraWidth;
+				layout->ePadX[PAD_BOTTOM_RIGHT] += extraWidth;
 				layout->eWidth += extraWidth;
 			}
 
 			/* Internal expansion only: E */
 			else
 			{
-				layout->iPad[RIGHT] += extraWidth;
+				layout->iPadX[PAD_BOTTOM_RIGHT] += extraWidth;
 				layout->iWidth += extraWidth;
 				layout->eWidth += extraWidth;
 			}
@@ -699,7 +720,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 	ElementLink *eLinks1, *eLinks2, *eLink1, *eLink2;
 	int y = 0;
 	int n, s;
-	int *ePad, *iPad, *uPad;
+	int *ePadY, *iPadY, *uPadY;
 	int numExpandNS = 0;
 	int numSqueezeY = 0;
 	int i, j, eLinkCount = 0;
@@ -763,18 +784,18 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			if (eLink1->onion != NULL)
 				continue;
 
-			ePad = eLink1->ePad;
-			iPad = eLink1->iPad;
-			uPad = layout->uPad;
+			ePadY = eLink1->ePadY;
+			iPadY = eLink1->iPadY;
+			uPadY = layout->uPadY;
 
 			if ((eLink1->flags & ELF_SQUEEZE_Y) &&
 				((eLink1->flags & ELF_DETACH) ||
 				!masterStyle->vertical))
 			{
 				int height =
-					MAX(ePad[TOP], uPad[TOP]) +
-					iPad[TOP] + layout->useHeight + iPad[BOTTOM] +
-					MAX(ePad[BOTTOM], uPad[BOTTOM]);
+					MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]) +
+					iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT] +
+					MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
 				if (height > drawArgs->height)
 					layout->useHeight -= (height - drawArgs->height);
 			}
@@ -789,16 +810,16 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		eLink1 = &eLinks1[i];
 		eLink2 = &eLinks2[i];
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadY = eLink1->ePadY;
+		iPadY = eLink1->iPadY;
+		uPadY = layout->uPadY;
 
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-		layout->y = MAX(y, abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP])));
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
+		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
 		if (masterStyle->vertical)
 			y = layout->y + layout->eHeight;
@@ -840,8 +861,8 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				if (layouts[j].eLink != NULL)
 					layouts[j].y += extraHeight;
 
-			ePad = layout->ePad;
-			iPad = layout->iPad;
+			ePadY = layout->ePadY;
+			iPadY = layout->iPadY;
 
 			/* External and internal expansion */
 			if ((eLink1->flags & ELF_eEXPAND_NS) && (eLink1->flags & ELF_iEXPAND_NS))
@@ -860,13 +881,13 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			{
 				if ((eLink1->flags & ELF_eEXPAND_NS) == ELF_eEXPAND_NS)
 				{
-					ePad[TOP] += eExtra / 2;
-					ePad[BOTTOM] += eExtra - eExtra / 2;
+					ePadY[PAD_TOP_LEFT] += eExtra / 2;
+					ePadY[PAD_BOTTOM_RIGHT] += eExtra - eExtra / 2;
 				}
 				else if (eLink1->flags & ELF_eEXPAND_N)
-					ePad[TOP] += eExtra;
+					ePadY[PAD_TOP_LEFT] += eExtra;
 				else
-					ePad[BOTTOM] += eExtra;
+					ePadY[PAD_BOTTOM_RIGHT] += eExtra;
 			}
 
 			/* Internal expansion */
@@ -874,13 +895,13 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			{
 				if ((eLink1->flags & ELF_iEXPAND_NS) == ELF_iEXPAND_NS)
 				{
-					iPad[TOP] += iExtra / 2;
-					iPad[BOTTOM] += iExtra - iExtra / 2;
+					iPadY[PAD_TOP_LEFT] += iExtra / 2;
+					iPadY[PAD_BOTTOM_RIGHT] += iExtra - iExtra / 2;
 				}
 				else if (eLink1->flags & ELF_iEXPAND_N)
-					iPad[TOP] += iExtra;
+					iPadY[PAD_TOP_LEFT] += iExtra;
 				else
-					iPad[BOTTOM] += iExtra;
+					iPadY[PAD_BOTTOM_RIGHT] += iExtra;
 				layout->iHeight += iExtra;
 			}
 			layout->eHeight += extraHeight;
@@ -914,13 +935,13 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (!(eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadY = eLink1->ePadY;
+		iPadY = eLink1->iPadY;
+		uPadY = layout->uPadY;
 
-		layout->y = abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP]));
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
+		layout->y = abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
 		Style_DoExpandV(layout, eLink1->flags, drawArgs->height);
 	}
@@ -936,8 +957,8 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (eLink1->onion == NULL)
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
+		ePadY = eLink1->ePadY;
+		iPadY = eLink1->iPadY;
 
 		n = 10000, s = -10000;
 
@@ -945,13 +966,13 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		{
 			struct Layout *layout2 = &layouts[eLink1->onion[j]];
 
-			n = MIN(n, layout2->y + layout2->ePad[TOP]);
-			s = MAX(s, layout2->y + layout2->ePad[TOP] + layout2->iHeight);
+			n = MIN(n, layout2->y + layout2->ePadY[PAD_TOP_LEFT]);
+			s = MAX(s, layout2->y + layout2->ePadY[PAD_TOP_LEFT] + layout2->iHeight);
 		}
 
-		layout->y = n - iPad[TOP] - ePad[TOP];
-		layout->iHeight = iPad[TOP] + (s - n) + iPad[BOTTOM];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
+		layout->y = n - iPadY[PAD_TOP_LEFT] - ePadY[PAD_TOP_LEFT];
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + (s - n) + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 	}
 
 	/* Expand -union elements if needed: vertical */
@@ -978,19 +999,19 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				int iExtra = extraHeight - extraHeight / 2;
 
 				/* External expansion */
-				layout->ePad[TOP] += eExtra;
+				layout->ePadY[PAD_TOP_LEFT] += eExtra;
 				layout->y = 0;
 				layout->eHeight += extraHeight;
 
 				/* Internal expansion */
-				layout->iPad[TOP] += iExtra;
+				layout->iPadY[PAD_TOP_LEFT] += iExtra;
 				layout->iHeight += iExtra;
 			}
 
 			/* External expansion only: N */
 			else if (eLink1->flags & ELF_eEXPAND_N)
 			{
-				layout->ePad[TOP] += extraHeight;
+				layout->ePadY[PAD_TOP_LEFT] += extraHeight;
 				layout->y = 0;
 				layout->eHeight += extraHeight;
 			}
@@ -998,7 +1019,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 			/* Internal expansion only: N */
 			else
 			{
-				layout->iPad[TOP] += extraHeight;
+				layout->iPadY[PAD_TOP_LEFT] += extraHeight;
 				layout->y = 0;
 				layout->iHeight += extraHeight;
 				layout->eHeight += extraHeight;
@@ -1015,25 +1036,25 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 				int iExtra = extraHeight - extraHeight / 2;
 
 				/* External expansion */
-				layout->ePad[BOTTOM] += eExtra;
+				layout->ePadY[PAD_BOTTOM_RIGHT] += eExtra;
 				layout->eHeight += extraHeight; /* all the space */
 
 				/* Internal expansion */
-				layout->iPad[BOTTOM] += iExtra;
+				layout->iPadY[PAD_BOTTOM_RIGHT] += iExtra;
 				layout->iHeight += iExtra;
 			}
 
 			/* External expansion only: S */
 			else if (eLink1->flags & ELF_eEXPAND_S)
 			{
-				layout->ePad[BOTTOM] += extraHeight;
+				layout->ePadY[PAD_BOTTOM_RIGHT] += extraHeight;
 				layout->eHeight += extraHeight;
 			}
 
 			/* Internal expansion only */
 			else
 			{
-				layout->iPad[BOTTOM] += extraHeight;
+				layout->iPadY[PAD_BOTTOM_RIGHT] += extraHeight;
 				layout->iHeight += extraHeight;
 				layout->eHeight += extraHeight;
 			}
@@ -1056,10 +1077,10 @@ static void Layout_Size(int vertical, int numLayouts, struct Layout layouts[20],
 		struct Layout *layout = &layouts[i];
 		int w, n, e, s;
 
-		w = layout->x + layout->ePad[LEFT] - MAX(layout->ePad[LEFT], layout->uPad[LEFT]);
-		n = layout->y + layout->ePad[TOP] - MAX(layout->ePad[TOP], layout->uPad[TOP]);
-		e = layout->x + layout->eWidth - layout->ePad[RIGHT] + MAX(layout->ePad[RIGHT], layout->uPad[RIGHT]);
-		s = layout->y + layout->eHeight - layout->ePad[BOTTOM] + MAX(layout->ePad[BOTTOM], layout->uPad[BOTTOM]);
+		w = layout->x + layout->ePadX[PAD_TOP_LEFT] - MAX(layout->ePadX[PAD_TOP_LEFT], layout->uPadX[PAD_TOP_LEFT]);
+		n = layout->y + layout->ePadY[PAD_TOP_LEFT] - MAX(layout->ePadY[PAD_TOP_LEFT], layout->uPadY[PAD_TOP_LEFT]);
+		e = layout->x + layout->eWidth - layout->ePadX[PAD_BOTTOM_RIGHT] + MAX(layout->ePadX[PAD_BOTTOM_RIGHT], layout->uPadX[PAD_BOTTOM_RIGHT]);
+		s = layout->y + layout->eHeight - layout->ePadY[PAD_BOTTOM_RIGHT] + MAX(layout->ePadY[PAD_BOTTOM_RIGHT], layout->uPadY[PAD_BOTTOM_RIGHT]);
 
 		if (vertical)
 		{
@@ -1090,7 +1111,7 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
 	ElementLink *eLinks1, *eLinks2, *eLink1, *eLink2;
-	int *ePad, *iPad, *uPad;
+	int *ePadY, *iPadY, *uPadY;
 	int i;
 	int y = 0;
 
@@ -1105,9 +1126,9 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		eLink1 = &eLinks1[i];
 		eLink2 = &eLinks2[i];
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadY = eLink1->ePadY;
+		iPadY = eLink1->iPadY;
+		uPadY = layout->uPadY;
 
 		/* The size of a -union element is determined by the elements
 		 * it surrounds */
@@ -1118,9 +1139,9 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (eLink1->flags & ELF_DETACH)
 			continue;
 
-		layout->y = MAX(y, abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP])));
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
+		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
 		if (masterStyle->vertical)
 			y = layout->y + layout->eHeight;
@@ -1137,13 +1158,13 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[20])
 		if (!(eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadY = eLink1->ePadY;
+		iPadY = eLink1->iPadY;
+		uPadY = layout->uPadY;
 
-		layout->y = abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP]));
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
+		layout->y = abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 	}
 }
 
@@ -1263,8 +1284,8 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 	Style *masterStyle = style->master;
 	ElementLink *eLinks1, *eLinks2, *eLink1, *eLink2;
 	struct Layout layouts[20];
-	int *ePad, *iPad, *uPad;
-	int i, j, k;
+	int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
+	int i, j;
 	int x = 0, y = 0;
 
 	if (style->master != NULL)
@@ -1283,8 +1304,10 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 		struct Layout *layout = &layouts[i];
 
 		/* No -union padding yet */
-		for (j = 0; j < 4; j++)
-			layout->uPad[j] = 0;
+		layout->uPadX[PAD_TOP_LEFT]     = 0;
+		layout->uPadX[PAD_BOTTOM_RIGHT] = 0;
+		layout->uPadY[PAD_TOP_LEFT]     = 0;
+		layout->uPadY[PAD_BOTTOM_RIGHT] = 0;
 	}
 
 	/* Figure out the padding around elements surrounded by -union elements */
@@ -1295,16 +1318,21 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 		if (eLink1->onion == NULL)
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
+		ePadX = eLink1->ePadX;
+		ePadY = eLink1->ePadY;
+		iPadX = eLink1->iPadX;
+		iPadY = eLink1->iPadY;
 
 		for (j = 0; j < eLink1->onionCount; j++)
 		{
 			struct Layout *layout = &layouts[eLink1->onion[j]];
 
-			uPad = layout->uPad;
-			for (k = 0; k < 4; k++)
-				uPad[k] = MAX(uPad[k], iPad[k] + ePad[k]);
+			uPadX = layout->uPadX;
+			uPadY = layout->uPadY;
+			uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
+			uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
+			uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
+			uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 		}
 	}
 
@@ -1316,17 +1344,26 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 		eLink1 = &eLinks1[i];
 		eLink2 = &eLinks2[i];
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadX = eLink1->ePadX;
+		ePadY = eLink1->ePadY;
+		iPadX = eLink1->iPadX;
+		iPadY = eLink1->iPadY;
+		uPadX = layout->uPadX;
+		uPadY = layout->uPadY;
 
 		/* The size of a -union element is determined by the elements
 		 * it surrounds */
 		if (eLink1->onion != NULL)
 		{
 			layout->x = layout->y = layout->eWidth = layout->eHeight = 0;
-			for (j = 0; j < 4; j++)
-				layout->ePad[j] = layout->iPad[j] = 0;
+			layout->ePadX[PAD_TOP_LEFT]     = 0;
+			layout->ePadX[PAD_BOTTOM_RIGHT] = 0;
+			layout->ePadY[PAD_TOP_LEFT]     = 0;
+			layout->ePadY[PAD_BOTTOM_RIGHT] = 0;
+			layout->iPadX[PAD_TOP_LEFT]     = 0;
+			layout->iPadX[PAD_BOTTOM_RIGHT] = 0;
+			layout->iPadY[PAD_TOP_LEFT]     = 0;
+			layout->iPadY[PAD_BOTTOM_RIGHT] = 0;
 			continue;
 		}
 
@@ -1362,16 +1399,19 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 			continue;
 
 		layout->eLink = eLink2;
-		layout->x = MAX(x, abs(ePad[LEFT] - MAX(ePad[LEFT], uPad[LEFT])));
-		layout->y = MAX(y, abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP])));
-		layout->iWidth = iPad[LEFT] + layout->useWidth + iPad[RIGHT];
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eWidth = ePad[LEFT] + layout->iWidth + ePad[RIGHT];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
-		for (j = 0; j < 4; j++)
+		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
+		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
+		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
+
+		for (j = 0; j < 2; j++)
 		{
-			layout->ePad[j] = ePad[j];
-			layout->iPad[j] = iPad[j];
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
 		}
 
 		if (masterStyle->vertical)
@@ -1391,22 +1431,28 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 		if (!(eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-		ePad = eLink1->ePad;
-		iPad = eLink1->iPad;
-		uPad = layout->uPad;
+		ePadX = eLink1->ePadX;
+		ePadY = eLink1->ePadY;
+		iPadX = eLink1->iPadX;
+		iPadY = eLink1->iPadY;
+		uPadX = layout->uPadX;
+		uPadY = layout->uPadY;
 
 		layout->eLink = eLink2;
 		layout->master = eLink1;
-		layout->x = abs(ePad[LEFT] - MAX(ePad[LEFT], uPad[LEFT]));
-		layout->y = abs(ePad[TOP] - MAX(ePad[TOP], uPad[TOP]));
-		layout->iWidth = iPad[LEFT] + layout->useWidth + iPad[RIGHT];
-		layout->iHeight = iPad[TOP] + layout->useHeight + iPad[BOTTOM];
-		layout->eWidth = ePad[LEFT] + layout->iWidth + ePad[RIGHT];
-		layout->eHeight = ePad[TOP] + layout->iHeight + ePad[BOTTOM];
-		for (j = 0; j < 4; j++)
+		layout->x = abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
+		layout->y = abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
+		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
+		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
+		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
+		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
+
+		for (j = 0; j < 2; j++)
 		{
-			layout->ePad[j] = ePad[j];
-			layout->iPad[j] = iPad[j];
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
 		}
 	}
 
@@ -1516,14 +1562,14 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 		if ((layout->iWidth > 0) && (layout->iHeight > 0))
 		{
 			args.elem = layout->eLink->elem;
-			args.display.x = drawArgs->x + layout->x + layout->ePad[LEFT];
-			args.display.y = drawArgs->y + layout->y + layout->ePad[TOP];
+			args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
+			args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
 			args.display.width = layout->iWidth;
 			args.display.height = layout->iHeight;
-			args.display.pad[LEFT] = layout->iPad[LEFT];
-			args.display.pad[TOP] = layout->iPad[TOP];
-			args.display.pad[RIGHT] = layout->iPad[RIGHT];
-			args.display.pad[BOTTOM] = layout->iPad[BOTTOM];
+			args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
+			args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
+			args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
+			args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
 			if (debugDraw)
 			{
 				XColor *color[3];
@@ -1549,8 +1595,8 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 				/* external */
 				XFillRectangle(tree->display, args.display.drawable,
 					gc[2],
-					args.display.x - layout->ePad[LEFT],
-					args.display.y - layout->ePad[TOP],
+					args.display.x - layout->ePadX[PAD_TOP_LEFT],
+					args.display.y - layout->ePadY[PAD_TOP_LEFT],
 					layout->eWidth, layout->eHeight);
 				/* internal */
 				XFillRectangle(tree->display, args.display.drawable,
@@ -1561,8 +1607,8 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 				if (!layout->master->onion && !(layout->master->flags & ELF_DETACH))
 				XFillRectangle(tree->display, args.display.drawable,
 					gc[0],
-					args.display.x + layout->iPad[LEFT],
-					args.display.y + layout->iPad[TOP],
+					args.display.x + layout->iPadX[PAD_TOP_LEFT],
+					args.display.y + layout->iPadY[PAD_TOP_LEFT],
 					layout->eLink->neededWidth, layout->eLink->neededHeight);
 			}
 			else
@@ -1580,14 +1626,14 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 			if (layout->iWidth > 0 && layout->iHeight > 0)
 			{
 				args.elem = layout->eLink->elem;
-				args.display.x = drawArgs->x + layout->x + layout->ePad[LEFT];
-				args.display.y = drawArgs->y + layout->y + layout->ePad[TOP];
+				args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
+				args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
 				args.display.width = layout->iWidth;
 				args.display.height = layout->iHeight;
-				args.display.pad[LEFT] = layout->iPad[LEFT];
-				args.display.pad[TOP] = layout->iPad[TOP];
-				args.display.pad[RIGHT] = layout->iPad[RIGHT];
-				args.display.pad[BOTTOM] = layout->iPad[BOTTOM];
+				args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
+				args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
+				args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
+				args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
 				{
 					XColor *color[3];
 					GC gc[3];
@@ -1600,8 +1646,8 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 					/* external */
 					XDrawRectangle(tree->display, args.display.drawable,
 						gc[0],
-						args.display.x - layout->ePad[LEFT],
-						args.display.y - layout->ePad[TOP],
+						args.display.x - layout->ePadX[PAD_TOP_LEFT],
+						args.display.y - layout->ePadY[PAD_TOP_LEFT],
 						layout->eWidth - 1, layout->eHeight - 1);
 					/* internal */
 					XDrawRectangle(tree->display, args.display.drawable,
@@ -2722,14 +2768,12 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Style *style;
 	Element *elem;
 	ElementLink *eLink;
-	int i, index, pad;
-	static CONST char *optionNames[] = { "-padw", "-padn", "-pade",
-		"-pads", "-ipadw", "-ipadn", "-ipade",
-		"-ipads", "-expand", "-union", "-detach", "-iexpand",
+	int i, index;
+	static CONST char *optionNames[] = { "-padx", "-pady", "-ipadx",
+		"-ipady", "-expand", "-union", "-detach", "-iexpand",
 		"-squeeze", (char *) NULL };
-	enum { OPTION_PADLEFT, OPTION_PADTOP, OPTION_PADRIGHT,
-		OPTION_PADBOTTOM, OPTION_iPADLEFT, OPTION_iPADTOP,
-		OPTION_iPADRIGHT, OPTION_iPADBOTTOM, OPTION_EXPAND,
+	enum { OPTION_PADX, OPTION_PADY, OPTION_iPADX, OPTION_iPADY,
+		OPTION_EXPAND,
 		OPTION_UNION, OPTION_DETACH, OPTION_iEXPAND, OPTION_SQUEEZE };
 
 	if (objc < 5)
@@ -2760,22 +2804,14 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
 		Tcl_Obj *unionObj = Tcl_NewListObj(0, NULL);
 
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-padw", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->ePad[LEFT]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-padn", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->ePad[TOP]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-pade", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->ePad[RIGHT]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-pads", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->ePad[BOTTOM]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipadw", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPad[LEFT]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipadn", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPad[TOP]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipade", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPad[RIGHT]));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipads", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPad[BOTTOM]));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-padx", -1));
+		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->ePadX));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-pady", -1));
+		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->ePadY));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipadx", -1));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPadX[PAD_TOP_LEFT]));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipady", -1));
+		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewIntObj(eLink->iPadY[PAD_TOP_LEFT]));
 
 		n = 0;
 		if (eLink->flags & ELF_eEXPAND_W) flags[n++] = 'w';
@@ -2822,20 +2858,24 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			return TCL_ERROR;
 		switch (index)
 		{
-			case OPTION_PADLEFT:
-			case OPTION_PADTOP:
-			case OPTION_PADRIGHT:
-			case OPTION_PADBOTTOM:
+			case OPTION_PADX:
 			{
-				 objPtr = Tcl_NewIntObj(eLink->ePad[index - OPTION_PADLEFT]);
+				 objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadX);
 				 break;
 			}
-			case OPTION_iPADLEFT:
-			case OPTION_iPADTOP:
-			case OPTION_iPADRIGHT:
-			case OPTION_iPADBOTTOM:
+			case OPTION_PADY:
 			{
-				 objPtr = Tcl_NewIntObj(eLink->iPad[index - OPTION_iPADLEFT]);
+				 objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadY);
+				 break;
+			}
+			case OPTION_iPADX:
+			{
+				 objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadX);
+				 break;
+			}
+			case OPTION_iPADY:
+			{
+				 objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadY);
 				 break;
 			}
 			case OPTION_DETACH:
@@ -2913,24 +2953,40 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		switch (index)
 		{
-			case OPTION_PADLEFT:
-			case OPTION_PADTOP:
-			case OPTION_PADRIGHT:
-			case OPTION_PADBOTTOM:
+			case OPTION_PADX:
 			{
-				if (Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1], &pad) != TCL_OK)
+				if (TreeCtrl_GetPadAmountFromObj(interp,
+					tree->tkwin, objv[i + 1],
+					&eLink->ePadX[PAD_TOP_LEFT],
+					&eLink->ePadX[PAD_BOTTOM_RIGHT]) != TCL_OK)
 					return TCL_ERROR;
-				eLink->ePad[index - OPTION_PADLEFT] = pad;
 				break;
 			}
-			case OPTION_iPADLEFT:
-			case OPTION_iPADTOP:
-			case OPTION_iPADRIGHT:
-			case OPTION_iPADBOTTOM:
+			case OPTION_PADY:
 			{
-				if (Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1], &pad) != TCL_OK)
+				if (TreeCtrl_GetPadAmountFromObj(interp,
+					tree->tkwin, objv[i + 1],
+					&eLink->ePadY[PAD_TOP_LEFT],
+					&eLink->ePadY[PAD_BOTTOM_RIGHT]) != TCL_OK)
 					return TCL_ERROR;
-				eLink->iPad[index - OPTION_iPADLEFT] = pad;
+				break;
+			}
+			case OPTION_iPADX:
+			{
+				if (TreeCtrl_GetPadAmountFromObj(interp,
+					tree->tkwin, objv[i + 1],
+					&eLink->iPadX[PAD_TOP_LEFT],
+					&eLink->iPadX[PAD_BOTTOM_RIGHT]) != TCL_OK)
+					return TCL_ERROR;
+				break;
+			}
+			case OPTION_iPADY:
+			{
+				if (TreeCtrl_GetPadAmountFromObj(interp,
+					tree->tkwin, objv[i + 1],
+					&eLink->iPadY[PAD_TOP_LEFT],
+					&eLink->iPadY[PAD_BOTTOM_RIGHT]) != TCL_OK)
+					return TCL_ERROR;
 				break;
 			}
 			case OPTION_DETACH:
@@ -3360,8 +3416,8 @@ char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y)
 	{
 		struct Layout *layout = &layouts[i];
 		eLink = layout->eLink;
-		if ((x >= layout->x + layout->ePad[LEFT]) && (x < layout->x + layout->ePad[LEFT] + layout->iWidth) &&
-			(y >= layout->y + layout->ePad[TOP]) && (y < layout->y + layout->ePad[TOP] + layout->iHeight))
+		if ((x >= layout->x + layout->ePadX[PAD_TOP_LEFT]) && (x < layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth) &&
+			(y >= layout->y + layout->ePadY[PAD_TOP_LEFT]) && (y < layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight))
 		{
 			return (char *) eLink->elem->name;
 		}
@@ -3397,10 +3453,10 @@ void TreeStyle_Identify2(StyleDrawArgs *drawArgs,
 	{
 		struct Layout *layout = &layouts[i];
 		eLink = layout->eLink;
-		if ((drawArgs->x + layout->x + layout->ePad[LEFT] < x2) &&
-			(drawArgs->x + layout->x + layout->ePad[LEFT] + layout->iWidth > x1) &&
-			(drawArgs->y + layout->y + layout->ePad[TOP] < y2) &&
-			(drawArgs->y + layout->y + layout->ePad[TOP] + layout->iHeight > y1))
+		if ((drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] < x2) &&
+			(drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth > x1) &&
+			(drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT] < y2) &&
+			(drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight > y1))
 		{
 			Tcl_ListObjAppendElement(drawArgs->tree->interp, listObj,
 				Tcl_NewStringObj(eLink->elem->name, -1));
@@ -3614,8 +3670,8 @@ int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc,
 			if (j == objc)
 				continue;
 		}
-		rects[count].x = drawArgs->x + layout->x + layout->ePad[LEFT];
-		rects[count].y = drawArgs->y + layout->y + layout->ePad[TOP];
+		rects[count].x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
+		rects[count].y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
 		rects[count].width = layout->iWidth;
 		rects[count].height = layout->iHeight;
 		count++;

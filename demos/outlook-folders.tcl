@@ -30,31 +30,31 @@ proc DemoOutlookFolders {} {
 	set S [$T style create s1]
 	$T style elements $S {e6 e1 e2}
 	$T style layout $S e1 -expand ns
-	$T style layout $S e2 -padw 4 -expand ns -squeeze x
-	$T style layout $S e6 -union [list e2] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e2 -padx {4 0} -expand ns -squeeze x
+	$T style layout $S e6 -union [list e2] -iexpand ns -ipadx 2
 
 	# image + text + text
 	set S [$T style create s2]
 	$T style elements $S {e6 e1 e3 e4}
 	$T style layout $S e1 -expand ns
-	$T style layout $S e3 -padw 4 -pade 4 -expand ns -squeeze x
+	$T style layout $S e3 -padx 4 -expand ns -squeeze x
 	$T style layout $S e4 -expand ns
-	$T style layout $S e6 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e6 -union [list e3] -iexpand ns -ipadx 2
 
 	# folder + text
 	set S [$T style create s3]
 	$T style elements $S {e6 e5 e2}
 	$T style layout $S e5 -expand ns
-	$T style layout $S e2 -padw 4 -expand ns -squeeze x
-	$T style layout $S e6 -union [list e2] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e2 -padx {4 0} -expand ns -squeeze x
+	$T style layout $S e6 -union [list e2] -iexpand ns -ipadx 2
 
 	# folder + text + text
 	set S [$T style create s4]
 	$T style elements $S {e6 e5 e3 e4}
 	$T style layout $S e5 -expand ns
-	$T style layout $S e3 -padw 4 -pade 4 -expand ns -squeeze x
+	$T style layout $S e3 -padx 4 -expand ns -squeeze x
 	$T style layout $S e4 -expand ns
-	$T style layout $S e6 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e6 -union [list e3] -iexpand ns -ipadx 2
 
 	$T item style set root 0 s1
 	$T item complex root [list [list e1 -image outlook-main] [list e2 -text "Outlook Express"]]

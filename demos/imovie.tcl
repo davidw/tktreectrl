@@ -36,12 +36,12 @@ proc DemoIMovie {} {
 
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemShadow elemRect elemTime elemImg elemName}
-	$T style layout $S elemShadow -detach yes -pade 2 -pads 2 -padn 1 -padw 1 -iexpand es
-	$T style layout $S elemTime -padw 2
-	$T style layout $S elemImg -pads 1
-	$T style layout $S elemName -expand we -ipads 2 -pade 3 -squeeze x
+	    $T style layout $S elemShadow -detach yes -padx {1 2} -pady {1 2} -iexpand es
+	$T style layout $S elemTime -padx {2 0}
+	$T style layout $S elemImg -pady {0 1}
+	$T style layout $S elemName -expand we -ipady {0 2} -padx {0 3} -squeeze x
 	$T style layout $S elemRect -union {elemTime elemImg elemName} \
-		-ipadw 6 -ipade 6 -pade 3 -pads 3
+		-ipadx 6 -padx {0 3} -pady {0 3}
 
 for {set i 0} {$i < 5} {incr i} {
 	foreach {time name image} {

@@ -28,16 +28,16 @@ proc DemoHelpContents {} {
 	# book
 	set S [$T style create s1]
 	$T style elements $S {e4 e1 e3}
-	$T style layout $S e1 -pade 4 -expand ns
+	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
 
 	# page
 	set S [$T style create s2]
 	$T style elements $S {e4 e2 e3}
-	$T style layout $S e2 -pade 4 -expand ns
+	$T style layout $S e2 -padx {0 4} -expand ns
 	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -138,30 +138,30 @@ proc DemoHelpContents2 {} {
 	# book
 	set S [$T style create s1]
 	$T style elements $S {e4 e1 e3}
-	$T style layout $S e1 -pade 4 -expand ns
+	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
 
 	# page
 	set S [$T style create s2]
 	$T style elements $S {e4 e2 e3}
-	$T style layout $S e2 -pade 4 -expand ns
+	$T style layout $S e2 -padx {0 4} -expand ns
 	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
 
 	# book (focus)
 	set S [$T style create s1.f]
 	$T style elements $S {e4 e1 e5}
-	$T style layout $S e1 -pade 4 -expand ns
+	$T style layout $S e1 -padx {0 4} -expand ns
 	$T style layout $S e5 -expand ns
-	$T style layout $S e4 -union [list e5] -iexpand ns -ipadw 1 -ipade 2
+	$T style layout $S e4 -union [list e5] -iexpand ns -ipadx {1 2}
 
 	# page (focus)
 	set S [$T style create s2.f]
 	$T style elements $S {e4 e2 e5}
-	$T style layout $S e2 -pade 4 -expand ns
+	$T style layout $S e2 -padx {0 4} -expand ns
 	$T style layout $S e5 -expand ns
-	$T style layout $S e4 -union [list e5] -iexpand ns -ipadw 1 -ipade 2
+	$T style layout $S e4 -union [list e5] -iexpand ns -ipadx {1 2}
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root

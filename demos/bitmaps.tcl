@@ -24,9 +24,9 @@ proc DemoBitmaps {} {
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSelBmp elemBmp elemSelTxt elemTxt}
 	$T style layout $S elemSelBmp -union elemBmp \
-		-ipadn 6 -ipads 6 -ipadw 6 -ipade 6
-	$T style layout $S elemBmp -pads 6 -expand we
-	$T style layout $S elemSelTxt -union elemTxt -ipadw 2 -ipade 2
+		-ipadx 6 -ipady 6
+	$T style layout $S elemBmp -pady {0 6} -expand we
+	$T style layout $S elemSelTxt -union elemTxt -ipadx 2
 	$T style layout $S elemTxt -expand we
 
 	set bitmapNames [list error gray75 gray50 gray25 gray12 hourglass info \

@@ -116,8 +116,10 @@ struct TreeCtrl
 #define BG_MODE_ROW 2
 #define BG_MODE_VISINDEX 3
 	int backgroundMode; /* -backgroundmode */
-	int itemPad[4]; /* -itempad w/n/e/s */
-	Tcl_Obj *itemPadObj[4]; /* -itempad w/n/e/s */
+	int *itemPadX; /* -itempadx */
+	Tcl_Obj *itemPadXObj; /* -itempadx */
+	int *itemPadY; /* -itempady */
+	Tcl_Obj *itemPadYObj; /* -itempady */
 
 	struct TreeCtrlDebug debug;
 
@@ -503,3 +505,12 @@ extern void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr
 extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
 
+
+#define PAD_TOP_LEFT     0
+#define PAD_BOTTOM_RIGHT 1
+extern Tk_ObjCustomOption PadAmountOption;
+
+extern int       TreeCtrl_GetPadAmountFromObj _ANSI_ARGS_((Tcl_Interp *interp,
+		     Tk_Window tkwin, Tcl_Obj *padObj,
+		     int *topLeftPtr, int *bottomRightPtr));
+extern Tcl_Obj * TreeCtrl_NewPadAmountObj _ANSI_ARGS_((int *padAmounts));

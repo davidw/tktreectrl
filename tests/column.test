@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.1 2002/12/30 21:42:19 krischan Exp $
+# CVS: @(#) $Id: column.test,v 1.2 2003/01/02 02:27:50 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -90,11 +90,11 @@ test column-3.2 {column configure: invalid column} -body {
 
 test column-3.3 {column configure: list all options} -body {
     .t column configure column1
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpade {} {} 6 6} {-arrowpadw {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadn {} {} 0 0} {-imagepads {} {} 0 0} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadn {} {} 0 0} {-textpads {} {} 0 0} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpad {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepadx {} {} 6 6} {-imagepady {} {} 0 0} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} column1} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpadx {} {} 6 6} {-textpady {} {} 0 0} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
 
 test column-3.4 {column configure: tail column} -body {
     .t column configure tail
-} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpade {} {} 6 6} {-arrowpadw {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepade {} {} 6 6} {-imagepadn {} {} 0 0} {-imagepads {} {} 0 0} {-imagepadw {} {} 6 6} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} tail} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpade {} {} 6 6} {-textpadn {} {} 0 0} {-textpads {} {} 0 0} {-textpadw {} {} 6 6} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
+} -result {{-arrow {} {} none none} {-arrowside {} {} right right} {-arrowgravity {} {} left left} {-arrowpad {} {} 6 6} {-bitmap {} {} {} {}} {-background {} {} #d9d9d9 #d9d9d9} {-borderwidth {} {} 2 2} {-button {} {} 1 1} {-expand {} {} 0 0} {-font {} {} {} {}} {-image {} {} {} {}} {-imagepadx {} {} 6 6} {-imagepady {} {} 0 0} {-itembackground {} {} {} {}} {-justify {} {} left left} {-minwidth {} {} {} {}} {-relief {} {} raised raised} {-stepwidth {} {} {} {}} {-sunken {} {} 0 0} {-tag {} {} {} tail} {-text {} {} {} {}} {-textcolor {} {} Black Black} {-textpadx {} {} 6 6} {-textpady {} {} 0 0} {-width {} {} {} {}} {-visible {} {} 1 1} {-widthhack {} {} 0 0}}
 
 test column-3.5 {column configure: invalid -arrow} -body {
     .t column configure column1 -arrow straight
@@ -123,14 +123,22 @@ test column-3.10 {column configure/cget: -arrowgravity} -body {
     .t column cget column1 -arrowgravity
 } -result {right}
 
-test column-3.11 {column configure: invalid -arrowpadw} -body {
-    .t column configure column1 -arrowpadw x
-} -returnCodes error -result {bad screen distance "x"}
+test column-3.11 {column configure: invalid -arrowpad} -body {
+    .t column configure column1 -arrowpad x
+} -returnCodes error -result {bad pad amount "x": must be a list of 1 or 2 positive screen distances}
 
-test column-3.12 {column configure/cget: -arrowpadw/e} -body {
-    .t column configure column1 -arrowpadw 8 -arrowpade 5
-    list [.t column cget column1 -arrowpadw] \
-	 [.t column cget column1 -arrowpade]
+test column-3.11a {column configure: invalid 2 element -arrowpad} -body {
+    .t column configure column1 -arrowpad {3 x}
+} -returnCodes error -result {bad pad amount "3 x": must be a list of 1 or 2 positive screen distances}
+
+test column-3.12 {column configure/cget: -arrowpad} -body {
+    .t column configure column1 -arrowpad 8
+    .t column cget column1 -arrowpad
+} -result {8}
+
+test column-3.12a {column configure/cget: 2 element -arrowpad} -body {
+    .t column configure column1 -arrowpad {8 5}
+    .t column cget column1 -arrowpad
 } -result {8 5}
 
 test column-3.13 {column configure: invalid -bitmap} -body {
@@ -187,15 +195,25 @@ test column-3.24 {column configure/cget: -image} -body {
     .t column cget column1 -image
 } -result {emptyImg}
 
-test column-3.25 {column configure: invalid -imagepade} -body {
-    .t column configure column1 -imagepade y
-} -returnCodes error -result {bad screen distance "y"}
+test column-3.25 {column configure: invalid -imagepadx} -body {
+    .t column configure column1 -imagepadx y
+} -returnCodes error -result {bad pad amount "y": must be a list of 1 or 2 positive screen distances}
 
-test column-3.26 {column configure/cget: -imagepadw/e} -body {
-    .t column configure column1 -imagepadw 9 -imagepade 4
-    list [.t column cget column1 -imagepadw] \
-	 [.t column cget column1 -imagepade]
+test column-3.25a {column configure: invalid 2 element -imagepadx} -body {
+    .t column configure column1 -imagepadx "y \{"
+} -returnCodes error -result {unmatched open brace in list}
+
+test column-3.26 {column configure/cget: -imagepadx} -body {
+    .t column configure column1 -imagepadx 9 -imagepady 4
+    list [.t column cget column1 -imagepadx] \
+	 [.t column cget column1 -imagepady]
 } -result {9 4}
+
+test column-3.26a {column configure/cget: 2 element -imagepadx/y} -body {
+    .t column configure column1 -imagepadx {9 0} -imagepady {4 3}
+    list [.t column cget column1 -imagepadx] \
+	 [.t column cget column1 -imagepady]
+} -result {{9 0} {4 3}}
 
 test column-3.27 {column configure: invalid -itembackground} -body {
     .t column configure column1 -itembackground no
@@ -265,15 +283,25 @@ test column-3.41 {column configure: -text} -body {
     .t column cget column1 -text
 } -result {Text above Column 1}
 
-test column-3.42 {column configure: invalid -textpadw} -body {
-    .t column configure column1 -textpadw baz
-} -returnCodes error -result {bad screen distance "baz"}
+test column-3.42 {column configure: invalid -textpadx} -body {
+    .t column configure column1 -textpadx baz
+} -returnCodes error -result {bad pad amount "baz": must be a list of 1 or 2 positive screen distances}
 
-test column-3.43 {column configure/cget: -textpadw/e} -body {
-    .t column configure column1 -textpadw 8 -textpade 5
-    list [.t column cget column1 -textpadw] \
-	 [.t column cget column1 -textpade]
+test column-3.42a {column configure: invalid 2 element -textpadx} -body {
+    .t column configure column1 -textpadx {foo bar baz}
+} -returnCodes error -result {bad pad amount "foo bar baz": must be a list of 1 or 2 positive screen distances}
+
+test column-3.43 {column configure/cget: -textpadx/y} -body {
+    .t column configure column1 -textpadx 8 -textpady 5
+    list [.t column cget column1 -textpadx] \
+	 [.t column cget column1 -textpady]
 } -result {8 5}
+
+test column-3.43a {column configure/cget: 2 element -textpadx/y} -body {
+    .t column configure column1 -textpadx {8 4} -textpady {4 5}
+    list [.t column cget column1 -textpadx] \
+	 [.t column cget column1 -textpady]
+} -result {{8 4} {4 5}}
 
 test column-3.44 {column configure: invalid -width} -body {
     .t column configure column1 -width all

@@ -32,20 +32,20 @@ proc DemoRandom {} {
 
 	$T style create s1
 	$T style elements s1 {e5 e1 e3 e4}
-	$T style layout s1 e1 -pade 4 -expand ns
-	$T style layout s1 e3 -pade 4 -expand ns
-	$T style layout s1 e4 -pade 6 -expand ns
-	$T style layout s1 e5 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout s1 e1 -padx {0 4} -expand ns
+	$T style layout s1 e3 -padx {0 4} -expand ns
+	$T style layout s1 e4 -padx {0 6} -expand ns
+	$T style layout s1 e5 -union [list e3] -iexpand ns -ipadx 2
 
 	$T style create s2
 	$T style elements s2 {e5 e2 e3}
-	$T style layout s2 e2 -pade 4 -expand ns
-	$T style layout s2 e3 -pade 6 -expand ns
-	$T style layout s2 e5 -union [list e3] -iexpand ns -ipadw 2 -ipade 2
+	$T style layout s2 e2 -padx {0 4} -expand ns
+	$T style layout s2 e3 -padx {0 4} -expand ns
+	$T style layout s2 e5 -union [list e3] -iexpand ns -ipadx 2
 
 	$T style create s3
 	$T style elements s3 {e6}
-	$T style layout s3 e6 -padw 6 -pade 6 -expand ns
+	$T style layout s3 e6 -padx 6 -expand ns
 
 	set ::TreeCtrl::Priv(sensitive,$T) {
 		{item s1 e5 e1 e3}

@@ -16,14 +16,14 @@ proc DemoMailWasher {} {
 		-xscrollincrement 1
 
 	set pad 4
-	$T column configure 0 -text Delete -textpadw $pad -textpade $pad -tag delete
-	$T column configure 1 -text Bounce -textpadw $pad -textpade $pad -tag bounce
-	$T column configure 2 -text Status -width 80 -textpadw $pad -textpade $pad -tag status
-	$T column configure 3 -text Size -width 40 -textpadw $pad -textpade $pad -justify right -tag size
-	$T column configure 4 -text From -width 140 -textpadw $pad -textpade $pad -tag from
-	$T column configure 5 -text Subject -width 240 -textpadw $pad -textpade $pad -tag subject
-	$T column configure 6 -text Received -textpadw $pad -textpade $pad -arrow up -arrowpadw 4 -tag received
-	$T column configure 7 -text Attachments -textpadw $pad -textpade $pad -tag attachments
+	$T column configure 0 -text Delete -textpadx $pad -tag delete
+	$T column configure 1 -text Bounce -textpadx $pad -tag bounce
+	$T column configure 2 -text Status -width 80 -textpadx $pad -tag status
+	$T column configure 3 -text Size -width 40 -textpadx $pad -justify right -tag size
+	$T column configure 4 -text From -width 140 -textpadx $pad -tag from
+	$T column configure 5 -text Subject -width 240 -textpadx $pad -tag subject
+	$T column configure 6 -text Received -textpadx $pad -arrow up -arrowpad {4 0} -tag received
+	$T column configure 7 -text Attachments -textpadx $pad -tag attachments
 
 	$T element create border rect -open nw -outline gray -outlinewidth 1 \
 		-fill [list $::SystemHighlight {selected}]
@@ -57,7 +57,7 @@ proc DemoMailWasher {} {
 		set S [$T style create sty$name]
 		$T style elements $S [list border txt$name]
 		$T style layout $S border -detach yes -iexpand es
-		$T style layout $S txt$name -padw $pad -pade $pad -squeeze x -expand ns
+		$T style layout $S txt$name -padx $pad -squeeze x -expand ns
 	}
 for {set i 0} {$i < 1} {incr i} {
 	foreach {from subject} {

@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.14 2002/12/31 12:18:23 krischan Exp $
+'\" $Id: treectrl.n,v 1.15 2003/01/02 02:25:13 treectrl Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -272,7 +272,7 @@ If the item has descendants, they are no longer displayed.
 If the item is configured to have a button,
 the button will now display the image or bitmap configured with the
 widget options \fB\-closedbuttonimage\fR or \fB\-closedbuttonbitmap\fR,
-or a \fB\+\fR sign if no image or bitmap is configured.
+or a \fB+\fR sign if no image or bitmap is configured.
 If the item is already closed, this command has no effect.
 \fIItemDesc\fR may also be the string \fBall\fR,
 in which case all items of the treectrl widget are collapsed.
@@ -1147,7 +1147,6 @@ Returns a decimal string giving the number of
 columns configured in the treectrl widget.
 Since the always existant tail column is ignored by this command,
 the number can be 0 if no column is configured yet.
-.RE
 .TP
 \fIpathName \fBnumitems\fR
 Returns a decimal string giving the number of
@@ -1344,31 +1343,24 @@ managed by \fIstyle\fR.
 The following options are supported:
 .RS
 .TP
-\fB\-pade \fIamount\fR
+\fB\-padx \fIamount\fR
 .TP
-\fB\-padn \fIamount\fR
-.TP
-\fB\-pads \fIamount\fR
-.TP
-\fB\-padw \fIamount\fR
+\fB\-pady \fIamount\fR
 \fIAmount\fR specifies how much external padding to
-leave on the corresponding side of the element.
+leave on the left and right (for \fB\-padx\fR)
+or top and bottom (for \fB\-pady\fR) side of the element.
+\fIAmount\fR may be a list
+of two values to specify padding for the two sides separately.
 \fIAmount\fR defaults to 0.
 .TP
-\fB\-ipade \fIamount\fR
+\fB\-ipadx \fIamount\fR
 .TP
-\fB\-ipadn \fIamount\fR
-.TP
-\fB\-ipads \fIamount\fR
-.TP
-\fB\-ipadw \fIamount\fR
+\fB\-ipady \fIamount\fR
 \fIAmount\fR specifies how much internal padding to
-leave on the corresponding side of the element.
-\fIAmount\fR defaults to 0.
-.TP
-\fB\-ipadw \fIamount\fR
-\fIAmount\fR specifies how much internal padding to
-leave on the corresponding side of the element.
+leave on the left and right (for \fB\-ipadx\fR)
+or top and bottom (for \fB\-ipady\fR) side of the element.
+\fIAmount\fR may be a list
+of two values to specify padding for the two sides separately.
 \fIAmount\fR defaults to 0.
 .TP
 \fB\-expand \fIstyle\fR
@@ -1527,11 +1519,12 @@ Indicates onto which side an arrow should be packed,
 if there is more space available for drawing the arrow then needed.
 \fISide\fR must be either \fBleft\fR (the default) or \fBright\fR.
 .TP
-\fB\-arrowpade \fIamount\fR
-.TP
-\fB\-arrowpadw \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the left or right side of the arrow.
+\fB\-arrowpad \fIamount\fR
+\fIAmount\fR specifies how much external padding to
+leave on the left and right side of the arrow.
+\fIAmount\fR may be a list
+of two values to specify padding for left and right separately.
+\fIAmount\fR defaults to 0.
 .TP
 \fB\-bitmap \fIbitmap\fR
 Specifies the bitmap to display in the element
@@ -1565,15 +1558,15 @@ Specifies the image to display in the element
 to the left of the column title.
 This option overrides the \fB\-bitmap\fR column option.
 .TP
-\fB\-imagepade \fIamount\fR
+\fB\-imagepadx \fIamount\fR
 .TP
-\fB\-imagepadn \fIamount\fR
-.TP
-\fB\-imagepads \fIamount\fR
-.TP
-\fB\-imagepadw \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the corresponding side of the image.
+\fB\-imagepady \fIamount\fR
+\fIAmount\fR specifies how much external padding to
+leave on the left and right (for \fB\-imagepadx\fR)
+or top and bottom (for \fB\-imagepady\fR) side of the image.
+\fIAmount\fR may be a list
+of two values to specify padding for the two sides separately.
+\fIAmount\fR defaults to 0.
 .TP
 \fB\-itembackground \fIcolorList\fR
 Specifies a list of colors, which should be used as
@@ -1615,15 +1608,15 @@ Specifies a text to be displayed inside the column title.
 Specifies a color, which should be used as foreground color
 to display the column title.
 .TP
-\fB\-textpade \fIamount\fR
+\fB\-textpadx \fIamount\fR
 .TP
-\fB\-textpadn \fIamount\fR
-.TP
-\fB\-textpads \fIamount\fR
-.TP
-\fB\-textpadw \fIamount\fR
-\fIAmount\fR specifies how much padding to
-leave on the corresponding side of the text.
+\fB\-textpady \fIamount\fR
+\fIAmount\fR specifies how much external padding to
+leave on the left and right (for \fB\-textpadx\fR)
+or top and bottom (for \fB\-textpady\fR) side of the text.
+\fIAmount\fR may be a list
+of two values to specify padding for the two sides separately.
+\fIAmount\fR defaults to 0.
 .TP
 \fB\-width \fIsize\fR
 Specifies the width of the column.

@@ -474,7 +474,7 @@ proc InitDemoList {} {
 	$t style create s1
 	$t style elements s1 {e2 e1}
 	# Tk listbox has linespace + 1 height
-	$t style layout s1 e2 -union [list e1] -ipadw 2 -ipade 2 -ipads 1 -iexpand e
+	$t style layout s1 e2 -union [list e1] -ipadx 2 -ipady {0 1} -iexpand e
 
 	#	"Picture Catalog" DemoPictureCatalog
 	#	"Picture Catalog 2" DemoPictureCatalog2
@@ -547,12 +547,12 @@ proc DisplayStylesInList {} {
 
 		$t style create s1
 		$t style elements s1 {e3 e1}
-		$t style layout s1 e3 -union [list e1] -ipadw 1 -ipade 1 -ipadn 0 -ipads 1
+		$t style layout s1 e3 -union [list e1] -ipadx 1 -ipady {0 1}
 
 		$t style create s2
 		$t style elements s2 {e3 e1 e2}
-		$t style layout s2 e1 -pade 4
-		$t style layout s2 e3 -union [list e1 e2] -ipade 1 -ipadw 1 -ipadn 0 -ipads 1
+		$t style layout s2 e1 -padx {0 4}
+		$t style layout s2 e3 -union [list e1 e2] -ipadx 1 -ipady {0 1}
 	}
 
 	# Clear the list
@@ -631,12 +631,12 @@ proc DisplayStylesInItem {item} {
 
 		$t style create s1
 		$t style elements s1 {e3 e1}
-		$t style layout s1 e3 -union [list e1] -ipade 1 -ipadw 2 -ipadn 0 -ipads 1
+		$t style layout s1 e3 -union [list e1] -ipadx {1 2} -ipady {0 1}
 
 		$t style create s2
 		$t style elements s2 {e3 e1 e2}
-		$t style layout s2 e1 -pade 4
-		$t style layout s2 e3 -union [list e1 e2] -ipadw 1 -ipade 1 -ipadn 0 -ipads 1
+		$t style layout s2 e1 -padx {0 4}
+		$t style layout s2 e3 -union [list e1 e2] -ipadx 1 -ipady {0 1}
 	}
 
 	# Clear the list
@@ -775,9 +775,9 @@ proc DemoPictureCatalog {} {
 
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSelImg elemImg elemSelTxt elemTxt}
-	$T style layout $S elemSelImg -union elemImg -ipadn 6 -ipads 6 -ipadw 6 -ipade 6
+	$T style layout $S elemSelImg -union elemImg -ipadx 6 -ipady 6
 	$T style layout $S elemSelTxt -union elemTxt
-	$T style layout $S elemImg -pads 6
+	$T style layout $S elemImg -pady {0 6}
 
 	for {set i 1} {$i <= 10} {incr i} {
 		set I [$T item create]
@@ -810,9 +810,9 @@ proc DemoPictureCatalog2 {} {
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSelImg elemImg elemSelTxt elemTxt}
 	$T style layout $S elemSelImg -union elemImg \
-		-ipadn 6 -ipads 6 -ipadw 6 -ipade 6
+		-ipadx 6 -ipady 6
 	$T style layout $S elemSelTxt -union elemTxt
-	$T style layout $S elemImg -pads 6
+	$T style layout $S elemImg -pady {0 6}
 	$T style layout $S elemImg -expand n
 	$T style layout $S elemTxt -expand s
 

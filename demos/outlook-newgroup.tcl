@@ -51,19 +51,19 @@ proc DemoOutlookNewsgroup {} {
 	set S [$T style create s1]
 	$T style elements $S {sel.e elemImg elemTxt}
 	$T style layout $S elemImg -expand ns
-	$T style layout $S elemTxt -padw 2 -pade 6 -squeeze x -expand ns
-	$T style layout $S sel.e -union [list elemTxt] -iexpand nes -ipadw 2
+	$T style layout $S elemTxt -padx {2 6} -squeeze x -expand ns
+	$T style layout $S sel.e -union [list elemTxt] -iexpand nes -ipadx {2 0}
 
 	# Text
 	set S [$T style create s2.we]
 	$T style elements $S {sel.we elemTxt}
-	$T style layout $S elemTxt -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.we -detach yes -iexpand es
 
 	# Text
 	set S [$T style create s2.w]
 	$T style elements $S {sel.w elemTxt}
-	$T style layout $S elemTxt -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand es
 
 	set msgCnt 100
@@ -210,45 +210,45 @@ proc DemoOutlookNewsgroup2 {} {
 	set S [$T style create unread]
 	$T style elements $S {sel.e image.unread text.unread}
 	$T style layout $S image.unread -expand ns
-	$T style layout $S text.unread -padw 2 -pade 6 -squeeze x -expand ns
-	$T style layout $S sel.e -union [list text.unread] -iexpand nes -ipadw 2
+	$T style layout $S text.unread -padx {2 6} -squeeze x -expand ns
+	$T style layout $S sel.e -union [list text.unread] -iexpand nes -ipadx {2 0}
 
 	# Image + text
 	set S [$T style create read]
 	$T style elements $S {sel.e image.read text.read}
 	$T style layout $S image.read -expand ns
-	$T style layout $S text.read -padw 2 -pade 6 -squeeze x -expand ns
-	$T style layout $S sel.e -union [list text.read] -iexpand nes -ipadw 2
+	$T style layout $S text.read -padx {2 6} -squeeze x -expand ns
+	$T style layout $S sel.e -union [list text.read] -iexpand nes -ipadx {2 0}
 
 	# Image + text
 	set S [$T style create read2]
 	$T style elements $S {sel.e image.read2 text.unread}
 	$T style layout $S image.read2 -expand ns
-	$T style layout $S text.unread -padw 2 -pade 6 -squeeze x -expand ns
-	$T style layout $S sel.e -union [list text.unread] -iexpand nes -ipadw 2
+	$T style layout $S text.unread -padx {2 6} -squeeze x -expand ns
+	$T style layout $S sel.e -union [list text.unread] -iexpand nes -ipadx {2 0}
 
 	# Text
 	set S [$T style create unread.we]
 	$T style elements $S {sel.we text.unread}
-	$T style layout $S text.unread -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S text.unread -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.we -detach yes -iexpand es
 
 	# Text
 	set S [$T style create read.we]
 	$T style elements $S {sel.we text.read}
-	$T style layout $S text.read -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S text.read -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.we -detach yes -iexpand es
 
 	# Text
 	set S [$T style create unread.w]
 	$T style elements $S {sel.w text.unread}
-	$T style layout $S text.unread -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S text.unread -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand es
 
 	# Text
 	set S [$T style create read.w]
 	$T style elements $S {sel.w text.read}
-	$T style layout $S text.read -padw 6 -pade 6 -squeeze x -expand ns
+	$T style layout $S text.read -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand es
 
 	set msgCnt 100
