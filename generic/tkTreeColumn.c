@@ -1027,6 +1027,8 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				tree->widthOfColumns = -1;
 				Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH |
 					DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
+				/* BUG 784245 */
+				Tree_DInfoChanged(tree, DINFO_DRAW_HEADER);
 			}
 			break;
 		}
