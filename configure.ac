@@ -3,11 +3,11 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.2 2004/08/13 20:30:38 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.3 2004/10/09 22:56:11 hobbs2 Exp $
 
 #-----------------------------------------------------------------------
-# Sample configure.in for Tcl Extensions.  The only places you should
-# need to modify this file are marked by the string __CHANGE__
+# Sample configure.in for Tcl Extensions.
+# See the TEA sample extension for description of structure and items.
 #-----------------------------------------------------------------------
 
 #-----------------------------------------------------------------------
@@ -19,49 +19,11 @@ dnl	to configure the system for the local environment.
 # AC_INIT(generic/tcl.h)
 #-----------------------------------------------------------------------
 
-AC_INIT(generic/tkTreeCtrl.h)
+AC_INIT([treectrl], [1.1])
+
+TEA_INIT([3.1])
 
 AC_CONFIG_AUX_DIR(tclconfig)
-CONFIGDIR=${srcdir}/tclconfig
-AC_SUBST(CONFIGDIR)
-
-#----------------------------------------------------------------------
-# __CHANGE__
-# Set your package name and version numbers here.  The NODOT_VERSION is
-# required for constructing the library name on systems that don't like
-# dots in library names (Windows).  The VERSION variable is used on the
-# other systems.
-#----------------------------------------------------------------------
-
-PACKAGE=treectrl
-
-MAJOR_VERSION=1
-MINOR_VERSION=1
-PATCHLEVEL=
-
-VERSION=${MAJOR_VERSION}.${MINOR_VERSION}${PATCHLEVEL}
-NODOT_VERSION=${MAJOR_VERSION}${MINOR_VERSION}
-
-AC_SUBST(PACKAGE)
-AC_SUBST(VERSION)
-# This package name must be replaced statically for AC_SUBST to work
-AC_SUBST(treectrl_LIB_FILE)
-# Substitute stub_LIB_FILE if your package creates a stub library too.
-#AC_SUBST(samplestub_LIB_FILE)
-
-#--------------------------------------------------------------------
-# We put this here so that you can compile with -DVERSION="1.2" to
-# encode the package version directly into the source files.
-#--------------------------------------------------------------------
-
-eval AC_DEFINE_UNQUOTED(VERSION, "${VERSION}")
-
-#--------------------------------------------------------------------
-# Call TEA_INIT as the first TEA_ macro to set up initial vars.
-# This will define a ${TEA_PLATFORM} variable == "unix" or "windows".
-#--------------------------------------------------------------------
-
-TEA_INIT
 
 #--------------------------------------------------------------------
 # Load the tclConfig.sh file
@@ -93,6 +55,25 @@ TEA_PREFIX
 
 TEA_SETUP_COMPILER
 
+#-----------------------------------------------------------------------
+# __CHANGE__
+# Specify the C source files to compile in TEA_ADD_SOURCES,
+# public headers that need to be installed in TEA_ADD_HEADERS,
+# stub library C source files to compile in TEA_ADD_STUB_SOURCES,
+# and runtime Tcl library files in TEA_ADD_TCL_SOURCES.
+# This defines PKG(_STUB)_SOURCES, PKG(_STUB)_OBJECTS, PKG_HEADERS
+# and PKG_TCL_SOURCES.
+#-----------------------------------------------------------------------
+
+TEA_ADD_SOURCES([qebind.c tkTreeColumn.c tkTreeCtrl.c tkTreeDisplay.c
+		tkTreeDrag.c tkTreeElem.c tkTreeItem.c tkTreeMarquee.c
+		tkTreeNotify.c tkTreeStyle.c tkTreeUtils.c])
+TEA_ADD_HEADERS([])
+#TEA_ADD_INCLUDES([-I. -I\"`${CYGPATH} ${srcdir}/generic`\"])
+TEA_ADD_CFLAGS([])
+TEA_ADD_STUB_SOURCES([])
+TEA_ADD_TCL_SOURCES([library/treectrl.tcl library/filelist-bindings.tcl])
+
 #--------------------------------------------------------------------
 # __CHANGE__
 # Choose which headers you need.  Extension authors should try very
@@ -107,6 +88,12 @@ TEA_PRIVATE_TCL_HEADERS
 
 #TEA_PUBLIC_TK_HEADERS
 TEA_PRIVATE_TK_HEADERS
+
+#--------------------------------------------------------------------
+# For Unix/Tk builds, make sure that the X libraries/headers are found.
+#--------------------------------------------------------------------
+
+TEA_PATH_X
 
 #--------------------------------------------------------------------
 # __CHANGE__
@@ -128,13 +115,11 @@ TEA_PRIVATE_TK_HEADERS
 if test "${TEA_PLATFORM}" = "windows" ; then
     AC_DEFINE(BUILD_treectrl)
     CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
-    EXTRA_SOURCES='$(WIN_SOURCES)'
+    TEA_ADD_LIBS([gdi32.lib user32.lib])
 else
     CLEANFILES="pkgIndex.tcl"
-    EXTRA_SOURCES='$(UNIX_SOURCES)'
 fi
 AC_SUBST(CLEANFILES)
-AC_SUBST(EXTRA_SOURCES)
 
 #--------------------------------------------------------------------
 # Check whether --enable-threads or --disable-threads was given.
@@ -182,14 +167,6 @@ AC_DEFINE(USE_TK_STUBS)
 TEA_MAKE_LIB
 
 #--------------------------------------------------------------------
-# __CHANGE__
-# Add platform libs to LIBS or SHLIB_LD_LIBS as necessary.
-#--------------------------------------------------------------------
-
-#LIBS="${LIBS} -lsuperfly"
-LIBS="${LIBS} ${TK_LIBS}"
-
-#--------------------------------------------------------------------
 # Find tclsh so that we can run pkg_mkIndex to generate the pkgIndex.tcl
 # file during the install process.  Don't run the TCLSH_PROG through
 # ${CYGPATH} because it's being used directly by make.
@@ -207,4 +184,4 @@ TEA_PROG_WISH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile pkgIndex.tcl])
+AC_OUTPUT([Makefile])
