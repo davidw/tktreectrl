@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.17 2004/08/13 20:25:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.18 2005/01/03 21:36:13 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -35,6 +35,7 @@
 
 #define INCREMENTS
 #define SELECTION_VISIBLE
+#define BG_IMAGE
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -134,6 +135,9 @@ struct TreeCtrl
     char *closedButtonString;	/* -closedbuttonimage */
     Pixmap openButtonBitmap;	/* -openbuttonbitmap */
     Pixmap closedButtonBitmap;	/* -closedbuttonbitmap */
+#ifdef BG_IMAGE
+    char *backgroundImageString; /* -backgroundimage */
+#endif
     int useIndent;		/* MAX of open/closed button width and
 				 * indent */
 #define BG_MODE_COLUMN 0
@@ -161,6 +165,9 @@ struct TreeCtrl
     GC lineGC;
     Tk_Image openButtonImage;	/* -openbuttonimage */
     Tk_Image closedButtonImage;	/* -closedbuttonimage */
+#ifdef BG_IMAGE
+    Tk_Image backgroundImage; /* -backgroundimage */
+#endif
     GC buttonOpenGC;
     GC buttonClosedGC;
     int closedButtonWidth;
@@ -250,6 +257,9 @@ struct TreeCtrl
 #define TREE_CONF_BUTTON 0x1000
 #define TREE_CONF_LINE 0x2000
 #define TREE_CONF_DEFSTYLE 0x4000
+#ifdef BG_IMAGE
+#define TREE_CONF_BG_IMAGE 0x8000
+#endif
 
 extern void Tree_AddItem(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveItem(TreeCtrl *tree, TreeItem item);
@@ -516,6 +526,10 @@ extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
 extern TreeItem *Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY);
 extern void TreeColumnProxy_Undisplay(TreeCtrl *tree);
 extern void TreeColumnProxy_Display(TreeCtrl *tree);
+#ifdef BG_IMAGE
+extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image, 
+    int x1, int y1, int x2, int y2);
+#endif
 
 #define DINFO_OUT_OF_DATE 0x0001
 #define DINFO_CHECK_COLUMN_WIDTH 0x0002
