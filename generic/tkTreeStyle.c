@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.15 2004/08/09 02:25:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.16 2004/08/13 20:28:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1760,7 +1760,7 @@ int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, i
 }
 
 /* Create an instance Element if it doesn't exist in this Style */
-static ElementLink *Style_CreateElem(TreeCtrl *tree, Style *style, Element *masterElem, int *isNew)
+static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item, Style *style, Element *masterElem, int *isNew)
 {
 	ElementLink *eLink = NULL;
 	Element *elem;
@@ -1801,6 +1801,7 @@ static ElementLink *Style_CreateElem(TreeCtrl *tree, Style *style, Element *mast
 	elem->name = masterElem->name;
 	elem->master = masterElem;
 	args.tree = tree;
+	args.item = item;
 	args.elem = elem;
 
 	/* FIXME: free memory if these calls could actually fail */
@@ -2210,7 +2211,7 @@ Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
 	return NULL;
 }
 
-void TreeStyle_SetText(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *textObj)
+void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *textObj)
 {
 	Style *style = (Style *) style_;
 	Style *masterStyle = style->master;
@@ -2234,7 +2235,7 @@ void TreeStyle_SetText(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *textObj)
 			Tcl_Obj *objv[2];
 			ElementArgs args;
 
-			eLink = Style_CreateElem(tree, style, eLink->elem, NULL);
+			eLink = Style_CreateElem(tree, item, style, eLink->elem, NULL);
 			objv[0] = confTextObj;
 			objv[1] = textObj;
 			args.tree = tree;
@@ -2379,6 +2380,20 @@ static void Element_Deleted(TreeCtrl *tree, Element *masterElem)
 	}
 }
 
+void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem)
+{
+	/* Master element */
+	if (elem->master == NULL)
+	{
+	}
+
+	/* Instance element */
+	else
+	{
+		Tree_InvalidateItemDInfo(tree, item, NULL);
+	}
+}
+
 void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT)
 {
 	Tcl_HashEntry *hPtr;
@@ -2434,7 +2449,7 @@ int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tc
 	return TCL_OK;
 }
 
-int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask)
+int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask)
 {
 	Style *style = (Style *) style_;
 	Element *elem;
@@ -2472,7 +2487,7 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemOb
 	{
 		int isNew;
 
-		eLink = Style_CreateElem(tree, style, elem, &isNew);
+		eLink = Style_CreateElem(tree, item, style, elem, &isNew);
 		if (eLink == NULL)
 		{
 			FormatResult(tree->interp, "style %s does not use element %s",
@@ -2547,6 +2562,7 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, ElementType *type, char 
 	elem->name = Tk_GetUid(name);
 	elem->typePtr = type;
 	args.tree = tree;
+	args.item = NULL;
 	args.elem = elem;
 	if ((*type->createProc)(&args) != TCL_OK)
 		return NULL;
