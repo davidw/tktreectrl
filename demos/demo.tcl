@@ -17,7 +17,7 @@ cd $ScriptDir
 
 # Command to create a full pathname in this file's directory
 proc Path {args} {
-	return [eval file join [list $::ScriptDir] $args]
+	return [file normalize [eval file join [list $::ScriptDir] $args]]
 }
 
 # Create some photo images on demand
@@ -49,35 +49,58 @@ if {[catch {
 	proc dbwin s {puts -nonewline $s}
 }
 
-switch -- $::thisPlatform {
-	macintosh {
-		load treectrl.shlb
-	}
-	macosx {
-		load build/treectrl.dylib
-	}
-	unix {
-
-		# Try to load libtreectrl*.so on Unix
-		set lib [glob -nocomplain libtreectrl*[info sharedlibextension]]
-		load $lib
-	}
-	default {
-
-		# Windows build
-		load Build/treectrl[info sharedlibextension]
-	}
+# Return TRUE if we are running from the development directory
+proc IsDevelopment {} {
+	return [file exists [Path .. generic]]
 }
 
-# Default TreeCtrl bindings
-source [Path library treectrl.tcl]
+if {[IsDevelopment]} {
 
-# Other useful bindings
-source [Path library filelist-bindings.tcl]
+	switch -- $::thisPlatform {
+		macintosh {
+			load [Path .. treectrl.shlb]
+		}
+		macosx {
+			load [Path .. build treectrl.dylib]
+		}
+		unix {
+
+			# Try to load libtreectrl*.so on Unix
+			load [glob -directory [Path ..] libtreectrl*[info sharedlibextension]]
+		}
+		default {
+
+			# Windows build
+			load [Path .. Build treectrl[info sharedlibextension]]
+		}
+	}
+
+	# Default TreeCtrl bindings
+	source [Path .. library treectrl.tcl]
+
+	# Other useful bindings
+	source [Path .. library filelist-bindings.tcl]
+
+} else {
+
+	lappend ::auto_path [Path ..]
+	package require treectrl
+}
 
 # Demo sources
-foreach file [glob -directory [Path demos] *.tcl] {
-	source $file
+foreach file {
+	bitmaps
+	explorer
+	help
+	imovie
+	layout
+	mailwasher
+	outlook-folders
+	outlook-newgroup
+	random
+	www-options
+	} {
+	source [Path $file.tcl]
 }
 
 # Get default colors
@@ -141,7 +164,7 @@ proc MakeSourceWindow {} {
 }
 proc ShowSource {file} {
 	wm title .source "Demo Source: $file"
-	set path [Path demos $file]
+	set path [Path $file]
 	set t .source.f.t
 	set chan [open $path]
 	$t delete 1.0 end
