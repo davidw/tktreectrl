@@ -31,6 +31,8 @@ bind TreeCtrlFileList <ButtonRelease-1> {
     break
 }
 
+namespace eval TreeCtrl {}
+
 proc TreeCtrl::FileListButton1 {T x y} {
     variable Priv
     focus $T

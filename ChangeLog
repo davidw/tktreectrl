@@ -1,3 +1,25 @@
+2004-10-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* Makefile.in:      Revamp build system to use TEA 3.1 setup.
+	* configure:
+	* configure.ac:
+	* tclconfig/tcl.m4:
+
+	* pkgIndex.tcl.in: Automate creation of pkgIndex.tcl and use
+	* demos/demo.tcl:  tcl_findLibrary to avoid the issue of build vs.
+	* tests/all.tcl:   install package.
+	* generic/tkTreeCtrl.c:
+
+	* generic/tkTreeDisplay.c: correctly handle the damageRgn var.
+
+	* generic/tkTreeUtils.c: Implement Tk_OffsetRegion as
+	XOffsetRegion on unix. (werner)
+
+	* library/filelist-bindings.tcl: ensure TreeCtrl namespace exists
+	* library/treectrl.tcl: source filelist-bindings
+
+	*** Tim Baker (treectrl) made numerous changes for 1.1 ***
+
 2004-02-09  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.c (ImageChangedProc):   cause image change to

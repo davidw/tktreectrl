@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.24 2004/08/13 20:24:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.25 2004/10/09 22:57:44 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2960,6 +2960,16 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 #endif /* not TARGET_OS_MAC */
 #endif /* not WIN32 */
 
+static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
+  namespace eval ::TreeCtrl {}\n\
+  proc ::TreeCtrl::Init {} {\n\
+    global treectrl_library\n\
+    tcl_findLibrary treectrl " PACKAGE_VERSION " " PACKAGE_VERSION " treectrl.tcl TREECTRL_LIBRARY treectrl_library\n\
+  }\n\
+}\n\
+::TreeCtrl::Init";
+
+
 DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 {
 #ifdef USE_TCL_STUBS
@@ -2991,7 +3001,10 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 #endif
 #endif
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
-    return Tcl_PkgProvide(interp, "treectrl", "1.1");
+    if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK) {
+	return TCL_ERROR;
+    }
+    return Tcl_EvalEx(interp, initScript, -1, TCL_EVAL_GLOBAL);
 }
 
 DLLEXPORT int Treectrl_SafeInit(Tcl_Interp *interp)

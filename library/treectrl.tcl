@@ -190,6 +190,9 @@ namespace eval ::TreeCtrl {
     }
 }
 
+# Retrieve filelist bindings from this dir
+source [file join [file dirname [info script]] filelist-bindings.tcl]
+
 proc ::TreeCtrl::CursorCheck {w x y} {
     variable Priv
     set id [$w identify $x $y]
