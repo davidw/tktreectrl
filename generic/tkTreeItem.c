@@ -1518,9 +1518,9 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width, int height, Drawable drawable)
 {
 	Item *self = (Item *) item_;
-	Item *parent;
+	Item *item, *parent;
 	int indent, left, lineLeft, lineTop;
-	int hasPrev = FALSE, hasNext = FALSE;
+	int hasPrev, hasNext;
 	int i, vert = 0;
 
 	indent = TreeItem_Indent(tree, item_);
@@ -1534,17 +1534,26 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
 	/* Top edge of horizontal line */
 	lineTop = y + (height - tree->lineThickness) / 2;
 
+	/* NOTE: The next three checks do not call TreeItem_ReallyVisible()
+	 * since 'self' is ReallyVisible */
+
+	/* Check for ReallyVisible previous sibling */
+	item = self->prevSibling;
+	while ((item != NULL) && !item->isVisible)
+		item = item->prevSibling;
+	hasPrev = (item != NULL);
+
+	/* Check for ReallyVisible parent */
+	if ((self->parent != NULL) && (!ISROOT(self->parent) || tree->showRoot))
+		hasPrev = TRUE;
+
+	/* Check for ReallyVisible next sibling */
+	item = self->nextSibling;
+	while ((item != NULL) && !item->isVisible)
+		item = item->nextSibling;
+	hasNext = (item != NULL);
+
 	/* Vertical line to parent and/or previous/next sibling */
-	/* The root may not actually be visible if showRoot is FALSE */
-	if ((self->parent != NULL) &&
-		TreeItem_ReallyVisible(tree, (TreeItem) self->parent))
-		hasPrev = TRUE;
-	else if ((self->prevSibling != NULL) &&
-		TreeItem_ReallyVisible(tree, (TreeItem) self->prevSibling))
-		hasPrev = TRUE;
-	if ((self->nextSibling != NULL) &&
-		TreeItem_ReallyVisible(tree, (TreeItem) self->nextSibling))
-		hasNext = TRUE;
 	if (hasPrev || hasNext)
 	{
 		int top = y, bottom = y + height;
@@ -1598,8 +1607,13 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
 		parent = parent->parent)
 	{
 		lineLeft -= tree->useIndent;
-		if (parent->nextSibling != NULL &&
-			TreeItem_ReallyVisible(tree, (TreeItem) parent->nextSibling))
+
+		/* Check for ReallyVisible next sibling */
+		item = parent->nextSibling;
+		while ((item != NULL) && !item->isVisible)
+			item = item->nextSibling;
+
+		if (item != NULL)
 		{
 			if (tree->lineStyle == LINE_STYLE_DOT)
 			{
