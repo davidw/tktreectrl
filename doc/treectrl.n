@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.24 2004/08/09 02:40:43 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.25 2004/08/11 00:29:56 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 1.0  "Tk Commands"
 .BS
@@ -107,6 +107,8 @@ package require \fBtreectrl  1.0\fR
 .sp
 \fIpathName\fR \fBitem children\fR \fIitemDesc\fR\fR
 .sp
+\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+.sp
 \fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
 .sp
 \fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
@@ -124,6 +126,8 @@ package require \fBtreectrl  1.0\fR
 \fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
 .sp
 \fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+.sp
+\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
 .sp
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
 .sp
@@ -166,6 +170,8 @@ package require \fBtreectrl  1.0\fR
 \fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?\fR
 .sp
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR \fIcolumn\fR ?\fItext\fR? ?\fIcolumn text ...\fR?\fR
+.sp
+\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
 .sp
 \fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
 .sp
@@ -776,22 +782,7 @@ by \fIoption\fR.
 command.
 .TP
 \fIpathName\fR \fBcollapse\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
-Switches off the \fBopen\fR state of the item(s)
-described by \fIitemDesc\fR.
-If the item has descendants, they are no longer displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options \fB-closedbuttonimage\fR or \fB-closedbuttonbitmap\fR,
-or a \fI+\fR sign if no image or bitmap is configured.
-If the item is already closed, this command has no effect.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case all items of the treectrl widget are collapsed.
-If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
-will also be collapsed.
-For every item, that actually will be collapsed,
-two events are generated:
-a \fB<Collapse-before>\fR event before the item state is changed,
-and a \fB<Collapse-after>\fR event after the item state was changed.
+Use \fBitem collapse\fR instead.
 .TP
 \fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?\fR
 This command is used to manipulate the columns of the treectrl widget
@@ -1094,21 +1085,7 @@ such as \fBrect\fR or \fBtext\fR.
 .RE
 .TP
 \fIpathName\fR \fBexpand\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
-Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
-If the item has descendants, they are now displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options \fB-openbuttonimage\fR or \fB-openbuttonbitmap\fR,
-or a \fI-\fR sign if no image or bitmap is configured.
-If the item is already open, this command has no effect.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case all items of the treectrl widget are expanded.
-If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
-will also be expanded.
-For every item, that actually will be expanded,
-two events are generated:
-an \fB<Expand-before>\fR event before the item state is changed,
-and an \fB<Expand-after>\fR event after the item state was changed.
+Use \fBitem expand\fR instead.
 .TP
 \fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR\fR
 Returns a list containing some diagnostics about what
@@ -1178,6 +1155,24 @@ values accepted by the \fBitem create\fR command when the item was created.
 Returns a list containing the numerical indexes of all children
 of the item specified by \fIitemDesc\fR in the correct order from
 the first child to the last child.
+.TP
+\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+Switches off the \fBopen\fR state of the item(s)
+described by \fIitemDesc\fR.
+If the item has descendants, they are no longer displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options \fB-closedbuttonimage\fR or \fB-closedbuttonbitmap\fR,
+or a \fI+\fR sign if no image or bitmap is configured.
+If the item is already closed, this command has no effect.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case all items of the treectrl widget are collapsed.
+If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
+will also be collapsed.
+For every item, that actually will be collapsed,
+two events are generated:
+a \fB<Collapse-before>\fR event before the item state is changed,
+and a \fB<Collapse-after>\fR event after the item state was changed.
 .TP
 \fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
 Modifies the elements of the item described by \fIitemDesc\fR.
@@ -1291,6 +1286,23 @@ modifies the given option(s) to have the given value(s) in the
 \fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR;
 in this case the command returns an empty string.
 .RE
+.TP
+\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
+If the item has descendants, they are now displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options \fB-openbuttonimage\fR or \fB-openbuttonbitmap\fR,
+or a \fI-\fR sign if no image or bitmap is configured.
+If the item is already open, this command has no effect.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case all items of the treectrl widget are expanded.
+If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
+will also be expanded.
+For every item, that actually will be expanded,
+two events are generated:
+an \fB<Expand-before>\fR event before the item state is changed,
+and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
 If \fIchild\fR is not specified, returns the numerical index of the first
@@ -1486,6 +1498,16 @@ then the text(s) of item in \fIcolumn\fR will be set to \fItext\fR. Note that
 this command is provided as a convenience. Use the
 \fBitem element configure\fR command if you want to set the text of a
 specific text element.
+.TP
+\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
+If the state is currently switched off,
+this command does the same as the \fBitem expand\fR widget command,
+otherwise the same as the \fBitem collapse\fR widget command.
+\fIItemDesc\fR may also be the string \fBall\fR,
+in which case the state of all items of the treectrl widget are toggled.
+If \fB-recurse\fR is specified, the state of all descendants of
+\fIitemDesc\fR will also be toggled.
 .RE
 .TP
 \fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
@@ -1958,14 +1980,7 @@ Returns a list containing the names of all existing styles.
 .RE
 .TP
 \fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
-Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
-If the state is currently switched off,
-this command does the same as the \fBexpand\fR widget command,
-otherwise the same as the \fBcollapse\fR widget command.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case the state of all items of the treectrl widget are toggled.
-If \fB-recurse\fR is specified, the state of all descendants of
-\fIitemDesc\fR will also be toggles.
+Use \fBitem toggle\fR instead.
 .TP
 \fIpathName\fR \fBxview\fR ?\fIargs\fR?\fR
 This command is used to query and change the horizontal position of the

@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.7 2004/08/09 02:40:43 treectrl Exp $}
+  $Id: treectrl.man,v 1.8 2004/08/11 00:29:56 treectrl Exp $}
 ][manpage_begin treectrl n 1.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -328,22 +328,7 @@ command.
 
 [call [arg pathName] [cmd collapse] [opt [option -recurse]] \
      [opt [arg {itemDesc ...}]]]
-Switches off the [const open] state of the item(s)
-described by [arg itemDesc].
-If the item has descendants, they are no longer displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options [option -closedbuttonimage] or [option -closedbuttonbitmap],
-or a [emph +] sign if no image or bitmap is configured.
-If the item is already closed, this command has no effect.
-[arg ItemDesc] may also be the string [const all],
-in which case all items of the treectrl widget are collapsed.
-If [option -recurse] is specified, all descendants of [arg itemDesc]
-will also be collapsed.
-For every item, that actually will be collapsed,
-two events are generated:
-a [const <Collapse-before>] event before the item state is changed,
-and a [const <Collapse-after>] event after the item state was changed.
+Use [cmd {item collapse}] instead.
 
 [call [arg pathName] [cmd column] [arg option] [arg column] \
      [opt [arg {arg ...}]]]
@@ -659,21 +644,7 @@ such as [const rect] or [const text].
 
 [call [arg pathName] [cmd expand] [opt [option -recurse]] \
      [opt [arg {itemDesc ...}]]]
-Switches on the [const open] state of the item(s) described by [arg itemDesc].
-If the item has descendants, they are now displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options [option -openbuttonimage] or [option -openbuttonbitmap],
-or a [emph -] sign if no image or bitmap is configured.
-If the item is already open, this command has no effect.
-[arg ItemDesc] may also be the string [const all],
-in which case all items of the treectrl widget are expanded.
-If [option -recurse] is specified, all descendants of [arg itemDesc]
-will also be expanded.
-For every item, that actually will be expanded,
-two events are generated:
-an [const <Expand-before>] event before the item state is changed,
-and an [const <Expand-after>] event after the item state was changed.
+Use [cmd {item expand}] instead.
 
 [call [arg pathName] [cmd identify] [arg x] [arg y]]
 Returns a list containing some diagnostics about what
@@ -746,6 +717,24 @@ values accepted by the [cmd "item create"] command when the item was created.
 Returns a list containing the numerical indexes of all children
 of the item specified by [arg itemDesc] in the correct order from
 the first child to the last child.
+
+[call [arg pathName] [cmd {item collapse}] [arg itemDesc] [opt [option -recurse]]]
+Switches off the [const open] state of the item(s)
+described by [arg itemDesc].
+If the item has descendants, they are no longer displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options [option -closedbuttonimage] or [option -closedbuttonbitmap],
+or a [emph +] sign if no image or bitmap is configured.
+If the item is already closed, this command has no effect.
+[arg ItemDesc] may also be the string [const all],
+in which case all items of the treectrl widget are collapsed.
+If [option -recurse] is specified, all descendants of [arg itemDesc]
+will also be collapsed.
+For every item, that actually will be collapsed,
+two events are generated:
+a [const <Collapse-before>] event before the item state is changed,
+and a [const <Collapse-after>] event after the item state was changed.
 
 [call [arg pathName] [cmd {item complex}] [arg itemDesc] [arg list] [arg ...]]
 Modifies the elements of the item described by [arg itemDesc].
@@ -866,6 +855,23 @@ modifies the given option(s) to have the given value(s) in the
 [arg element] inside [arg column] of the item described by [arg itemDesc];
 in this case the command returns an empty string.
 [list_end]
+
+[call [arg pathName] [cmd {item expand}] [arg itemDesc] [opt [option -recurse]]]
+Switches on the [const open] state of the item(s) described by [arg itemDesc].
+If the item has descendants, they are now displayed.
+If the item is configured to have a button,
+the button will now display the image or bitmap configured with the
+widget options [option -openbuttonimage] or [option -openbuttonbitmap],
+or a [emph -] sign if no image or bitmap is configured.
+If the item is already open, this command has no effect.
+[arg ItemDesc] may also be the string [const all],
+in which case all items of the treectrl widget are expanded.
+If [option -recurse] is specified, all descendants of [arg itemDesc]
+will also be expanded.
+For every item, that actually will be expanded,
+two events are generated:
+an [const <Expand-before>] event before the item state is changed,
+and an [const <Expand-after>] event after the item state was changed.
 
 [call [arg pathName] [cmd {item firstchild}] [arg parent] [opt [arg child]]]
 If [arg child] is not specified, returns the numerical index of the first
@@ -1076,6 +1082,16 @@ then the text(s) of item in [arg column] will be set to [arg text]. Note that
 this command is provided as a convenience. Use the
 [cmd "item element configure"] command if you want to set the text of a
 specific text element.
+
+[call [arg pathName] [cmd {item toggle}] [arg itemDesc] [opt [option -recurse]]]
+Changes the [const open] state of the item(s) described by [arg itemDesc].
+If the state is currently switched off,
+this command does the same as the [cmd {item expand}] widget command,
+otherwise the same as the [cmd {item collapse}] widget command.
+[arg ItemDesc] may also be the string [const all],
+in which case the state of all items of the treectrl widget are toggled.
+If [option -recurse] is specified, the state of all descendants of
+[arg itemDesc] will also be toggled.
 
 [list_end]
 
@@ -1568,14 +1584,7 @@ Returns a list containing the names of all existing styles.
 
 [call [arg pathName] [cmd toggle] [opt [option -recurse]] \
      [opt [arg {itemDesc ...}]]]
-Changes the [const open] state of the item(s) described by [arg itemDesc].
-If the state is currently switched off,
-this command does the same as the [cmd expand] widget command,
-otherwise the same as the [cmd collapse] widget command.
-[arg ItemDesc] may also be the string [const all],
-in which case the state of all items of the treectrl widget are toggled.
-If [option -recurse] is specified, the state of all descendants of
-[arg itemDesc] will also be toggles.
+Use [cmd {item toggle}] instead.
 
 [call [arg pathName] [cmd xview] [opt [arg args]]]
 This command is used to query and change the horizontal position of the
