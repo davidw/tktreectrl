@@ -31,14 +31,12 @@ proc DemoLayout {} {
 	$T style layout $S e6 -detach yes -expand ws -padx {0 2} -pady {2 0}
 	$T style layout $S e7 -detach yes -expand wn -padx {0 2} -pady {0 2}
 
-	set I [$T item create]
-	$T item hasbutton $I yes
+	set I [$T item create -button yes]
 	$T item style set $I 0 $S
 	$T item lastchild root $I
 	set parent $I
 
 	set I [$T item create]
-	$T item hasbutton $I no
 	$T item style set $I 0 $S
 	$T item lastchild $parent $I
 
@@ -50,13 +48,11 @@ proc DemoLayout {} {
 	$T style layout $S e3 -union e1 -ipadx {20 4} -ipady {4 12}
 	$T style layout $S e4 -detach yes -iexpand es
 
-	set I [$T item create]
-	$T item hasbutton $I yes
+	set I [$T item create -button yes]
 	$T item style set $I 0 $S
 	$T item lastchild root $I
 
 	set I2 [$T item create]
-	$T item hasbutton $I2 no
 	$T item style set $I2 0 $S
 	$T item lastchild $I $I2
 
@@ -68,13 +64,11 @@ proc DemoLayout {} {
 	$T style layout $S e3 -union {e1 e5} -ipadx 4 -ipady 4
 	$T style layout $S e5 -ipady {0 20}
 
-	set I [$T item create]
-	$T item hasbutton $I yes
+	set I [$T item create -button yes]
 	$T item style set $I 0 $S
 	$T item lastchild root $I
 
 	set I2 [$T item create]
-	$T item hasbutton $I2 no
 	$T item style set $I2 0 $S
 	$T item lastchild $I $I2
 
@@ -91,15 +85,13 @@ proc DemoLayout {} {
 	$T style layout $S eb -union et -ipadx 2 -ipady 2
 	$T style layout $S et -squeeze x
 
-	set I [$T item create]
-	$T item hasbutton $I yes
+	set I [$T item create -button yes]
 	$T item style set $I 0 $S
 	$T item text $I 0 $text
 	$T item lastchild root $I
 	set parent $I
 
 	set I [$T item create]
-	$T item hasbutton $I no
 	$T item style set $I 0 $S
 	$T item text $I 0 $text
 	$T item lastchild $parent $I

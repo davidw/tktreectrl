@@ -77,8 +77,7 @@ proc DemoOutlookFolders {} {
 		0 server "news.gmane.org" yes 0
 			1 group "gmane.comp.lang.lua.general" no 498
 	} {
-		set item [$T item create]
-		$T item hasbutton $item $button
+		set item [$T item create -button $button]
 		if {[string equal $img folder]} {
 			if {$unread} {
 				$T item style set $item 0 s4

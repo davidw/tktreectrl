@@ -116,7 +116,7 @@ proc DemoOutlookNewsgroup {} {
 		}
 
 		if {[$T item numchildren $i]} {
-			$T item hasbutton $i yes
+			$T item configure $i -button yes
 
 			# Collapse some messages
 			if {rand() * 2 > 1} {
@@ -299,7 +299,7 @@ proc DemoOutlookNewsgroup2 {} {
 		$T item style set $i 3 $style 4 $style2.we 5 $style2.we 6 $style2.w
 		$T item text $i 3 $subject 4 $from 5 $sent 6 $size
 		if {[$T item numchildren $i]} {
-			$T item hasbutton $i yes
+			$T item configure $i -button yes
 		}
 	}
 
