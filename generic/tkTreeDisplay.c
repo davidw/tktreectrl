@@ -2647,32 +2647,6 @@ static TkRegion CalcWhiteSpaceRegion(TreeCtrl *tree)
 	return wsRgn;
 }
 
-#ifdef WIN32
-#include "tkWinInt.h"
-#endif
-
-void XFillRegion(Display *display, Drawable drawable, GC gc,
-	int x, int y, int width, int height, TkRegion rgn)
-{
-#ifdef WIN32
-	HDC dc;
-	TkWinDCState dcState;
-	HBRUSH brush;
-
-	dc = TkWinGetDrawableDC(display, drawable, &dcState);
-	brush = CreateSolidBrush(gc->foreground);
-	FillRgn(dc, (HRGN) rgn, brush);
-	DeleteObject(brush);
-	TkWinReleaseDrawableDC(drawable, dc, &dcState);
-#elif defined(TARGET_OS_MAC)
-#error "Mac developer: implement XFillRegion please!"
-#else
-	TkSetRegion(display, gc, rgn);
-	XFillRectangle(display, drawable, gc, x, y, width, height);
-	XSetClipMask(display, gc, None);
-#endif
-}
-
 void Tree_Display(ClientData clientData)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
@@ -2879,14 +2853,11 @@ if (tree->debug.enable && tree->debug.display && 0)
 		GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
 		if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor)
 		{
-			XFillRegion(tree->display, Tk_WindowId(tree->tkwin),
-				tree->debug.gcErase, wsBox.x, wsBox.y, wsBox.width, wsBox.height,
-				wsRgnDif);
+			Tk_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
+				tree->debug.gcErase, wsRgnDif);
 			DisplayDelay(tree);
 		}
-		XFillRegion(tree->display, drawable, gc,
-			wsBox.x, wsBox.y, wsBox.width, wsBox.height,
-			wsRgnDif);
+		Tk_FillRegion(tree->display, drawable, gc, wsRgnDif);
 		if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
 		{
 			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
