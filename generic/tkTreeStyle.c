@@ -1747,6 +1747,17 @@ static ElementLink *Style_FindElem(TreeCtrl *tree, Style *style, Element *master
 	return NULL;
 }
 
+int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index)
+{
+	if (Style_FindElem(tree, (Style *) style_, (Element *) elem_, index) == NULL)
+	{
+		FormatResult(tree->interp, "style %s does not use element %s",
+			((Style *) style_)->name, ((Element *) elem_)->name);
+		return TCL_ERROR;
+	}
+	return TCL_OK;
+}
+
 /* Create an instance Element if it doesn't exist in this Style */
 static ElementLink *Style_CreateElem(TreeCtrl *tree, Style *style, Element *masterElem, int *isNew)
 {
@@ -1861,6 +1872,16 @@ static int Element_FromObj(TreeCtrl *tree, Tcl_Obj *obj, Element **elemPtr)
 	}
 	(*elemPtr) = (Element *) Tcl_GetHashValue(hPtr);
 	return TCL_OK;
+}
+
+int TreeElement_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeElement *elemPtr)
+{
+	return Element_FromObj(tree, obj, (Element **) elemPtr);
+}
+
+int TreeElement_IsType(TreeCtrl *tree, TreeElement elem_, CONST char *type)
+{
+	return strcmp(((Element *) elem_)->typePtr->name, type) == 0;
 }
 
 int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr)
@@ -3653,19 +3674,32 @@ done:
 	return result;
 }
 
-int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int type, long *lv, double *dv, char **sv)
+int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int type, long *lv, double *dv, char **sv)
 {
 	Style *style = (Style *) style_;
-	ElementLink *eLink;
+	ElementLink *eLink = style->elements;
 	int i;
 
-	for (i = 0; i < style->numElements; i++)
+	if (elemIndex == -1)
 	{
-		eLink = &style->elements[i];
+		for (i = 0; i < style->numElements; i++)
+		{
+			if (eLink->elem->typePtr == &elemTypeText)
+				return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
+			eLink++;
+		}
+	}
+	else
+	{
+		if ((elemIndex < 0) || (elemIndex >= style->numElements))
+			panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
+		eLink = &style->elements[elemIndex];
 		if (eLink->elem->typePtr == &elemTypeText)
 			return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	}
 
+	FormatResult(tree->interp, "can't find text element in style %s",
+		style->name);
 	return TCL_ERROR;
 }
 
