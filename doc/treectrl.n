@@ -7,7 +7,7 @@
 '\" of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\" 
 '\"
-'\" $Id: treectrl.n,v 1.3 2002/12/26 12:25:48 krischan Exp $
+'\" $Id: treectrl.n,v 1.4 2002/12/26 15:52:02 krischan Exp $
 '\" 
 .so man.macros
 .TH treectrl n 8.4 Tk "Tk Commands"
@@ -242,11 +242,13 @@ From now on the item can be retrieved with the item description \fBactive\fR.
 .TP
 \fIpathName \fBcanvasx\fR \fIscreenx\fR
 Given a window x-coordinate in the treectrl \fIscreenx\fR,
-this command returns the x-coordinate that is displayed at that location.
+this command returns the treectrl x-coordinate
+that is displayed at that location.
 .TP
 \fIpathName \fBcanvasy\fR \fIscreeny\fR
 Given a window y-coordinate in the treectrl \fIscreeny\fR,
-this command returns the y-coordinate that is displayed at that location.
+this command returns the treectrl y-coordinate
+that is displayed at that location.
 .TP
 \fIpathName \fBcget\fR \fIoption\fR
 Returns the current value of the configuration option given
@@ -617,6 +619,94 @@ specifying if the item should be visible.
 The visibility of an item is independend from the state of its ancestors.
 So if the state of one of the ancestors is currently not opened,
 the item may be considered visible although it is not displayed on the screen.
+.RE
+.TP
+\fIpathName \fBmarquee \fIoption\fR ?\fIarg ...\fR?
+This command is used to manipulate the marquee,
+a rectangular region of the treectrl widget
+optionally marked with a surrounding dotted line.
+One corner point of the marquee is fixed as long as the marquee is visible
+and called the anchor; the diagonally opposite corner is dragged with the
+mouse while resizing the marquee and simply called the corner.
+All coordinates handled by this widget command are treectrl coordinates,
+i.e. the \fBcanvasx\fR or \fBcanvasy\fR widget command should be
+used before any window coordinates can be used.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBmarquee\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName \fBmarquee anchor\fR ?\fIx y\fR?
+Returns a list containing the x and y coordinates of the anchor,
+if no additional arguments are specified.
+If two coordinates are specified,
+sets the anchor to the given coordinates \fIx\fR and \fIy\fR.
+.TP
+\fIpathName \fBmarquee cget \fIoption\fR
+This command returns the current value of the marquee option
+named \fIoption\fR.
+\fIOption\fR may have any of the values accepted by the
+\fBmarquee configure\fR widget command.
+.TP
+\fIpathName \fBmarquee configure ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+This command is similar to the \fBconfigure\fR widget command except
+that it modifies the marquee options
+instead of modifying options for the overall treectrl widget.
+If no \fIoption\fR is specified, the command returns a list describing
+all of the available marquee options (see \fBTk_ConfigureInfo\fR
+for information on the format of this list).
+If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
+a list describing the one named marquee option (this list will be identical to
+the corresponding sublist of the value returned if no \fIoption\fR
+is specified).
+If one or more \fIoption\-value\fR pairs are specified, then the command
+modifies the given marquee option(s) to have the given value(s);
+in this case the command returns an empty string.
+
+The following marquee options are supported:
+.RS
+.TP
+\fB\-visible \fIboolean\fR
+Specifies a boolean value which determines
+whether the dotted line surrounding the region of the marquee
+should currently be visible.
+This option should not be modified by means of the
+\fBmarquee configure\fR widget command;
+instead use the \fBmarquee visible\fR widget command.
+.RE
+.TP
+\fIpathName \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?
+Returns a list containing the x and y coordinates of the anchor
+followed by the x and y coordinates of the corner,
+if no additional arguments are specified.
+If four coordinates are specified,
+sets the anchor to the given coordinates \fIx1\fR and \fIy1\fR
+and the corner to the coordinates \fIx2\fR and \fIy2\fR.
+.TP
+\fIpathName \fBmarquee corner\fR ?\fIx y\fR?
+Returns a list containing the x and y coordinates of the corner,
+if no additional arguments are specified.
+If two coordinates are specified,
+sets the corner to the given coordinates \fIx\fR and \fIy\fR.
+.TP
+\fIpathName \fBmarquee identify\fR
+Returns a list with information about the items inside the marquee.
+The list has as elements a list itself
+for every item which is displayed inside the marquee.
+The first element of these lists is the numerical item id,
+followed by another list with information about every column of the
+item inside the marque.
+These lists start with the column number,
+followed by the elements of the style defined for the item in this column
+if there are any.
+.TP
+\fIpathName \fBmarquee visible\fR ?\fIboolean\fR?
+If the additional argument specifies true, the dotted line will become
+visible and the marquee option \fB\-visible\fR becomes 1;
+if it specifies false, the dotted line will be hidden
+and the marquee option \fB\-visible\fR becomes 0.
+Returns 1 if the dotted line surrounding the marquee is currently visible,
+0 otherwise.
 .RE
 .TP
 \fIpathName \fBstate \fIoption\fR ?\fIstateName\fR?
