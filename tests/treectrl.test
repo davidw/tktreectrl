@@ -10,10 +10,10 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.10 2002/12/28 22:08:58 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.11 2002/12/29 08:45:08 krischan Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
-    package require tcltest
+    package require tcltest 2
     namespace import ::tcltest::*
 }
 
@@ -672,7 +672,7 @@ test tree-3.29 {element configure/cget: border -relief} -body {
 
 test tree-3.30 {element configure: border invalid psd -relief} -body {
     .t element configure eBorder -relief {groove open ridge}
-} -returnCodes error -result {list must have event number of elements}
+} -returnCodes error -result {list must have even number of elements}
 
 test tree-3.31 {element configure/cget: border psd -relief} -body {
     .t element configure eBorder -relief {groove !open ridge {}}
@@ -725,7 +725,7 @@ test tree-3.41 {element configure/cget: image -image} -body {
 
 test tree-3.42 {element configure: image invalid psd -image} -body {
     .t element configure eImage -image {emptyImg open dirImg}
-} -returnCodes error -result {list must have event number of elements}
+} -returnCodes error -result {list must have even number of elements}
 
 test tree-3.43 {element configure/cget: image psd -image} -body {
     .t element configure eImage -image {emptyImg {}}
@@ -947,21 +947,6 @@ test tree-3.90 {element names} -body {
     lsort [.t element names]
 } -result {eBorder eImage eRect eText}
 
-# Disabled since it triggers a panic() in Range_ItemUnderPoint()
-test tree-3.91 {element delete while item is still displayed} -constraints knownBug -body {
-    .t element create elText text -text hallo
-    .t style create stText
-    .t style element stText elText
-    set new [.t item create]
-    .t item style set $new 0 stText
-    .t item lastchild 0 $new
-    .t element delete elText
-    place [frame .obscure] -in .t -relwidth 1.0 -relheight 1.0
-    update
-    destroy .obscure
-    update
-} -result {}
-
 test tree-4.1 {style: missing args} -body {
     .t style
 } -returnCodes error -result {wrong # args: should be ".t style command ?arg arg...?"}
@@ -1064,11 +1049,19 @@ test tree-4.24 {style layout: option -pads} -body {
 
 test tree-4.25 {style layout: option -expand} -body {
     .t style layout testStyle eText -expand "hello world"
+} -returnCodes error -result {bad expand value "hello world": must be a string containing zero or more of n, e, s, and w}
+
+test tree-4.25a {style layout: option -expand} -body {
+    .t style layout testStyle eText -expand ew
     .t style layout testStyle eText -expand
 } -result {we}
 
 test tree-4.26 {style layout: option -squeeze} -body {
-    .t style layout testStyle eText -squeeze "xyzzy"
+    .t style layout testStyle eText -squeeze xyzzy
+} -returnCodes error -result {bad squeeze value "xyzzy": must be a string containing zero or more of x and y}
+
+test tree-4.26a {style layout: option -squeeze} -body {
+    .t style layout testStyle eText -squeeze xy
     .t style layout testStyle eText -squeeze
 } -result {xy}
 
@@ -1111,9 +1104,8 @@ test tree-5.2 {state: invalid command} -body {
 } -returnCodes error -result {bad command "foo": must be define, undefine, or names}
 
 test tree-5.3 {state names: too many args} -body {
-    # This should generate an error?
     .t state names foo bar
-} -result {}
+} -returnCodes error -result {wrong # args: should be ".t state names"}
 
 test tree-5.4 {state names: no states defined yet} -body {
     .t state names
@@ -1137,16 +1129,16 @@ test tree-5.7 {state names} -body {
     .t state names
 } -result {state0 state1 state2 state3 state4 state5 state6 state7 state8 state9 state10 state11 state12 state13 state14 state15 state16 state17 state18 state19 state20 state21 state22 state23 state24 state25 state26}
 
-test tree-5.8 {state undefine: missing args} -body {
+test tree-5.8 {state undefine: missing args is ok} -body {
     .t state undefine
-} -returnCodes error -result {wrong # args: should be ".t state undefine stateName"}
+} -result {}
 
 test tree-5.9 {state undefine: too many args} -body {
-    # too bad that this doesn't work...
-    eval {.t state undefine} [lrange [.t state names] 1 end]
-} -returnCodes error -result {wrong # args: should be ".t state undefine stateName"}
+    eval {.t state undefine} [lrange [.t state names] 3 end]
+    .t state names
+} -result {state0 state1 state2}
 
-test tree-5.10 {state undefine: too many args} -body {
+test tree-5.10 {state undefine} -body {
     foreach state [lrange [.t state names] 1 end] {
 	.t state undefine $state
     }
@@ -1191,12 +1183,12 @@ test tree-6.9 {item delete: item range without common ancestor} -body {
     .t item delete 10 11
 } -result {}
 
-test tree-6.9a {item delete: don't allow to delete "root" itemDesc} -body {
+test tree-6.9a {item delete: don't delete "root" itemDesc} -body {
     .t item delete root
-} -returnCodes error -result {can't specify "root" for this command}
+    .t index root
+} -result {0}
 
-# disabled since it generates a segfault
-test tree-6.9b {item delete: deleting root should be ignored} -constraints knownBug -body {
+test tree-6.9b {item delete: deleting root should be ignored} -body {
     .t item delete [.t index root]
     update idletasks
 } -result {}
@@ -1553,7 +1545,7 @@ test tree-8.7 {selection add: all children of an item} -body {
     list [.t selection count] [.t selection get]
 } -result {2 {2 3}}
 
-test tree-8.8 {selection add: all items and then some} -constraints knownBug -body {
+test tree-8.8 {selection add: all items and then some} -body {
     .t selection add all "1 lastchild"
     list [.t selection count] [.t selection get]
 } -result {10 {0 1 2 3 4 5 6 7 8 12}}
@@ -1564,7 +1556,7 @@ test tree-8.9 {selection clear} -body {
     list [.t selection count] [.t selection get]
 } -result {9 {0 2 3 4 5 6 7 8 12}}
 
-test tree-8.10 {selection clear: some items and then all} -constraints knownBug -body {
+test tree-8.10 {selection clear: some items and then all} -body {
     .t selection clear "root lastchild" all
     list [.t selection count] [.t selection get]
 } -result {0 {}}
@@ -1632,7 +1624,7 @@ test tree-10.4 {range: select all from bottom to top} -body {
     .t range "root bottom" "root top"
 } -result {0 1 2 3 4 5 6 7 8}
 
-test tree-11.1 {orphans: too many args} -constraints knownBug -body {
+test tree-11.1 {orphans: too many args} -body {
     .t orphans foo
 } -returnCodes error -result {wrong # args: should be ".t orphans"}
 
@@ -1645,7 +1637,7 @@ test tree-11.3 {orphans: no orphans} -body {
     .t orphans
 } -result {}
 
-test tree-12.1 {numitems: too many args} -constraints knownBug -body {
+test tree-12.1 {numitems: too many args} -body {
     .t numitems foo
 } -returnCodes error -result {wrong # args: should be ".t numitems"}
 
@@ -1670,7 +1662,21 @@ test tree-12.6 {contentbox: simple double check with borders} -body {
 		== ([.t cget -bd]+[.t cget -highlightthickness])}
 } -result {1}
 
-test tree-13.1 {depth: too many args} -constraints knownBug -body {
+test tree-12.99 {element delete while item is still displayed} -body {
+    .t element create elText text -text hallo
+    .t style create stText
+    .t style element stText elText
+    set new [.t item create]
+    .t item style set $new 0 stText
+    .t item lastchild 0 $new
+    .t element delete elText
+    place [frame .obscure] -in .t -relwidth 1.0 -relheight 1.0
+    update
+    destroy .obscure
+    update
+} -result {}
+
+test tree-13.1 {depth: too many args} -body {
     .t depth foo bar
 } -returnCodes error -result {wrong # args: should be ".t depth ?item?"}
 
@@ -1686,13 +1692,16 @@ test tree-13.4 {depth of the tree} -body {
     .t depth
 } -result {3}
 
-test tree-13.5 {depth of the tree} -constraints knownBug -body {
-    foreach i [.t item children root] {.t item remove $i}
+test tree-13.5 {depth of the tree} -body {
     .t depth
+} -setup {
+    set rootKids [.t item children root]
+    foreach i $rootKids {.t item remove $i}
+} -cleanup {
+    foreach i $rootKids {.t item lastchild root $i}
 } -result {0}
 
-# disabled since it generates a segfault.
-test tree-14.1 {column: missing args} -constraints knownBug -body {
+test tree-14.1 {column: missing args} -body {
     .t column
 } -returnCodes error -result {wrong # args: should be ".t column command ?arg arg...?"}
 
@@ -1718,8 +1727,7 @@ test tree-14.6 {column bbox} -body {
     .t column bbox 0
 } -result {3 3 501 7}
 
-# disabled since it generates a segfault.
-test tree-14.7 {column bbox: tail column not allowed} -constraints knownBug -body {
+test tree-14.7 {column bbox: tail column not allowed} -body {
     .t column bbox tail
 } -returnCodes error -result {can't specify "tail" for this command}
 
@@ -2142,7 +2150,7 @@ test tree-16.4 {dragimage configure -visible} -body {
     .t dragimage configure -visible
 } -result {-visible {} {} 0 0}
 
-test tree-16.5 {dragimage cget -visible} -constraints knownBug -body {
+test tree-16.5 {dragimage cget -visible} -body {
     .t dragimage cget -visible
 } -result {0}
 
@@ -2177,7 +2185,7 @@ test tree-16.12 {dragimage offset} -body {
     .t dragimage offset
 } -result {10 10}
 
-test tree-16.13 {dragimage clear: too many args} -constraints knownBug -body {
+test tree-16.13 {dragimage clear: too many args} -body {
     .t dragimage clear 1
 } -returnCodes error -result {wrong # args: should be ".t dragimage clear"}
 
@@ -2185,6 +2193,46 @@ test tree-16.14 {dragimage clear: doesn't modify the offset} -body {
     .t dragimage clear
     .t dragimage offset
 } -result {10 10}
+
+test tree-17.1 {notify: missing args} -body {
+    .t notify
+} -returnCodes error -result {wrong # args: should be ".t notify command ?arg arg...?"}
+
+test tree-17.2 {notify: unknown command} -body {
+    .t notify foo
+} -returnCodes error -result {bad command "foo": must be bind, configure, detailnames, eventnames, generate, install, linkage, or uninstall}
+
+test tree-17.3 {notify bind: too much args} -body {
+    .t notify bind z y z z y
+} -returnCodes error -result {wrong # args: should be ".t notify bind ?object? ?pattern? ?script?"}
+
+test tree-17.4 {notify configure: missing args} -body {
+    .t notify configure
+} -returnCodes error -result {wrong # args: should be ".t notify configure window pattern ?option? ?value? ?option value ...?"}
+
+test tree-17.5 {notify detailnames: missing args} -body {
+    .t notify detailnames
+} -returnCodes error -result {wrong # args: should be ".t notify detailnames eventName"}
+
+test tree-17.6 {notify eventnames: too much args} -body {
+    .t notify eventnames Open
+} -returnCodes error -result {wrong # args: should be ".t notify eventnames"}
+
+test tree-17.7 {notify generate: missing args} -body {
+    .t notify generate
+} -returnCodes error -result {wrong # args: should be ".t notify generate pattern ?field value ...?"}
+
+test tree-17.8 {notify install: missing args} -body {
+    .t notify install
+} -returnCodes error -result {wrong # args: should be ".t notify install option arg ..."}
+
+test tree-17.9 {notify linkage: missing args} -body {
+    .t notify linkage
+} -returnCodes error -result {wrong # args: should be ".t notify linkage event ?detail?"}
+
+test tree-17.10 {notify uninstall: missing args} -body {
+    .t notify uninstall
+} -returnCodes error -result {wrong # args: should be ".t notify uninstall option arg ..."}
 
 # cleanup
 image delete emptyImg
