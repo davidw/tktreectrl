@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2004 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.8 2004/10/12 03:49:59 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.9 2005/01/03 21:28:24 treectrl Exp $
  */
 
 /*
@@ -862,16 +862,16 @@ static void ExpandPercents(BindingTable *bindPtr, ClientData object,
 	{
 		for (string = command; (*string != 0) && (*string != '%'); string++)
 		{
-		    /* Empty loop body. */
+			/* Empty loop body. */
 		}
 		if (string != command)
 		{
-		    Tcl_DStringAppend(result, command, string - command);
-		    command = string;
+			Tcl_DStringAppend(result, command, string - command);
+			command = string;
 		}
 		if (*command == 0)
 		{
-		    break;
+			break;
 		}
 
 		/* Expand % here */
@@ -1012,7 +1012,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	 * interpreter result and restore it later.
 	 */
 	Tcl_DStringInit(&savedResult);
-    Tcl_DStringGetResult(bindPtr->interp, &savedResult);
+	Tcl_DStringGetResult(bindPtr->interp, &savedResult);
 
 	p = Tcl_DStringValue(&scripts);
 	end = p + Tcl_DStringLength(&scripts);
@@ -1055,7 +1055,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 		p += strlen(p);
 		p++;
 	}
-    
+
 	Tcl_DStringFree(&scripts);
 
 	/* Restore the interpreter result */
@@ -1088,7 +1088,7 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	 * interpreter result and restore it later.
 	 */
 	Tcl_DStringInit(&savedResult);
-    Tcl_DStringGetResult(bindPtr->interp, &savedResult);
+	Tcl_DStringGetResult(bindPtr->interp, &savedResult);
 
 	for (valuePtr = (BindValue *) Tcl_GetHashValue(hPtr);
 		valuePtr; valuePtr = valuePtr->nextValue)
@@ -1177,8 +1177,8 @@ static void BindEvent(BindingTable *bindPtr, QE_Event *eventPtr, int wantDetail,
 	}
 
 	/* Restore the interpreter result */
-    Tcl_DStringResult(bindPtr->interp, &savedResult);
-    
+	Tcl_DStringResult(bindPtr->interp, &savedResult);
+
 	Tcl_DStringFree(&command);
 }
 
@@ -1479,9 +1479,9 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		tkwin2 = Tk_NameToWindow(bindPtr->interp, string, tkwin);
 		if (tkwin2 == NULL)
 		{
-		    return TCL_ERROR;
+			return TCL_ERROR;
 		}
-		object = (ClientData) Tk_PathName(tkwin2);
+		object = (ClientData) Tk_GetUid(Tk_PathName(tkwin2));
 	}
 	else
 	{
@@ -1517,7 +1517,7 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		QE_GetAllBindings(bindingTable, object);
 	}
 
-    return TCL_OK;
+	return TCL_OK;
 }
 
 /*
@@ -1708,31 +1708,31 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	char *t, *eventString;
 	int index;
 	ClientData object;
-	
-    if (objc - objOffset < 3)
-    {
+
+	if (objc - objOffset < 3)
+	{
 		Tcl_WrongNumArgs(interp, objOffset + 1, objv,
 			"object pattern ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
-    }
+	}
 
 	t = Tcl_GetStringFromObj(objv[objOffset + 1], NULL);
 	eventString = Tcl_GetStringFromObj(objv[objOffset + 2], NULL);
 
-    if (t[0] == '.')
-    {
+	if (t[0] == '.')
+	{
 		Tk_Window tkwin2;
 		tkwin2 = Tk_NameToWindow(interp, t, tkwin);
 		if (tkwin2 == NULL)
 		{
-		    return TCL_ERROR;
+			return TCL_ERROR;
 		}
-		object = (ClientData) Tk_PathName(tkwin2);
-    }
-    else
-    {
+		object = (ClientData) Tk_GetUid(Tk_PathName(tkwin2));
+	}
+	else
+	{
 		object = (ClientData) Tk_GetUid(t);
-    }
+	}
 
 	if (FindSequence(bindPtr, object, eventString, 0, NULL, &valuePtr) != TCL_OK)
 		return TCL_ERROR;
@@ -1751,13 +1751,29 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		return TCL_OK;
 	}
 
-	while (objc > 1)
+	if (objc == 1)
 	{
-	    if (Tcl_GetIndexFromObj(interp, objPtr[0], configSwitch,
+		if (Tcl_GetIndexFromObj(interp, objPtr[0], configSwitch,
 			"option", 0, &index) != TCL_OK)
 		{
 			return TCL_ERROR;
-	    }
+		}
+		switch (index)
+		{
+			case 0: /* -active */
+				Tcl_SetBooleanObj(Tcl_GetObjResult(interp), valuePtr->active);
+				break;
+		}
+		return TCL_OK;
+	}
+
+	while (objc > 1)
+	{
+		if (Tcl_GetIndexFromObj(interp, objPtr[0], configSwitch,
+			"option", 0, &index) != TCL_OK)
+		{
+			return TCL_ERROR;
+		}
 		switch (index)
 		{
 			case 0: /* -active */
