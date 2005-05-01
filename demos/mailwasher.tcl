@@ -194,10 +194,10 @@ proc DemoMailWasher {} {
 }
 
 proc CompareOnOff {T C item1 item2} {
-	set s1 [$T item style set $item1 $C]
-	set s2 [$T item style set $item2 $C]
+	set s1 [$T item state forcolumn $item1 $C]
+	set s2 [$T item state forcolumn $item2 $C]
 	if {$s1 eq $s2} { return 0 }
-	if {$s1 eq "styOff"} { return -1 }
+	if {[lsearch -exact $s1 CHECK] == -1} { return -1 }
 	return 1
 }
 
