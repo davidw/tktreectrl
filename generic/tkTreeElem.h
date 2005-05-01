@@ -3,9 +3,9 @@
  *
  *	This module is the header for elements in treectrl widgets.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.7 2004/10/12 03:53:06 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.8 2005/05/01 01:37:06 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -91,8 +91,6 @@ extern ElementType elemTypeText;
 
 /***** ***** *****/
 
-extern ElementType *elementTypeList;
-
 extern int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, double *dv, char **sv);
 
 typedef struct PerStateData PerStateData;
@@ -139,6 +137,7 @@ struct PerStateType
 
 typedef struct TreeIterate_ *TreeIterate;
 
+extern int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, ElementType **typePtrPtr);
 extern void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem);
 extern TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr);
 extern TreeIterate Tree_ElementIterateNext(TreeIterate iter_);
