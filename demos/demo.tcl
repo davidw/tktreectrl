@@ -1,6 +1,6 @@
 #!../TclTk-8.4.9/bin/wish84.exe
 
-set VERSION 1.1
+set VERSION 1.2
 
 package require Tk 8.4
 
@@ -158,6 +158,7 @@ proc MakeMenuBar {} {
 	}
     }
     $m2 add command -label "Event Browser" -command ToggleEventsWindow
+    $m2 add command -label "Identify" -command ToggleIdentifyWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
     $m2 add command -label Quit -command exit
     $m add cascade -label File -menu $m2
@@ -175,8 +176,12 @@ proc MakeEventsWindow {} {
     set m1 [menu $m.m1 -tearoff 0]
     $m1 add cascade -label "Static" -menu [menu $m1.m1 -tearoff 0]
     $m1 add cascade -label "Dynamic" -menu [menu $m1.m2 -tearoff 0]
+    $m1 add command -label "Clear Window" -command "$w.f.t item delete all" \
+	-accelerator Ctrl+X
     $m1 add command -label "Rebuild Menus" -command "RebuildEventsMenus $w.f.t $m"
     $m add cascade -label "Events" -menu $m1
+
+    bind $w <Control-KeyPress-x> "$w.f.t item delete all"
 
     TreePlusScrollbarsInAFrame $w.f 1 1
     pack $w.f -expand yes -fill both
@@ -319,6 +324,44 @@ proc ToggleEventsWindow {} {
 proc ToggleEvent {T pattern} {
     .f2.f1.t notify configure $T $pattern -active $::EventTrack($pattern)
     return    
+}
+
+proc MakeIdentifyWindow {} {
+    set w .identify
+    toplevel $w
+    wm withdraw $w
+    wm title $w "TkTreeCtrl Identify"
+    set wText $w.text
+    text $wText -state disabled -width 50 -height 2 -font [.f2.f1.t cget -font]
+    $wText tag configure tagBold -font "[.f2.f1.t cget -font] bold"
+    pack $wText -expand yes -fill both
+    wm protocol $w WM_DELETE_WINDOW "ToggleIdentifyWindow"
+    return
+}
+proc UpdateIdentifyWindow {T x y} {
+    set w .identify
+    if {![winfo exists $w]} return
+    set wText $w.text
+    $wText configure -state normal
+    $wText delete 1.0 end
+    $wText insert end x= tagBold "$x  " {} y= tagBold $y\n
+    foreach {key val} [$T identify $x $y] {
+	$wText insert end $key tagBold " $val "
+    }
+    $wText configure -state disabled
+    return
+}
+proc ToggleIdentifyWindow {} {
+    set w .identify
+    if {![winfo exists $w]} {
+	MakeIdentifyWindow
+    }
+    if {[winfo ismapped $w]} {
+	wm withdraw $w
+    } else {
+	wm deiconify $w
+    }
+    return
 }
 
 proc MakeSourceWindow {} {
@@ -480,12 +523,9 @@ proc MakeMainWindow {} {
     grid rowconfigure .f2 0 -weight 1
     grid configure .f2.f1 -row 0 -column 0 -sticky news -pady 0
 
-    # Label to display result of "T identify"
-    label .f2.l1 -anchor w
-    grid rowconfigure .f2 1 -weight 0
-    grid configure .f2.l1 -row 1 -column 0 -sticky we
+    # Window to display result of "T identify"
     bind .f2.f1.t <Motion> {
-	.f2.l1 configure -text "%W identify %x %y == \"[%W identify %x %y]\""
+	UpdateIdentifyWindow %W %x %y
     }
 
     .pw2 add .pw1 -width 200
