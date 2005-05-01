@@ -3,11 +3,11 @@
  *
  *	This module is the header for treectrl widgets for the Tk toolkit.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.20 2005/03/29 21:03:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.21 2005/05/01 01:31:43 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -44,6 +44,7 @@
 #define INCREMENTS
 #define SELECTION_VISIBLE
 #define BG_IMAGE
+#define THEME
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -176,7 +177,10 @@ struct TreeCtrl
     Tk_Image openButtonImage;	/* -openbuttonimage */
     Tk_Image closedButtonImage;	/* -closedbuttonimage */
 #ifdef BG_IMAGE
-    Tk_Image backgroundImage; /* -backgroundimage */
+    Tk_Image backgroundImage;	/* -backgroundimage */
+#endif
+#ifdef THEME
+    int useTheme;		/* -usetheme */
 #endif
     GC buttonOpenGC;
     GC buttonClosedGC;
@@ -269,6 +273,9 @@ struct TreeCtrl
 #define TREE_CONF_DEFSTYLE 0x4000
 #ifdef BG_IMAGE
 #define TREE_CONF_BG_IMAGE 0x8000
+#endif
+#ifdef THEME
+#define TREE_CONF_THEME 0x00010000
 #endif
 
 extern void Tree_AddItem(TreeCtrl *tree, TreeItem item);
@@ -556,6 +563,18 @@ extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image imag
 #define DINFO_UPDATE_SCROLLBAR_Y 0x0800
 #define DINFO_REDO_INCREMENTS 0x1000
 extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
+
+#ifdef THEME
+extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
+
+/* tkTreeTheme.c */
+extern int TreeTheme_Init(Tcl_Interp *interp);
+extern int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int x, int y, int width, int height);
+extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4]);
+extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, int x, int y, int width, int height);
+extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
+extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
+#endif
 
 /* tkTreeUtils.c */
 extern void wipefree(char *memPtr, int size);
