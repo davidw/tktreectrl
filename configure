@@ -6224,7 +6224,7 @@ done
 
     vars="qebind.c tkTreeColumn.c tkTreeCtrl.c tkTreeDisplay.c
 		tkTreeDrag.c tkTreeElem.c tkTreeItem.c tkTreeMarquee.c
-		tkTreeNotify.c tkTreeStyle.c tkTreeUtils.c"
+		tkTreeNotify.c tkTreeStyle.c tkTreeTheme.c tkTreeUtils.c"
     for i in $vars; do
 	case $i in
 	    \$*)
