@@ -3,9 +3,9 @@
  *
  *	This module implements styles for treectrl widgets.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.18 2005/03/29 21:09:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.19 2005/05/01 01:41:56 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1201,7 +1201,7 @@ static void Style_DoLayout2(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		/* If a Text Element is given less width than it needs (due to
 		 * -squeeze x layout), then it may wrap lines. This means
 		 * the height can vary depending on the width. */
-		if (eLink->elem->typePtr == &elemTypeText)
+		if (eLink->elem->typePtr->name == elemTypeText.name)
 		{
 			ElementArgs args;
 
@@ -1258,7 +1258,7 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[], cha
 		/* If a Text Element is given less width than it needs (due to
 		 * -squeeze x layout), then it may wrap lines. This means
 		 * the height can vary depending on the width. */
-		if (eLink->elem->typePtr == &elemTypeText)
+		if (eLink->elem->typePtr->name == elemTypeText.name)
 		{
 			ElementArgs args;
 
@@ -2198,7 +2198,7 @@ Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &style->elements[i];
-		if (eLink->elem->typePtr == &elemTypeText)
+		if (eLink->elem->typePtr->name == elemTypeText.name)
 		{
 			Tcl_Obj *resultObjPtr;
 			resultObjPtr = Tk_GetOptionValue(tree->interp,
@@ -2230,7 +2230,7 @@ void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj 
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &masterStyle->elements[i];
-		if (eLink->elem->typePtr == &elemTypeText)
+		if (eLink->elem->typePtr->name == elemTypeText.name)
 		{
 			Tcl_Obj *objv[2];
 			ElementArgs args;
@@ -2812,6 +2812,10 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				FormatResult(interp, "element \"%s\" already exists", name);
 				return TCL_ERROR;
 			}
+#if 1
+			if (TreeElement_TypeFromObj(tree, objv[4], &typePtr) != TCL_OK)
+				return TCL_ERROR;
+#else
 			typeStr = Tcl_GetStringFromObj(objv[4], &length);
 			if (!length)
 			{
@@ -2842,6 +2846,7 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				return TCL_ERROR;
 			}
 			typePtr = matchPtr;
+#endif
 			elem = Element_CreateAndConfig(tree, typePtr, name, objc - 5, objv + 5);
 			if (elem == NULL)
 				return TCL_ERROR;
@@ -3834,7 +3839,7 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int t
 	{
 		for (i = 0; i < style->numElements; i++)
 		{
-			if (eLink->elem->typePtr == &elemTypeText)
+			if (eLink->elem->typePtr->name == elemTypeText.name)
 				return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 			eLink++;
 		}
@@ -3844,7 +3849,7 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int t
 		if ((elemIndex < 0) || (elemIndex >= style->numElements))
 			panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
 		eLink = &style->elements[elemIndex];
-		if (eLink->elem->typePtr == &elemTypeText)
+		if (eLink->elem->typePtr->name == elemTypeText.name)
 			return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	}
 
