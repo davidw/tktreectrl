@@ -3,9 +3,9 @@
  *
  *	This module implements treectrl widget's columns.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.18 2005/02/15 00:05:29 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.19 2005/05/01 01:33:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3444,6 +3444,7 @@ Tree_RelayoutWindow(TreeCtrl *tree)
 	DINFO_REDO_RANGES |
 	DINFO_OUT_OF_DATE |
 	DINFO_CHECK_COLUMN_WIDTH |
+	DINFO_DRAW_HEADER |
 	DINFO_SET_ORIGIN_X |
 	DINFO_SET_ORIGIN_Y |
 	DINFO_UPDATE_SCROLLBAR_X |
