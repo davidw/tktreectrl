@@ -3,9 +3,9 @@
  *
  *	This module implements items for treectrl widgets.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.27 2005/03/29 21:05:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.28 2005/05/01 01:38:42 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1558,7 +1558,6 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
     Item *item, *parent;
     int indent, left, lineLeft, lineTop;
     int hasPrev, hasNext;
-    int hasButton;
     int i, vert = 0;
 
     indent = TreeItem_Indent(tree, item_);
@@ -1622,10 +1621,7 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
     }
 
     /* Horizontal line to self */
-    hasButton = tree->showButtons && self->hasButton;
-    if (ISROOT(self) && !tree->showRootButton)
-	hasButton = FALSE;
-    if (hasButton || hasPrev || hasNext) {
+    if (hasPrev || hasNext) {
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
 		HDotLine(tree, drawable, tree->lineGC,
@@ -1729,6 +1725,20 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 	XSetClipOrigin(tree->display, gc, 0, 0);
 	return;
     }
+
+#ifdef THEME
+    if (tree->useTheme) {
+	int bw = (self->state & STATE_OPEN) ?
+	    tree->openButtonWidth : tree->closedButtonWidth;
+	int bh = (self->state & STATE_OPEN) ?
+	    tree->openButtonHeight : tree->closedButtonHeight;
+	if (TreeTheme_DrawButton(tree, drawable, self->state & STATE_OPEN,
+	    left + (tree->useIndent - bw) / 2, y + (height - bh) / 2,
+	    bw, bh) == TCL_OK) {
+	    return;
+	}
+    }
+#endif
 
     w1 = tree->buttonThickness / 2;
 
