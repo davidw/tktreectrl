@@ -3,11 +3,11 @@
  *
  *	This module implements treectrl widget's columns.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.18 2005/03/29 20:58:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.19 2005/05/01 01:24:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -62,6 +62,11 @@ struct Column
     int arrowSide;		/* -arrowside */
     int arrowGravity;		/* -arrowgravity */
 
+#define COLUMN_STATE_NORMAL 0
+#define COLUMN_STATE_ACTIVE 1
+#define COLUMN_STATE_PRESSED 2
+    int state;			/* -state */
+
     TreeCtrl *tree;
     Tk_OptionTable optionTable;
     int index;			/* column number */
@@ -82,6 +87,7 @@ struct Column
 
 static char *arrowST[] = { "none", "up", "down", (char *) NULL };
 static char *arrowSideST[] = { "left", "right", (char *) NULL };
+static char *stateST[] = { "normal", "active", "pressed", (char *) NULL };
 
 #define COLU_CONF_IMAGE		0x0001
 #define COLU_CONF_NWIDTH	0x0002	/* neededWidth */
@@ -157,6 +163,9 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_BOOLEAN, "-squeeze", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(Column, squeeze),
      0, (ClientData) NULL, COLU_CONF_TWIDTH},
+    {TK_OPTION_STRING_TABLE, "-state", (char *) NULL, (char *) NULL,
+     "normal", -1, Tk_Offset(Column, state),
+     0, (ClientData) stateST, COLU_CONF_DISPLAY},
     {TK_OPTION_PIXELS, "-stepwidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, stepWidthObj),
      Tk_Offset(Column, stepWidth),
@@ -593,12 +602,17 @@ int TreeColumn_NeededWidth(TreeColumn column_)
 	column->neededWidth += widthList[i] + padList[i];
     column->neededWidth += padList[n];
 
+    /* Notice I'm not considering column->borderWidth. */
+
     return column->neededWidth;
 }
 
 int TreeColumn_NeededHeight(TreeColumn column_)
 {
     Column *column = (Column *) column_;
+#ifdef THEME
+    int margins[4];
+#endif
 
     if (column->neededHeight >= 0)
 	return column->neededHeight;
@@ -622,6 +636,19 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 	    + column->textPadY[PAD_BOTTOM_RIGHT];
 	column->neededHeight = MAX(column->neededHeight, fm.linespace);
     }
+#ifdef THEME
+    if (column->tree->useTheme &&
+	(TreeTheme_GetHeaderContentMargins(column->tree, column->state, margins) == TCL_OK)) {
+#ifdef WIN32
+	/* I'm hacking these margins since the default XP theme does not give
+	 * reasonable ContentMargins for HP_HEADERITEM */
+	int bw = MAX(column->borderWidth, 3);
+	margins[1] = MAX(margins[1], bw);
+	margins[3] = MAX(margins[3], bw);
+#endif /* WIN32 */
+	column->neededHeight += margins[1] + margins[3];
+    } else
+#endif /* THEME */
     column->neededHeight += column->borderWidth * 2;
 
     return column->neededHeight;
@@ -1300,11 +1327,21 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
     struct Layout layout;
     int width = column->useWidth;
     int relief = column->sunken ? TK_RELIEF_SUNKEN : TK_RELIEF_RAISED;
+#ifdef THEME
+    int theme = TCL_ERROR;
+#endif
 
     layout.width = width;
     layout.height = height;
     Column_Layout(column, &layout);
 
+#ifdef THEME
+    if (tree->useTheme) {
+	theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state, x, y,
+		width, height);
+    }
+    if (theme != TCL_OK)
+#endif
     Tk_Fill3DRectangle(tree->tkwin, drawable, column->border,
 	    x, y, width, height, 0, TK_RELIEF_FLAT /* column->borderWidth, relief */);
 
@@ -1371,6 +1408,11 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
 	    ckfree(text);
     }
 
+#ifdef THEME
+    if (!tree->useTheme ||
+	    (column->arrow == ARROW_NONE) ||
+	    (TreeTheme_DrawHeaderArrow(tree, drawable, column->arrow == ARROW_UP, x + layout.arrowLeft, y + (height - layout.arrowHeight) / 2, layout.arrowWidth, layout.arrowHeight) != TCL_OK))
+#endif
     if (column->arrow != ARROW_NONE) {
 	int arrowWidth = layout.arrowWidth;
 	int arrowHeight = layout.arrowHeight;
@@ -1422,6 +1464,9 @@ void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y)
 		points, 2, CoordModeOrigin);
     }
 
+#ifdef THEME
+    if (theme != TCL_OK)
+#endif
     Tk_Draw3DRectangle(tree->tkwin, drawable, column->border,
 	    x, y, width, height, column->borderWidth, relief);
 }
@@ -1460,12 +1505,14 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 	column = (Column *) tree->columnTail;
 	width = maxX - x + column->borderWidth;
 	height = tree->headerHeight;
+#ifdef THEME
+	if (tree->useTheme &&
+	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, x, y, width, height) == TCL_OK)) {
+	} else
+#endif
 	Tk_Fill3DRectangle(tkwin, pixmap, column->border,
 		x, y, width, height, column->borderWidth, column->relief);
-	Tk_Draw3DRectangle(tkwin, pixmap, column->border,
-		x, y, width, height, column->borderWidth, column->relief);
     }
-
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
 	XCopyArea(tree->display, pixmap, drawable,
 		tree->copyGC, minX, y,
