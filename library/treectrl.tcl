@@ -1,8 +1,10 @@
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
+    TreeCtrl::MotionInHeader %W %x %y
 }
 bind TreeCtrl <Leave> {
     TreeCtrl::CursorCancel %W
+    TreeCtrl::MotionInHeader %W
 }
 
 bind TreeCtrl <ButtonPress-1> {
@@ -258,6 +260,43 @@ proc ::TreeCtrl::CursorCancel {w} {
     return
 }
 
+proc ::TreeCtrl::MotionInHeader {w args} {
+    variable Priv
+    if {[llength $args]} {
+	set x [lindex $args 0]
+	set y [lindex $args 1]
+	set id [$w identify $x $y]
+    } else {
+	set id ""
+    }
+    if {[info exists Priv(inheader,$w)]} {
+	set prevColumn $Priv(inheader,$w)
+    } else {
+	set prevColumn ""
+    }
+    set column ""
+    if {[lindex $id 0] eq "header"} {
+	set column [lindex $id 1]
+	if {$column eq "tail"} {
+	    set column ""
+	} elseif {![$w column cget $column -button]} {
+	    set column ""
+	}
+    }
+    if {$column ne $prevColumn} {
+	if {$prevColumn ne ""} {
+	    $w column configure $prevColumn -state normal
+	}
+	if {$column ne ""} {
+	    $w column configure $column -state active
+	    set Priv(inheader,$w) $column
+	} else {
+	    unset Priv(inheader,$w)
+	}
+    }
+    return
+}
+
 proc ::TreeCtrl::ButtonPress1 {w x y} {
     variable Priv
     focus $w
@@ -312,6 +351,7 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	set Priv(buttonMode) header
 	set Priv(column) $column
 	$w column configure $column -sunken yes
+	$w column configure $column -state pressed
 	return
     }
     set Priv(buttonMode) normal
@@ -375,10 +415,12 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    if {![string match "header $Priv(column)*" $id]} {
 		if {[$w column cget $Priv(column) -sunken]} {
 		    $w column configure $Priv(column) -sunken no
+		    $w column configure $Priv(column) -state normal
 		}
 	    } else {
 		if {![$w column cget $Priv(column) -sunken]} {
 		    $w column configure $Priv(column) -sunken yes
+		    $w column configure $Priv(column) -state pressed
 		}
 	    }
 	}
@@ -417,6 +459,7 @@ proc ::TreeCtrl::Leave1 {w x y} {
 	header {
 	    if {[$w column cget $Priv(column) -sunken]} {
 		$w column configure $Priv(column) -sunken no
+		$w column configure $Priv(column) -state normal
 	    }
 	}
 	normal {
@@ -433,6 +476,7 @@ proc ::TreeCtrl::Release1 {w x y} {
 	header {
 	    if {[$w column cget $Priv(column) -sunken]} {
 		$w column configure $Priv(column) -sunken no
+		$w column configure $Priv(column) -state active
 		# Don't generate the event if it wasn't installed
 		if {[lsearch -exact [$w notify eventnames] Header] != -1} {
 		    $w notify generate <Header-invoke> \
