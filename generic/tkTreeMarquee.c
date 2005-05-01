@@ -3,9 +3,9 @@
  *
  *	This module implements the selection marquee for treectrl widgets.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.3 2004/07/30 21:12:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.4 2005/05/01 01:39:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
