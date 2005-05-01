@@ -3,9 +3,9 @@
  *
  *	This module implements elements for treectrl widgets.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.15 2004/11/30 19:05:05 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.16 2005/05/01 01:36:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3250,28 +3250,90 @@ ElementType elemTypeText = {
 
 /*****/
 
-ElementType *elementTypeList = NULL;
+typedef struct ElementAssocData ElementAssocData;
+
+struct ElementAssocData
+{
+    ElementType *typeList;
+};
+
+int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, ElementType **typePtrPtr)
+{
+    Tcl_Interp *interp = tree->interp;
+    ElementAssocData *assocData;
+    char *typeStr;
+    int length;
+    ElementType *typeList;
+    ElementType *typePtr, *matchPtr = NULL;
+
+    assocData = Tcl_GetAssocData(interp, "TreeCtrlElementTypes", NULL);
+    typeList = assocData->typeList;
+
+    typeStr = Tcl_GetStringFromObj(objPtr, &length);
+    if (!length)
+    {
+	FormatResult(interp, "invalid element type \"\"");
+	return TCL_ERROR;
+    }
+    for (typePtr = typeList;
+	typePtr != NULL;
+	typePtr = typePtr->next)
+    {
+	if ((typeStr[0] == typePtr->name[0]) &&
+		!strncmp(typeStr, typePtr->name, length))
+	{
+	    if (matchPtr != NULL)
+	    {
+		FormatResult(interp,
+			"ambiguous element type \"%s\"",
+			typeStr);
+		return TCL_ERROR;
+	    }
+	    matchPtr = typePtr;
+	}
+    }
+    if (matchPtr == NULL)
+    {
+	FormatResult(interp, "unknown element type \"%s\"", typeStr);
+	return TCL_ERROR;
+    }
+    *typePtrPtr = matchPtr;
+
+    return TCL_OK;
+}
 
 int TreeCtrl_RegisterElementType(Tcl_Interp *interp, ElementType *newTypePtr)
 {
-    ElementType *prevPtr, *typePtr;
+    ElementAssocData *assocData;
+    ElementType *typeList;
+    ElementType *prevPtr, *typePtr, *nextPtr;
 
-    for (typePtr = elementTypeList, prevPtr = NULL;
+    assocData = Tcl_GetAssocData(interp, "TreeCtrlElementTypes", NULL);
+    typeList = assocData->typeList;
+
+    for (typePtr = typeList, prevPtr = NULL;
 	 typePtr != NULL;
-	 prevPtr = typePtr, typePtr = typePtr->next) {
+	 prevPtr = typePtr, typePtr = nextPtr) {
+	nextPtr = typePtr->next;
 	/* Remove duplicate type */
 	if (!strcmp(typePtr->name, newTypePtr->name)) {
 	    if (prevPtr == NULL)
-		elementTypeList = typePtr->next;
+		typeList = typePtr->next;
 	    else
 		prevPtr->next = typePtr->next;
+	    ckfree((char *) typePtr);
 	}
     }
-    newTypePtr->next = elementTypeList;
-    elementTypeList = newTypePtr;
+    typePtr = (ElementType *) ckalloc(sizeof(ElementType));
+    memcpy(typePtr, newTypePtr, sizeof(ElementType));
 
-    newTypePtr->optionTable = Tk_CreateOptionTable(interp,
+    typePtr->next = typeList;
+    typeList = typePtr;
+
+    typePtr->optionTable = Tk_CreateOptionTable(interp,
 	    newTypePtr->optionSpecs);
+
+    assocData->typeList = typeList;
 
     return TCL_OK;
 }
@@ -3290,23 +3352,35 @@ TreeCtrlStubs stubs = {
     PerStateInfo_Undefine
 };
 
+static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
+{
+    ElementAssocData *assocData = (ElementAssocData *) clientData;
+    ElementType *typeList = assocData->typeList;
+    ElementType *next;
+
+    while (typeList != NULL)
+    {
+	next = typeList->next;
+	/* The ElementType.optionTables are freed when the interp is deleted */
+	ckfree((char *) typeList);
+	typeList = next;
+    }
+    ckfree((char *) assocData);
+}
+
 int TreeElement_Init(Tcl_Interp *interp)
 {
-    ElementType *typePtr;
+    ElementAssocData *assocData;
 
-    elementTypeList = &elemTypeBitmap;
-    elemTypeBitmap.next = &elemTypeBorder;
-    elemTypeBorder.next = &elemTypeImage;
-    elemTypeImage.next = &elemTypeRect;
-    elemTypeRect.next = &elemTypeText;
-    elemTypeText.next = NULL;
+    assocData = (ElementAssocData *) ckalloc(sizeof(ElementAssocData));
+    assocData->typeList = NULL;
+    Tcl_SetAssocData(interp, "TreeCtrlElementTypes", FreeAssocData, assocData);
 
-    for (typePtr = elementTypeList;
-	 typePtr != NULL;
-	 typePtr = typePtr->next) {
-	typePtr->optionTable = Tk_CreateOptionTable(interp,
-		typePtr->optionSpecs);
-    }
+    TreeCtrl_RegisterElementType(interp, &elemTypeBitmap);
+    TreeCtrl_RegisterElementType(interp, &elemTypeBorder);
+    TreeCtrl_RegisterElementType(interp, &elemTypeImage);
+    TreeCtrl_RegisterElementType(interp, &elemTypeRect);
+    TreeCtrl_RegisterElementType(interp, &elemTypeText);
 
     Tcl_SetAssocData(interp, "TreeCtrlStubs", NULL, &stubs);
 
