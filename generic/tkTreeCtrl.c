@@ -3,11 +3,11 @@
  *
  *	This module implements treectrl widgets for the Tk toolkit.
  *
- * Copyright (c) 2002-2004 Tim Baker
+ * Copyright (c) 2002-2005 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.30 2005/03/29 21:01:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.31 2005/05/01 01:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -199,6 +199,11 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_INT, "-treecolumn", "treeColumn", "TreeColumn",
      "0", -1, Tk_Offset(TreeCtrl, columnTree),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+#ifdef THEME
+    {TK_OPTION_BOOLEAN, "-usetheme", "useTheme",
+     "UseTheme", "0", -1, Tk_Offset(TreeCtrl, useTheme),
+     0, (ClientData) NULL, TREE_CONF_THEME | TREE_CONF_RELAYOUT},
+#endif
     {TK_OPTION_PIXELS, "-width", "width", "Width",
      "200", Tk_Offset(TreeCtrl, widthObj), Tk_Offset(TreeCtrl, width),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
@@ -656,8 +661,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)
 		goto error;
 
+	    /* Require point inside borders */
+	    if ((x < tree->inset) || (x >= Tk_Width(tree->tkwin) - tree->inset))
+		break;
+	    if ((y < tree->inset) || (y >= Tk_Height(tree->tkwin) - tree->inset))
+		break;
+
 	    /* Point in header */
-	    if ((y >= tree->inset) && (y < tree->inset + Tree_HeaderHeight(tree))) {
+	    if (y < tree->inset + Tree_HeaderHeight(tree)) {
 		int left = 0 - tree->xOrigin, columnIndex = 0;
 		TreeColumn column = tree->columns;
 
@@ -1269,8 +1280,6 @@ badWrap:
 
     if (createFlag) {
 	mask |= TREE_CONF_BUTTON;
-	tree->closedButtonWidth = tree->buttonSize;
-	tree->closedButtonHeight = tree->buttonSize;
     }
 
     if (mask & TREE_CONF_BUTTON) {
@@ -1328,7 +1337,13 @@ badWrap:
 	}
     }
 
-    if (mask & (TREE_CONF_BUTIMG_CLOSED | TREE_CONF_BUTBMP_CLOSED)) {
+#ifdef THEME
+    /* If the theme changes, recalculate the size of buttons */
+    if (mask & TREE_CONF_THEME)
+	mask |= TREE_CONF_BUTTON;
+#endif
+
+    if (mask & TREE_CONF_BUTTON) {
 	if (tree->closedButtonImage != NULL) {
 	    Tk_SizeOfImage(tree->closedButtonImage,
 		    &tree->closedButtonWidth, &tree->closedButtonHeight);
@@ -1336,13 +1351,19 @@ badWrap:
 	else if (tree->closedButtonBitmap != None) {
 	    Tk_SizeOfBitmap(tree->display, tree->closedButtonBitmap,
 		    &tree->closedButtonWidth, &tree->closedButtonHeight);
+#ifdef THEME
+	} else if (tree->useTheme && (TreeTheme_GetButtonSize(tree,
+	    Tk_WindowId(tree->tkwin), FALSE,
+	    &tree->closedButtonWidth, &tree->closedButtonHeight) == TCL_OK)) {
+	    /* nothing */
+#endif
 	} else {
 	    tree->closedButtonWidth = tree->buttonSize;
 	    tree->closedButtonHeight = tree->buttonSize;
 	}
     }
 
-    if (mask & (TREE_CONF_BUTIMG_OPEN | TREE_CONF_BUTBMP_OPEN)) {
+    if (mask & TREE_CONF_BUTTON) {
 	if (tree->openButtonImage != NULL) {
 	    Tk_SizeOfImage(tree->openButtonImage,
 		    &tree->openButtonWidth, &tree->openButtonHeight);
@@ -1350,6 +1371,12 @@ badWrap:
 	else if (tree->openButtonBitmap != None) {
 	    Tk_SizeOfBitmap(tree->display, tree->openButtonBitmap,
 		    &tree->openButtonWidth, &tree->openButtonHeight);
+#ifdef THEME
+	} else if (tree->useTheme && (TreeTheme_GetButtonSize(tree,
+	    Tk_WindowId(tree->tkwin), TRUE,
+	    &tree->openButtonWidth, &tree->openButtonHeight) == TCL_OK)) {
+	    /* nothing */
+#endif
 	} else {
 	    tree->openButtonWidth = tree->buttonSize;
 	    tree->openButtonHeight = tree->buttonSize;
@@ -3011,6 +3038,36 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 #endif /* not TARGET_OS_MAC */
 #endif /* not WIN32 */
 
+#ifdef THEME
+
+/* Taken from tkFont.c */
+static void RecomputeWidgets(TkWindow *winPtr)
+{
+    Tk_ClassWorldChangedProc *proc;
+
+    /* Clomp! Stomp! All over the internals */
+    proc = Tk_GetClassProc(winPtr->classProcsPtr, worldChangedProc);
+    if (proc == TreeWorldChanged) {
+	TreeWorldChanged(winPtr->instanceData);
+    }
+
+    for (winPtr = winPtr->childList; winPtr != NULL; winPtr = winPtr->nextPtr) {
+	RecomputeWidgets(winPtr);
+    }
+}
+
+/*
+ * Called when the system theme changes.
+ */
+void Tree_TheWorldHasChanged(Tcl_Interp *interp)
+{
+    /* Could send a <<ThemeChanged>> event like Tile does. */
+    TkWindow *winPtr = (TkWindow *) Tk_MainWindow(interp);
+    RecomputeWidgets(winPtr);
+}
+
+#endif /* THEME */
+
 static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
   namespace eval ::TreeCtrl {}\n\
   proc ::TreeCtrl::Init {} {\n\
@@ -3039,6 +3096,10 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
     if (TreeStyle_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
+#ifdef THEME
+    /* We don't care if this fails */
+    (void) TreeTheme_Init(interp);
+#endif
 
     /* Hack for editing a text Element */
     Tcl_CreateObjCommand(interp, "textlayout", TextLayoutCmd, NULL, NULL);
