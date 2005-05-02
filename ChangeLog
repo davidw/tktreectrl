@@ -1,3 +1,8 @@
+2005-05-02  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeTheme.c: correct headers to build on unix and use
+	of c++-style var decls.
+
 2005-03-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* Makefile.in, generic/tkTreeCtrl.h:         OS X patch from
