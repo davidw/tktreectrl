@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.28 2005/05/01 01:38:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.29 2005/05/10 22:27:10 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -293,16 +293,82 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 	column = column->next;
     }
 
-    /* OPEN -> CLOSED or vice versa */
-    if ((stateOff | stateOn) & STATE_OPEN) {
-	/* This item has a button */
-	if (item->hasButton && tree->showButtons
-		&& (!ISROOT(item) || tree->showRootButton)) {
-	    /* Image or bitmap is used */
-	    if ((tree->openButtonWidth != tree->closedButtonWidth) ||
-		    (tree->openButtonHeight != tree->closedButtonHeight)) {
-		iMask |= CS_LAYOUT;
+    /* This item has a button */
+    if (item->hasButton && tree->showButtons
+	    && (!ISROOT(item) || tree->showRootButton)) {
+
+	Tk_Image image1, image2;
+	Pixmap bitmap1, bitmap2;
+	int butOpen, butClosed;
+#ifdef THEME
+	int themeOpen, themeClosed;
+#endif
+	int w1, h1, w2, h2;
+	void *ptr1 = NULL, *ptr2 = NULL;
+
+	/*
+	 * Compare the image/bitmap/theme/xlib button for the old state
+	 * to the image/bitmap/theme/xlib button for the new state. Figure
+	 * out if the size or appearance has changed.
+	 */
+
+	/* image > bitmap > theme > draw */
+	image1 = PerStateImage_ForState(tree, &tree->buttonImage, item->state, NULL);
+	if (image1 != NULL) {
+	    Tk_SizeOfImage(image1, &w1, &h1);
+	    ptr1 = image1;
+	}
+	if (ptr1 == NULL) {
+	    bitmap1 = PerStateBitmap_ForState(tree, &tree->buttonBitmap, item->state, NULL);
+	    if (bitmap1 != None) {
+		Tk_SizeOfBitmap(tree->display, bitmap1, &w1, &h1);
+		ptr1 = (void *) bitmap1;
 	    }
+	}
+#ifdef THEME
+	if (ptr1 == NULL) {
+	    if (tree->useTheme &&
+		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
+		(item->state & STATE_OPEN) != 0, &w1, &h1) == TCL_OK) {
+		ptr1 = (item->state & STATE_OPEN) ? &themeOpen : &themeClosed;
+	    }
+	}
+#endif
+	if (ptr1 == NULL) {
+	    w1 = h1 = tree->buttonSize;
+	    ptr1 = (item->state & STATE_OPEN) ? &butOpen : &butClosed;
+	}
+
+	/* image > bitmap > theme > draw */
+	image2 = PerStateImage_ForState(tree, &tree->buttonImage, state, NULL);
+	if (image2 != NULL) {
+	    Tk_SizeOfImage(image2, &w2, &h2);
+	    ptr2 = image2;
+	}
+	if (ptr2 == NULL) {
+	    bitmap2 = PerStateBitmap_ForState(tree, &tree->buttonBitmap, state, NULL);
+	    if (bitmap2 != None) {
+		Tk_SizeOfBitmap(tree->display, bitmap2, &w2, &h2);
+		ptr2 = (void *) bitmap2;
+	    }
+	}
+#ifdef THEME
+	if (ptr2 == NULL) {
+	    if (tree->useTheme &&
+		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
+		(state & STATE_OPEN) != 0, &w2, &h2) == TCL_OK) {
+		ptr2 = (state & STATE_OPEN) ? &themeOpen : &themeClosed;
+	    }
+	}
+#endif
+	if (ptr2 == NULL) {
+	    w2 = h2 = tree->buttonSize;
+	    ptr2 = (state & STATE_OPEN) ? &butOpen : &butClosed;
+	}
+
+	if ((w1 != w2) || (h1 != h2)) {
+	    iMask |= CS_LAYOUT | CS_DISPLAY;
+	} else if (ptr1 != ptr2) {
 	    iMask |= CS_DISPLAY;
 	}
     }
@@ -1368,8 +1434,7 @@ int TreeItem_Height(TreeCtrl *tree, TreeItem item_)
 
     /* Can't have less height than our button */
     if (tree->showButtons && self->hasButton && (!ISROOT(self) || tree->showRootButton)) {
-	buttonHeight = (self->state & STATE_OPEN) ?
-	    tree->openButtonHeight : tree->closedButtonHeight;
+	buttonHeight = ButtonHeight(tree, self->state);
     }
 
     /* User specified a fixed height for this item */
@@ -1379,6 +1444,10 @@ int TreeItem_Height(TreeCtrl *tree, TreeItem item_)
     /* Fixed height of all items */
     if (tree->itemHeight > 0)
 	return MAX(tree->itemHeight, buttonHeight);
+
+    /* Minimum height of all items */
+    if (tree->minItemHeight > 0)
+	useHeight = MAX(useHeight, tree->minItemHeight);
 
     /* No fixed height specified */
     return MAX(useHeight, buttonHeight);
@@ -1543,6 +1612,16 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 		    drawArgs.justify = TreeColumn_Justify(treeColumn);
 		    TreeStyle_Draw(&drawArgs);
 		}
+#if 1
+		if (TreeColumn_Index(treeColumn) == tree->columnTree) {
+		    if (tree->showLines)
+			TreeItem_DrawLines(tree, item_, x, y, width, height,
+				drawable);
+		    if (tree->showButtons)
+			TreeItem_DrawButton(tree, item_, x, y, width, height,
+				drawable);
+		}
+#endif
 	    }
 	    totalWidth += columnWidth;
 	}
@@ -1672,11 +1751,10 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 {
     Item *self = (Item *) item_;
     int indent, left, lineLeft, lineTop;
-    Tk_Image image = NULL;
-    Pixmap bitmap = None;
-    int imgW, imgH;
     int buttonLeft, buttonTop, w1;
     int macoffset = 0;
+    Tk_Image image;
+    Pixmap bitmap;
 
     if (!self->hasButton)
 	return;
@@ -1692,50 +1770,46 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
     /* Left edge of button/line area */
     left = x + tree->columnTreeLeft + indent - tree->useIndent;
 
-    if (self->state & STATE_OPEN) {
-	imgW = tree->openButtonWidth;
-	imgH = tree->openButtonHeight;
-	if (tree->openButtonImage != NULL)
-	    image = tree->openButtonImage;
-	else if (tree->openButtonBitmap != None)
-	    bitmap = tree->openButtonBitmap;
-    } else {
-	imgW = tree->closedButtonWidth;
-	imgH = tree->closedButtonHeight;
-	if (tree->closedButtonImage != NULL)
-	    image = tree->closedButtonImage;
-	else if (tree->closedButtonBitmap != None)
-	    bitmap = tree->closedButtonBitmap;
-    }
+    image = PerStateImage_ForState(tree, &tree->buttonImage, self->state, NULL);
     if (image != NULL) {
+	int imgW, imgH;
+	Tk_SizeOfImage(image, &imgW, &imgH);
 	Tk_RedrawImage(image, 0, 0, imgW, imgH, drawable,
-		left + (tree->useIndent - imgW) / 2,
-		y + (height - imgH) / 2);
+	    left + (tree->useIndent - imgW) / 2,
+	    y + (height - imgH) / 2);
 	return;
     }
-    if (bitmap != None) {
-	GC gc = (self->state & STATE_OPEN) ? tree->buttonOpenGC : tree->buttonClosedGC;
-	int bx = left + (tree->useIndent - imgW) / 2;
-	int by = y + (height - imgH) / 2;
 
+    bitmap = PerStateBitmap_ForState(tree, &tree->buttonBitmap, self->state, NULL);
+    if (bitmap != None) {
+	int bmpW, bmpH;
+	int bx, by;
+	XGCValues gcValues;
+	GC gc;
+	Tk_SizeOfBitmap(tree->display, bitmap, &bmpW, &bmpH);
+	gcValues.clip_mask = bitmap;
+	gcValues.graphics_exposures = False;
+	gc = Tk_GetGC(tree->tkwin, GCClipMask | GCGraphicsExposures, &gcValues);
+	bx = left + (tree->useIndent - bmpW) / 2;
+	by = y + (height - bmpH) / 2;
 	XSetClipOrigin(tree->display, gc, bx, by);
 	XCopyPlane(tree->display, bitmap, drawable, gc,
-		0, 0, imgW, imgH,
+		0, 0, (unsigned int) bmpW, (unsigned int) bmpH,
 		bx, by, 1);
-	XSetClipOrigin(tree->display, gc, 0, 0);
+	Tk_FreeGC(tree->display, gc);
 	return;
     }
 
 #ifdef THEME
     if (tree->useTheme) {
-	int bw = (self->state & STATE_OPEN) ?
-	    tree->openButtonWidth : tree->closedButtonWidth;
-	int bh = (self->state & STATE_OPEN) ?
-	    tree->openButtonHeight : tree->closedButtonHeight;
-	if (TreeTheme_DrawButton(tree, drawable, self->state & STATE_OPEN,
-	    left + (tree->useIndent - bw) / 2, y + (height - bh) / 2,
-	    bw, bh) == TCL_OK) {
-	    return;
+	int bw, bh;
+	if (TreeTheme_GetButtonSize(tree, drawable, self->state & STATE_OPEN,
+	    &bw, &bh) == TCL_OK) {
+	    if (TreeTheme_DrawButton(tree, drawable, self->state & STATE_OPEN,
+		left + (tree->useIndent - bw) / 2, y + (height - bh) / 2,
+		bw, bh) == TCL_OK) {
+		return;
+	    }
 	}
     }
 #endif
@@ -1782,6 +1856,63 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 		buttonTop + tree->buttonThickness * 2,
 		tree->buttonThickness,
 		tree->buttonSize - tree->buttonThickness * 4);
+    }
+}
+
+void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
+    int x, int y, int width, int height)
+{
+    Item *self = (Item *) item_;
+    int indent, columnWidth, totalWidth;
+    Column *column;
+    StyleDrawArgs drawArgs;
+    TreeColumn treeColumn;
+
+    drawArgs.tree = tree;
+    drawArgs.drawable = None;
+
+    totalWidth = 0;
+    treeColumn = tree->columns;
+    column = self->columns;
+    while ((column != NULL) && (treeColumn != NULL)) {
+	if (!TreeColumn_Visible(treeColumn))
+	    columnWidth = 0;
+	else if (tree->columnCountVis == 1)
+	    columnWidth = width;
+	else
+	    columnWidth = TreeColumn_UseWidth(treeColumn);
+	if (columnWidth > 0) {
+	    if (TreeColumn_Index(treeColumn) == tree->columnTree)
+		indent = TreeItem_Indent(tree, item_);
+	    else
+		indent = 0;
+	    if ((column != NULL) && (column->style != NULL)) {
+		drawArgs.state = self->state | column->cstate;
+		drawArgs.style = column->style;
+		drawArgs.x = x + indent + totalWidth;
+		drawArgs.y = y;
+		drawArgs.width = columnWidth - indent;
+		drawArgs.height = height;
+		drawArgs.justify = TreeColumn_Justify(treeColumn);
+		TreeStyle_UpdateWindowPositions(&drawArgs);
+	    }
+	    totalWidth += columnWidth;
+	}
+	treeColumn = TreeColumn_Next(treeColumn);
+	column = column->next;
+    }
+}
+
+void TreeItem_HideWindows(TreeCtrl *tree, TreeItem item_)
+{
+    Item *self = (Item *) item_;
+    Column *column = self->columns;
+
+    while (column != NULL) {
+	if (column->style != NULL) {
+	    TreeStyle_HideWindows(tree, column->style);
+	}
+	column = column->next;
     }
 }
 
@@ -1966,7 +2097,8 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{
 	    int result, eMask;
 
-	    result = TreeStyle_ElementConfigure(tree, (TreeItem) item, column->style, objv[6],
+	    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
+		    (TreeItemColumn) column, column->style, objv[6],
 		    objc - 7, (Tcl_Obj **) objv + 7, &eMask);
 	    if (eMask != 0) {
 		if (eMask & CS_DISPLAY)
@@ -3017,7 +3149,7 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (listObjc == 0)
 		break;
 	    for (i = 0; i < listObjc; i++) {
-		if (StateFromObj(tree, listObjv[i], states, NULL,
+		if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
 			    SFO_NOT_STATIC) != TCL_OK)
 		    return TCL_ERROR;
 	    }
@@ -3044,7 +3176,7 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    if (objc == 6) {
 		states[STATE_OP_ON] = 0;
-		if (StateFromObj(tree, objv[5], states, NULL,
+		if (Tree_StateFromObj(tree, objv[5], states, NULL,
 			    SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 		    return TCL_ERROR;
 		Tcl_SetObjResult(interp,
@@ -3092,7 +3224,7 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (listObjc == 0)
 		break;
 	    for (i = 0; i < listObjc; i++) {
-		if (StateFromObj(tree, listObjv[i], states, NULL,
+		if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
 			    SFO_NOT_STATIC) != TCL_OK)
 		    return TCL_ERROR;
 	    }
@@ -3184,17 +3316,6 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
     } else {
 	TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
 	TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
-	if (indexFirst > indexLast) {
-	    int index;
-
-	    item = itemFirst;
-	    itemFirst = itemLast;
-	    itemLast = item;
-
-	    index = indexFirst;
-	    indexFirst = indexLast;
-	    indexLast = index;
-	}
 	count = indexLast - indexFirst + 1;
     }
     STATIC_ALLOC(items, TreeItem, count + 1);
@@ -3216,6 +3337,63 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
     }
     STATIC_FREE2(items, staticItems);
 }
+
+#ifdef ALLOW_EVENT_ITEM_DELETED
+static void ItemDeleteNotify(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
+{
+    int staticItemIds[256], *itemIds = staticItemIds;
+    int itemIdCnt = 0;
+    TreeItem item;
+
+    if (itemFirst == ITEM_ALL || itemLast == ITEM_ALL) {
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+
+	itemIdCnt = tree->itemCount - 1;
+	if (itemIdCnt > sizeof(staticItemIds) / sizeof(int))
+	    itemIds = (int *) ckalloc(sizeof(int) * itemIdCnt);
+	itemIdCnt = 0;
+
+	/* TreeItem_Delete() deletes child items, so we must iterate
+	* over each individually. Plus we need to process orphans */
+	hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	while (hPtr != NULL) {
+	    item = (TreeItem) Tcl_GetHashValue(hPtr);
+	    if (item != tree->root)
+		itemIds[itemIdCnt++] = ((Item *) item)->id;
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+	goto doNotify;
+    }
+
+    if (itemFirst == itemLast) {
+	itemIdCnt = 1;
+    } else {
+	int indexFirst, indexLast;
+	TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
+	TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
+	itemIdCnt = indexLast - indexFirst + 1;
+    }
+
+    if (itemIdCnt > sizeof(staticItemIds) / sizeof(int))
+	itemIds = (int *) ckalloc(sizeof(int) * itemIdCnt);
+    itemIdCnt = 0;
+
+    item = itemFirst;
+    while (item != NULL) {
+	itemIds[itemIdCnt++] = ((Item *) item)->id;
+	if (item == itemLast)
+	    break;
+	item = TreeItem_Next(tree, item);
+    }
+
+doNotify:
+    if (itemIdCnt)
+	TreeNotify_ItemDeleted(tree, itemIds, itemIdCnt);
+    if (itemIds != staticItemIds)
+	ckfree((char *) itemIds);
+}
+#endif
 
 #ifdef SELECTION_VISIBLE
 /* FIXME: optimize all calls to this routine */
@@ -3635,7 +3813,8 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
-		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item, column->style,
+		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item,
+				(TreeItemColumn) column, column->style,
 				objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK) {
 			result = TCL_ERROR;
 			goto doneComplex;
@@ -3702,7 +3881,24 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{
 	    int index1, index2;
 
-	    /* Generate <Select> event for selected items being deleted */
+	    /* Exclude root from the range */
+	    if (item == item2)
+		item2 = NULL;
+	    if ((item != (Item *) ITEM_ALL) && (item2 != (Item *) ITEM_ALL)) {
+		if (item2 == NULL) {
+		    if (ISROOT(item))
+			break;
+		} else {
+		    if (ISROOT(item))
+			item = (Item *) TreeItem_Next(tree, (TreeItem) item);
+		    if (ISROOT(item2))
+			item2 = (Item *) TreeItem_Next(tree, (TreeItem) item2);
+		    if (item == item2)
+			item2 = NULL;
+		}
+	    }
+
+	    /* Generate <Selection> event for selected items being deleted */
 	    if (tree->selectCount) {
 		Item *itemFirst, *itemLast;
 
@@ -3710,27 +3906,34 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    itemFirst = (Item *) ITEM_ALL;
 		    itemLast = NULL;
 		} else if ((item2 != NULL) && (item != item2)) {
-		    Item *last, *last2;
+		    int indexFirst;
+		    Item *ancestor;
 
 		    TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
 		    TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
-		    if (index1 < index2)
+		    if (index1 < index2) {
 			itemFirst = item;
-		    else
+			itemLast = item2;
+			indexFirst = index1;
+		    } else {
 			itemFirst = item2;
+			itemLast = item;
+			indexFirst = index2;
+		    }
 
-		    last = item;
-		    while (last->lastChild != NULL)
-			last = last->lastChild;
-		    last2 = item2;
-		    while (last2->lastChild != NULL)
-			last2 = last2->lastChild;
-		    TreeItem_ToIndex(tree, (TreeItem) last, &index1, NULL);
-		    TreeItem_ToIndex(tree, (TreeItem) last2, &index2, NULL);
-		    if (index1 < index2)
-			itemLast = last2;
-		    else
-			itemLast = last;
+		    ancestor = itemLast;
+		    while (ancestor->parent != NULL) {
+			int index;
+			TreeItem_ToIndex(tree, (TreeItem) ancestor, &index, NULL);
+			if (index >= indexFirst)
+			    itemLast = ancestor;
+			else
+			    break;
+			ancestor = ancestor->parent;
+		    }
+
+		    while (itemLast->lastChild != NULL)
+			itemLast = itemLast->lastChild;
 		} else {
 		    itemFirst = item;
 		    itemLast = item;
@@ -3739,6 +3942,51 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		ItemDeleteDeselect(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
 	    }
+#ifdef ALLOW_EVENT_ITEM_DELETED
+	    {
+		Item *itemFirst, *itemLast;
+
+		if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
+		    itemFirst = (Item *) ITEM_ALL;
+		    itemLast = NULL;
+		} else if ((item2 != NULL) && (item != item2)) {
+		    int indexFirst;
+		    Item *ancestor;
+
+		    TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
+		    TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
+		    if (index1 < index2) {
+			itemFirst = item;
+			itemLast = item2;
+			indexFirst = index1;
+		    } else {
+			itemFirst = item2;
+			itemLast = item;
+			indexFirst = index2;
+		    }
+
+		    ancestor = itemLast;
+		    while (ancestor->parent != NULL) {
+			int index;
+			TreeItem_ToIndex(tree, (TreeItem) ancestor, &index, NULL);
+			if (index >= indexFirst)
+			    itemLast = ancestor;
+			else
+			    break;
+			ancestor = ancestor->parent;
+		    }
+
+		    while (itemLast->lastChild != NULL)
+			itemLast = itemLast->lastChild;
+		} else {
+		    itemFirst = item;
+		    itemLast = item;
+		    while (itemLast->lastChild != NULL)
+			itemLast = itemLast->lastChild;
+		}
+		ItemDeleteNotify(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
+	    }
+#endif
 	    if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
 		/* Do it this way so any detached items are deleted */
 		while (1) {
@@ -3970,7 +4218,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			    itemPrefix, item->id, columnIndex);
 		    return TCL_ERROR;
 		}
-		TreeStyle_SetText(tree, (TreeItem) item, column->style, objv[i + 1]);
+		TreeStyle_SetText(tree, (TreeItem) item, (TreeItemColumn) column, column->style, objv[i + 1]);
 		column->neededWidth = column->neededHeight = -1;
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 	    }
