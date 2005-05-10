@@ -68,7 +68,7 @@ proc DemoExplorerDetails {} {
 	#
 
 	$T column create -text Name -tag name -width 200 \
-		-arrow up -arrowpad 6
+		-arrow up -arrowpadx 6
 	$T column create -text Size -tag size -justify right -width 60 \
 		-arrowside left -arrowgravity right
 	$T column create -text Type -tag type -width 120
