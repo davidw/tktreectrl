@@ -32,7 +32,9 @@ bind TreeCtrl <Control-ButtonPress-1> {
 bind TreeCtrl <Button1-Leave> {
     TreeCtrl::Leave1 %W %x %y
 }
-bind TreeCtrl <Button1-Enter> {}
+bind TreeCtrl <Button1-Enter> {
+    TreeCtrl::Enter1 %W %x %y
+}
 
 bind TreeCtrl <KeyPress-Up> {
     TreeCtrl::SetActiveItem %W [TreeCtrl::UpDown %W -1]
@@ -350,8 +352,9 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	if {![$w column cget $column -button]} return
 	set Priv(buttonMode) header
 	set Priv(column) $column
-	$w column configure $column -sunken yes
 	$w column configure $column -state pressed
+	set Priv(columnDrag,x) $x
+	set Priv(columnDrag,y) $y
 	return
     }
     set Priv(buttonMode) normal
@@ -413,21 +416,69 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	header {
 	    set id [$w identify $x $y]
 	    if {![string match "header $Priv(column)*" $id]} {
-		if {[$w column cget $Priv(column) -sunken]} {
-		    $w column configure $Priv(column) -sunken no
+		if {[$w column cget $Priv(column) -state] eq "pressed"} {
 		    $w column configure $Priv(column) -state normal
 		}
 	    } else {
-		if {![$w column cget $Priv(column) -sunken]} {
-		    $w column configure $Priv(column) -sunken yes
+		if {[$w column cget $Priv(column) -state] ne "pressed"} {
 		    $w column configure $Priv(column) -state pressed
 		}
+		if {[$w columndrag cget -enable] &&
+		    (abs($Priv(columnDrag,x) - $x) > 4)} {
+		    $w columndrag configure \
+			-imagecolumn $Priv(column) \
+			-imageoffset [expr {$x - $Priv(columnDrag,x)}]
+		    set Priv(buttonMode) dragColumn
+		}
 	    }
+	}
+	dragColumn {
+	    scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
+	    if {$y < $y1 - 30 || $y >= $y2 + 30} {
+		set inside 0
+	    } else {
+		set inside 1
+	    }
+	    if {$inside && [$w columndrag cget -imagecolumn] == -1} {
+		$w columndrag configure -imagecolumn $Priv(column)
+	    } elseif {!$inside && [$w columndrag cget -imagecolumn] != -1} {
+		$w columndrag configure -imagecolumn -1 -indicatorcolumn -1
+	    }
+	    if {$inside} {
+		$w columndrag configure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
+		set id [$w identify $x $Priv(columnDrag,y)]
+		if {[lindex $id 0] eq "header"} {
+		    set column [lindex $id 1]
+		    if {$column eq "tail"} {
+			$w columndrag configure -indicatorcolumn [$w column index tail]
+		    } elseif {$column ne ""} {
+			scan [$w column bbox $column] "%d %d %d %d" x1 y1 x2 y2
+			if {$x < $x1 + ($x2 - $x1) / 2} {
+			    $w columndrag configure -indicatorcolumn $column
+			} else {
+			    set visColumns {}
+			    for {set i 0} {$i < [$w numcolumns]} {incr i} {
+				if {[$w column cget $i -visible]} {
+				    lappend visColumns $i
+				    if {$column == $i} {
+					set visIndex $i
+				    }
+				}
+			    }
+			    lappend visColumns [$w column index tail]
+			    set column [lindex $visColumns [expr {$visIndex + 1}]]
+			    $w columndrag configure -indicatorcolumn $column
+			}
+		    }
+		}
+	    }
+	    ColumnDragScrollCheck $w $x $y
 	}
 	normal {
 	    set Priv(x) $x
 	    set Priv(y) $y
-	    Motion $w [$w index [list nearest $x $y]]
+	    SelectionMotion $w [$w index [list nearest $x $y]]
+	    set Priv(autoscan,command,$w) {SelectionMotion %T [%T index "nearest %x %y"]}
 	    AutoScanCheck $w $x $y
 	}
 	resize {
@@ -457,14 +508,19 @@ proc ::TreeCtrl::Leave1 {w x y} {
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
 	header {
-	    if {[$w column cget $Priv(column) -sunken]} {
-		$w column configure $Priv(column) -sunken no
+	    if {[$w column cget $Priv(column) -state] eq "pressed"} {
 		$w column configure $Priv(column) -state normal
 	    }
 	}
-	normal {
-	}
-	resize {}
+    }
+    return
+}
+
+proc ::TreeCtrl::Enter1 {w x y} {
+    variable Priv
+    if {![info exists Priv(buttonMode)]} return
+    switch $Priv(buttonMode) {
+	default {}
     }
     return
 }
@@ -474,14 +530,36 @@ proc ::TreeCtrl::Release1 {w x y} {
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
 	header {
-	    if {[$w column cget $Priv(column) -sunken]} {
-		$w column configure $Priv(column) -sunken no
+	    if {[$w column cget $Priv(column) -state] eq "pressed"} {
 		$w column configure $Priv(column) -state active
 		# Don't generate the event if it wasn't installed
 		if {[lsearch -exact [$w notify eventnames] Header] != -1} {
 		    $w notify generate <Header-invoke> \
 			[list C $Priv(column)] \
 			"::TreeCtrl::PercentsCmd $w"
+		}
+	    }
+	}
+	dragColumn {
+	    AutoScanCancel $w
+	    $w column configure $Priv(column) -state normal
+	    set visible [expr {[$w columndrag cget -imagecolumn] != -1}]
+	    if {$visible} {
+		$w columndrag configure -imagecolumn -1
+		set column [$w columndrag cget -indicatorcolumn]
+		if {$column != -1 && $column != $Priv(column)} {
+		    if {$column == [$w numcolumns]} {
+			set column tail
+		    }
+		    $w column move $Priv(column) $column
+		}
+		$w columndrag configure  -indicatorcolumn -1
+	    }
+	    set id [$w identify $x $y]
+	    if {[lindex $id 0] eq "header"} {
+		set column [lindex $id 1]
+		if {$column ne "" && $column ne "tail"} {
+		    $w column configure $column -state active
 		}
 	    }
 	}
@@ -531,9 +609,10 @@ proc ::TreeCtrl::BeginSelect {w el} {
 	set Priv(selection) {}
 	set Priv(prev) $el
     }
+    return
 }
 
-# ::TreeCtrl::Motion --
+# ::TreeCtrl::SelectionMotion --
 #
 # This procedure is called to process mouse motion events while
 # button 1 is down.  It may move or extend the selection, depending
@@ -543,7 +622,8 @@ proc ::TreeCtrl::BeginSelect {w el} {
 # w -		The listbox widget.
 # el -		The element under the pointer (must be a number).
 
-proc ::TreeCtrl::Motion {w el} {
+# NOT USED
+proc ::TreeCtrl::SelectionMotion {w el} {
     variable Priv
     if {$el eq $Priv(prev)} {
 	return
@@ -584,10 +664,11 @@ proc ::TreeCtrl::Motion {w el} {
 	    set Priv(prev) $el
 	}
     }
+    return
 }
 
 # Different version that uses single "selection modify" call
-proc ::TreeCtrl::Motion {w el} {
+proc ::TreeCtrl::SelectionMotion {w el} {
     variable Priv
     if {$el eq $Priv(prev)} {
 	return
@@ -632,6 +713,7 @@ proc ::TreeCtrl::Motion {w el} {
 	    $w selection modify $select $deselect
 	}
     }
+    return
 }
 
 # ::TreeCtrl::BeginExtend --
@@ -649,12 +731,13 @@ proc ::TreeCtrl::Motion {w el} {
 proc ::TreeCtrl::BeginExtend {w el} {
     if {[string equal [$w cget -selectmode] "extended"]} {
 	if {[$w selection includes anchor]} {
-	    Motion $w $el
+	    SelectionMotion $w $el
 	} else {
 	    # No selection yet; simulate the begin-select operation.
 	    BeginSelect $w $el
 	}
     }
+    return
 }
 
 # ::TreeCtrl::BeginToggle --
@@ -681,6 +764,7 @@ proc ::TreeCtrl::BeginToggle {w el} {
 	    $w selection add $el
 	}
     }
+    return
 }
 
 proc ::TreeCtrl::CancelRepeat {} {
@@ -689,6 +773,7 @@ proc ::TreeCtrl::CancelRepeat {} {
 	after cancel $Priv(afterId)
 	unset Priv(afterId)
     }
+    return
 }
 
 proc ::TreeCtrl::AutoScanCheck {w x y} {
@@ -722,7 +807,10 @@ proc ::TreeCtrl::AutoScanCheck {w x y} {
 		}
 		set Priv(autoscan,scanning,$w) 1
 	    }
-	    Motion $w [$w index "nearest $x $y"]
+	    if {$Priv(autoscan,command,$w) ne ""} {
+		set command [string map [list %T $w %x $x %y $y] $Priv(autoscan,command,$w)]
+		eval $command
+	    }
 	    set Priv(autoscan,afterId,$w) [after $delay [list TreeCtrl::AutoScanCheckAux $w]]
 	}
 	return
@@ -754,6 +842,43 @@ proc ::TreeCtrl::AutoScanCancel {w} {
     return
 }
 
+proc ::TreeCtrl::ColumnDragScrollCheck {w x y} {
+    variable Priv
+    scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
+    if {($x < $x1) || ($x >= $x2)} {
+	if {![info exists Priv(autoscan,afterId,$w)]} {
+	    set bbox1 [$w column bbox $Priv(column)]
+	    if {$x >= $x2} {
+		$w xview scroll 1 units
+	    } else {
+		$w xview scroll -1 units
+	    }
+	    set bbox2 [$w column bbox $Priv(column)]
+	    if {[lindex $bbox1 0] != [lindex $bbox2 0]} {
+		incr Priv(columnDrag,x) [expr {[lindex $bbox2 0] - [lindex $bbox1 0]}]
+		$w columndrag configure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
+	    }
+	    set Priv(autoscan,afterId,$w) [after 50 [list TreeCtrl::ColumnDragScrollCheckAux $w]]
+	}
+	return
+    }
+    AutoScanCancel $w
+    return
+}
+
+proc ::TreeCtrl::ColumnDragScrollCheckAux {w} {
+    variable Priv
+    # Not quite sure how this can happen
+    if {![info exists Priv(autoscan,afterId,$w)]} return
+    unset Priv(autoscan,afterId,$w)
+    set x [winfo pointerx $w]
+    set y [winfo pointery $w]
+    set x [expr {$x - [winfo rootx $w]}]
+    set y [expr {$y - [winfo rooty $w]}]
+    ColumnDragScrollCheck $w $x $y
+    return
+}
+
 # ::TreeCtrl::UpDown --
 #
 # Moves the location cursor (active element) up or down by one element,
@@ -769,17 +894,17 @@ proc ::TreeCtrl::UpDown {w n} {
     set rnc [$w item rnc active]
     # active item isn't visible
     if {$rnc eq ""} {
-    	set rnc [$w item rnc first]
-    	if {$rnc eq ""} return
+	set rnc [$w item rnc first]
+	if {$rnc eq ""} return
     }
     scan $rnc "%d %d" row col
     set Priv(row) [expr {$row + $n}]
     if {$rnc ne $Priv(rnc)} {
-   	set Priv(col) $col
+	set Priv(col) $col
     }
     set index [$w index "rnc $Priv(row) $Priv(col)"]
     if {[$w compare active == $index]} {
-    	set Priv(row) $row
+	set Priv(row) $row
     } else {
 	set Priv(rnc) [$w item rnc $index]
     }
@@ -790,17 +915,17 @@ proc ::TreeCtrl::LeftRight {w n} {
     variable Priv
     set rnc [$w item rnc active]
     if {$rnc eq ""} {
-    	set rnc [$w item rnc first]
-    	if {$rnc eq ""} return
+	set rnc [$w item rnc first]
+	if {$rnc eq ""} return
     }
     scan $rnc "%d %d" row col
     set Priv(col) [expr {$col + $n}]
     if {$rnc ne $Priv(rnc)} {
-    	set Priv(row) $row
+	set Priv(row) $row
     }
     set index [$w index "rnc $Priv(row) $Priv(col)"]
     if {[$w compare active == $index]} {
-    	set Priv(col) $col
+	set Priv(col) $col
     } else {
 	set Priv(rnc) [$w item rnc $index]
     }
@@ -819,6 +944,7 @@ proc ::TreeCtrl::SetActiveItem {w index} {
 	    set Priv(selection) {}
 	}
     }
+    return
 }
 
 # ::TreeCtrl::ExtendUpDown --
@@ -845,7 +971,8 @@ proc ::TreeCtrl::ExtendUpDown {w amount} {
     if {$index eq ""} return
     $w activate $index
     $w see active
-    Motion $w [$w index active]
+    SelectionMotion $w [$w index active]
+    return
 }
 
 # ::TreeCtrl::DataExtend
@@ -865,12 +992,13 @@ proc ::TreeCtrl::DataExtend {w el} {
 	$w activate $el
 	$w see $el
         if {[$w selection includes anchor]} {
-	    Motion $w $el
+	    SelectionMotion $w $el
 	}
     } elseif {[string equal $mode "multiple"]} {
 	$w activate $el
 	$w see $el
     }
+    return
 }
 
 # ::TreeCtrl::Cancel
@@ -906,6 +1034,7 @@ proc ::TreeCtrl::Cancel w {
 	}
 	set first [$w index "$first next visible"]
     }
+    return
 }
 
 # ::TreeCtrl::SelectAll
@@ -924,6 +1053,7 @@ proc ::TreeCtrl::SelectAll w {
     } else {
 	$w selection add all
     }
+    return
 }
 
 proc ::TreeCtrl::MarqueeBegin {w x y} {
@@ -990,4 +1120,5 @@ proc ::TreeCtrl::PercentsCmd {T char object event detail charMap} {
 	    return $map($char)
 	}
     }
+    return
 }
