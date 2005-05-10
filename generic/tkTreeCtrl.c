@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.31 2005/05/01 01:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.32 2005/05/10 22:07:43 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -66,6 +66,14 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_COLOR, "-buttoncolor", "buttonColor", "ButtonColor",
      "#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
+    {TK_OPTION_STRING, "-buttonbitmap", "buttonBitmap", "ButtonBitmap",
+     (char *) NULL, Tk_Offset(TreeCtrl, buttonBitmap.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL,
+     TREE_CONF_BUTTON | TREE_CONF_BUTBMP | TREE_CONF_RELAYOUT},
+    {TK_OPTION_STRING, "-buttonimage", "buttonImage", "ButtonImage",
+     (char *) NULL, Tk_Offset(TreeCtrl, buttonImage.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL,
+     TREE_CONF_BUTTON | TREE_CONF_BUTIMG | TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-buttonsize", "buttonSize", "ButtonSize",
      "9", Tk_Offset(TreeCtrl, buttonSizeObj),
      Tk_Offset(TreeCtrl, buttonSize),
@@ -75,16 +83,6 @@ static Tk_OptionSpec optionSpecs[] = {
      "1", Tk_Offset(TreeCtrl, buttonThicknessObj),
      Tk_Offset(TreeCtrl, buttonThickness),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
-    {TK_OPTION_BITMAP, "-closedbuttonbitmap",
-     "closedButtonBitmap", "ClosedButtonBitmap",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, closedButtonBitmap),
-     TK_OPTION_NULL_OK, (ClientData) NULL,
-     TREE_CONF_BUTTON | TREE_CONF_BUTBMP_CLOSED | TREE_CONF_RELAYOUT},
-    {TK_OPTION_STRING, "-closedbuttonimage",
-     "closedButtonImage", "ClosedButtonImage",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, closedButtonString),
-     TK_OPTION_NULL_OK, (ClientData) NULL,
-     TREE_CONF_BUTTON | TREE_CONF_BUTIMG_CLOSED | TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-columnproxy", "columnProxy", "ColumnProxy",
      (char *) NULL, Tk_Offset(TreeCtrl, columnProxy.xObj),
      Tk_Offset(TreeCtrl, columnProxy.x),
@@ -153,16 +151,10 @@ static Tk_OptionSpec optionSpecs[] = {
      "1", Tk_Offset(TreeCtrl, lineThicknessObj),
      Tk_Offset(TreeCtrl, lineThickness),
      0, (ClientData) NULL, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
-    {TK_OPTION_BITMAP, "-openbuttonbitmap",
-     "openButtonBitmap", "OpenButtonBitmap",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, openButtonBitmap),
-     TK_OPTION_NULL_OK, (ClientData) NULL,
-     TREE_CONF_BUTTON | TREE_CONF_BUTBMP_OPEN | TREE_CONF_RELAYOUT},
-    {TK_OPTION_STRING, "-openbuttonimage",
-     "openButtonImage", "OpenButtonImage",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, openButtonString),
-     TK_OPTION_NULL_OK, (ClientData) NULL,
-     TREE_CONF_BUTTON | TREE_CONF_BUTIMG_OPEN | TREE_CONF_RELAYOUT},
+    {TK_OPTION_PIXELS, "-minitemheight", "minItemHeight", "MinItemHeight",
+     "0", Tk_Offset(TreeCtrl, minItemHeightObj),
+     Tk_Offset(TreeCtrl, minItemHeight),
+     0, (ClientData) NULL, TREE_CONF_ITEMHEIGHT | TREE_CONF_RELAYOUT},
     {TK_OPTION_STRING_TABLE, "-orient", "orient", "Orient",
      "vertical", -1, Tk_Offset(TreeCtrl, vertical),
      0, (ClientData) orientStringTable, TREE_CONF_RELAYOUT},
@@ -252,6 +244,35 @@ static Tk_OptionSpec debugSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
+#ifdef COLUMN_DRAG_IMAGE
+static Tk_OptionSpec dragSpecs[] = {
+    {TK_OPTION_BOOLEAN, "-enable", (char *) NULL, (char *) NULL,
+     "0", -1, Tk_Offset(TreeCtrl, columnDrag.enable),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_INT, "-imagealpha", (char *) NULL, (char *) NULL,
+     "128", -1, Tk_Offset(TreeCtrl, columnDrag.alpha),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_COLOR, "-imagecolor", (char *) NULL, (char *) NULL,
+     "gray75", -1, Tk_Offset(TreeCtrl, columnDrag.color),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_INT, "-imagecolumn", (char *) NULL, (char *) NULL,
+     "-1", -1, Tk_Offset(TreeCtrl, columnDrag.column),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_PIXELS, "-imageoffset", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(TreeCtrl, columnDrag.offsetObj),
+     Tk_Offset(TreeCtrl, columnDrag.offset), 0, (ClientData) NULL, 0},
+    {TK_OPTION_COLOR, "-indicatorcolor", (char *) NULL, (char *) NULL,
+     "Black", -1, Tk_Offset(TreeCtrl, columnDrag.indColor),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_INT, "-indicatorcolumn", (char *) NULL, (char *) NULL,
+     "-1", -1, Tk_Offset(TreeCtrl, columnDrag.indColumn),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
+     (char *) NULL, 0, -1, 0, 0, 0}
+};
+#endif
+
+
 static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[], int createFlag);
 static void TreeEventProc(ClientData clientData, XEvent * eventPtr);
@@ -263,8 +284,10 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[]);
+static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,Tcl_Obj *CONST objv[]);
+#ifdef COLUMN_DRAG_IMAGE
+static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+#endif
 
 static Tk_ClassProcs treectrlClass = {
     sizeof(Tk_ClassProcs),	/* size */
@@ -324,6 +347,10 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     (void) Tk_InitOptions(interp, (char *) tree, tree->debug.optionTable,
 	    tkwin);
 
+    tree->columnDrag.optionTable = Tk_CreateOptionTable(interp, dragSpecs);
+    (void) Tk_InitOptions(interp, (char *) tree, tree->columnDrag.optionTable,
+	    tkwin);
+
     Tcl_InitHashTable(&tree->itemHash, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable(&tree->elementHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
@@ -374,7 +401,11 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int result = TCL_OK;
     static CONST char *commandName[] = {
 	"activate", "canvasx", "canvasy", "cget", "collapse",
-	"column", "compare", "configure", "contentbox",
+	"column",
+#ifdef COLUMN_DRAG_IMAGE
+	"columndrag",
+#endif
+	"compare", "configure", "contentbox",
 	"debug", "depth", "dragimage",
 	"element", "expand", "identify", "index", "item",
 	"marquee", "notify", "numcolumns", "numitems", "orphans",
@@ -383,7 +414,11 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     };
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
-	COMMAND_COLLAPSE, COMMAND_COLUMN, COMMAND_COMPARE, COMMAND_CONFIGURE,
+	COMMAND_COLLAPSE, COMMAND_COLUMN,
+#ifdef COLUMN_DRAG_IMAGE
+	COMMAND_COLUMNDRAG,
+#endif
+	COMMAND_COMPARE, COMMAND_CONFIGURE,
 	COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
@@ -556,6 +591,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    result = TreeColumnCmd(clientData, interp, objc, objv);
 	    break;
 	}
+
+#ifdef COLUMN_DRAG_IMAGE
+	case COMMAND_COLUMNDRAG:
+	{
+	    result = TreeColumnDragCmd(clientData, interp, objc, objv);
+	    break;
+	}
+#endif
 
 	case COMMAND_COMPARE:
 	{
@@ -1042,18 +1085,6 @@ error:
     return TCL_ERROR;
 }
 
-static int ObjectIsEmpty(Tcl_Obj *obj)
-{
-    int length;
-
-    if (obj == NULL)
-	return 1;
-    if (obj->bytes != NULL)
-	return (obj->length == 0);
-    Tcl_GetStringFromObj(obj, &length);
-    return (length == 0);
-}
-
 static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 	Tcl_Obj *CONST objv[], int createFlag)
 {
@@ -1061,7 +1092,6 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
     Tcl_Obj *errorResult = NULL;
     TreeCtrl saved;
     Tk_SavedOptions savedOptions;
-    int doubleBuffer = 1;
     int oldShowRoot = tree->showRoot;
     int mask;
     XGCValues gcValues;
@@ -1075,42 +1105,45 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		continue;
 	    }
 
-	    if (mask & TREE_CONF_BUTIMG_CLOSED)
-		saved.closedButtonImage = tree->closedButtonImage;
-	    if (mask & TREE_CONF_BUTIMG_OPEN)
-		saved.openButtonImage = tree->openButtonImage;
+	    /* Wouldn't have to do this if Tk_InitOptions() would return
+	    * a mask of configured options like Tk_SetOptions() does. */
+	    if (createFlag) {
+		if (tree->backgroundImageString != NULL)
+		    mask |= TREE_CONF_BG_IMAGE;
+		if (tree->buttonBitmap.obj != NULL)
+		    mask |= TREE_CONF_BUTBMP;
+		if (tree->buttonImage.obj != NULL)
+		    mask |= TREE_CONF_BUTIMG;
+		if (tree->defaultStyle.stylesObj != NULL)
+		    mask |= TREE_CONF_DEFSTYLE;
+		if (tree->wrapObj != NULL)
+		    mask |= TREE_CONF_WRAP;
+	    }
+
+	    /*
+	     * Step 1: Save old values
+	     */
+
 #ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE)
 		saved.backgroundImage = tree->backgroundImage;
 #endif
-	    if (mask & TREE_CONF_WRAP) {
-		saved.wrapMode = tree->wrapMode;
-		saved.wrapArg = tree->wrapArg;
-	    }
+	    if (mask & TREE_CONF_BUTBMP)
+		PSTSave(&tree->buttonBitmap, &saved.buttonBitmap);
+	    if (mask & TREE_CONF_BUTIMG)
+		PSTSave(&tree->buttonImage, &saved.buttonImage);
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		saved.defaultStyle.styles = tree->defaultStyle.styles;
 		saved.defaultStyle.numStyles = tree->defaultStyle.numStyles;
 	    }
-
-	    if (mask & TREE_CONF_BUTIMG_CLOSED) {
-		tree->closedButtonImage = NULL;
-		if (tree->closedButtonString != NULL) {
-		    Tk_Image image = Tree_GetImage(tree, tree->closedButtonString);
-		    if (image == NULL)
-			continue;
-		    tree->closedButtonImage = image;
-		}
+	    if (mask & TREE_CONF_WRAP) {
+		saved.wrapMode = tree->wrapMode;
+		saved.wrapArg = tree->wrapArg;
 	    }
 
-	    if (mask & TREE_CONF_BUTIMG_OPEN) {
-		tree->openButtonImage = NULL;
-		if (tree->openButtonString != NULL) {
-		    Tk_Image image = Tree_GetImage(tree, tree->openButtonString);
-		    if (image == NULL)
-			continue;
-		    tree->openButtonImage = image;
-		}
-	    }
+	    /*
+	     * Step 2: Process new values
+	     */
 
 #ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE) {
@@ -1123,6 +1156,18 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		}
 	    }
 #endif
+
+	    if (mask & TREE_CONF_BUTBMP) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap,
+		    &tree->buttonBitmap) != TCL_OK)
+		    continue;
+	    }
+
+	    if (mask & TREE_CONF_BUTIMG) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstImage,
+		    &tree->buttonImage) != TCL_OK)
+		    continue;
+	    }
 
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (tree->defaultStyle.stylesObj == NULL) {
@@ -1210,10 +1255,22 @@ badWrap:
 		}
 	    }
 
+	    /*
+	     * Step 3: Free saved values
+	     */
+
+#ifdef BG_IMAGE
+	    if (mask & TREE_CONF_BG_IMAGE)
+		; /* nothing to free */
+#endif
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (saved.defaultStyle.styles != NULL)
 		    ckfree((char *) saved.defaultStyle.styles);
 	    }
+	    if (mask & TREE_CONF_BUTBMP)
+		PerStateInfo_Free(tree, &pstBitmap, &saved.buttonBitmap);
+	    if (mask & TREE_CONF_BUTIMG)
+		PerStateInfo_Free(tree, &pstImage, &saved.buttonImage);
 
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
@@ -1222,30 +1279,27 @@ badWrap:
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (mask & TREE_CONF_BUTIMG_CLOSED) {
-		tree->closedButtonImage = saved.closedButtonImage;
-	    }
-
-	    if (mask & TREE_CONF_BUTIMG_OPEN) {
-		tree->openButtonImage = saved.openButtonImage;
-	    }
-
 #ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = saved.backgroundImage;
 	    }
 #endif
-
+	    if (mask & TREE_CONF_BUTBMP) {
+		PSTRestore(tree, &pstBitmap, &tree->buttonBitmap,
+		    &saved.buttonBitmap);
+	    }
+	    if (mask & TREE_CONF_BUTIMG) {
+		PSTRestore(tree, &pstImage, &tree->buttonImage,
+		    &saved.buttonImage);
+	    }
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		tree->defaultStyle.styles = saved.defaultStyle.styles;
 		tree->defaultStyle.numStyles = saved.defaultStyle.numStyles;
 	    }
-
 	    if (mask & TREE_CONF_WRAP) {
 		tree->wrapMode = saved.wrapMode;
 		tree->wrapArg = saved.wrapArg;
 	    }
-
 	    Tcl_SetObjResult(interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
 	    return TCL_ERROR;
@@ -1271,16 +1325,15 @@ badWrap:
 	tree->textGC = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
     }
 
-    if ((tree->copyGC == None) && (doubleBuffer)) {
+    if (tree->copyGC == None) {
 	gcValues.function = GXcopy;
 	gcValues.graphics_exposures = False;
 	gcMask = GCFunction | GCGraphicsExposures;
 	tree->copyGC = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
     }
 
-    if (createFlag) {
+    if (createFlag)
 	mask |= TREE_CONF_BUTTON;
-    }
 
     if (mask & TREE_CONF_BUTTON) {
 	if (tree->buttonGC != None)
@@ -1308,83 +1361,7 @@ badWrap:
 	TreeColumnProxy_Display(tree);
     }
 
-    if (mask & TREE_CONF_BUTBMP_CLOSED) {
-	if (tree->buttonClosedGC != None) {
-	    Tk_FreeGC(tree->display, tree->buttonClosedGC);
-	    tree->buttonClosedGC = None;
-	}
-	if (tree->closedButtonBitmap != None) {
-	    gcValues.clip_mask = tree->closedButtonBitmap;
-	    gcValues.graphics_exposures = False;
-	    gcMask = GCClipMask | GCGraphicsExposures;
-	    tree->buttonClosedGC = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
-	}
-    }
-
-    if (mask & TREE_CONF_BUTBMP_OPEN) {
-	if (tree->buttonOpenGC != None) {
-	    Tk_FreeGC(tree->display, tree->buttonOpenGC);
-	    tree->buttonOpenGC = None;
-	}
-	if (tree->openButtonBitmap != None) {
-	    gcValues.clip_mask = tree->openButtonBitmap;
-	    gcValues.graphics_exposures = False;
-	    gcMask = GCClipMask | GCGraphicsExposures;
-	    tree->buttonOpenGC = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
-
-	    Tk_SizeOfBitmap(tree->display, tree->openButtonBitmap,
-		    &tree->openButtonWidth, &tree->openButtonHeight);
-	}
-    }
-
-#ifdef THEME
-    /* If the theme changes, recalculate the size of buttons */
-    if (mask & TREE_CONF_THEME)
-	mask |= TREE_CONF_BUTTON;
-#endif
-
-    if (mask & TREE_CONF_BUTTON) {
-	if (tree->closedButtonImage != NULL) {
-	    Tk_SizeOfImage(tree->closedButtonImage,
-		    &tree->closedButtonWidth, &tree->closedButtonHeight);
-	}
-	else if (tree->closedButtonBitmap != None) {
-	    Tk_SizeOfBitmap(tree->display, tree->closedButtonBitmap,
-		    &tree->closedButtonWidth, &tree->closedButtonHeight);
-#ifdef THEME
-	} else if (tree->useTheme && (TreeTheme_GetButtonSize(tree,
-	    Tk_WindowId(tree->tkwin), FALSE,
-	    &tree->closedButtonWidth, &tree->closedButtonHeight) == TCL_OK)) {
-	    /* nothing */
-#endif
-	} else {
-	    tree->closedButtonWidth = tree->buttonSize;
-	    tree->closedButtonHeight = tree->buttonSize;
-	}
-    }
-
-    if (mask & TREE_CONF_BUTTON) {
-	if (tree->openButtonImage != NULL) {
-	    Tk_SizeOfImage(tree->openButtonImage,
-		    &tree->openButtonWidth, &tree->openButtonHeight);
-	}
-	else if (tree->openButtonBitmap != None) {
-	    Tk_SizeOfBitmap(tree->display, tree->openButtonBitmap,
-		    &tree->openButtonWidth, &tree->openButtonHeight);
-#ifdef THEME
-	} else if (tree->useTheme && (TreeTheme_GetButtonSize(tree,
-	    Tk_WindowId(tree->tkwin), TRUE,
-	    &tree->openButtonWidth, &tree->openButtonHeight) == TCL_OK)) {
-	    /* nothing */
-#endif
-	} else {
-	    tree->openButtonWidth = tree->buttonSize;
-	    tree->openButtonHeight = tree->buttonSize;
-	}
-    }
-
-    tree->useIndent = MAX(tree->closedButtonWidth, tree->openButtonWidth);
-    tree->useIndent = MAX(tree->indent, tree->useIndent);
+    tree->useIndent = MAX(tree->indent, ButtonMaxWidth(tree));
 
     if (tree->highlightWidth < 0)
 	tree->highlightWidth = 0;
@@ -1401,6 +1378,7 @@ badWrap:
     if (mask & TREE_CONF_RELAYOUT) {
 	TreeComputeGeometry(tree);
 	Tree_InvalidateColumnWidth(tree, -1);
+	Tree_InvalidateColumnHeight(tree, -1); /* In case -usetheme changes */
 	Tree_RelayoutWindow(tree);
     } else if (mask & TREE_CONF_REDISPLAY) {
 	Tree_RelayoutWindow(tree);
@@ -1512,10 +1490,6 @@ static void TreeDestroy(char *memPtr)
 	Tk_FreeGC(tree->display, tree->buttonGC);
     if (tree->lineGC != None)
 	Tk_FreeGC(tree->display, tree->lineGC);
-    if (tree->buttonClosedGC != None)
-	Tk_FreeGC(tree->display, tree->buttonClosedGC);
-    if (tree->buttonOpenGC != None)
-	Tk_FreeGC(tree->display, tree->buttonOpenGC);
 
     Tree_FreeColumns(tree);
 
@@ -1660,7 +1634,7 @@ Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName)
     return (Tk_Image) Tcl_GetHashValue(hPtr);
 }
 
-int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags)
+int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags)
 {
     Tcl_Interp *interp = tree->interp;
     int i, op = STATE_OP_ON, op2, op3, length, state = 0;
@@ -1706,16 +1680,16 @@ int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int
 	goto unknown;
 
     if (states != NULL) {
-	if (op == 0) {
-	    op2 = 1;
-	    op3 = 2;
+	if (op == STATE_OP_ON) {
+	    op2 = STATE_OP_OFF;
+	    op3 = STATE_OP_TOGGLE;
 	}
-	else if (op == 1) {
-	    op2 = 0;
-	    op3 = 2;
+	else if (op == STATE_OP_OFF) {
+	    op2 = STATE_OP_ON;
+	    op3 = STATE_OP_TOGGLE;
 	} else {
-	    op2 = 0;
-	    op3 = 1;
+	    op2 = STATE_OP_ON;
+	    op3 = STATE_OP_OFF;
 	}
 	states[op2] &= ~state;
 	states[op3] &= ~state;
@@ -1793,7 +1767,7 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		Tcl_WrongNumArgs(interp, 3, objv, "state");
 		return TCL_ERROR;
 	    }
-	    if (StateFromObj(tree, objv[3], NULL, &index,
+	    if (Tree_StateFromObj(tree, objv[3], NULL, &index,
 		    SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 		return TCL_ERROR;
 	    Tcl_SetObjResult(interp, Tcl_NewStringObj(
@@ -1825,7 +1799,7 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 	    int i, index;
 
 	    for (i = 3; i < objc; i++) {
-		if (StateFromObj(tree, objv[i], NULL, &index,
+		if (Tree_StateFromObj(tree, objv[i], NULL, &index,
 			SFO_NOT_STATIC | SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 		    return TCL_ERROR;
 		TreeStyle_UndefineState(tree, 1L << index);
@@ -2706,6 +2680,87 @@ static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     return TCL_OK;
 }
 
+#ifdef COLUMN_DRAG_IMAGE
+static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc,
+	Tcl_Obj *CONST objv[])
+{
+    TreeCtrl *tree = (TreeCtrl *) clientData;
+    static CONST char *commandNames[] = { "cget", "configure", (char *) NULL };
+    enum { COMMAND_CGET, COMMAND_CONFIGURE };
+    int index;
+
+    if (objc < 3) {
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	return TCL_ERROR;
+    }
+
+    if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
+	    &index) != TCL_OK) {
+	return TCL_ERROR;
+    }
+
+    switch (index) {
+	/* T columndrag cget option */
+	case COMMAND_CGET:
+	{
+	    Tcl_Obj *resultObjPtr;
+
+	    if (objc != 4) {
+		Tcl_WrongNumArgs(interp, 3, objv, "option");
+		return TCL_ERROR;
+	    }
+	    resultObjPtr = Tk_GetOptionValue(interp, (char *) tree,
+		    tree->columnDrag.optionTable, objv[3], tree->tkwin);
+	    if (resultObjPtr == NULL)
+		return TCL_ERROR;
+	    Tcl_SetObjResult(interp, resultObjPtr);
+	    break;
+	}
+
+	/* T columndrag configure ?option? ?value? ?option value ...? */
+	case COMMAND_CONFIGURE:
+	{
+	    Tcl_Obj *resultObjPtr;
+	    Tk_SavedOptions savedOptions;
+	    int mask, result;
+
+	    if (objc < 3) {
+		Tcl_WrongNumArgs(interp, 3, objv, "?option? ?value?");
+		return TCL_ERROR;
+	    }
+	    if (objc <= 4) {
+		resultObjPtr = Tk_GetOptionInfo(interp, (char *) tree,
+			tree->columnDrag.optionTable,
+			(objc == 3) ? (Tcl_Obj *) NULL : objv[3],
+			tree->tkwin);
+		if (resultObjPtr == NULL)
+		    return TCL_ERROR;
+		Tcl_SetObjResult(interp, resultObjPtr);
+		break;
+	    }
+	    result = Tk_SetOptions(interp, (char *) tree,
+		    tree->columnDrag.optionTable, objc - 3, objv + 3, tree->tkwin,
+		    &savedOptions, &mask);
+	    if (result != TCL_OK) {
+		Tk_RestoreSavedOptions(&savedOptions);
+		return TCL_ERROR;
+	    }
+	    Tk_FreeSavedOptions(&savedOptions);
+
+	    if (tree->columnDrag.alpha < 0)
+		tree->columnDrag.alpha = 0;
+	    if (tree->columnDrag.alpha > 255)
+		tree->columnDrag.alpha = 255;
+
+	    Tree_DInfoChanged(tree, DINFO_DRAW_HEADER);
+	    break;
+	}
+    }
+
+    return TCL_OK;
+}
+#endif
+
 /*
 textlayout $font $text
 	-width pixels
@@ -2918,6 +2973,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
     int i, ncolors;
     XColor *xcolors;
     unsigned long red_shift, green_shift, blue_shift;
+    int separated = 0;
 
     if (objc != 7) {
 	Tcl_WrongNumArgs(interp, 1, objv, "imageName x y w h zoom");
@@ -2972,15 +3028,15 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
     ncolors = visual->map_entries;
     xcolors = (XColor *) ckalloc(sizeof(XColor) * ncolors);
 
-    red_shift = green_shift = blue_shift = 0;
-    while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
-	red_shift++;
-    while ((0x0001 & (ximage->green_mask >> green_shift)) == 0)
-	green_shift++;
-    while ((0x0001 & (ximage->blue_mask >> blue_shift)) == 0)
-	blue_shift++;
-
     if ((visual->class == DirectColor) || (visual->class == TrueColor)) {
+	separated = 1;
+	red_shift = green_shift = blue_shift = 0;
+	while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
+	    red_shift++;
+	while ((0x0001 & (ximage->green_mask >> green_shift)) == 0)
+	    green_shift++;
+	while ((0x0001 & (ximage->blue_mask >> blue_shift)) == 0)
+	    blue_shift++;
 	for (i = 0; i < ncolors; i++) {
 	    xcolors[i].pixel =
 		((i << red_shift) & ximage->red_mask) |
@@ -3012,12 +3068,18 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	    unsigned long pixel;
 
 	    pixel = XGetPixel(ximage, x, y);
-	    r = (pixel & ximage->red_mask) >> red_shift;
-	    g = (pixel & ximage->green_mask) >> green_shift;
-	    b = (pixel & ximage->blue_mask) >> blue_shift;
-	    r = ((double) xcolors[r].red / USHRT_MAX) * 255;
-	    g = ((double) xcolors[g].green / USHRT_MAX) * 255;
-	    b = ((double) xcolors[b].blue / USHRT_MAX) * 255;
+	    if (separated) {
+		r = (pixel & ximage->red_mask) >> red_shift;
+		g = (pixel & ximage->green_mask) >> green_shift;
+		b = (pixel & ximage->blue_mask) >> blue_shift;
+		r = ((double) xcolors[r].red / USHRT_MAX) * 255;
+		g = ((double) xcolors[g].green / USHRT_MAX) * 255;
+		b = ((double) xcolors[b].blue / USHRT_MAX) * 255;
+	    } else {
+		r = ((double) xcolors[pixel].red / USHRT_MAX) * 255;
+		g = ((double) xcolors[pixel].green / USHRT_MAX) * 255;
+		b = ((double) xcolors[pixel].blue / USHRT_MAX) * 255;
+	    }
 	    pixelPtr[y * photoBlock.pitch + x * 4 + 0] = r;
 	    pixelPtr[y * photoBlock.pitch + x * 4 + 1] = g;
 	    pixelPtr[y * photoBlock.pitch + x * 4 + 2] = b;
@@ -3061,7 +3123,8 @@ static void RecomputeWidgets(TkWindow *winPtr)
  */
 void Tree_TheWorldHasChanged(Tcl_Interp *interp)
 {
-    /* Could send a <<ThemeChanged>> event like Tile does. */
+    /* Could send a <<ThemeChanged>> event to every window like Tile does. */
+    /* Could keep a list of treectrl widgets */
     TkWindow *winPtr = (TkWindow *) Tk_MainWindow(interp);
     RecomputeWidgets(winPtr);
 }
