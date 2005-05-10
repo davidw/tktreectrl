@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.12 2005/05/01 01:42:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.13 2005/05/10 22:38:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -66,7 +66,7 @@ void FormatResult(Tcl_Interp *interp, char *fmt, ...)
 	Tcl_SetResult(interp, buf, TCL_VOLATILE);
 }
 
-int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis)
+int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force)
 {
 	char staticStr[256], *tmpStr = staticStr;
 	int pixels, pixelsTest, bytesThatFit, bytesTest;
@@ -75,8 +75,8 @@ int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *e
 	bytesThatFit = Tk_MeasureChars(tkfont, string, numBytes, *maxPixels, 0,
 		&pixels);
 
-	/* The whole string fits. No ellipsis needed */
-	if (bytesThatFit == numBytes)
+	/* The whole string fits. No ellipsis needed (unless forced) */
+	if ((bytesThatFit == numBytes) && !force)
 	{
 		(*maxPixels) = pixels;
 		return numBytes;
@@ -89,7 +89,10 @@ int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *e
 	}
 
 	/* Strip off one character at a time, adding ellipsis, until it fits */
-	bytesTest = Tcl_UtfPrev(string + bytesThatFit, string) - string;
+	if (force)
+		bytesTest = bytesThatFit;
+	else
+		bytesTest = Tcl_UtfPrev(string + bytesThatFit, string) - string;
 	if (bytesTest + ellipsisNumBytes > sizeof(staticStr))
 		tmpStr = ckalloc(bytesTest + ellipsisNumBytes);
 	memcpy(tmpStr, string, bytesTest);
@@ -489,6 +492,173 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 }
 
 /*
+ * TIP #116 altered Tk_PhotoPutBlock API to add interp arg.
+ * We need to remove that for compiling with 8.4.
+ */
+#if (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION < 5)
+#define TK_PHOTOPUTBLOCK(interp, hdl, blk, x, y, w, h, cr) \
+		Tk_PhotoPutBlock(hdl, blk, x, y, w, h, cr)
+#define TK_PHOTOPUTZOOMEDBLOCK(interp, hdl, blk, x, y, w, h, \
+				zx, zy, sx, sy, cr) \
+		Tk_PhotoPutZoomedBlock(hdl, blk, x, y, w, h, \
+				zx, zy, sx, sy, cr)
+#else
+#define TK_PHOTOPUTBLOCK	Tk_PhotoPutBlock
+#define TK_PHOTOPUTZOOMEDBLOCK	Tk_PhotoPutZoomedBlock
+#endif
+
+#if defined(WIN32) || defined(TARGET_OS_MAC)
+void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha)
+{
+    Tk_PhotoImageBlock photoBlock;
+    unsigned char *pixelPtr;
+    int x, y, w = ximage->width, h = ximage->height;
+#ifdef TARGET_OS_MAC
+    unsigned long red_shift, green_shift, blue_shift;
+#endif
+
+    Tk_PhotoBlank(photoH);
+
+    /* See TkPoscriptImage */
+
+#ifdef TARGET_OS_MAC
+    red_shift = green_shift = blue_shift = 0;
+    while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
+	red_shift++;
+    while ((0x0001 & (ximage->green_mask >> green_shift)) == 0)
+	green_shift++;
+    while ((0x0001 & (ximage->blue_mask >> blue_shift)) == 0)
+	blue_shift++;
+#endif
+
+    pixelPtr = (unsigned char *) Tcl_Alloc(ximage->width * ximage->height * 4);
+    photoBlock.pixelPtr  = pixelPtr;
+    photoBlock.width     = ximage->width;
+    photoBlock.height    = ximage->height;
+    photoBlock.pitch     = ximage->width * 4;
+    photoBlock.pixelSize = 4;
+    photoBlock.offset[0] = 0;
+    photoBlock.offset[1] = 1;
+    photoBlock.offset[2] = 2;
+    photoBlock.offset[3] = 3;
+
+    for (y = 0; y < ximage->height; y++) {
+	for (x = 0; x < ximage->width; x++) {
+	    int r, g, b;
+	    unsigned long pixel;
+
+	    /* FIXME: I think this blows up on classic Mac??? */
+	    pixel = XGetPixel(ximage, x, y);
+#ifdef WIN32
+	    r = GetRValue(pixel);
+	    g = GetGValue(pixel);
+	    b = GetBValue(pixel);
+#endif
+#ifdef TARGET_OS_MAC
+	    r = (pixel & ximage->red_mask) >> red_shift;
+	    g = (pixel & ximage->green_mask) >> green_shift;
+	    b = (pixel & ximage->blue_mask) >> blue_shift;
+#endif
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 0] = r;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 1] = g;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 2] = b;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 3] = alpha;
+	}
+    }
+
+    TK_PHOTOPUTBLOCK(tree->interp, photoH, &photoBlock, 0, 0, w, h,
+	    TK_PHOTO_COMPOSITE_SET);
+
+    Tcl_Free((char *) pixelPtr);
+}
+#else /* X11 */
+void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha)
+{
+    Tk_Window tkwin = Tk_MainWindow(interp);
+    Display *display = Tk_Display(tkwin);
+    Visual *visual = Tk_Visual(tkwin);
+    Tk_PhotoImageBlock photoBlock;
+    unsigned char *pixelPtr;
+    int x, y, w = ximage->width, h = ximage->height;
+    int i, ncolors;
+    XColor *xcolors;
+    unsigned long red_shift, green_shift, blue_shift;
+    int separated = 0;
+
+    Tk_PhotoBlank(photoH);
+
+    /* See TkPoscriptImage */
+
+    ncolors = visual->map_entries;
+    xcolors = (XColor *) ckalloc(sizeof(XColor) * ncolors);
+
+    if ((visual->class == DirectColor) || (visual->class == TrueColor)) {
+	separated = 1;
+	red_shift = green_shift = blue_shift = 0;
+	while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
+	    red_shift++;
+	while ((0x0001 & (ximage->green_mask >> green_shift)) == 0)
+	    green_shift++;
+	while ((0x0001 & (ximage->blue_mask >> blue_shift)) == 0)
+	    blue_shift++;
+	for (i = 0; i < ncolors; i++) {
+	    xcolors[i].pixel =
+		((i << red_shift) & ximage->red_mask) |
+		((i << green_shift) & ximage->green_mask) |
+		((i << blue_shift) & ximage->blue_mask);
+	}
+    } else {
+	for (i = 0; i < ncolors; i++)
+	    xcolors[i].pixel = i;
+    }
+
+    XQueryColors(display, Tk_Colormap(tkwin), xcolors, ncolors);
+
+    pixelPtr = (unsigned char *) Tcl_Alloc(ximage->width * ximage->height * 4);
+    photoBlock.pixelPtr  = pixelPtr;
+    photoBlock.width     = ximage->width;
+    photoBlock.height    = ximage->height;
+    photoBlock.pitch     = ximage->width * 4;
+    photoBlock.pixelSize = 4;
+    photoBlock.offset[0] = 0;
+    photoBlock.offset[1] = 1;
+    photoBlock.offset[2] = 2;
+    photoBlock.offset[3] = 3;
+
+    for (y = 0; y < ximage->height; y++) {
+	for (x = 0; x < ximage->width; x++) {
+	    int r, g, b;
+	    unsigned long pixel;
+
+	    pixel = XGetPixel(ximage, x, y);
+	    if (separated) {
+		r = (pixel & ximage->red_mask) >> red_shift;
+		g = (pixel & ximage->green_mask) >> green_shift;
+		b = (pixel & ximage->blue_mask) >> blue_shift;
+		r = ((double) xcolors[r].red / USHRT_MAX) * 255;
+		g = ((double) xcolors[g].green / USHRT_MAX) * 255;
+		b = ((double) xcolors[b].blue / USHRT_MAX) * 255;
+	    } else {
+		r = ((double) xcolors[pixel].red / USHRT_MAX) * 255;
+		g = ((double) xcolors[pixel].green / USHRT_MAX) * 255;
+		b = ((double) xcolors[pixel].blue / USHRT_MAX) * 255;
+	    }
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 0] = r;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 1] = g;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 2] = b;
+	    pixelPtr[y * photoBlock.pitch + x * 4 + 3] = alpha;
+	}
+    }
+
+    TK_PHOTOPUTBLOCK(interp, photoH, &photoBlock, 0, 0, w, h,
+	    TK_PHOTO_COMPOSITE_SET);
+
+    Tcl_Free((char *) pixelPtr);
+    ckfree((char *) xcolors);
+}
+#endif
+
+/*
  * Replacement for Tk_TextLayout stuff. Allows the caller to break lines
  * on character boundaries (as well as word boundaries). Allows the caller
  * to specify the maximum number of lines to display. Will add ellipsis "..."
@@ -757,6 +927,10 @@ wrapLine:
 	 * text remaining */
 	if ((start < end) && (layoutPtr->numChunks > 0))
 	{
+		char *ellipsis = "...";
+		int ellipsisLen = strlen(ellipsis);
+		char staticStr[256], *buf = staticStr;
+
 		chunkPtr = &layoutPtr->chunks[layoutPtr->numChunks - 1];
 		if (wrapLength > 0)
 		{
@@ -773,8 +947,10 @@ wrapLine:
 					continue;
 
 				newX = chunkPtr->totalWidth - 1;
+				if (chunkPtr->x + chunkPtr->totalWidth < wrapLength)
+					newX = wrapLength - chunkPtr->x;
 				bytesThisChunk = Ellipsis(tkfont, (char *) chunkPtr->start,
-					chunkPtr->numBytes, &newX, "...");
+					chunkPtr->numBytes, &newX, ellipsis, TRUE);
 				if (bytesThisChunk > 0)
 				{
 					chunkPtr->numBytes = bytesThisChunk;
@@ -793,10 +969,6 @@ wrapLine:
 		}
 		else
 		{
-			char staticStr[256], *buf = staticStr;
-			char *ellipsis = "...";
-			int ellipsisLen = strlen(ellipsis);
-
 			if (chunkPtr->start[0] == '\n')
 			{
 				if (layoutPtr->numChunks == 1)
@@ -872,8 +1044,9 @@ finish:
 
 	Tcl_DStringFree(&lineBuffer);
 
-	if (layoutPtr->numLines == 1)
-		dbwin("WARNING: single-line TextLayout created\n");
+	/* We don't want single-line text layouts for text elements, but it happens for column titles */
+/*	if (layoutPtr->numLines == 1)
+		dbwin("WARNING: single-line TextLayout created\n"); */
 
 	return (TextLayout) layoutPtr;
 }
@@ -1205,3 +1378,674 @@ PadAmountOptionFree(clientData, tkwin, internalPtr)
 	ckfree((char *) *(int **)internalPtr);
     }
 }
+
+/*****/
+
+int ObjectIsEmpty(Tcl_Obj *obj)
+{
+    int length;
+
+    if (obj == NULL)
+	return 1;
+    if (obj->bytes != NULL)
+	return (obj->length == 0);
+    Tcl_GetStringFromObj(obj, &length);
+    return (length == 0);
+}
+
+void PerStateInfo_Free(
+    TreeCtrl *tree,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo)
+{
+    PerStateData *pData = pInfo->data;
+    int i;
+
+    if (pInfo->data == NULL)
+	return;
+#ifdef DEBUG_PSI
+    if (pInfo->type != typePtr)
+	panic("PerStateInfo_Free type mismatch: got %s expected %s",
+		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+#endif
+    for (i = 0; i < pInfo->count; i++) {
+	(*typePtr->freeProc)(tree, pData);
+	pData = (PerStateData *) (((char *) pData) + typePtr->size);
+    }
+    wipefree((char *) pInfo->data, typePtr->size * pInfo->count);
+    pInfo->data = NULL;
+    pInfo->count = 0;
+}
+
+int PerStateInfo_FromObj(
+    TreeCtrl *tree,
+    StateFromObjProc proc,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo)
+{
+    int i, j;
+    int objc, objc2;
+    Tcl_Obj **objv, **objv2;
+    PerStateData *pData;
+
+#ifdef DEBUG_PSI
+    pInfo->type = typePtr;
+#endif
+
+    PerStateInfo_Free(tree, typePtr, pInfo);
+
+    if (pInfo->obj == NULL)
+	return TCL_OK;
+
+    if (Tcl_ListObjGetElements(tree->interp, pInfo->obj, &objc, &objv) != TCL_OK)
+	return TCL_ERROR;
+
+    if (objc == 0)
+	return TCL_OK;
+
+    if (objc == 1) {
+	pData = (PerStateData *) ckalloc(typePtr->size);
+	pData->stateOff = pData->stateOn = 0; /* all states */
+	if ((*typePtr->fromObjProc)(tree, objv[0], pData) != TCL_OK) {
+	    wipefree((char *) pData, typePtr->size);
+	    return TCL_ERROR;
+	}
+	pInfo->data = pData;
+	pInfo->count = 1;
+	return TCL_OK;
+    }
+
+    if (objc & 1) {
+	FormatResult(tree->interp, "list must have even number of elements");
+	return TCL_ERROR;
+    }
+
+    pData = (PerStateData *) ckalloc(typePtr->size * (objc / 2));
+    pInfo->data = pData;
+    for (i = 0; i < objc; i += 2) {
+	if ((*typePtr->fromObjProc)(tree, objv[i], pData) != TCL_OK) {
+	    PerStateInfo_Free(tree, typePtr, pInfo);
+	    return TCL_ERROR;
+	}
+	pInfo->count++;
+	if (Tcl_ListObjGetElements(tree->interp, objv[i + 1], &objc2, &objv2) != TCL_OK) {
+	    PerStateInfo_Free(tree, typePtr, pInfo);
+	    return TCL_ERROR;
+	}
+	pData->stateOff = pData->stateOn = 0; /* all states */
+	for (j = 0; j < objc2; j++) {
+	    if (proc(tree, objv2[j], &pData->stateOff, &pData->stateOn) != TCL_OK) {
+		PerStateInfo_Free(tree, typePtr, pInfo);
+		return TCL_ERROR;
+	    }
+	}
+	pData = (PerStateData *) (((char *) pData) + typePtr->size);
+    }
+    return TCL_OK;
+}
+
+PerStateData *PerStateInfo_ForState(
+    TreeCtrl *tree,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateData *pData = pInfo->data;
+    int stateOff = ~state, stateOn = state;
+    int i;
+
+#ifdef DEBUG_PSI
+    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+	panic("PerStateInfo_ForState type mismatch: got %s expected %s",
+		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+#endif
+
+    for (i = 0; i < pInfo->count; i++) {
+	/* Any state */
+	if ((pData->stateOff == 0) &&
+		(pData->stateOn == 0)) {
+	    if (match) (*match) = MATCH_ANY;
+	    return pData;
+	}
+
+	/* Exact match */
+	if ((pData->stateOff == stateOff) &&
+		(pData->stateOn == stateOn)) {
+	    if (match) (*match) = MATCH_EXACT;
+	    return pData;
+	}
+
+	/* Partial match */
+	if (((pData->stateOff & stateOff) == pData->stateOff) &&
+		((pData->stateOn & stateOn) == pData->stateOn)) {
+	    if (match) (*match) = MATCH_PARTIAL;
+	    return pData;
+	}
+
+	pData = (PerStateData *) (((char *) pData) + typePtr->size);
+    }
+
+    if (match) (*match) = MATCH_NONE;
+    return NULL;
+}
+
+Tcl_Obj *PerStateInfo_ObjForState(
+    TreeCtrl *tree,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateData *pData;
+    Tcl_Obj *obj;
+    int i;
+
+#ifdef DEBUG_PSI
+    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+	panic("PerStateInfo_ObjForState type mismatch: got %s expected %s",
+		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+#endif
+
+    pData = PerStateInfo_ForState(tree, typePtr, pInfo, state, match);
+    if (pData != NULL) {
+	i = ((char *) pData - (char *) pInfo->data) / typePtr->size;
+	Tcl_ListObjIndex(tree->interp, pInfo->obj, i * 2, &obj);
+	return obj;
+    }
+
+    return NULL;
+}
+
+void PerStateInfo_Undefine(
+    TreeCtrl *tree,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo,
+    int state)
+{
+    PerStateData *pData = pInfo->data;
+    int i, j, numStates, stateOff, stateOn;
+    Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
+
+#ifdef DEBUG_PSI
+    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+	panic("PerStateInfo_Undefine type mismatch: got %s expected %s",
+		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+#endif
+
+    for (i = 0; i < pInfo->count; i++) {
+	if ((pData->stateOff | pData->stateOn) & state) {
+	    pData->stateOff &= ~state;
+	    pData->stateOn &= ~state;
+	    if (Tcl_IsShared(configObj)) {
+		configObj = Tcl_DuplicateObj(configObj);
+		Tcl_DecrRefCount(pInfo->obj);
+		Tcl_IncrRefCount(configObj);
+		pInfo->obj = configObj;
+	    }
+	    Tcl_ListObjIndex(tree->interp, configObj, i * 2 + 1, &listObj);
+	    if (Tcl_IsShared(listObj)) {
+		listObj = Tcl_DuplicateObj(listObj);
+		Tcl_ListObjReplace(tree->interp, configObj, i * 2 + 1, 1, 1, &listObj);
+	    }
+	    Tcl_ListObjLength(tree->interp, listObj, &numStates);
+	    for (j = 0; j < numStates; ) {
+		Tcl_ListObjIndex(tree->interp, listObj, j, &stateObj);
+		stateOff = stateOn = 0;
+		TreeStateFromObj(tree, stateObj, &stateOff, &stateOn);
+		if ((stateOff | stateOn) & state) {
+		    Tcl_ListObjReplace(tree->interp, listObj, j, 1, 0, NULL);
+		    numStates--;
+		} else
+		    j++;
+	    }
+	    /* Given {bitmap {state1 state2 state3}}, we just invalidated
+	     * the string rep of the sublist {state1 ...}, but not
+	     * the parent list */
+	    Tcl_InvalidateStringRep(configObj);
+	}
+	pData = (PerStateData *) (((char *) pData) + typePtr->size);
+    }
+}
+
+/*****/
+
+void PerStateGC_Free(TreeCtrl *tree, struct PerStateGC **pGCPtr)
+{
+    struct PerStateGC *pGC = (*pGCPtr), *next;
+
+    while (pGC != NULL) {
+	next = pGC->next;
+	Tk_FreeGC(tree->display, pGC->gc);
+	WFREE(pGC, struct PerStateGC);
+	pGC = next;
+    }
+    (*pGCPtr) = NULL;
+}
+
+GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask, XGCValues *gcValues)
+{
+    struct PerStateGC *pGC;
+
+    if ((mask | (GCFont | GCForeground | GCBackground | GCGraphicsExposures)) != 
+	    (GCFont | GCForeground | GCBackground | GCGraphicsExposures))
+	panic("PerStateGC_Get: unsupported mask");
+
+    for (pGC = (*pGCPtr); pGC != NULL; pGC = pGC->next) {
+	if (mask != pGC->mask)
+	    continue;
+	if ((mask & GCFont) &&
+		(pGC->gcValues.font != gcValues->font))
+	    continue;
+	if ((mask & GCForeground) &&
+		(pGC->gcValues.foreground != gcValues->foreground))
+	    continue;
+	if ((mask & GCBackground) &&
+		(pGC->gcValues.background != gcValues->background))
+	    continue;
+	if ((mask & GCGraphicsExposures) &&
+		(pGC->gcValues.graphics_exposures != gcValues->graphics_exposures))
+	    continue;
+	return pGC->gc;
+    }
+
+    pGC = (struct PerStateGC *) ckalloc(sizeof(*pGC));
+    pGC->gcValues = (*gcValues);
+    pGC->mask = mask;
+    pGC->gc = Tk_GetGC(tree->tkwin, mask, gcValues);
+    pGC->next = (*pGCPtr);
+    (*pGCPtr) = pGC;
+
+    return pGC->gc;
+}
+
+/*****/
+
+typedef struct PerStateDataBitmap PerStateDataBitmap;
+struct PerStateDataBitmap
+{
+    PerStateData header;
+    Pixmap bitmap;
+};
+
+static int PSDBitmapFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBitmap *pBitmap)
+{
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pBitmap->bitmap = None;
+    } else {
+	pBitmap->bitmap = Tk_AllocBitmapFromObj(tree->interp, tree->tkwin, obj);
+	if (pBitmap->bitmap == None)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDBitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
+{
+    if (pBitmap->bitmap != None)
+	Tk_FreeBitmap(tree->display, pBitmap->bitmap);
+}
+
+PerStateType pstBitmap =
+{
+#ifdef DEBUG_PSI
+    "Bitmap",
+#endif
+    sizeof(PerStateDataBitmap),
+    (PerStateType_FromObjProc) PSDBitmapFromObj,
+    (PerStateType_FreeProc) PSDBitmapFree
+};
+
+Pixmap PerStateBitmap_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataBitmap *pData;
+
+    pData = (PerStateDataBitmap *) PerStateInfo_ForState(tree, &pstBitmap, pInfo, state, match);
+    if (pData != NULL)
+	return pData->bitmap;
+    return None;
+}
+
+void PerStateBitmap_MaxSize(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int *widthPtr,
+    int *heightPtr)
+{
+    PerStateDataBitmap *pData = (PerStateDataBitmap *) pInfo->data;
+    int i, width, height, w, h;
+
+    width = height = 0;
+
+    for (i = 0; i < pInfo->count; i++, ++pData) {
+	if (pData->bitmap == None)
+	    continue;
+	Tk_SizeOfBitmap(tree->display, pData->bitmap, &w, &h);
+	width = MAX(width, w);
+	height = MAX(height, h);
+    }
+
+    (*widthPtr) = width;
+    (*heightPtr) = height;
+}
+
+/*****/
+
+typedef struct PerStateDataBorder PerStateDataBorder;
+struct PerStateDataBorder
+{
+    PerStateData header;
+    Tk_3DBorder border;
+};
+
+static int PSDBorderFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBorder *pBorder)
+{
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pBorder->border = NULL;
+    } else {
+	pBorder->border = Tk_Alloc3DBorderFromObj(tree->interp, tree->tkwin, obj);
+	if (pBorder->border == NULL)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDBorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
+{
+    if (pBorder->border != NULL)
+	Tk_Free3DBorder(pBorder->border);
+}
+
+PerStateType pstBorder =
+{
+#ifdef DEBUG_PSI
+    "Border",
+#endif
+    sizeof(PerStateDataBorder),
+    (PerStateType_FromObjProc) PSDBorderFromObj,
+    (PerStateType_FreeProc) PSDBorderFree
+};
+
+Tk_3DBorder PerStateBorder_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataBorder *pData;
+
+    pData = (PerStateDataBorder *) PerStateInfo_ForState(tree, &pstBorder, pInfo, state, match);
+    if (pData != NULL)
+	return pData->border;
+    return NULL;
+}
+
+/*****/
+
+typedef struct PerStateDataColor PerStateDataColor;
+struct PerStateDataColor
+{
+    PerStateData header;
+    XColor *color;
+};
+
+static int PSDColorFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataColor *pColor)
+{
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pColor->color = NULL;
+    } else {
+	pColor->color = Tk_AllocColorFromObj(tree->interp, tree->tkwin, obj);
+	if (pColor->color == NULL)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
+{
+    if (pColor->color != NULL)
+	Tk_FreeColor(pColor->color);
+}
+
+PerStateType pstColor =
+{
+#ifdef DEBUG_PSI
+    "Color",
+#endif
+    sizeof(PerStateDataColor),
+    (PerStateType_FromObjProc) PSDColorFromObj,
+    (PerStateType_FreeProc) PSDColorFree
+};
+
+XColor *PerStateColor_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataColor *pData;
+
+    pData = (PerStateDataColor *) PerStateInfo_ForState(tree, &pstColor, pInfo, state, match);
+    if (pData != NULL)
+	return pData->color;
+    return NULL;
+}
+
+/*****/
+
+typedef struct PerStateDataFont PerStateDataFont;
+struct PerStateDataFont
+{
+    PerStateData header;
+    Tk_Font tkfont;
+};
+
+static int PSDFontFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataFont *pFont)
+{
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pFont->tkfont = NULL;
+    } else {
+	pFont->tkfont = Tk_AllocFontFromObj(tree->interp, tree->tkwin, obj);
+	if (pFont->tkfont == NULL)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDFontFree(TreeCtrl *tree, PerStateDataFont *pFont)
+{
+    if (pFont->tkfont != NULL)
+	Tk_FreeFont(pFont->tkfont);
+}
+
+PerStateType pstFont =
+{
+#ifdef DEBUG_PSI
+    "Font",
+#endif
+    sizeof(PerStateDataFont),
+    (PerStateType_FromObjProc) PSDFontFromObj,
+    (PerStateType_FreeProc) PSDFontFree
+};
+
+Tk_Font PerStateFont_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataFont *pData;
+
+    pData = (PerStateDataFont *) PerStateInfo_ForState(tree, &pstFont, pInfo, state, match);
+    if (pData != NULL)
+	return pData->tkfont;
+    return NULL;
+}
+
+/*****/
+
+typedef struct PerStateDataImage PerStateDataImage;
+struct PerStateDataImage
+{
+    PerStateData header;
+    Tk_Image image;
+    char *string;
+};
+
+static int PSDImageFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataImage *pImage)
+{
+    int length;
+    char *string;
+
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pImage->image = NULL;
+	pImage->string = NULL;
+    } else {
+	string = Tcl_GetStringFromObj(obj, &length);
+	pImage->image = Tree_GetImage(tree, string);
+	if (pImage->image == NULL)
+	    return TCL_ERROR;
+	pImage->string = ckalloc(length + 1);
+	strcpy(pImage->string, string);
+    }
+    return TCL_OK;
+}
+
+static void PSDImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
+{
+    if (pImage->string != NULL)
+	ckfree(pImage->string);
+    /* don't free image */
+}
+
+PerStateType pstImage =
+{
+#ifdef DEBUG_PSI
+    "Image",
+#endif
+    sizeof(PerStateDataImage),
+    (PerStateType_FromObjProc) PSDImageFromObj,
+    (PerStateType_FreeProc) PSDImageFree
+};
+
+Tk_Image PerStateImage_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataImage *pData;
+
+    pData = (PerStateDataImage *) PerStateInfo_ForState(tree, &pstImage, pInfo, state, match);
+    if (pData != NULL)
+	return pData->image;
+    return NULL;
+}
+
+void PerStateImage_MaxSize(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int *widthPtr,
+    int *heightPtr)
+{
+    PerStateDataImage *pData = (PerStateDataImage *) pInfo->data;
+    int i, width, height, w, h;
+
+    width = height = 0;
+
+    for (i = 0; i < pInfo->count; i++, ++pData) {
+	if (pData->image == None)
+	    continue;
+	Tk_SizeOfImage(pData->image, &w, &h);
+	width = MAX(width, w);
+	height = MAX(height, h);
+    }
+
+    (*widthPtr) = width;
+    (*heightPtr) = height;
+}
+
+/*****/
+
+typedef struct PerStateDataRelief PerStateDataRelief;
+struct PerStateDataRelief
+{
+    PerStateData header;
+    int relief;
+};
+
+static int PSDReliefFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataRelief *pRelief)
+{
+    if (ObjectIsEmpty(obj)) {
+	/* Specify empty string to override masterX */
+	pRelief->relief = TK_RELIEF_NULL;
+    } else {
+	if (Tk_GetReliefFromObj(tree->interp, obj, &pRelief->relief) != TCL_OK)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
+{
+}
+
+PerStateType pstRelief =
+{
+#ifdef DEBUG_PSI
+    "Relief",
+#endif
+    sizeof(PerStateDataRelief),
+    (PerStateType_FromObjProc) PSDReliefFromObj,
+    (PerStateType_FreeProc) PSDReliefFree
+};
+
+int PerStateRelief_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataRelief *pData;
+
+    pData = (PerStateDataRelief *) PerStateInfo_ForState(tree, &pstRelief, pInfo, state, match);
+    if (pData != NULL)
+	return pData->relief;
+    return TK_RELIEF_NULL;
+}
+
+/*****/
+
+void PSTSave(
+    PerStateInfo *pInfo,
+    PerStateInfo *pSave)
+{
+#ifdef DEBUG_PSI
+    pSave->type = pInfo->type; /* could be NULL */
+#endif
+    pSave->data = pInfo->data;
+    pSave->count = pInfo->count;
+    pInfo->data = NULL;
+    pInfo->count = 0;
+}
+
+void PSTRestore(
+    TreeCtrl *tree,
+    PerStateType *typePtr,
+    PerStateInfo *pInfo,
+    PerStateInfo *pSave)
+{
+    PerStateInfo_Free(tree, typePtr, pInfo);
+    pInfo->data = pSave->data;
+    pInfo->count = pSave->count;
+}
+
