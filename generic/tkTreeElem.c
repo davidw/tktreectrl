@@ -5,23 +5,11 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.16 2005/05/01 01:36:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.17 2005/05/10 22:17:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
-
-static int ObjectIsEmpty(Tcl_Obj *obj)
-{
-    int length;
-
-    if (obj == NULL)
-	return 1;
-    if (obj->bytes != NULL)
-	return (obj->length == 0);
-    Tcl_GetStringFromObj(obj, &length);
-    return (length == 0);
-}
 
 /* BEGIN custom "boolean" option */
 
@@ -266,634 +254,17 @@ static void StringTableRestore(
 
 /*****/
 
-static int StateFromObj2(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
+int TreeStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
 {
     int states[3];
 
-    states[0] = states[1] = states[2] = 0;
-    if (StateFromObj(tree, obj, states, NULL, SFO_NOT_TOGGLE) != TCL_OK)
+    states[STATE_OP_ON] = states[STATE_OP_OFF] = states[STATE_OP_TOGGLE] = 0;
+    if (Tree_StateFromObj(tree, obj, states, NULL, SFO_NOT_TOGGLE) != TCL_OK)
 	return TCL_ERROR;
 
     (*stateOn) |= states[STATE_OP_ON];
     (*stateOff) |= states[STATE_OP_OFF];
     return TCL_OK;
-}
-
-static void PerStateInfo_Free(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo)
-{
-    PerStateData *pData = pInfo->data;
-    int i;
-
-    if (pInfo->data == NULL)
-	return;
-#ifdef DEBUG_PSI
-    if (pInfo->type != typePtr)
-	panic("PerStateInfo_Free type mismatch: got %s expected %s",
-		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
-#endif
-    for (i = 0; i < pInfo->count; i++) {
-	(*typePtr->freeProc)(tree, pData);
-	pData = (PerStateData *) (((char *) pData) + typePtr->size);
-    }
-    wipefree((char *) pInfo->data, typePtr->size * pInfo->count);
-    pInfo->data = NULL;
-    pInfo->count = 0;
-}
-
-static int PerStateInfo_FromObj(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo)
-{
-    int i, j;
-    int objc, objc2;
-    Tcl_Obj **objv, **objv2;
-    PerStateData *pData;
-
-#ifdef DEBUG_PSI
-    pInfo->type = typePtr;
-#endif
-
-    PerStateInfo_Free(tree, typePtr, pInfo);
-
-    if (pInfo->obj == NULL)
-	return TCL_OK;
-
-    if (Tcl_ListObjGetElements(tree->interp, pInfo->obj, &objc, &objv) != TCL_OK)
-	return TCL_ERROR;
-
-    if (objc == 0)
-	return TCL_OK;
-
-    if (objc == 1) {
-	pData = (PerStateData *) ckalloc(typePtr->size);
-	pData->stateOff = pData->stateOn = 0; /* all states */
-	if ((*typePtr->fromObjProc)(tree, objv[0], pData) != TCL_OK) {
-	    wipefree((char *) pData, typePtr->size);
-	    return TCL_ERROR;
-	}
-	pInfo->data = pData;
-	pInfo->count = 1;
-	return TCL_OK;
-    }
-
-    if (objc & 1) {
-	FormatResult(tree->interp, "list must have even number of elements");
-	return TCL_ERROR;
-    }
-
-    pData = (PerStateData *) ckalloc(typePtr->size * (objc / 2));
-    pInfo->data = pData;
-    for (i = 0; i < objc; i += 2) {
-	if ((*typePtr->fromObjProc)(tree, objv[i], pData) != TCL_OK) {
-	    PerStateInfo_Free(tree, typePtr, pInfo);
-	    return TCL_ERROR;
-	}
-	pInfo->count++;
-	if (Tcl_ListObjGetElements(tree->interp, objv[i + 1], &objc2, &objv2) != TCL_OK) {
-	    PerStateInfo_Free(tree, typePtr, pInfo);
-	    return TCL_ERROR;
-	}
-	pData->stateOff = pData->stateOn = 0; /* all states */
-	for (j = 0; j < objc2; j++) {
-	    if (StateFromObj2(tree, objv2[j], &pData->stateOff, &pData->stateOn) != TCL_OK) {
-		PerStateInfo_Free(tree, typePtr, pInfo);
-		return TCL_ERROR;
-	    }
-	}
-	pData = (PerStateData *) (((char *) pData) + typePtr->size);
-    }
-    return TCL_OK;
-}
-
-static PerStateData *PerStateInfo_ForState(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateData *pData = pInfo->data;
-    int stateOff = ~state, stateOn = state;
-    int i;
-
-#ifdef DEBUG_PSI
-    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
-	panic("PerStateInfo_ForState type mismatch: got %s expected %s",
-		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
-#endif
-
-    for (i = 0; i < pInfo->count; i++) {
-	/* Any state */
-	if ((pData->stateOff == 0) &&
-		(pData->stateOn == 0)) {
-	    (*match) = MATCH_ANY;
-	    return pData;
-	}
-
-	/* Exact match */
-	if ((pData->stateOff == stateOff) &&
-		(pData->stateOn == stateOn)) {
-	    (*match) = MATCH_EXACT;
-	    return pData;
-	}
-
-	/* Partial match */
-	if (((pData->stateOff & stateOff) == pData->stateOff) &&
-		((pData->stateOn & stateOn) == pData->stateOn)) {
-	    (*match) = MATCH_PARTIAL;
-	    return pData;
-	}
-
-	pData = (PerStateData *) (((char *) pData) + typePtr->size);
-    }
-
-    (*match) = MATCH_NONE;
-    return NULL;
-}
-
-static Tcl_Obj *PerStateInfo_ObjForState(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateData *pData;
-    Tcl_Obj *obj;
-    int i;
-
-#ifdef DEBUG_PSI
-    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
-	panic("PerStateInfo_ObjForState type mismatch: got %s expected %s",
-		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
-#endif
-
-    pData = PerStateInfo_ForState(tree, typePtr, pInfo, state, match);
-    if (pData != NULL) {
-	i = ((char *) pData - (char *) pInfo->data) / typePtr->size;
-	Tcl_ListObjIndex(tree->interp, pInfo->obj, i * 2, &obj);
-	return obj;
-    }
-
-    return NULL;
-}
-
-static void PerStateInfo_Undefine(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state)
-{
-    PerStateData *pData = pInfo->data;
-    int i, j, numStates, stateOff, stateOn;
-    Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
-
-#ifdef DEBUG_PSI
-    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
-	panic("PerStateInfo_Undefine type mismatch: got %s expected %s",
-		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
-#endif
-
-    for (i = 0; i < pInfo->count; i++) {
-	if ((pData->stateOff | pData->stateOn) & state) {
-	    pData->stateOff &= ~state;
-	    pData->stateOn &= ~state;
-	    if (Tcl_IsShared(configObj)) {
-		configObj = Tcl_DuplicateObj(configObj);
-		Tcl_DecrRefCount(pInfo->obj);
-		Tcl_IncrRefCount(configObj);
-		pInfo->obj = configObj;
-	    }
-	    Tcl_ListObjIndex(tree->interp, configObj, i * 2 + 1, &listObj);
-	    if (Tcl_IsShared(listObj)) {
-		listObj = Tcl_DuplicateObj(listObj);
-		Tcl_ListObjReplace(tree->interp, configObj, i * 2 + 1, 1, 1, &listObj);
-	    }
-	    Tcl_ListObjLength(tree->interp, listObj, &numStates);
-	    for (j = 0; j < numStates; ) {
-		Tcl_ListObjIndex(tree->interp, listObj, j, &stateObj);
-		stateOff = stateOn = 0;
-		StateFromObj2(tree, stateObj, &stateOff, &stateOn);
-		if ((stateOff | stateOn) & state) {
-		    Tcl_ListObjReplace(tree->interp, listObj, j, 1, 0, NULL);
-		    numStates--;
-		} else
-		    j++;
-	    }
-	    /* Given {bitmap {state1 state2 state3}}, we just invalidated
-	     * the string rep of the sublist {state1 ...}, but not
-	     * the parent list */
-	    Tcl_InvalidateStringRep(configObj);
-	}
-	pData = (PerStateData *) (((char *) pData) + typePtr->size);
-    }
-}
-
-/*****/
-
-struct PerStateGC
-{
-    unsigned long mask;
-    XGCValues gcValues;
-    GC gc;
-    struct PerStateGC *next;
-};
-
-void PerStateGC_Free(TreeCtrl *tree, struct PerStateGC **pGCPtr)
-{
-    struct PerStateGC *pGC = (*pGCPtr), *next;
-
-    while (pGC != NULL) {
-	next = pGC->next;
-	Tk_FreeGC(tree->display, pGC->gc);
-	WFREE(pGC, struct PerStateGC);
-	pGC = next;
-    }
-    (*pGCPtr) = NULL;
-}
-
-GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask, XGCValues *gcValues)
-{
-    struct PerStateGC *pGC;
-
-    if ((mask | (GCFont | GCForeground | GCBackground | GCGraphicsExposures)) != 
-	    (GCFont | GCForeground | GCBackground | GCGraphicsExposures))
-	panic("PerStateGC_Get: unsupported mask");
-
-    for (pGC = (*pGCPtr); pGC != NULL; pGC = pGC->next) {
-	if (mask != pGC->mask)
-	    continue;
-	if ((mask & GCFont) &&
-		(pGC->gcValues.font != gcValues->font))
-	    continue;
-	if ((mask & GCForeground) &&
-		(pGC->gcValues.foreground != gcValues->foreground))
-	    continue;
-	if ((mask & GCBackground) &&
-		(pGC->gcValues.background != gcValues->background))
-	    continue;
-	if ((mask & GCGraphicsExposures) &&
-		(pGC->gcValues.graphics_exposures != gcValues->graphics_exposures))
-	    continue;
-	return pGC->gc;
-    }
-
-    pGC = (struct PerStateGC *) ckalloc(sizeof(*pGC));
-    pGC->gcValues = (*gcValues);
-    pGC->mask = mask;
-    pGC->gc = Tk_GetGC(tree->tkwin, mask, gcValues);
-    pGC->next = (*pGCPtr);
-    (*pGCPtr) = pGC;
-
-    return pGC->gc;
-}
-
-/*****/
-
-typedef struct PerStateDataBitmap PerStateDataBitmap;
-struct PerStateDataBitmap
-{
-    PerStateData header;
-    Pixmap bitmap;
-};
-
-static int BitmapFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBitmap *pBitmap)
-{
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pBitmap->bitmap = None;
-    } else {
-	pBitmap->bitmap = Tk_AllocBitmapFromObj(tree->interp, tree->tkwin, obj);
-	if (pBitmap->bitmap == None)
-	    return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void BitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
-{
-    if (pBitmap->bitmap != None)
-	Tk_FreeBitmap(tree->display, pBitmap->bitmap);
-}
-
-PerStateType pstBitmap =
-{
-#ifdef DEBUG_PSI
-    "Bitmap",
-#endif
-    sizeof(PerStateDataBitmap),
-    (PerStateType_FromObjProc) BitmapFromObj,
-    (PerStateType_FreeProc) BitmapFree
-};
-
-static Pixmap PerStateBitmap_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataBitmap *pData;
-
-    pData = (PerStateDataBitmap *) PerStateInfo_ForState(tree, &pstBitmap, pInfo, state, match);
-    if (pData != NULL)
-	return pData->bitmap;
-    return None;
-}
-
-/*****/
-
-typedef struct PerStateDataBorder PerStateDataBorder;
-struct PerStateDataBorder
-{
-    PerStateData header;
-    Tk_3DBorder border;
-};
-
-static int BorderFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBorder *pBorder)
-{
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pBorder->border = NULL;
-    } else {
-	pBorder->border = Tk_Alloc3DBorderFromObj(tree->interp, tree->tkwin, obj);
-	if (pBorder->border == NULL)
-	    return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void BorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
-{
-    if (pBorder->border != NULL)
-	Tk_Free3DBorder(pBorder->border);
-}
-
-PerStateType pstBorder =
-{
-#ifdef DEBUG_PSI
-    "Border",
-#endif
-    sizeof(PerStateDataBorder),
-    (PerStateType_FromObjProc) BorderFromObj,
-    (PerStateType_FreeProc) BorderFree
-};
-
-static Tk_3DBorder PerStateBorder_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataBorder *pData;
-
-    pData = (PerStateDataBorder *) PerStateInfo_ForState(tree, &pstBorder, pInfo, state, match);
-    if (pData != NULL)
-	return pData->border;
-    return NULL;
-}
-
-/*****/
-
-typedef struct PerStateDataColor PerStateDataColor;
-struct PerStateDataColor
-{
-    PerStateData header;
-    XColor *color;
-};
-
-static int ColorFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataColor *pColor)
-{
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pColor->color = NULL;
-    } else {
-	pColor->color = Tk_AllocColorFromObj(tree->interp, tree->tkwin, obj);
-	if (pColor->color == NULL)
-	    return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void ColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
-{
-    if (pColor->color != NULL)
-	Tk_FreeColor(pColor->color);
-}
-
-PerStateType pstColor =
-{
-#ifdef DEBUG_PSI
-    "Color",
-#endif
-    sizeof(PerStateDataColor),
-    (PerStateType_FromObjProc) ColorFromObj,
-    (PerStateType_FreeProc) ColorFree
-};
-
-static XColor *PerStateColor_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataColor *pData;
-
-    pData = (PerStateDataColor *) PerStateInfo_ForState(tree, &pstColor, pInfo, state, match);
-    if (pData != NULL)
-	return pData->color;
-    return NULL;
-}
-
-/*****/
-
-typedef struct PerStateDataFont PerStateDataFont;
-struct PerStateDataFont
-{
-    PerStateData header;
-    Tk_Font tkfont;
-};
-
-static int FontFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataFont *pFont)
-{
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pFont->tkfont = NULL;
-    } else {
-	pFont->tkfont = Tk_AllocFontFromObj(tree->interp, tree->tkwin, obj);
-	if (pFont->tkfont == NULL)
-	    return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void FontFree(TreeCtrl *tree, PerStateDataFont *pFont)
-{
-    if (pFont->tkfont != NULL)
-	Tk_FreeFont(pFont->tkfont);
-}
-
-PerStateType pstFont =
-{
-#ifdef DEBUG_PSI
-    "Font",
-#endif
-    sizeof(PerStateDataFont),
-    (PerStateType_FromObjProc) FontFromObj,
-    (PerStateType_FreeProc) FontFree
-};
-
-static Tk_Font PerStateFont_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataFont *pData;
-
-    pData = (PerStateDataFont *) PerStateInfo_ForState(tree, &pstFont, pInfo, state, match);
-    if (pData != NULL)
-	return pData->tkfont;
-    return NULL;
-}
-
-/*****/
-
-typedef struct PerStateDataImage PerStateDataImage;
-struct PerStateDataImage
-{
-    PerStateData header;
-    Tk_Image image;
-    char *string;
-};
-
-static int ImageFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataImage *pImage)
-{
-    int length;
-    char *string;
-
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pImage->image = NULL;
-	pImage->string = NULL;
-    } else {
-	string = Tcl_GetStringFromObj(obj, &length);
-	pImage->image = Tree_GetImage(tree, string);
-	if (pImage->image == NULL)
-	    return TCL_ERROR;
-	pImage->string = ckalloc(length + 1);
-	strcpy(pImage->string, string);
-    }
-    return TCL_OK;
-}
-
-static void ImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
-{
-    if (pImage->string != NULL)
-	ckfree(pImage->string);
-    /* don't free image */
-}
-
-PerStateType pstImage =
-{
-#ifdef DEBUG_PSI
-    "Image",
-#endif
-    sizeof(PerStateDataImage),
-    (PerStateType_FromObjProc) ImageFromObj,
-    (PerStateType_FreeProc) ImageFree
-};
-
-static Tk_Image PerStateImage_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataImage *pData;
-
-    pData = (PerStateDataImage *) PerStateInfo_ForState(tree, &pstImage, pInfo, state, match);
-    if (pData != NULL)
-	return pData->image;
-    return NULL;
-}
-
-/*****/
-
-typedef struct PerStateDataRelief PerStateDataRelief;
-struct PerStateDataRelief
-{
-    PerStateData header;
-    int relief;
-};
-
-static int ReliefFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataRelief *pRelief)
-{
-    if (ObjectIsEmpty(obj)) {
-	/* Specify empty string to override masterX */
-	pRelief->relief = TK_RELIEF_NULL;
-    } else {
-	if (Tk_GetReliefFromObj(tree->interp, obj, &pRelief->relief) != TCL_OK)
-	    return TCL_ERROR;
-    }
-    return TCL_OK;
-}
-
-static void ReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
-{
-}
-
-PerStateType pstRelief =
-{
-#ifdef DEBUG_PSI
-    "Relief",
-#endif
-    sizeof(PerStateDataRelief),
-    (PerStateType_FromObjProc) ReliefFromObj,
-    (PerStateType_FreeProc) ReliefFree
-};
-
-static int PerStateRelief_ForState(
-    TreeCtrl *tree,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
-{
-    PerStateDataRelief *pData;
-
-    pData = (PerStateDataRelief *) PerStateInfo_ForState(tree, &pstRelief, pInfo, state, match);
-    if (pData != NULL)
-	return pData->relief;
-    return TK_RELIEF_NULL;
-}
-
-/*****/
-
-void PSTSave(
-    PerStateInfo *pInfo,
-    PerStateInfo *pSave)
-{
-#ifdef DEBUG_PSI
-    pSave->type = pInfo->type; /* could be NULL */
-#endif
-    pSave->data = pInfo->data;
-    pSave->count = pInfo->count;
-    pInfo->data = NULL;
-    pInfo->count = 0;
-}
-
-void PSTRestore(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    PerStateInfo *pSave)
-{
-    PerStateInfo_Free(tree, typePtr, pInfo);
-    pInfo->data = pSave->data;
-    pInfo->count = pSave->count;
 }
 
 /*****/
@@ -926,7 +297,7 @@ static Tk_OptionSpec bitmapOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void ElemDeleteBitmap(ElementArgs *args)
+static void DeleteProcBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -937,7 +308,7 @@ static void ElemDeleteBitmap(ElementArgs *args)
     PerStateInfo_Free(tree, &pstColor, &elemX->bg);
 }
 
-static int WorldChangedBitmap(ElementArgs *args)
+static int WorldChangedProcBitmap(ElementArgs *args)
 {
     int flagM = args->change.flagMaster;
     int flagS = args->change.flagSelf;
@@ -952,7 +323,7 @@ static int WorldChangedBitmap(ElementArgs *args)
     return mask;
 }
 
-static int ElemConfigBitmap(ElementArgs *args)
+static int ConfigProcBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -980,17 +351,17 @@ static int ElemConfigBitmap(ElementArgs *args)
 		PSTSave(&elemX->bg, &savedX.bg);
 
 	    if (args->config.flagSelf & BITMAP_CONF_BITMAP) {
-		if (PerStateInfo_FromObj(tree, &pstBitmap, &elemX->bitmap) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap, &elemX->bitmap) != TCL_OK)
 		    continue;
 	    }
 
 	    if (args->config.flagSelf & BITMAP_CONF_FG) {
-		if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fg) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fg) != TCL_OK)
 		    continue;
 	    }
 
 	    if (args->config.flagSelf & BITMAP_CONF_BG) {
-		if (PerStateInfo_FromObj(tree, &pstColor, &elemX->bg) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->bg) != TCL_OK)
 		    continue;
 	    }
 
@@ -1025,12 +396,12 @@ static int ElemConfigBitmap(ElementArgs *args)
     return TCL_OK;
 }
 
-static int ElemCreateBitmap(ElementArgs *args)
+static int CreateProcBitmap(ElementArgs *args)
 {
     return TCL_OK;
 }
 
-static void ElemDisplayBitmap(ElementArgs *args)
+static void DisplayProcBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1109,7 +480,7 @@ static void ElemDisplayBitmap(ElementArgs *args)
     }
 }
 
-static void ElemLayoutBitmap(ElementArgs *args)
+static void LayoutProcBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1296,15 +667,15 @@ ElementType elemTypeBitmap = {
     sizeof(ElementBitmap),
     bitmapOptionSpecs,
     NULL,
-    ElemCreateBitmap,
-    ElemDeleteBitmap,
-    ElemConfigBitmap,
-    ElemDisplayBitmap,
-    ElemLayoutBitmap,
-    WorldChangedBitmap,
+    CreateProcBitmap,
+    DeleteProcBitmap,
+    ConfigProcBitmap,
+    DisplayProcBitmap,
+    LayoutProcBitmap,
+    WorldChangedProcBitmap,
     StateProcBitmap,
     UndefProcBitmap,
-    ActualProcBitmap
+    ActualProcBitmap,
 };
 
 /*****/
@@ -1357,7 +728,7 @@ static Tk_OptionSpec borderOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void DeleteBorder(ElementArgs *args)
+static void DeleteProcBorder(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1367,7 +738,7 @@ static void DeleteBorder(ElementArgs *args)
     PerStateInfo_Free(tree, &pstRelief, &elemX->relief);
 }
 
-static int WorldChangedBorder(ElementArgs *args)
+static int WorldChangedProcBorder(ElementArgs *args)
 {
     int flagM = args->change.flagMaster;
     int flagS = args->change.flagSelf;
@@ -1383,7 +754,7 @@ static int WorldChangedBorder(ElementArgs *args)
     return mask;
 }
 
-static int ConfigBorder(ElementArgs *args)
+static int ConfigProcBorder(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1409,12 +780,12 @@ static int ConfigBorder(ElementArgs *args)
 		PSTSave(&elemX->relief, &savedX.relief);
 
 	    if (args->config.flagSelf & BORDER_CONF_BG) {
-		if (PerStateInfo_FromObj(tree, &pstBorder, &elemX->border) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBorder, &elemX->border) != TCL_OK)
 		    continue;
 	    }
 
 	    if (args->config.flagSelf & BORDER_CONF_RELIEF) {
-		if (PerStateInfo_FromObj(tree, &pstRelief, &elemX->relief) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstRelief, &elemX->relief) != TCL_OK)
 		    continue;
 	    }
 
@@ -1444,7 +815,7 @@ static int ConfigBorder(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateBorder(ElementArgs *args)
+static int CreateProcBorder(ElementArgs *args)
 {
     Element *elem = args->elem;
     ElementBorder *elemX = (ElementBorder *) elem;
@@ -1453,7 +824,7 @@ static int CreateBorder(ElementArgs *args)
     return TCL_OK;
 }
 
-static void DisplayBorder(ElementArgs *args)
+static void DisplayProcBorder(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1509,7 +880,7 @@ static void DisplayBorder(ElementArgs *args)
     }
 }
 
-static void LayoutBorder(ElementArgs *args)
+static void LayoutProcBorder(ElementArgs *args)
 {
     Element *elem = args->elem;
     ElementBorder *elemX = (ElementBorder *) elem;
@@ -1648,16 +1019,347 @@ ElementType elemTypeBorder = {
     sizeof(ElementBorder),
     borderOptionSpecs,
     NULL,
-    CreateBorder,
-    DeleteBorder,
-    ConfigBorder,
-    DisplayBorder,
-    LayoutBorder,
-    WorldChangedBorder,
+    CreateProcBorder,
+    DeleteProcBorder,
+    ConfigProcBorder,
+    DisplayProcBorder,
+    LayoutProcBorder,
+    WorldChangedProcBorder,
     StateProcBorder,
     UndefProcBorder,
     ActualProcBorder
 };
+
+/*****/
+#if 0
+
+static CONST char *chkbutStateST[] = {
+    "checked", "mixed", "normal", "active", "pressed", "disabled", (char *) NULL
+};
+
+typedef struct ElementCheckButton ElementCheckButton;
+
+struct ElementCheckButton
+{
+    Element header;
+    PerStateInfo image;
+    int state;
+};
+
+#define CHKBUT_CONF_IMAGE 0x0001
+#define CHKBUT_CONF_STATE 0x0002
+
+static Tk_OptionSpec chkbutOptionSpecs[] = {
+    {TK_OPTION_STRING, "-image", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementCheckButton, image.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, CHKBUT_CONF_IMAGE},
+    {TK_OPTION_STRING_TABLE, "-state", (char *) NULL, (char *) NULL,
+     "normal", -1, Tk_Offset(ElementCheckButton, state),
+     0, (ClientData) chkbutStateST, CHKBUT_CONF_STATE},
+    {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
+     (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
+};
+
+static void DeleteProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementCheckButton *elemX = (ElementCheckButton *) elem;
+
+    PerStateInfo_Free(tree, &pstImage, &elemX->image);
+}
+
+static int WorldChangedProcCheckButton(ElementArgs *args)
+{
+    int flagM = args->change.flagMaster;
+    int flagS = args->change.flagSelf;
+    int mask = 0;
+
+    if ((flagS | flagM) & (CHKBUT_CONF_IMAGE | CHKBUT_CONF_STATE))
+	mask |= CS_DISPLAY | CS_LAYOUT;
+
+    return mask;
+}
+
+static int ChkButStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
+{
+    Tcl_Interp *interp = tree->interp;
+    int i, op = STATE_OP_ON, op2, op3, length, state = 0;
+    char ch0, *string;
+    int states[3];
+
+    states[STATE_OP_ON] = 0;
+    states[STATE_OP_OFF] = 0;
+    states[STATE_OP_TOGGLE] = 0;
+
+    string = Tcl_GetStringFromObj(obj, &length);
+    if (length == 0)
+	goto unknown;
+    ch0 = string[0];
+    if (ch0 == '!') {
+	op = STATE_OP_OFF;
+	++string;
+	ch0 = string[0];
+    } else if (ch0 == '~') {
+	if (1) {
+	    FormatResult(interp, "can't specify '~' for this command");
+	    return TCL_ERROR;
+	}
+	op = STATE_OP_TOGGLE;
+	++string;
+	ch0 = string[0];
+    }
+    for (i = 0; chkbutStateST[i] != NULL; i++) {
+	if ((ch0 == chkbutStateST[i][0]) && !strcmp(string, chkbutStateST[i])) {
+	    state = 1L << i;
+	    break;
+	}
+    }
+    if (state == 0)
+	goto unknown;
+
+    if (op == STATE_OP_ON) {
+	op2 = STATE_OP_OFF;
+	op3 = STATE_OP_TOGGLE;
+    }
+    else if (op == STATE_OP_OFF) {
+	op2 = STATE_OP_ON;
+	op3 = STATE_OP_TOGGLE;
+    } else {
+	op2 = STATE_OP_ON;
+	op3 = STATE_OP_OFF;
+    }
+    states[op2] &= ~state;
+    states[op3] &= ~state;
+    states[op] |= state;
+
+    *stateOn |= states[STATE_OP_ON];
+    *stateOff |= states[STATE_OP_OFF];
+
+    return TCL_OK;
+
+unknown:
+    FormatResult(interp, "unknown state \"%s\"", string);
+    return TCL_ERROR;
+}
+
+static int ConfigProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementCheckButton *elemX = (ElementCheckButton *) elem;
+    ElementCheckButton savedX;
+    Tk_SavedOptions savedOptions;
+    int error;
+    Tcl_Obj *errorResult = NULL;
+
+    for (error = 0; error <= 1; error++) {
+	if (error == 0) {
+	    if (Tk_SetOptions(tree->interp, (char *) elemX,
+			elem->typePtr->optionTable,
+			args->config.objc, args->config.objv, tree->tkwin,
+			&savedOptions, &args->config.flagSelf) != TCL_OK) {
+		args->config.flagSelf = 0;
+		continue;
+	    }
+
+	    if (args->config.flagSelf & CHKBUT_CONF_IMAGE)
+		PSTSave(&elemX->image, &savedX.image);
+
+	    if (args->config.flagSelf & CHKBUT_CONF_IMAGE) {
+		if (PerStateInfo_FromObj(tree, ChkButStateFromObj, &pstImage, &elemX->image) != TCL_OK)
+		    continue;
+	    }
+
+	    if (args->config.flagSelf & CHKBUT_CONF_IMAGE)
+		PerStateInfo_Free(tree, &pstImage, &savedX.image);
+	    Tk_FreeSavedOptions(&savedOptions);
+	    break;
+	} else {
+	    errorResult = Tcl_GetObjResult(tree->interp);
+	    Tcl_IncrRefCount(errorResult);
+	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & CHKBUT_CONF_IMAGE)
+		PSTRestore(tree, &pstImage, &elemX->image, &savedX.image);
+
+	    Tcl_SetObjResult(tree->interp, errorResult);
+	    Tcl_DecrRefCount(errorResult);
+	    return TCL_ERROR;
+	}
+    }
+
+    return TCL_OK;
+}
+
+static int CreateProcCheckButton(ElementArgs *args)
+{
+    return TCL_OK;
+}
+
+static void DisplayProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementCheckButton *elemX = (ElementCheckButton *) elem;
+    ElementCheckButton *masterX = (ElementCheckButton *) elem->master;
+    int state = args->state;
+    int match, matchM;
+    Tk_Image image;
+    int imgW, imgH;
+    int dx = 0, dy = 0;
+
+    image = PerStateImage_ForState(tree, &elemX->image, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	Tk_Image imageM = PerStateImage_ForState(tree, &masterX->image,
+		state, &matchM);
+	if (matchM > match)
+	    image = imageM;
+    }
+
+    if (image != NULL) {
+	Tk_SizeOfImage(image, &imgW, &imgH);
+	if (imgW < args->display.width)
+	    dx = (args->display.width - imgW) / 2;
+	else if (imgW > args->display.width)
+	    imgW = args->display.width;
+	if (imgH < args->display.height)
+	    dy = (args->display.height - imgH) / 2;
+	else if (imgH > args->display.height)
+	    imgH = args->display.height;
+	Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable,
+		args->display.x /* + args->display.pad[LEFT] */ + dx,
+		args->display.y /* + args->display.pad[TOP] */ + dy);
+    }
+}
+
+static void LayoutProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementCheckButton *elemX = (ElementCheckButton *) elem;
+    ElementCheckButton *masterX = (ElementCheckButton *) elem->master;
+    int state = args->state;
+    int match, match2;
+    Tk_Image image;
+    int width = 0, height = 0;
+
+    image = PerStateImage_ForState(tree, &elemX->image, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	Tk_Image image2 = PerStateImage_ForState(tree, &masterX->image,
+		state, &match2);
+	if (match2 > match)
+	    image = image2;
+    }
+
+    if (image != NULL)
+	Tk_SizeOfImage(image, &width, &height);
+
+    args->layout.width = width;
+    args->layout.height = height;
+}
+
+static int StateProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementCheckButton *elemX = (ElementCheckButton *) elem;
+    ElementCheckButton *masterX = (ElementCheckButton *) elem->master;
+    int match, match2;
+    Tk_Image image1, image2;
+    int mask = 0;
+
+    image1 = PerStateImage_ForState(tree, &elemX->image,
+	    args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	Tk_Image image = PerStateImage_ForState(tree, &masterX->image, args->states.state1, &match2);
+	if (match2 > match)
+	    image1 = image;
+    }
+
+    image2 = PerStateImage_ForState(tree, &elemX->image,
+	    args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	Tk_Image image = PerStateImage_ForState(tree, &masterX->image,
+		args->states.state2, &match2);
+	if (match2 > match)
+	    image2 = image;
+    }
+
+    if (image1 != image2) {
+	mask |= CS_DISPLAY;
+	if ((image1 != NULL) && (image2 != NULL)) {
+	    int w1, h1, w2, h2;
+	    Tk_SizeOfImage(image1, &w1, &h1);
+	    Tk_SizeOfImage(image2, &w2, &h2);
+	    if ((w1 != w2) || (h1 != h2))
+		mask |= CS_LAYOUT;
+	} else
+	    mask |= CS_LAYOUT;
+    }
+
+    return mask;
+}
+
+static void UndefProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    ElementCheckButton *elemX = (ElementCheckButton *) args->elem;
+
+    PerStateInfo_Undefine(tree, &pstImage, &elemX->image, args->state);
+}
+
+static int ActualProcCheckButton(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    ElementCheckButton *elemX = (ElementCheckButton *) args->elem;
+    ElementCheckButton *masterX = (ElementCheckButton *) args->elem->master;
+    static CONST char *optionName[] = {
+	"-image",
+	(char *) NULL };
+    int index, match, matchM;
+    Tcl_Obj *obj = NULL, *objM;
+
+    if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
+		"option", 0, &index) != TCL_OK)
+	return TCL_ERROR;
+
+    switch (index) {
+	case 0:
+	{
+	    obj = PerStateInfo_ObjForState(tree, &pstImage,
+		    &elemX->image, args->state, &match);
+	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+		objM = PerStateInfo_ObjForState(tree, &pstImage,
+			&masterX->image, args->state, &matchM);
+		if (matchM > match)
+		    obj = objM;
+	    }
+	    break;
+	}
+    }
+    if (obj != NULL)
+	Tcl_SetObjResult(tree->interp, obj);
+    return TCL_OK;
+}
+
+ElementType elemTypeCheckButton = {
+    "checkbutton",
+    sizeof(ElementCheckButton),
+    chkbutOptionSpecs,
+    NULL,
+    CreateProcCheckButton,
+    DeleteProcCheckButton,
+    ConfigProcCheckButton,
+    DisplayProcCheckButton,
+    LayoutProcCheckButton,
+    WorldChangedProcCheckButton,
+    StateProcCheckButton,
+    UndefProcCheckButton,
+    ActualProcCheckButton,
+};
+
+#endif
 
 /*****/
 
@@ -1692,7 +1394,7 @@ static Tk_OptionSpec imageOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void DeleteImage(ElementArgs *args)
+static void DeleteProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1701,7 +1403,7 @@ static void DeleteImage(ElementArgs *args)
     PerStateInfo_Free(tree, &pstImage, &elemX->image);
 }
 
-static int WorldChangedImage(ElementArgs *args)
+static int WorldChangedProcImage(ElementArgs *args)
 {
     int flagM = args->change.flagMaster;
     int flagS = args->change.flagSelf;
@@ -1713,7 +1415,7 @@ static int WorldChangedImage(ElementArgs *args)
     return mask;
 }
 
-static int ConfigImage(ElementArgs *args)
+static int ConfigProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1737,7 +1439,7 @@ static int ConfigImage(ElementArgs *args)
 		PSTSave(&elemX->image, &savedX.image);
 
 	    if (args->config.flagSelf & IMAGE_CONF_IMAGE) {
-		if (PerStateInfo_FromObj(tree, &pstImage, &elemX->image) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstImage, &elemX->image) != TCL_OK)
 		    continue;
 	    }
 
@@ -1762,12 +1464,12 @@ static int ConfigImage(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateImage(ElementArgs *args)
+static int CreateProcImage(ElementArgs *args)
 {
     return TCL_OK;
 }
 
-static void DisplayImage(ElementArgs *args)
+static void DisplayProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1803,7 +1505,7 @@ static void DisplayImage(ElementArgs *args)
     }
 }
 
-static void LayoutImage(ElementArgs *args)
+static void LayoutProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1927,15 +1629,15 @@ ElementType elemTypeImage = {
     sizeof(ElementImage),
     imageOptionSpecs,
     NULL,
-    CreateImage,
-    DeleteImage,
-    ConfigImage,
-    DisplayImage,
-    LayoutImage,
-    WorldChangedImage,
+    CreateProcImage,
+    DeleteProcImage,
+    ConfigProcImage,
+    DisplayProcImage,
+    LayoutProcImage,
+    WorldChangedProcImage,
     StateProcImage,
     UndefProcImage,
-    ActualProcImage
+    ActualProcImage,
 };
 
 /*****/
@@ -1994,7 +1696,7 @@ static Tk_OptionSpec rectOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void DeleteRect(ElementArgs *args)
+static void DeleteProcRect(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     ElementRect *elemX = (ElementRect *) args->elem;
@@ -2003,7 +1705,7 @@ static void DeleteRect(ElementArgs *args)
     PerStateInfo_Free(tree, &pstColor, &elemX->outline);
 }
 
-static int WorldChangedRect(ElementArgs *args)
+static int WorldChangedProcRect(ElementArgs *args)
 {
     int flagM = args->change.flagMaster;
     int flagS = args->change.flagSelf;
@@ -2019,7 +1721,7 @@ static int WorldChangedRect(ElementArgs *args)
     return mask;
 }
 
-static int ConfigRect(ElementArgs *args)
+static int ConfigProcRect(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2048,12 +1750,12 @@ static int ConfigRect(ElementArgs *args)
 		savedX.open = elemX->open;
 
 	    if (args->config.flagSelf & RECT_CONF_FILL) {
-		if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fill) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
 		    continue;
 	    }
 
 	    if (args->config.flagSelf & RECT_CONF_OUTLINE) {
-		if (PerStateInfo_FromObj(tree, &pstColor, &elemX->outline) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->outline) != TCL_OK)
 		    continue;
 	    }
 
@@ -2116,7 +1818,7 @@ static int ConfigRect(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateRect(ElementArgs *args)
+static int CreateProcRect(ElementArgs *args)
 {
     ElementRect *elemX = (ElementRect *) args->elem;
 
@@ -2124,7 +1826,7 @@ static int CreateRect(ElementArgs *args)
     return TCL_OK;
 }
 
-static void DisplayRect(ElementArgs *args)
+static void DisplayProcRect(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2214,7 +1916,7 @@ static void DisplayRect(ElementArgs *args)
     }
 }
 
-static void LayoutRect(ElementArgs *args)
+static void LayoutProcRect(ElementArgs *args)
 {
     Element *elem = args->elem;
     ElementRect *elemX = (ElementRect *) elem;
@@ -2361,12 +2063,12 @@ ElementType elemTypeRect = {
     sizeof(ElementRect),
     rectOptionSpecs,
     NULL,
-    CreateRect,
-    DeleteRect,
-    ConfigRect,
-    DisplayRect,
-    LayoutRect,
-    WorldChangedRect,
+    CreateProcRect,
+    DeleteProcRect,
+    ConfigProcRect,
+    DisplayProcRect,
+    LayoutProcRect,
+    WorldChangedProcRect,
     StateProcRect,
     UndefProcRect,
     ActualProcRect
@@ -2526,7 +2228,7 @@ static Tk_OptionSpec textOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
-static int WorldChangedText(ElementArgs *args)
+static int WorldChangedProcText(ElementArgs *args)
 {
 /*	TreeCtrl *tree = args->tree;*/
     Element *elem = args->elem;
@@ -2797,7 +2499,7 @@ static void TextUpdateLayout(ElementArgs *args)
 	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
 }
 
-static void DeleteText(ElementArgs *args)
+static void DeleteProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2817,7 +2519,7 @@ static void DeleteText(ElementArgs *args)
 	TextLayout_Free(elemX->layout);
 }
 
-static int ConfigText(ElementArgs *args)
+static int ConfigProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2843,12 +2545,12 @@ static int ConfigText(ElementArgs *args)
 		PSTSave(&elemX->font, &savedX.font);
 
 	    if (args->config.flagSelf & TEXT_CONF_FILL) {
-		if (PerStateInfo_FromObj(tree, &pstColor, &elemX->fill) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
 		    continue;
 	    }
 
 	    if (args->config.flagSelf & TEXT_CONF_FONT) {
-		if (PerStateInfo_FromObj(tree, &pstFont, &elemX->font) != TCL_OK)
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstFont, &elemX->font) != TCL_OK)
 		    continue;
 	    }
 
@@ -2878,7 +2580,7 @@ static int ConfigText(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateText(ElementArgs *args)
+static int CreateProcText(ElementArgs *args)
 {
     ElementText *elemX = (ElementText *) args->elem;
 
@@ -2891,7 +2593,7 @@ static int CreateText(ElementArgs *args)
     return TCL_OK;
 }
 
-static void DisplayText(ElementArgs *args)
+static void DisplayProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2968,7 +2670,7 @@ static void DisplayText(ElementArgs *args)
 
     pixelsForText = args->display.width /* - args->display.pad[LEFT] -
 					   args->display.pad[RIGHT] */;
-    bytesThatFit = Ellipsis(tkfont, text, textLen, &pixelsForText, ellipsis);
+    bytesThatFit = Ellipsis(tkfont, text, textLen, &pixelsForText, ellipsis, FALSE);
     if (bytesThatFit != textLen) {
 	char staticStr[256], *buf = staticStr;
 	int bufLen = abs(bytesThatFit);
@@ -2993,7 +2695,7 @@ static void DisplayText(ElementArgs *args)
     }
 }
 
-static void LayoutText(ElementArgs *args)
+static void LayoutProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -3237,15 +2939,357 @@ ElementType elemTypeText = {
     sizeof(ElementText),
     textOptionSpecs,
     NULL,
-    CreateText,
-    DeleteText,
-    ConfigText,
-    DisplayText,
-    LayoutText,
-    WorldChangedText,
+    CreateProcText,
+    DeleteProcText,
+    ConfigProcText,
+    DisplayProcText,
+    LayoutProcText,
+    WorldChangedProcText,
     StateProcText,
     UndefProcText,
     ActualProcText
+};
+
+/*****/
+
+typedef struct ElementWindow ElementWindow;
+
+struct ElementWindow
+{
+    Element header;
+    TreeCtrl *tree;
+    TreeItem item; 		/* Needed if window changes size */
+    TreeItemColumn column; 	/* Needed if window changes size */
+    Tk_Window tkwin;		/* Window associated with item.  NULL means
+				 * window has been destroyed. */
+};
+
+#define EWIN_CONF_WINDOW 0x0001
+
+static Tk_OptionSpec windowOptionSpecs[] = {
+    {TK_OPTION_WINDOW, "-window", (char *) NULL, (char *) NULL,
+     (char) NULL, -1, Tk_Offset(ElementWindow, tkwin),
+     TK_OPTION_NULL_OK, (ClientData) NULL, EWIN_CONF_WINDOW},
+    {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
+     (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
+};
+
+static void
+WinItemStructureProc(clientData, eventPtr)
+    ClientData clientData;	/* Pointer to record describing window elem. */
+    XEvent *eventPtr;		/* Describes what just happened. */
+{
+    ElementWindow *elemX = (ElementWindow *) clientData;
+
+    if (eventPtr->type == DestroyNotify) {
+	elemX->tkwin = NULL;
+	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	    (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+    }
+}
+
+static void
+WinItemRequestProc(clientData, tkwin)
+    ClientData clientData;		/* Pointer to record for window item. */
+    Tk_Window tkwin;			/* Window that changed its desired
+					 * size. */
+{
+    ElementWindow *elemX = (ElementWindow *) clientData;
+
+    Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+}
+
+static void
+WinItemLostSlaveProc(clientData, tkwin)
+    ClientData clientData;	/* WindowItem structure for slave window that
+				 * was stolen away. */
+    Tk_Window tkwin;		/* Tk's handle for the slave window. */
+{
+    ElementWindow *elemX = (ElementWindow *) clientData;
+    TreeCtrl *tree = elemX->tree;
+
+    Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
+	    WinItemStructureProc, (ClientData) elemX);
+    if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
+	Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+    }
+    Tk_UnmapWindow(elemX->tkwin);
+    elemX->tkwin = NULL;
+    Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+}
+
+static Tk_GeomMgr winElemGeomType = {
+    "treectrl",				/* name */
+    WinItemRequestProc,			/* requestProc */
+    WinItemLostSlaveProc,		/* lostSlaveProc */
+};
+
+static void DeleteProcWindow(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+
+    if (elemX->tkwin != NULL) {
+	Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
+		WinItemStructureProc, (ClientData) elemX);
+	Tk_ManageGeometry(elemX->tkwin, (Tk_GeomMgr *) NULL,
+		(ClientData) NULL);
+	if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
+	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	}
+	Tk_UnmapWindow(elemX->tkwin);
+    }
+
+}
+
+static int WorldChangedProcWindow(ElementArgs *args)
+{
+    int flagM = args->change.flagMaster;
+    int flagS = args->change.flagSelf;
+    int mask = 0;
+
+    if ((flagS | flagM) & (EWIN_CONF_WINDOW))
+	mask |= CS_DISPLAY | CS_LAYOUT;
+
+    return mask;
+}
+
+static int ConfigProcWindow(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+    ElementWindow savedX;
+    Tk_SavedOptions savedOptions;
+    int error;
+    Tcl_Obj *errorResult = NULL;
+
+    savedX.tkwin = elemX->tkwin;
+
+    for (error = 0; error <= 1; error++) {
+	if (error == 0) {
+	    if (Tk_SetOptions(tree->interp, (char *) elemX,
+			elem->typePtr->optionTable,
+			args->config.objc, args->config.objv, tree->tkwin,
+			&savedOptions, &args->config.flagSelf) != TCL_OK) {
+		args->config.flagSelf = 0;
+		continue;
+	    }
+
+	    /* */
+
+	    Tk_FreeSavedOptions(&savedOptions);
+	    break;
+	} else {
+	    errorResult = Tcl_GetObjResult(tree->interp);
+	    Tcl_IncrRefCount(errorResult);
+	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    /* */
+
+	    Tcl_SetObjResult(tree->interp, errorResult);
+	    Tcl_DecrRefCount(errorResult);
+	    return TCL_ERROR;
+	}
+    }
+
+    if (savedX.tkwin != elemX->tkwin) {
+	if (savedX.tkwin != NULL) {
+	    Tk_DeleteEventHandler(savedX.tkwin, StructureNotifyMask,
+		    WinItemStructureProc, (ClientData) elemX);
+	    Tk_ManageGeometry(savedX.tkwin, (Tk_GeomMgr *) NULL,
+		    (ClientData) NULL);
+	    Tk_UnmaintainGeometry(savedX.tkwin, tree->tkwin);
+	    Tk_UnmapWindow(savedX.tkwin);
+	}
+	if (elemX->tkwin != NULL) {
+	    Tk_Window ancestor, parent;
+
+	    /*
+	     * Make sure that the treectrl is either the parent of the
+	     * window associated with the element or a descendant of that
+	     * parent.  Also, don't allow a top-of-hierarchy window to be
+	     * managed inside a treectrl.
+	     */
+
+	    parent = Tk_Parent(elemX->tkwin);
+	    for (ancestor = tree->tkwin; ;
+		    ancestor = Tk_Parent(ancestor)) {
+		if (ancestor == parent) {
+		    break;
+		}
+		if (((Tk_FakeWin *) (ancestor))->flags & TK_TOP_HIERARCHY) {
+		    badWindow:
+		    FormatResult(tree->interp,
+			    "can't use %s in a window element of %s",
+			    Tk_PathName(elemX->tkwin),
+			    Tk_PathName(tree->tkwin));
+		    elemX->tkwin = NULL;
+		    return TCL_ERROR;
+		}
+	    }
+	    if (((Tk_FakeWin *) (elemX->tkwin))->flags & TK_TOP_HIERARCHY) {
+		goto badWindow;
+	    }
+	    if (elemX->tkwin == tree->tkwin) {
+		goto badWindow;
+	    }
+	    Tk_CreateEventHandler(elemX->tkwin, StructureNotifyMask,
+		    WinItemStructureProc, (ClientData) elemX);
+	    Tk_ManageGeometry(elemX->tkwin, &winElemGeomType,
+		    (ClientData) elemX);
+	}
+    }
+#if 0
+    if ((elemX->tkwin != NULL)
+	    && (itemPtr->state == TK_STATE_HIDDEN)) {
+	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
+	    Tk_UnmapWindow(elemX->tkwin);
+	} else {
+	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	}
+    }
+#endif
+    return TCL_OK;
+}
+
+static int CreateProcWindow(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+
+    elemX->tree = tree;
+    elemX->item = args->create.item;
+    elemX->column = args->create.column;
+
+    return TCL_OK;
+}
+
+static void DisplayProcWindow(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+/*    ElementWindow *masterX = (ElementWindow *) elem->master;
+    int state = args->state;*/
+    int x = args->display.x + (tree->drawableXOrigin - tree->xOrigin);
+    int y = args->display.y + (tree->drawableYOrigin - tree->yOrigin);
+    int width = args->display.width; /* - padding */
+    int height = args->display.height; /* - padding */
+
+    if (elemX->tkwin == NULL)
+	return;
+
+    /* Hack -- item is no longer on screen */
+    /* See TreeStyle_HideWindows */
+    if (width == -1 && height == -1)
+	goto hideIt;
+
+    /*
+     * If the window is completely out of the visible area of the treectrl
+     * then unmap it.  The window could suddenly reappear if the treectrl
+     * window gets resized.
+     */
+
+    if (((x + width) <= 0) || ((y + height) <= 0)
+	    || (x >= Tk_Width(tree->tkwin)) || (y >= Tk_Height(tree->tkwin))) {
+hideIt:
+	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
+	    Tk_UnmapWindow(elemX->tkwin); 
+	} else {
+	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	}
+	return;
+    }
+
+    /*
+     * Reposition and map the window (but in different ways depending
+     * on whether the treectrl is the window's parent).
+     */
+
+    if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
+	if ((x != Tk_X(elemX->tkwin)) || (y != Tk_Y(elemX->tkwin))
+		|| (width != Tk_Width(elemX->tkwin))
+		|| (height != Tk_Height(elemX->tkwin))) {
+	    Tk_MoveResizeWindow(elemX->tkwin, x, y, width, height);
+	}
+	Tk_MapWindow(elemX->tkwin);
+    } else {
+	Tk_MaintainGeometry(elemX->tkwin, tree->tkwin, x, y,
+		width, height);
+    }
+}
+
+static void LayoutProcWindow(ElementArgs *args)
+{
+/*    TreeCtrl *tree = args->tree;*/
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+/*    ElementWindow *masterX = (ElementWindow *) elem->master;
+    int state = args->state;*/
+    int width = 0, height = 0;
+
+    if (elemX->tkwin && width <= 0) {
+	width = Tk_ReqWidth(elemX->tkwin);
+	if (width <= 0) {
+	    width = 1;
+	}
+    }
+    if (elemX->tkwin && height <= 0) {
+	height = Tk_ReqHeight(elemX->tkwin);
+	if (height <= 0) {
+	    height = 1;
+	}
+    }
+
+    args->layout.width = width;
+    args->layout.height = height;
+}
+
+static int StateProcWindow(ElementArgs *args)
+{
+/*    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+    ElementWindow *masterX = (ElementWindow *) elem->master;*/
+    int mask = 0;
+
+    return mask;
+}
+
+static void UndefProcWindow(ElementArgs *args)
+{
+/*    TreeCtrl *tree = args->tree;
+    ElementWindow *elemX = (ElementWindow *) args->elem;*/
+}
+
+static int ActualProcWindow(ElementArgs *args)
+{
+/*    TreeCtrl *tree = args->tree;
+    ElementWindow *elemX = (ElementWindow *) args->elem;
+    ElementWindow *masterX = (ElementWindow *) args->elem->master;*/
+
+    return TCL_OK;
+}
+
+ElementType elemTypeWindow = {
+    "window",
+    sizeof(ElementWindow),
+    windowOptionSpecs,
+    NULL,
+    CreateProcWindow,
+    DeleteProcWindow,
+    ConfigProcWindow,
+    DisplayProcWindow,
+    LayoutProcWindow,
+    WorldChangedProcWindow,
+    StateProcWindow,
+    UndefProcWindow,
+    ActualProcWindow,
 };
 
 /*****/
@@ -3378,9 +3422,11 @@ int TreeElement_Init(Tcl_Interp *interp)
 
     TreeCtrl_RegisterElementType(interp, &elemTypeBitmap);
     TreeCtrl_RegisterElementType(interp, &elemTypeBorder);
+/*    TreeCtrl_RegisterElementType(interp, &elemTypeCheckButton);*/
     TreeCtrl_RegisterElementType(interp, &elemTypeImage);
     TreeCtrl_RegisterElementType(interp, &elemTypeRect);
     TreeCtrl_RegisterElementType(interp, &elemTypeText);
+    TreeCtrl_RegisterElementType(interp, &elemTypeWindow);
 
     Tcl_SetAssocData(interp, "TreeCtrlStubs", NULL, &stubs);
 
