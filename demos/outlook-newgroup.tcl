@@ -19,7 +19,8 @@ proc DemoOutlookNewsgroup {} {
 	#
 
 	$T configure -itemheight $height -selectmode browse \
-		-showroot no -showrootbutton no -showbuttons yes -showlines no
+		-showroot no -showrootbutton no -showbuttons yes -showlines no \
+		-xscrollincrement 20
 
 	#
 	# Create columns
