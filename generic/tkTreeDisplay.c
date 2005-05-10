@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.19 2005/05/01 01:33:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.20 2005/05/10 22:13:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -60,6 +60,7 @@ struct DItem
 #define DITEM_ALL_DIRTY 0x0002
     int flags;
     DItem *next;
+    DItem *nextFree;
 };
 
 /* Display information for a TreeCtrl */
@@ -97,6 +98,14 @@ struct DInfo
     int incrementLeft; /* xScrollIncrement[] index of item at left */
 #endif
     TkRegion wsRgn; /* region containing whitespace */
+#define ITEM_VIS_HASH
+#ifdef ITEM_VIS_HASH
+    Tcl_HashTable itemVisHash;
+#endif
+#define DITEM_FREE
+#ifdef DITEM_FREE
+    DItem *dItemFree; /* list of unused DItems */
+#endif
 };
 
 /*========*/
@@ -1424,13 +1433,23 @@ DisplayDelay(TreeCtrl *tree)
 static DItem *
 DItem_Alloc(TreeCtrl *tree, RItem *rItem)
 {
+    DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
 
     dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
     if (dItem != NULL)
 	panic("tried to allocate duplicate DItem");
 
+#ifdef DITEM_FREE
+    if (dInfo->dItemFree != NULL) {
+	dItem = dInfo->dItemFree;
+	dInfo->dItemFree = dItem->nextFree;
+    } else {
+	dItem = (DItem *) ckalloc(sizeof(DItem));
+    }
+#else
     dItem = (DItem *) ckalloc(sizeof(DItem));
+#endif
     memset(dItem, '\0', sizeof(DItem));
     strncpy(dItem->magic, "MAGC", 4);
     dItem->item = rItem->item;
@@ -1461,12 +1480,18 @@ DItem_Unlink(DItem *head, DItem *dItem)
 static DItem *
 DItem_Free(TreeCtrl *tree, DItem *dItem)
 {
+    DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *next = dItem->next;
     if (strncmp(dItem->magic, "MAGC", 4) != 0)
 	panic("DItem_Free: dItem.magic != MAGC");
     if (dItem->item != NULL)
 	TreeItem_SetDInfo(tree, dItem->item, (TreeItemDInfo) NULL);
+#ifdef DITEM_FREE
+    dItem->nextFree = dInfo->dItemFree;
+    dInfo->dItemFree = dItem;
+#else
     WFREE(dItem, DItem);
+#endif
     return next;
 }
 
@@ -2988,6 +3013,7 @@ Tree_Display(ClientData clientData)
 			pixmap,
 			0, right - left,
 			dItem->index);
+#if 0
 		if (tree->columnTreeVis && tree->showLines) {
 		    TreeItem_DrawLines(tree, dItem->item,
 			    dItem->x - left,
@@ -3002,6 +3028,7 @@ Tree_Display(ClientData clientData)
 			    dItem->width, dItem->height,
 			    pixmap);
 		}
+#endif
 		XCopyArea(tree->display, pixmap, drawable,
 			tree->copyGC,
 			0, 0,
@@ -3022,6 +3049,7 @@ Tree_Display(ClientData clientData)
 			pixmap,
 			minX, maxX,
 			dItem->index);
+#if 0
 		if (tree->columnTreeVis && tree->showLines) {
 		    TreeItem_DrawLines(tree, dItem->item,
 			    dItem->x,
@@ -3036,6 +3064,7 @@ Tree_Display(ClientData clientData)
 			    dItem->width, dItem->height,
 			    pixmap);
 		}
+#endif
 	    }
 	    DisplayDelay(tree);
 	    numDraw++;
@@ -3063,7 +3092,6 @@ Tree_Display(ClientData clientData)
 		    dInfo->dirty[LEFT], dInfo-> dirty[TOP]);
 	}
     }
-
 
     /* XOR on */
     TreeMarquee_Display(tree->marquee);
@@ -3094,6 +3122,86 @@ Tree_Display(ClientData clientData)
 		tree->relief);
 	dInfo->flags &= ~DINFO_DRAW_BORDER;
     }
+
+#ifdef ITEM_VIS_HASH
+    {
+	Tcl_HashEntry *hPtr, *h2Ptr;
+	Tcl_HashSearch search;
+	Tcl_HashTable table, tableV, tableH;
+	int id, isNew;
+
+	Tcl_InitHashTable(&table, TCL_ONE_WORD_KEYS);
+	Tcl_InitHashTable(&tableV, TCL_ONE_WORD_KEYS);
+	Tcl_InitHashTable(&tableH, TCL_ONE_WORD_KEYS);
+
+	tree->drawableXOrigin = tree->xOrigin;
+	tree->drawableYOrigin = tree->yOrigin;
+
+	for (dItem = dInfo->dItem;
+	    dItem != NULL;
+	    dItem = dItem->next) {
+
+	    id = TreeItem_GetID(tree, dItem->item);
+
+	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
+	    if (hPtr == NULL) {
+/*		dbwin("item %d now visible\n", id); */
+		/* This item is now visible, wasn't before */
+		hPtr = Tcl_CreateHashEntry(&tableV, (char *) id, &isNew);
+	    } else {
+		TreeItem_UpdateWindowPositions(tree, dItem->item,
+		    dItem->x, dItem->y, dItem->width, dItem->height);
+	    }
+	    hPtr = Tcl_CreateHashEntry(&table, (char *) id, &isNew);
+	}
+
+	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
+	    h2Ptr = Tcl_FindHashEntry(&table, (char *) id);
+	    if (h2Ptr == NULL) {
+/*		dbwin("item %d no longer visible\n", id); */
+		/* This item was visible but isn't now */
+		h2Ptr = Tcl_CreateHashEntry(&tableH, (char *) id, &isNew);
+		/* Item could have been deleted */
+		h2Ptr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
+		if (h2Ptr != NULL) {
+		    TreeItem item = (TreeItem) Tcl_GetHashValue(h2Ptr);
+		    TreeItem_HideWindows(tree, item);
+		}
+	    }
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/* Remove newly-hidden items from itemVisHash */
+	hPtr = Tcl_FirstHashEntry(&tableH, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&tableH, hPtr);
+	    h2Ptr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
+	    Tcl_DeleteHashEntry(h2Ptr);
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/* Add newly-visible items to itemVisHash */
+	hPtr = Tcl_FirstHashEntry(&tableV, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&tableV, hPtr);
+	    h2Ptr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) id, &isNew);
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/*
+	 * Could generate an event here:
+	 * <ItemVisibility>
+	 * %v - newly-visible items
+	 * %h - no-longer visible items
+	 */
+
+	Tcl_DeleteHashTable(&table);
+	Tcl_DeleteHashTable(&tableV);
+	Tcl_DeleteHashTable(&tableH);
+    }
+#endif /* ITEM_VIS_HASH */
 }
 
 static int
@@ -3695,6 +3803,9 @@ TreeDInfo_Init(TreeCtrl *tree)
     dInfo->columnWidthSize = 10;
     dInfo->columnWidth = (int *) ckalloc(sizeof(int) * dInfo->columnWidthSize);
     dInfo->wsRgn = TkCreateRegion();
+#ifdef ITEM_VIS_HASH
+    Tcl_InitHashTable(&dInfo->itemVisHash, TCL_ONE_WORD_KEYS);
+#endif
     tree->dInfo = (TreeDInfo) dInfo;
 }
 
@@ -3706,7 +3817,20 @@ TreeDInfo_Free(TreeCtrl *tree)
 
     if (dInfo->rItem != NULL)
 	ckfree((char *) dInfo->rItem);
+#ifdef DITEM_FREE
+    while (dInfo->dItem != NULL) {
+	DItem *next = dInfo->dItem->next;
+	WFREE(dInfo->dItem, DItem);
+	dInfo->dItem = next;
+    }
+    while (dInfo->dItemFree != NULL) {
+	DItem *next = dInfo->dItemFree->nextFree;
+	WFREE(dInfo->dItemFree, DItem);
+	dInfo->dItemFree = next;
+    }
+#else
     FreeDItems(tree, dInfo->dItem, NULL, 0);
+#endif
     while (range != NULL)
 	range = Range_Free(tree, range);
     Tk_FreeGC(tree->display, dInfo->scrollGC);
@@ -3719,6 +3843,9 @@ TreeDInfo_Free(TreeCtrl *tree)
     if (dInfo->yScrollIncrements != NULL)
 	ckfree((char *) dInfo->yScrollIncrements);
     TkDestroyRegion(dInfo->wsRgn);
+#ifdef ITEM_VIS_HASH
+    Tcl_DeleteHashTable(&dInfo->itemVisHash);
+#endif
     WFREE(dInfo, DInfo);
 }
 
