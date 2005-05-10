@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.2 2005/05/02 18:37:19 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.3 2005/05/10 22:33:58 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -621,7 +621,7 @@ dbwin("Tcl_SetAssocData TreeTheme\n");
 
     data = (PerInterpData *) ckalloc(sizeof(PerInterpData));
     data->hwnd = hwnd;
-    Tcl_SetAssocData(interp, "TreeTheme", FreeAssocData, (ClientData) data);
+    Tcl_SetAssocData(interp, "TreeCtrlTheme", FreeAssocData, (ClientData) data);
 
     return TCL_OK;
 }
