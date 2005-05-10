@@ -118,14 +118,14 @@ proc ::TreeCtrl::FileListMotion1 {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
-	"resize" -
-	"header" {
-	    Motion1 $T $x $y
-	}
 	"drag" -
 	"marquee" {
-	    FileListAutoScanCheck $T $x $y
+	    set Priv(autoscan,command,$T) {FileListMotion %T %x %y}
+	    AutoScanCheck $T $x $y
 	    FileListMotion $T $x $y
+	}
+	default {
+	    Motion1 $T $x $y
 	}
     }
 }
@@ -134,10 +134,6 @@ proc ::TreeCtrl::FileListMotion {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
-	"resize" -
-	"header" {
-	    Motion1 $T $x $y
-	}
 	"marquee" {
 	    MarqueeUpdate $T $x $y
 	    set select $Priv(selection)
@@ -257,6 +253,9 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 	    $T dragimage offset $x $y
 	    $T dragimage configure -visible yes
 	}
+	default {
+	    Motion1 $T $x $y
+	}
     }
     return
 }
@@ -266,7 +265,7 @@ proc ::TreeCtrl::FileListLeave1 {T x y} {
     # This gets called when I click the mouse on Unix, and buttonMode is unset
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
-	"header" {
+	default {
 	    Leave1 $T $x $y
 	}
     }
@@ -277,10 +276,6 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
     switch $Priv(buttonMode) {
-	"resize" -
-	"header" {
-	    Release1 $T $x $y
-	}
 	"marquee" {
 	    AutoScanCancel $T
 	    MarqueeEnd $T $x $y
@@ -318,6 +313,9 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
 			[after 900 [list ::TreeCtrl::FileListEdit $T $I $S $E]]
 		}
 	    }
+	}
+	default {
+	    Release1 $T $x $y
 	}
     }
     set Priv(buttonMode) ""
@@ -360,64 +358,6 @@ proc ::TreeCtrl::FileListEditCancel {T} {
 	after cancel $Priv(editId,$T)
 	array unset Priv editId,$T
     }
-    return
-}
-
-# Same as TreeCtrl::AutoScanCheck, but calls FileListMotion and
-# FileListAutoScanCheckAux
-proc ::TreeCtrl::FileListAutoScanCheck {T x y} {
-    variable Priv
-    scan [$T contentbox] "%d %d %d %d" x1 y1 x2 y2
-    set margin [winfo pixels $T [$T cget -scrollmargin]]
-    if {($x < $x1 + $margin) || ($x >= $x2 - $margin) ||
-	($y < $y1 + $margin) || ($y >= $y2 - $margin)} {
-	if {![info exists Priv(autoscan,afterId,$T)]} {
-	    if {$y >= $y2 - $margin} {
-		$T yview scroll 1 units
-		set delay [$T cget -yscrolldelay]
-	    } elseif {$y < $y1 + $margin} {
-		$T yview scroll -1 units
-		set delay [$T cget -yscrolldelay]
-	    } elseif {$x >= $x2 - $margin} {
-		$T xview scroll 1 units
-		set delay [$T cget -xscrolldelay]
-	    } elseif {$x < $x1 + $margin} {
-		$T xview scroll -1 units
-		set delay [$T cget -xscrolldelay]
-	    }
-	    set count [scan $delay "%d %d" d1 d2]
-	    if {[info exists Priv(autoscan,scanning,$T)]} {
-		if {$count == 2} {
-		    set delay $d2
-		}
-	    } else {
-		if {$count == 2} {
-		    set delay $d1
-		}
-		set Priv(autoscan,scanning,$T) 1
-	    }
-	    switch $Priv(buttonMode) {
-		"drag" -
-		"marquee" {
-		    FileListMotion $T $x $y
-		}
-	    }
-	    set Priv(autoscan,afterId,$T) [after $delay [list TreeCtrl::FileListAutoScanCheckAux $T]]
-	}
-	return
-    }
-    AutoScanCancel $T
-    return
-}
-
-proc ::TreeCtrl::FileListAutoScanCheckAux {T} {
-    variable Priv
-    unset Priv(autoscan,afterId,$T)
-    set x [winfo pointerx $T]
-    set y [winfo pointery $T]
-    set x [expr {$x - [winfo rootx $T]}]
-    set y [expr {$y - [winfo rooty $T]}]
-    FileListAutoScanCheck $T $x $y
     return
 }
 
