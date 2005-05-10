@@ -1,4 +1,5 @@
 set RandomN 500
+set RandomDepth 5
 
 #
 # Demo: random N items
@@ -84,7 +85,7 @@ proc DemoRandom {} {
 		while 1 {
 			set j [expr {int(rand() * $i)}]
 			set itemj [lindex $items $j]
-			if {[$T depth $itemj] < 5} break
+			if {[$T depth $itemj] < $::RandomDepth} break
 		}
 		if {rand() * 2 > 1} {
 			$T item collapse $itemi
@@ -226,13 +227,13 @@ proc TreeCtrl::RandomButton1 {T x y} {
 proc TreeCtrl::RandomMotion1 {T x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
-		"resize" -
-		"header" {
-			Motion1 $T $x $y
-		}
 		"drag" {
-			RandomAutoScanCheck $T $x $y
+			set Priv(autoscan,command,$T) {RandomMotion %T %x %y}
+			AutoScanCheck $T $x $y
 			RandomMotion $T $x $y
+		}
+		default {
+			Motion1 $T $x $y
 		}
 	}
 	return
@@ -240,10 +241,6 @@ proc TreeCtrl::RandomMotion1 {T x y} {
 proc TreeCtrl::RandomMotion {T x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
-		"resize" -
-		"header" {
-			Motion1 $T $x $y
-		}
 		"drag" {
 			# Detect initial mouse movement
 			if {!$Priv(drag,motion)} {
@@ -330,6 +327,9 @@ proc TreeCtrl::RandomMotion {T x y} {
 			$T dragimage offset $x $y
 			$T dragimage configure -visible yes
 		}
+		default {
+			Motion1 $T $x $y
+		}
 	}
 	return
 }
@@ -339,7 +339,7 @@ proc TreeCtrl::RandomLeave1 {T x y} {
 	# and buttonMode is undefined.
 	if {![info exists Priv(buttonMode)]} return
 	switch $Priv(buttonMode) {
-		"header" {
+		default {
 			Leave1 $T $x $y
 		}
 	}
@@ -347,11 +347,8 @@ proc TreeCtrl::RandomLeave1 {T x y} {
 }
 proc TreeCtrl::RandomRelease1 {T x y} {
 	variable Priv
+    if {![info exists Priv(buttonMode)]} return
 	switch $Priv(buttonMode) {
-		"resize" -
-		"header" {
-			Release1 $T $x $y
-		}
 		"drag" {
 			AutoScanCancel $T
 			$T dragimage configure -visible no
@@ -360,9 +357,12 @@ proc TreeCtrl::RandomRelease1 {T x y} {
 			if {$Priv(drop) ne ""} {
 				RandomDrop $T $Priv(drop) $Priv(selection) $Priv(drop,pos)
 			}
+			unset Priv(buttonMode)
+		}
+		default {
+			Release1 $T $x $y
 		}
 	}
-	set Priv(buttonMode) ""
 	return
 }
 
@@ -442,64 +442,6 @@ proc RandomDrop {T target source pos} {
 	return
 }
 
-# Same as TreeCtrl::AutoScanCheck, but calls RandomMotion and
-# RandomAutoScanCheckAux
-proc TreeCtrl::RandomAutoScanCheck {T x y} {
-	variable Priv
-	scan [$T contentbox] "%d %d %d %d" x1 y1 x2 y2
-	set margin [winfo pixels $T [$T cget -scrollmargin]]
-	if {($x < $x1 + $margin) || ($x >= $x2 - $margin) ||
-		($y < $y1 + $margin) || ($y >= $y2 - $margin)} {
-		if {![info exists Priv(autoscan,afterId,$T)]} {
-			if {$y >= $y2 - $margin} {
-				$T yview scroll 1 units
-				set delay [$T cget -yscrolldelay]
-			} elseif {$y < $y1 + $margin} {
-				$T yview scroll -1 units
-				set delay [$T cget -yscrolldelay]
-			} elseif {$x >= $x2 - $margin} {
-				$T xview scroll 1 units
-				set delay [$T cget -xscrolldelay]
-			} elseif {$x < $x1 + $margin} {
-				$T xview scroll -1 units
-				set delay [$T cget -xscrolldelay]
-			}
-			set count [scan $delay "%d %d" d1 d2]
-			if {[info exists Priv(autoscan,scanning,$T)]} {
-				if {$count == 2} {
-					set delay $d2
-				}
-			} else {
-				if {$count == 2} {
-					set delay $d1
-				}
-				set Priv(autoscan,scanning,$T) 1
-			}
-			switch $Priv(buttonMode) {
-				"drag" -
-				"marquee" {
-					RandomMotion $T $x $y
-				}
-			}
-			set Priv(autoscan,afterId,$T) [after $delay [list TreeCtrl::RandomAutoScanCheckAux $T]]
-		}
-		return
-	}
-	AutoScanCancel $T
-	return
-}
-
-proc TreeCtrl::RandomAutoScanCheckAux {T} {
-	variable Priv
-	unset Priv(autoscan,afterId,$T)
-	set x [winfo pointerx $T]
-	set y [winfo pointery $T]
-	set x [expr {$x - [winfo rootx $T]}]
-	set y [expr {$y - [winfo rooty $T]}]
-	RandomAutoScanCheck $T $x $y
-	return
-}
-
 #
 # Demo: random N items, button images
 #
@@ -511,7 +453,7 @@ proc DemoRandom2 {} {
 
 	InitPics mac-*
 
-	$T configure -openbuttonimage mac-collapse -closedbuttonimage mac-expand \
+	$T configure -buttonimage {mac-collapse open mac-expand {}} \
 		-showlines no
 
 	return
