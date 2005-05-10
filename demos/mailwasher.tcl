@@ -18,7 +18,7 @@ proc DemoMailWasher {} {
 
 	$T configure -showroot no -showrootbutton no -showbuttons no \
 		-showlines no -itemheight $height -selectmode browse \
-		-xscrollincrement 1
+		-xscrollincrement 20
 
 	#
 	# Create columns
@@ -31,7 +31,7 @@ proc DemoMailWasher {} {
 	$T column create -text Size -width 40 -textpadx $pad -justify right -tag size
 	$T column create -text From -width 140 -textpadx $pad -tag from
 	$T column create -text Subject -width 240 -textpadx $pad -tag subject
-	$T column create -text Received -textpadx $pad -arrow up -arrowpad {4 0} -tag received
+	$T column create -text Received -textpadx $pad -arrow up -arrowpadx {4 0} -tag received
 	$T column create -text Attachments -textpadx $pad -tag attachments
 
 	$T state define CHECK
