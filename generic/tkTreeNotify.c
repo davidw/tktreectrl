@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.6 2005/05/01 01:39:36 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.7 2005/05/10 22:27:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -27,6 +27,9 @@ static int EVENT_ACTIVEITEM;
 static int EVENT_SCROLL,
 	DETAIL_SCROLL_X,
 	DETAIL_SCROLL_Y;
+#ifdef ALLOW_EVENT_ITEM_DELETED
+static int EVENT_ITEM_DELETE;
+#endif
 
 static void ExpandItem(int id, Tcl_DString *result)
 {
@@ -430,6 +433,62 @@ void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical)
 	(void) QE_BindEvent(tree->bindingTable, &event);
 }
 
+#ifdef ALLOW_EVENT_ITEM_DELETED
+static void Percents_ItemDeleted(QE_ExpandArgs *args)
+{
+	struct {
+		TreeCtrl *tree;
+		int count;
+		int *itemIds;
+	} *data = args->clientData;
+	int i;
+
+	switch (args->which)
+	{
+		case 'i':
+			Tcl_DStringStartSublist(args->result);
+			for (i = 0; i < data->count; i++)
+			{
+#if ITEM_ID_IS_STRING
+				char buf[10 + TCL_INTEGER_SPACE];
+				(void) sprintf(buf, "%s%d", itemPrefix, data->itemIds[i]);
+				Tcl_DStringAppendElement(args->result, buf);
+#else /* ITEM_ID_IS_STRING */
+				char string[TCL_INTEGER_SPACE];
+				TclFormatInt(string, data->itemIds[i]);
+				Tcl_DStringAppendElement(args->result, string);
+#endif /* ITEM_ID_IS_STRING */
+			}
+			Tcl_DStringEndSublist(args->result);
+			break;
+
+		default:
+			Percents_Any(args, Percents_ItemDeleted, "i");
+			break;
+	}
+}
+
+void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count)
+{
+	QE_Event event;
+	struct {
+		TreeCtrl *tree; /* Must be first*/
+		int count;
+		int *itemIds;
+	} data;
+
+	data.tree = tree;
+	data.count = count;
+	data.itemIds = itemIds;
+
+	event.type = EVENT_ITEM_DELETE;
+	event.detail = 0;
+	event.clientData = (ClientData) &data;
+
+	(void) QE_BindEvent(tree->bindingTable, &event);
+}
+#endif
+
 int TreeNotify_Init(TreeCtrl *tree)
 {
 	tree->bindingTable = QE_CreateBindingTable(tree->interp);
@@ -449,6 +508,10 @@ int TreeNotify_Init(TreeCtrl *tree)
 	EVENT_SCROLL = QE_InstallEvent(tree->bindingTable, "Scroll", Percents_Scroll);
 	DETAIL_SCROLL_X = QE_InstallDetail(tree->bindingTable, "x", EVENT_SCROLL, NULL);
 	DETAIL_SCROLL_Y = QE_InstallDetail(tree->bindingTable, "y", EVENT_SCROLL, NULL);
+
+#ifdef ALLOW_EVENT_ITEM_DELETED
+	EVENT_ITEM_DELETE = QE_InstallEvent(tree->bindingTable, "ItemDelete", Percents_ItemDeleted);
+#endif
 
 	return TCL_OK;
 }
