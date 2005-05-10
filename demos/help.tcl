@@ -313,8 +313,7 @@ proc TreeCtrl::HelpButton1 {w x y} {
 proc TreeCtrl::HelpMotion1 {w x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
-		"resize" -
-		"header" {
+		default {
 			Motion1 $w $x $y
 		}
 	}
@@ -326,21 +325,20 @@ proc TreeCtrl::HelpLeave1 {w x y} {
 	# and buttonMode is undefined.
 	if {![info exists Priv(buttonMode)]} return
 	switch $Priv(buttonMode) {
-		"header" {
-			$w column configure $Priv(column) -sunken no
+		default {
+			Leave1 $w $x $y
 		}
 	}
 	return
 }
 proc TreeCtrl::HelpRelease1 {w x y} {
 	variable Priv
+    if {![info exists Priv(buttonMode)]} return
 	switch $Priv(buttonMode) {
-		"resize" -
-		"header" {
+		default {
 			Release1 $w $x $y
 		}
 	}
-	set Priv(buttonMode) ""
 	return
 }
 
