@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.21 2005/05/01 01:31:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.22 2005/05/10 22:10:14 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -58,6 +58,47 @@ typedef struct TreeItemRInfo_ *TreeItemRInfo;
 typedef struct TreeStyle_ *TreeStyle;
 typedef struct TreeElement_ *TreeElement;
 
+/*****/
+
+typedef struct PerStateInfo PerStateInfo;
+typedef struct PerStateData PerStateData;
+typedef struct PerStateType PerStateType;
+
+/* There is one of these for each XColor, Tk_Font, Tk_Image etc */
+struct PerStateData
+{
+    int stateOff;
+    int stateOn;
+    /* Type-specific fields go here */
+};
+
+#define DEBUG_PSI
+
+struct PerStateInfo
+{
+#ifdef DEBUG_PSI
+    PerStateType *type;
+#endif
+    Tcl_Obj *obj;
+    int count;
+    PerStateData *data;
+};
+
+typedef int (*PerStateType_FromObjProc)(TreeCtrl *, Tcl_Obj *, PerStateData *);
+typedef void (*PerStateType_FreeProc)(TreeCtrl *, PerStateData *);
+
+struct PerStateType
+{
+#ifdef DEBUG_PSI
+    char *name;
+#endif
+    int size;
+    PerStateType_FromObjProc fromObjProc;
+    PerStateType_FreeProc freeProc;
+};
+
+/*****/
+
 enum { LEFT, TOP, RIGHT, BOTTOM };
 
 struct TreeCtrlDebug
@@ -70,6 +111,23 @@ struct TreeCtrlDebug
     XColor *eraseColor;		/* Erase "invalidated" areas */
     GC gcErase;			/* for eraseColor */
 };
+
+#define COLUMN_DRAG_IMAGE
+#ifdef COLUMN_DRAG_IMAGE
+struct TreeCtrlColumnDrag
+{
+    Tk_OptionTable optionTable;
+    int enable;			/* -enable */
+    int column;			/* -imagecolumn */
+    Tcl_Obj *offsetObj;		/* -imageoffset */
+    int offset;			/* -imageoffset */
+    XColor *color;		/* -imagecolor */
+    int alpha;			/* -imagealpha */
+#define SIDE_NONE 2
+    int indColumn;		/* -indicatorcolumn */
+    XColor *indColor;		/* -indicatorcolor */
+};
+#endif
 
 struct TreeCtrl
 {
@@ -118,8 +176,9 @@ struct TreeCtrl
     char *selectMode;		/* -selectmode: used by scripts only */
     Tcl_Obj *itemHeightObj;	/* -itemheight: Fixed height for all items
                                     (unless overridden) */
-    int itemHeight;		/* -itemheight: Fixed height for all items
-                                    (unless overridden) */
+    int itemHeight;		/* -itemheight */
+    Tcl_Obj *minItemHeightObj;	/* -minitemheight: Minimum height for all items */
+    int minItemHeight;		/* -minitemheight */
     Tcl_Obj *widthObj;		/* -width */
     int width;			/* -width */
     Tcl_Obj *heightObj;		/* -height */
@@ -142,10 +201,8 @@ struct TreeCtrl
     int lineStyle;		/* -linestyle */
     int vertical;		/* -orient */
     Tcl_Obj *wrapObj;		/* -wrap */
-    char *openButtonString;	/* -openbuttonimage */
-    char *closedButtonString;	/* -closedbuttonimage */
-    Pixmap openButtonBitmap;	/* -openbuttonbitmap */
-    Pixmap closedButtonBitmap;	/* -closedbuttonbitmap */
+    PerStateInfo buttonImage;	/* -buttonimage */
+    PerStateInfo buttonBitmap;	/* -buttonbitmap */
 #ifdef BG_IMAGE
     char *backgroundImageString; /* -backgroundimage */
 #endif
@@ -162,6 +219,7 @@ struct TreeCtrl
     Tcl_Obj *itemPadYObj;	/* -itempady */
 
     struct TreeCtrlDebug debug;
+    struct TreeCtrlColumnDrag columnDrag;
 
     /* Other stuff */
     int gotFocus;		/* flag */
@@ -174,20 +232,12 @@ struct TreeCtrl
     GC textGC;
     GC buttonGC;
     GC lineGC;
-    Tk_Image openButtonImage;	/* -openbuttonimage */
-    Tk_Image closedButtonImage;	/* -closedbuttonimage */
 #ifdef BG_IMAGE
     Tk_Image backgroundImage;	/* -backgroundimage */
 #endif
 #ifdef THEME
     int useTheme;		/* -usetheme */
 #endif
-    GC buttonOpenGC;
-    GC buttonClosedGC;
-    int closedButtonWidth;
-    int closedButtonHeight;
-    int openButtonWidth;
-    int openButtonHeight;
     int prevWidth;
     int prevHeight;
     int drawableXOrigin;
@@ -260,10 +310,9 @@ struct TreeCtrl
 #define TREE_CONF_ITEMHEIGHT 0x0002
 #define TREE_CONF_INDENT 0x0004
 #define TREE_CONF_WRAP 0x0008
-#define TREE_CONF_BUTIMG_CLOSED 0x0010
-#define TREE_CONF_BUTIMG_OPEN 0x0020
-#define TREE_CONF_BUTBMP_CLOSED 0x0040
-#define TREE_CONF_BUTBMP_OPEN 0x0080
+#define TREE_CONF_BUTIMG 0x0010
+#define TREE_CONF_BUTBMP 0x0020
+/* ... */
 #define TREE_CONF_RELAYOUT 0x0100
 #define TREE_CONF_REDISPLAY 0x0200
 #define TREE_CONF_FG 0x0400
@@ -292,7 +341,7 @@ extern void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item);
 #define SFO_NOT_OFF	0x0001
 #define SFO_NOT_TOGGLE	0x0002
 #define SFO_NOT_STATIC	0x0004
-extern int StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
+extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
 
 /* tkTreeItem.c */
 
@@ -377,6 +426,9 @@ extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
 extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
+    int x, int y, int width, int height);
+extern void TreeItem_HideWindows(TreeCtrl *tree, TreeItem item_);
 
 extern TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item);
 extern TreeItemColumn TreeItemColumn_GetNext(TreeCtrl *tree, TreeItemColumn column);
@@ -391,6 +443,7 @@ extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex,
 
 /* tkTreeElem.c */
 extern int TreeElement_Init(Tcl_Interp *interp);
+extern int TreeStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn);
 
 typedef struct StyleDrawArgs StyleDrawArgs;
 struct StyleDrawArgs
@@ -419,12 +472,12 @@ extern int TreeElement_IsType(TreeCtrl *tree, TreeElement elem_, CONST char *typ
 extern int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr);
 extern Tcl_Obj *TreeStyle_ToObj(TreeStyle style_);
 extern Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_);
-extern void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *textObj);
+extern void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *textObj);
 extern int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index);
 extern TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle master);
 extern int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj);
 extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
-extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
+extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
 extern void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_);
 extern TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_);
 extern char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y);
@@ -445,6 +498,11 @@ extern int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl
 extern int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, int state2);
 extern void TreeStyle_UndefineState(TreeCtrl *tree, int state);
 extern int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_);
+extern void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs);
+extern void TreeStyle_HideWindows(TreeCtrl *tree, TreeStyle style_);
+
+extern int ButtonMaxWidth(TreeCtrl *tree);
+extern int ButtonHeight(TreeCtrl *tree, int state);
 
 /* tkTreeNotify.c */
 extern int TreeNotify_Init(TreeCtrl *tree);
@@ -453,6 +511,10 @@ extern void TreeNotify_Selection(TreeCtrl *tree, TreeItem select[], TreeItem des
 extern int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern void TreeNotify_ActiveItem(TreeCtrl *tree, TreeItem itemOld, TreeItem itemNew);
 extern void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical);
+#define ALLOW_EVENT_ITEM_DELETED
+#ifdef ALLOW_EVENT_ITEM_DELETED
+extern void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count);
+#endif
 
 /* tkTreeColumn.c */
 extern void Tree_InitColumns(TreeCtrl *tree);
@@ -474,13 +536,13 @@ extern int TreeColumn_WidthHack(TreeColumn column_);
 extern int TreeColumn_Visible(TreeColumn column_);
 extern int TreeColumn_Squeeze(TreeColumn column_);
 extern GC TreeColumn_BackgroundGC(TreeColumn column_, int which);
-extern void TreeColumn_Draw(TreeColumn column_, Drawable drawable, int x, int y);
 extern void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y);
 extern int TreeColumn_WidthOfItems(TreeColumn column_);
 extern void TreeColumn_InvalidateWidth(TreeColumn column_);
 extern void TreeColumn_Init(TreeCtrl *tree);
 extern void Tree_FreeColumns(TreeCtrl *tree);
 extern void Tree_InvalidateColumnWidth(TreeCtrl *tree, int columnIndex);
+extern void Tree_InvalidateColumnHeight(TreeCtrl *tree, int columnIndex);
 extern int Tree_HeaderHeight(TreeCtrl *tree);
 extern int Tree_WidthOfColumns(TreeCtrl *tree);
 extern void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT);
@@ -580,7 +642,7 @@ extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, 
 extern void wipefree(char *memPtr, int size);
 #define WFREE(p,t) \
 	wipefree((char *) p, sizeof(t))
-extern int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis);
+extern int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force);
 extern void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2);
 extern void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2);
 extern void DotRect(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height);
@@ -601,7 +663,7 @@ extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
-
+extern void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha);
 
 #define PAD_TOP_LEFT     0
 #define PAD_BOTTOM_RIGHT 1
@@ -611,6 +673,67 @@ extern int       TreeCtrl_GetPadAmountFromObj(Tcl_Interp *interp,
 	Tk_Window tkwin, Tcl_Obj *padObj,
 	int *topLeftPtr, int *bottomRightPtr);
 extern Tcl_Obj * TreeCtrl_NewPadAmountObj(int *padAmounts);
+
+/*****/
+
+extern int ObjectIsEmpty(Tcl_Obj *obj);
+
+extern PerStateType pstBitmap;
+extern PerStateType pstBorder;
+extern PerStateType pstColor;
+extern PerStateType pstFont;
+extern PerStateType pstImage;
+extern PerStateType pstRelief;
+
+#define MATCH_NONE	0
+#define MATCH_ANY	1
+#define MATCH_PARTIAL	2
+#define MATCH_EXACT	3
+
+extern void PerStateInfo_Free(TreeCtrl *tree, PerStateType *typePtr,
+    PerStateInfo *pInfo);
+typedef int (*StateFromObjProc)(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn);
+extern int PerStateInfo_FromObj(TreeCtrl *tree, StateFromObjProc proc,
+    PerStateType *typePtr, PerStateInfo *pInfo);
+extern PerStateData *PerStateInfo_ForState(TreeCtrl *tree,
+    PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
+extern Tcl_Obj *PerStateInfo_ObjForState(TreeCtrl *tree, PerStateType *typePtr,
+    PerStateInfo *pInfo, int state, int *match);
+extern void PerStateInfo_Undefine(TreeCtrl *tree, PerStateType *typePtr,
+    PerStateInfo *pInfo, int state);
+
+struct PerStateGC
+{
+    unsigned long mask;
+    XGCValues gcValues;
+    GC gc;
+    struct PerStateGC *next;
+};
+extern void PerStateGC_Free(TreeCtrl *tree, struct PerStateGC **pGCPtr);
+extern GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask, XGCValues *gcValues);
+
+extern Pixmap PerStateBitmap_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+extern void PerStateBitmap_MaxSize(TreeCtrl *tree, PerStateInfo *pInfo,
+    int *widthPtr, int *heightPtr);
+extern Tk_3DBorder PerStateBorder_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+extern XColor *PerStateColor_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+extern Tk_Font PerStateFont_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+extern Tk_Image PerStateImage_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+extern void PerStateImage_MaxSize(TreeCtrl *tree, PerStateInfo *pInfo,
+    int *widthPtr, int *heightPtr);
+extern int PerStateRelief_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
+
+extern void PSTSave(PerStateInfo *pInfo, PerStateInfo *pSave);
+extern void PSTRestore(TreeCtrl *tree, PerStateType *typePtr,
+    PerStateInfo *pInfo, PerStateInfo *pSave);
+
+/*****/
 
 #define STATIC_SIZE 20
 #define STATIC_ALLOC(P,T,C) \
