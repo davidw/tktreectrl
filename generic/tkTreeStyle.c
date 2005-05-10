@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.19 2005/05/01 01:41:56 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.20 2005/05/10 22:32:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -534,7 +534,9 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	}
 
 	/* Now handle column justification */
-	if (drawArgs->width > style->neededWidth)
+	/* If any elements expand horizontally, then all the extra space
+	 * has already been consumed. */
+	if ((drawArgs->width > style->neededWidth) && !numExpandWE)
 	{
 		for (i = 0; i < eLinkCount; i++)
 		{
@@ -1201,7 +1203,7 @@ static void Style_DoLayout2(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		/* If a Text Element is given less width than it needs (due to
 		 * -squeeze x layout), then it may wrap lines. This means
 		 * the height can vary depending on the width. */
-		if (eLink->elem->typePtr->name == elemTypeText.name)
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 		{
 			ElementArgs args;
 
@@ -1258,7 +1260,7 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[], cha
 		/* If a Text Element is given less width than it needs (due to
 		 * -squeeze x layout), then it may wrap lines. This means
 		 * the height can vary depending on the width. */
-		if (eLink->elem->typePtr->name == elemTypeText.name)
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 		{
 			ElementArgs args;
 
@@ -1677,6 +1679,74 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 	STATIC_FREE(layouts, struct Layout, style->numElements);
 }
 
+void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
+{
+	Style *style = (Style *) drawArgs->style;
+	TreeCtrl *tree = drawArgs->tree;
+	ElementArgs args;
+	int i;
+	struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
+
+	if (drawArgs->width < style->minWidth)
+		drawArgs->width = style->minWidth;
+	if (drawArgs->height < style->minHeight)
+		drawArgs->height = style->minHeight;
+
+	STATIC_ALLOC(layouts, struct Layout, style->numElements);
+
+	Style_DoLayout(drawArgs, layouts, __FILE__, __LINE__);
+
+	args.tree = tree;
+	args.state = drawArgs->state;
+	args.display.drawable = drawArgs->drawable;
+
+	for (i = 0; i < style->numElements; i++)
+	{
+		struct Layout *layout = &layouts[i];
+
+		if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
+			continue;
+
+		if ((layout->iWidth > 0) && (layout->iHeight > 0))
+		{
+			args.elem = layout->eLink->elem;
+			args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
+			args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
+			args.display.width = layout->iWidth;
+			args.display.height = layout->iHeight;
+			args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
+			args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
+			args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
+			args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
+			(*args.elem->typePtr->displayProc)(&args);
+		}
+	}
+
+	STATIC_FREE(layouts, struct Layout, style->numElements);
+}
+
+void TreeStyle_HideWindows(TreeCtrl *tree, TreeStyle style_)
+{
+	Style *style = (Style *) style_;
+	ElementArgs args;
+	int i;
+
+	args.tree = tree;
+
+	for (i = 0; i < style->numElements; i++)
+	{
+		ElementLink *eLink = &style->elements[i];
+
+		if (!ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeWindow))
+			continue;
+
+		args.elem = eLink->elem;
+		args.display.width = -1;
+		args.display.height = -1;
+		(*args.elem->typePtr->displayProc)(&args);
+	}
+}
+
 static void Element_FreeResources(TreeCtrl *tree, Element *elem)
 {
 	ElementArgs args;
@@ -1759,12 +1829,65 @@ int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, i
 	return TCL_OK;
 }
 
+static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, Element *masterElem, ElementType *type,
+	CONST char *name, int objc, Tcl_Obj *CONST objv[])
+{
+	Element *elem;
+	ElementArgs args;
+
+	if (masterElem != NULL)
+	{
+		type = masterElem->typePtr;
+		name = masterElem->name;
+	}
+
+	elem = (Element *) ckalloc(type->size);
+	memset(elem, '\0', type->size);
+	elem->name = Tk_GetUid(name);
+	elem->typePtr = type;
+	elem->master = masterElem;
+
+	args.tree = tree;
+	args.elem = elem;
+	args.create.item = item;
+	args.create.column = column;
+	if ((*type->createProc)(&args) != TCL_OK)
+		return NULL;
+
+	if (Tk_InitOptions(tree->interp, (char *) elem,
+		type->optionTable, tree->tkwin) != TCL_OK)
+	{
+		WFREE(elem, Element);
+		return NULL;
+	}
+	args.config.objc = objc;
+	args.config.objv = objv;
+	args.config.flagSelf = 0;
+	if ((*type->configProc)(&args) != TCL_OK)
+	{
+		(*type->deleteProc)(&args);
+		Tk_FreeConfigOptions((char *) elem,
+			elem->typePtr->optionTable,
+			tree->tkwin);
+		WFREE(elem, Element);
+		return NULL;
+	}
+
+	args.change.flagSelf = args.config.flagSelf;
+	args.change.flagTree = 0;
+	args.change.flagMaster = 0;
+	(*type->changeProc)(&args);
+
+	return elem;
+}
+
 /* Create an instance Element if it doesn't exist in this Style */
-static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item, Style *style, Element *masterElem, int *isNew)
+static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, Style *style, Element *masterElem, int *isNew)
 {
 	ElementLink *eLink = NULL;
 	Element *elem;
-	ElementArgs args;
 	int i;
 
 	if (masterElem->master != NULL)
@@ -1795,6 +1918,10 @@ static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item, Style *style
 	if (i == style->numElements)
 		return NULL;
 
+	elem = Element_CreateAndConfig(tree, item, column, masterElem, NULL, NULL, 0, NULL);
+	if (elem == NULL)
+		return NULL;
+#if 0
 	elem = (Element *) ckalloc(masterElem->typePtr->size);
 	memset(elem, '\0', masterElem->typePtr->size);
 	elem->typePtr = masterElem->typePtr;
@@ -1821,6 +1948,7 @@ static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item, Style *style
 	args.change.flagTree = 0;
 	args.change.flagMaster = 0;
 	(*elem->typePtr->changeProc)(&args);
+#endif
 
 	eLink->elem = elem;
 	if (isNew != NULL) (*isNew) = TRUE;
@@ -2198,7 +2326,7 @@ Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &style->elements[i];
-		if (eLink->elem->typePtr->name == elemTypeText.name)
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 		{
 			Tcl_Obj *resultObjPtr;
 			resultObjPtr = Tk_GetOptionValue(tree->interp,
@@ -2211,7 +2339,8 @@ Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
 	return NULL;
 }
 
-void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *textObj)
+void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
+	TreeStyle style_, Tcl_Obj *textObj)
 {
 	Style *style = (Style *) style_;
 	Style *masterStyle = style->master;
@@ -2230,12 +2359,12 @@ void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj 
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &masterStyle->elements[i];
-		if (eLink->elem->typePtr->name == elemTypeText.name)
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 		{
 			Tcl_Obj *objv[2];
 			ElementArgs args;
 
-			eLink = Style_CreateElem(tree, item, style, eLink->elem, NULL);
+			eLink = Style_CreateElem(tree, item, column, style, eLink->elem, NULL);
 			objv[0] = confTextObj;
 			objv[1] = textObj;
 			args.tree = tree;
@@ -2419,7 +2548,7 @@ static int IterateItem(Iterate *iter)
 			for (i = 0; i < iter->style->numElements; i++)
 			{
 				iter->eLink = &iter->style->elements[i];
-				if (iter->eLink->elem->typePtr == iter->elemTypePtr)
+				if (ELEMENT_TYPE_MATCHES(iter->eLink->elem->typePtr, iter->elemTypePtr))
 					return 1;
 			}
 		}
@@ -2470,6 +2599,53 @@ TreeIterate Tree_ElementIterateNext(TreeIterate iter_)
 	}
 	ckfree((char *) iter);
 	return NULL;
+}
+
+void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, Element *elem, int mask)
+{
+	if (mask & CS_LAYOUT)
+	{
+		Style *style = (Style *) TreeItemColumn_GetStyle(tree, column);
+		int i;
+		ElementLink *eLink = NULL;
+		TreeItemColumn column2;
+		int columnIndex = 0;
+
+		if (style == NULL)
+			panic("Tree_ElementChangedItself but style is NULL\n");
+
+		for (i = 0; i < style->numElements; i++)
+		{
+			eLink = &style->elements[i];
+			if (eLink->elem == elem)
+				break;
+		}
+
+		if (eLink == NULL)
+			panic("Tree_ElementChangedItself but eLink is NULL\n");
+
+		column2 = TreeItem_GetFirstColumn(tree, item);
+		while (column2 != NULL)
+		{
+			if (column2 == column)
+				break;
+			columnIndex++;
+			column2 = TreeItemColumn_GetNext(tree, column2);
+		}
+		if (column2 == NULL)
+			panic("Tree_ElementChangedItself but column2 is NULL\n");
+
+		eLink->neededWidth = eLink->neededHeight = -1;
+		style->neededWidth = style->neededHeight = -1;
+
+		Tree_InvalidateColumnWidth(tree, columnIndex);
+		TreeItemColumn_InvalidateSize(tree, column);
+		TreeItem_InvalidateHeight(tree, item);
+		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+	}
+	if (mask & CS_DISPLAY)
+		Tree_InvalidateItemDInfo(tree, item, NULL);
 }
 
 void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
@@ -2551,7 +2727,9 @@ int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tc
 	return TCL_OK;
 }
 
-int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask)
+int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj,
+	int objc, Tcl_Obj **objv, int *eMask)
 {
 	Style *style = (Style *) style_;
 	Element *elem;
@@ -2589,7 +2767,7 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeStyle style_, 
 	{
 		int isNew;
 
-		eLink = Style_CreateElem(tree, item, style, elem, &isNew);
+		eLink = Style_CreateElem(tree, item, column, style, elem, &isNew);
 		if (eLink == NULL)
 		{
 			FormatResult(tree->interp, "style %s does not use element %s",
@@ -2652,48 +2830,6 @@ int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj
 	args.state = state;
 	args.actual.obj = obj;
 	return (*masterElem->typePtr->actualProc)(&args);
-}
-
-static Element *Element_CreateAndConfig(TreeCtrl *tree, ElementType *type, char *name, int objc, Tcl_Obj *CONST objv[])
-{
-	Element *elem;
-	ElementArgs args;
-
-	elem = (Element *) ckalloc(type->size);
-	memset(elem, '\0', type->size);
-	elem->name = Tk_GetUid(name);
-	elem->typePtr = type;
-	args.tree = tree;
-	args.item = NULL;
-	args.elem = elem;
-	if ((*type->createProc)(&args) != TCL_OK)
-		return NULL;
-
-	if (Tk_InitOptions(tree->interp, (char *) elem,
-		type->optionTable, tree->tkwin) != TCL_OK)
-	{
-		WFREE(elem, Element);
-		return NULL;
-	}
-	args.config.objc = objc;
-	args.config.objv = objv;
-	args.config.flagSelf = 0;
-	if ((*type->configProc)(&args) != TCL_OK)
-	{
-		(*type->deleteProc)(&args);
-		Tk_FreeConfigOptions((char *) elem,
-			elem->typePtr->optionTable,
-			tree->tkwin);
-		WFREE(elem, Element);
-		return NULL;
-	}
-
-	args.change.flagSelf = args.config.flagSelf;
-	args.change.flagTree = 0;
-	args.change.flagMaster = 0;
-	(*type->changeProc)(&args);
-
-	return elem;
 }
 
 int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
@@ -2791,11 +2927,11 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		case COMMAND_CREATE:
 		{
-			char *name, *typeStr;
+			char *name;
 			int length;
 			int isNew;
 			Element *elem;
-			ElementType *typePtr, *matchPtr = NULL;
+			ElementType *typePtr;
 			Tcl_HashEntry *hPtr;
 
 			if (objc < 5)
@@ -2812,42 +2948,9 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				FormatResult(interp, "element \"%s\" already exists", name);
 				return TCL_ERROR;
 			}
-#if 1
 			if (TreeElement_TypeFromObj(tree, objv[4], &typePtr) != TCL_OK)
 				return TCL_ERROR;
-#else
-			typeStr = Tcl_GetStringFromObj(objv[4], &length);
-			if (!length)
-			{
-				FormatResult(interp,
-					"invalid element type \"\"");
-				return TCL_ERROR;
-			}
-			for (typePtr = elementTypeList;
-				typePtr != NULL;
-				typePtr = typePtr->next)
-			{
-				if ((typeStr[0] == typePtr->name[0]) &&
-					!strncmp(typeStr, typePtr->name, length))
-				{
-					if (matchPtr != NULL)
-					{
-						FormatResult(interp,
-							"ambiguous element type \"%s\"",
-							typeStr);
-						return TCL_ERROR;
-					}
-					matchPtr = typePtr;
-				}
-			}
-			if (matchPtr == NULL)
-			{
-				FormatResult(interp, "unknown element type \"%s\"", typeStr);
-				return TCL_ERROR;
-			}
-			typePtr = matchPtr;
-#endif
-			elem = Element_CreateAndConfig(tree, typePtr, name, objc - 5, objv + 5);
+			elem = Element_CreateAndConfig(tree, NULL, NULL, NULL, typePtr, name, objc - 5, objv + 5);
 			if (elem == NULL)
 				return TCL_ERROR;
 			hPtr = Tcl_CreateHashEntry(&tree->elementHash, name, &isNew);
@@ -3601,6 +3704,57 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	return TCL_OK;
 }
 
+int ButtonMaxWidth(TreeCtrl *tree)
+{
+	int w, h, width = 0;
+
+	PerStateImage_MaxSize(tree, &tree->buttonImage, &w, &h);
+	width = MAX(width, w);
+
+	PerStateBitmap_MaxSize(tree, &tree->buttonBitmap, &w, &h);
+	width = MAX(width, w);
+
+#ifdef THEME
+	if (tree->useTheme)
+	{
+		if (TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
+			TRUE, &w, &h) == TCL_OK)
+			width = MAX(width, w);
+		if (TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
+			FALSE, &w, &h) == TCL_OK)
+			width = MAX(width, w);
+	}
+#endif
+	return MAX(width, tree->buttonSize);
+}
+
+int ButtonHeight(TreeCtrl *tree, int state)
+{
+	Tk_Image image;
+	Pixmap bitmap;
+	int w, h;
+
+	image = PerStateImage_ForState(tree, &tree->buttonImage, state, NULL);
+	if (image != NULL) {
+	    Tk_SizeOfImage(image, &w, &h);
+	    return h;
+	}
+
+	bitmap = PerStateBitmap_ForState(tree, &tree->buttonBitmap, state, NULL);
+	if (bitmap != None) {
+		Tk_SizeOfBitmap(tree->display, bitmap, &w, &h);
+		return h;
+	}
+
+#ifdef THEME
+	if (tree->useTheme &&
+		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
+			(state & STATE_OPEN) != 0, &w, &h) == TCL_OK)
+		return h;
+#endif
+	return tree->buttonSize;
+}
+
 char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y)
 {
 	TreeCtrl *tree = drawArgs->tree;
@@ -3839,7 +3993,7 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int t
 	{
 		for (i = 0; i < style->numElements; i++)
 		{
-			if (eLink->elem->typePtr->name == elemTypeText.name)
+			if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 				return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 			eLink++;
 		}
@@ -3849,7 +4003,7 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int t
 		if ((elemIndex < 0) || (elemIndex >= style->numElements))
 			panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
 		eLink = &style->elements[elemIndex];
-		if (eLink->elem->typePtr->name == elemTypeText.name)
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 			return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	}
 
@@ -4092,5 +4246,4 @@ void TreeStyle_Free(TreeCtrl *tree)
 	Tcl_DeleteHashTable(&tree->elementHash);
 	Tcl_DeleteHashTable(&tree->styleHash);
 }
-
 
