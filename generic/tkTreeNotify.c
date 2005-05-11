@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.7 2005/05/10 22:27:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.8 2005/05/11 03:24:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -27,9 +27,7 @@ static int EVENT_ACTIVEITEM;
 static int EVENT_SCROLL,
 	DETAIL_SCROLL_X,
 	DETAIL_SCROLL_Y;
-#ifdef ALLOW_EVENT_ITEM_DELETED
 static int EVENT_ITEM_DELETE;
-#endif
 
 static void ExpandItem(int id, Tcl_DString *result)
 {
@@ -433,7 +431,6 @@ void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical)
 	(void) QE_BindEvent(tree->bindingTable, &event);
 }
 
-#ifdef ALLOW_EVENT_ITEM_DELETED
 static void Percents_ItemDeleted(QE_ExpandArgs *args)
 {
 	struct {
@@ -487,7 +484,6 @@ void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count)
 
 	(void) QE_BindEvent(tree->bindingTable, &event);
 }
-#endif
 
 int TreeNotify_Init(TreeCtrl *tree)
 {
@@ -509,9 +505,7 @@ int TreeNotify_Init(TreeCtrl *tree)
 	DETAIL_SCROLL_X = QE_InstallDetail(tree->bindingTable, "x", EVENT_SCROLL, NULL);
 	DETAIL_SCROLL_Y = QE_InstallDetail(tree->bindingTable, "y", EVENT_SCROLL, NULL);
 
-#ifdef ALLOW_EVENT_ITEM_DELETED
 	EVENT_ITEM_DELETE = QE_InstallEvent(tree->bindingTable, "ItemDelete", Percents_ItemDeleted);
-#endif
 
 	return TCL_OK;
 }

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.32 2005/05/10 22:07:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.33 2005/05/11 03:24:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -45,12 +45,10 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BORDER, "-background", "background", "Background",
      "white", -1, Tk_Offset(TreeCtrl, border), 0, 
      (ClientData) "white", TREE_CONF_REDISPLAY},
-#ifdef BG_IMAGE
     {TK_OPTION_STRING, "-backgroundimage", "backgroundImage", "BackgroundImage",
       (char *) NULL, -1, Tk_Offset(TreeCtrl, backgroundImageString),
       TK_OPTION_NULL_OK, (ClientData) NULL,
       TREE_CONF_BG_IMAGE | TREE_CONF_REDISPLAY},
-#endif
     {TK_OPTION_STRING_TABLE, "-backgroundmode",
      "backgroundMode", "BackgroundMode",
      "row", -1, Tk_Offset(TreeCtrl, backgroundMode),
@@ -191,11 +189,9 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_INT, "-treecolumn", "treeColumn", "TreeColumn",
      "0", -1, Tk_Offset(TreeCtrl, columnTree),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
-#ifdef THEME
     {TK_OPTION_BOOLEAN, "-usetheme", "useTheme",
      "UseTheme", "0", -1, Tk_Offset(TreeCtrl, useTheme),
      0, (ClientData) NULL, TREE_CONF_THEME | TREE_CONF_RELAYOUT},
-#endif
     {TK_OPTION_PIXELS, "-width", "width", "Width",
      "200", Tk_Offset(TreeCtrl, widthObj), Tk_Offset(TreeCtrl, width),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
@@ -244,7 +240,6 @@ static Tk_OptionSpec debugSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
-#ifdef COLUMN_DRAG_IMAGE
 static Tk_OptionSpec dragSpecs[] = {
     {TK_OPTION_BOOLEAN, "-enable", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(TreeCtrl, columnDrag.enable),
@@ -270,7 +265,6 @@ static Tk_OptionSpec dragSpecs[] = {
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, 0, 0}
 };
-#endif
 
 
 static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -285,9 +279,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,Tcl_Obj *CONST objv[]);
-#ifdef COLUMN_DRAG_IMAGE
 static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-#endif
 
 static Tk_ClassProcs treectrlClass = {
     sizeof(Tk_ClassProcs),	/* size */
@@ -402,9 +394,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     static CONST char *commandName[] = {
 	"activate", "canvasx", "canvasy", "cget", "collapse",
 	"column",
-#ifdef COLUMN_DRAG_IMAGE
 	"columndrag",
-#endif
 	"compare", "configure", "contentbox",
 	"debug", "depth", "dragimage",
 	"element", "expand", "identify", "index", "item",
@@ -415,9 +405,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
 	COMMAND_COLLAPSE, COMMAND_COLUMN,
-#ifdef COLUMN_DRAG_IMAGE
 	COMMAND_COLUMNDRAG,
-#endif
 	COMMAND_COMPARE, COMMAND_CONFIGURE,
 	COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
@@ -592,13 +580,11 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    break;
 	}
 
-#ifdef COLUMN_DRAG_IMAGE
 	case COMMAND_COLUMNDRAG:
 	{
 	    result = TreeColumnDragCmd(clientData, interp, objc, objv);
 	    break;
 	}
-#endif
 
 	case COMMAND_COMPARE:
 	{
@@ -1124,10 +1110,8 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 	     * Step 1: Save old values
 	     */
 
-#ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE)
 		saved.backgroundImage = tree->backgroundImage;
-#endif
 	    if (mask & TREE_CONF_BUTBMP)
 		PSTSave(&tree->buttonBitmap, &saved.buttonBitmap);
 	    if (mask & TREE_CONF_BUTIMG)
@@ -1145,7 +1129,6 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 	     * Step 2: Process new values
 	     */
 
-#ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = NULL;
 		if (tree->backgroundImageString != NULL) {
@@ -1155,7 +1138,6 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		    tree->backgroundImage = image;
 		}
 	    }
-#endif
 
 	    if (mask & TREE_CONF_BUTBMP) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap,
@@ -1259,10 +1241,8 @@ badWrap:
 	     * Step 3: Free saved values
 	     */
 
-#ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE)
 		; /* nothing to free */
-#endif
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (saved.defaultStyle.styles != NULL)
 		    ckfree((char *) saved.defaultStyle.styles);
@@ -1279,11 +1259,9 @@ badWrap:
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-#ifdef BG_IMAGE
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = saved.backgroundImage;
 	    }
-#endif
 	    if (mask & TREE_CONF_BUTBMP) {
 		PSTRestore(tree, &pstBitmap, &tree->buttonBitmap,
 		    &saved.buttonBitmap);
@@ -2553,19 +2531,15 @@ static int A_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 
 static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
-#ifdef INCREMENTS
     if (tree->xScrollIncrement <= 0)
 	return B_XviewCmd(tree, objc, objv);
-#endif
     return A_XviewCmd(tree, objc, objv);
 }
 
 static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 {
-#ifdef INCREMENTS
     if (tree->yScrollIncrement <= 0)
 	return B_YviewCmd(tree, objc, objv);
-#endif
     return A_YviewCmd(tree, objc, objv);
 }
 
@@ -2680,7 +2654,6 @@ static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     return TCL_OK;
 }
 
-#ifdef COLUMN_DRAG_IMAGE
 static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
@@ -2759,7 +2732,6 @@ static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc
 
     return TCL_OK;
 }
-#endif
 
 /*
 textlayout $font $text
@@ -3100,8 +3072,6 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 #endif /* not TARGET_OS_MAC */
 #endif /* not WIN32 */
 
-#ifdef THEME
-
 /* Taken from tkFont.c */
 static void RecomputeWidgets(TkWindow *winPtr)
 {
@@ -3128,8 +3098,6 @@ void Tree_TheWorldHasChanged(Tcl_Interp *interp)
     TkWindow *winPtr = (TkWindow *) Tk_MainWindow(interp);
     RecomputeWidgets(winPtr);
 }
-
-#endif /* THEME */
 
 static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
   namespace eval ::TreeCtrl {}\n\
@@ -3159,10 +3127,8 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
     if (TreeStyle_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
-#ifdef THEME
     /* We don't care if this fails */
     (void) TreeTheme_Init(interp);
-#endif
 
     /* Hack for editing a text Element */
     Tcl_CreateObjCommand(interp, "textlayout", TextLayoutCmd, NULL, NULL);

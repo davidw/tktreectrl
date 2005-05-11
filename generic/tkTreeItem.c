@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.29 2005/05/10 22:27:10 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.30 2005/05/11 03:24:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -300,9 +300,7 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 	Tk_Image image1, image2;
 	Pixmap bitmap1, bitmap2;
 	int butOpen, butClosed;
-#ifdef THEME
 	int themeOpen, themeClosed;
-#endif
 	int w1, h1, w2, h2;
 	void *ptr1 = NULL, *ptr2 = NULL;
 
@@ -325,7 +323,6 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 		ptr1 = (void *) bitmap1;
 	    }
 	}
-#ifdef THEME
 	if (ptr1 == NULL) {
 	    if (tree->useTheme &&
 		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
@@ -333,7 +330,6 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 		ptr1 = (item->state & STATE_OPEN) ? &themeOpen : &themeClosed;
 	    }
 	}
-#endif
 	if (ptr1 == NULL) {
 	    w1 = h1 = tree->buttonSize;
 	    ptr1 = (item->state & STATE_OPEN) ? &butOpen : &butClosed;
@@ -352,7 +348,6 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 		ptr2 = (void *) bitmap2;
 	    }
 	}
-#ifdef THEME
 	if (ptr2 == NULL) {
 	    if (tree->useTheme &&
 		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
@@ -360,7 +355,6 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 		ptr2 = (state & STATE_OPEN) ? &themeOpen : &themeClosed;
 	    }
 	}
-#endif
 	if (ptr2 == NULL) {
 	    w2 = h2 = tree->buttonSize;
 	    ptr2 = (state & STATE_OPEN) ? &butOpen : &butClosed;
@@ -1551,13 +1545,9 @@ static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
     if (gc == None)
 	gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
     XFillRectangle(tree->display, drawable, gc, x, y, width, height);
-#ifdef BG_IMAGE
     if (tree->backgroundImage != NULL) 
-    {
-	Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
-		x + width, y + height);
-    }
-#endif
+		Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
+			x + width, y + height);
 }
 
 void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
@@ -1612,7 +1602,6 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 		    drawArgs.justify = TreeColumn_Justify(treeColumn);
 		    TreeStyle_Draw(&drawArgs);
 		}
-#if 1
 		if (TreeColumn_Index(treeColumn) == tree->columnTree) {
 		    if (tree->showLines)
 			TreeItem_DrawLines(tree, item_, x, y, width, height,
@@ -1621,7 +1610,6 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 			TreeItem_DrawButton(tree, item_, x, y, width, height,
 				drawable);
 		}
-#endif
 	    }
 	    totalWidth += columnWidth;
 	}
@@ -1800,7 +1788,6 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 	return;
     }
 
-#ifdef THEME
     if (tree->useTheme) {
 	int bw, bh;
 	if (TreeTheme_GetButtonSize(tree, drawable, self->state & STATE_OPEN,
@@ -1812,7 +1799,6 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 	    }
 	}
     }
-#endif
 
     w1 = tree->buttonThickness / 2;
 
@@ -2253,27 +2239,13 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     return TCL_OK;
 }
 
-#if 0
-T item sort I
--first I (default firstchild)
-    -last I (default lastchild)
-    -command $cmd
--dictionary
--integer
--real
--increasing
--decreasing
--column C (default 0)
-    -element E (default first "text")
-#endif
-
 /* one per column per SortItem */
-    struct SortItem1
-    {
-	long longValue;
-	double doubleValue;
-	char *string;
-    };
+struct SortItem1
+{
+    long longValue;
+    double doubleValue;
+    char *string;
+};
 
 /* one per Item */
 struct SortItem
@@ -3338,7 +3310,6 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
     STATIC_FREE2(items, staticItems);
 }
 
-#ifdef ALLOW_EVENT_ITEM_DELETED
 static void ItemDeleteNotify(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
 {
     int staticItemIds[256], *itemIds = staticItemIds;
@@ -3393,7 +3364,6 @@ doNotify:
     if (itemIds != staticItemIds)
 	ckfree((char *) itemIds);
 }
-#endif
 
 #ifdef SELECTION_VISIBLE
 /* FIXME: optimize all calls to this routine */
@@ -3879,6 +3849,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	}
 	case COMMAND_DELETE:
 	{
+	    Item *itemFirst, *itemLast;
 	    int index1, index2;
 
 	    /* Exclude root from the range */
@@ -3898,95 +3869,49 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 	    }
 
+	    if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
+		itemFirst = (Item *) ITEM_ALL;
+		itemLast = NULL;
+	    } else if ((item2 != NULL) && (item != item2)) {
+		int indexFirst;
+		Item *ancestor;
+
+		TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
+		TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
+		if (index1 < index2) {
+		    itemFirst = item;
+		    itemLast = item2;
+		    indexFirst = index1;
+		} else {
+		    itemFirst = item2;
+		    itemLast = item;
+		    indexFirst = index2;
+		}
+
+		ancestor = itemLast;
+		while (ancestor->parent != NULL) {
+		    int index;
+		    TreeItem_ToIndex(tree, (TreeItem) ancestor, &index, NULL);
+		    if (index >= indexFirst)
+			itemLast = ancestor;
+		    else
+			break;
+		    ancestor = ancestor->parent;
+		}
+
+		while (itemLast->lastChild != NULL)
+		    itemLast = itemLast->lastChild;
+	    } else {
+		itemFirst = item;
+		itemLast = item;
+		while (itemLast->lastChild != NULL)
+		    itemLast = itemLast->lastChild;
+	    }
 	    /* Generate <Selection> event for selected items being deleted */
-	    if (tree->selectCount) {
-		Item *itemFirst, *itemLast;
-
-		if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
-		    itemFirst = (Item *) ITEM_ALL;
-		    itemLast = NULL;
-		} else if ((item2 != NULL) && (item != item2)) {
-		    int indexFirst;
-		    Item *ancestor;
-
-		    TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
-		    TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
-		    if (index1 < index2) {
-			itemFirst = item;
-			itemLast = item2;
-			indexFirst = index1;
-		    } else {
-			itemFirst = item2;
-			itemLast = item;
-			indexFirst = index2;
-		    }
-
-		    ancestor = itemLast;
-		    while (ancestor->parent != NULL) {
-			int index;
-			TreeItem_ToIndex(tree, (TreeItem) ancestor, &index, NULL);
-			if (index >= indexFirst)
-			    itemLast = ancestor;
-			else
-			    break;
-			ancestor = ancestor->parent;
-		    }
-
-		    while (itemLast->lastChild != NULL)
-			itemLast = itemLast->lastChild;
-		} else {
-		    itemFirst = item;
-		    itemLast = item;
-		    while (itemLast->lastChild != NULL)
-			itemLast = itemLast->lastChild;
-		}
+	    if (tree->selectCount)
 		ItemDeleteDeselect(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
-	    }
-#ifdef ALLOW_EVENT_ITEM_DELETED
-	    {
-		Item *itemFirst, *itemLast;
+	    ItemDeleteNotify(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
 
-		if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
-		    itemFirst = (Item *) ITEM_ALL;
-		    itemLast = NULL;
-		} else if ((item2 != NULL) && (item != item2)) {
-		    int indexFirst;
-		    Item *ancestor;
-
-		    TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
-		    TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
-		    if (index1 < index2) {
-			itemFirst = item;
-			itemLast = item2;
-			indexFirst = index1;
-		    } else {
-			itemFirst = item2;
-			itemLast = item;
-			indexFirst = index2;
-		    }
-
-		    ancestor = itemLast;
-		    while (ancestor->parent != NULL) {
-			int index;
-			TreeItem_ToIndex(tree, (TreeItem) ancestor, &index, NULL);
-			if (index >= indexFirst)
-			    itemLast = ancestor;
-			else
-			    break;
-			ancestor = ancestor->parent;
-		    }
-
-		    while (itemLast->lastChild != NULL)
-			itemLast = itemLast->lastChild;
-		} else {
-		    itemFirst = item;
-		    itemLast = item;
-		    while (itemLast->lastChild != NULL)
-			itemLast = itemLast->lastChild;
-		}
-		ItemDeleteNotify(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
-	    }
-#endif
 	    if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
 		/* Do it this way so any detached items are deleted */
 		while (1) {

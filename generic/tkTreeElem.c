@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.17 2005/05/10 22:17:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.18 2005/05/11 03:24:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2078,16 +2078,12 @@ ElementType elemTypeRect = {
 
 typedef struct ElementText ElementText;
 
-/* Compile-time option */
-#define USE_TEXT_DATA 1
-
 struct ElementText
 {
     Element header;
     Tcl_Obj *textObj; /* -text */
     char *text;
     int textLen;
-#ifdef USE_TEXT_DATA
     Tcl_Obj *dataObj;
 #define TDT_NULL -1
 #define TDT_DOUBLE 0
@@ -2095,23 +2091,22 @@ struct ElementText
 #define TDT_LONG 2
 #define TDT_STRING 3
 #define TDT_TIME 4
-#define TEXT_CONF_DATA 0x0001000 /* for Tk_SetOptions() */
-    int dataType; /* -datatype */
-    Tcl_Obj *formatObj; /* -format */
+#define TEXT_CONF_DATA 0x0001000	/* for Tk_SetOptions() */
+    int dataType;			/* -datatype */
+    Tcl_Obj *formatObj;			/* -format */
     int stringRepInvalid;
-#endif /* USE_TEXT_DATA */
     PerStateInfo font;
     PerStateInfo fill;
     struct PerStateGC *gc;
 #define TK_JUSTIFY_NULL -1
-    int justify; /* -justify */
-    int lines; /* -lines */
-    Tcl_Obj *widthObj; /* -width */
-    int width; /* -width */
+    int justify;			/* -justify */
+    int lines;				/* -lines */
+    Tcl_Obj *widthObj;			/* -width */
+    int width;				/* -width */
 #define TEXT_WRAP_NULL -1
 #define TEXT_WRAP_CHAR 0
 #define TEXT_WRAP_WORD 1
-    int wrap; /* -wrap */
+    int wrap;				/* -wrap */
     TextLayout layout;
     int layoutInvalid;
     int layoutWidth;
@@ -2190,7 +2185,6 @@ static Tk_ObjCustomOption textWrapCO =
 };
 
 static Tk_OptionSpec textOptionSpecs[] = {
-#ifdef USE_TEXT_DATA
     {TK_OPTION_STRING, "-data", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, dataObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
@@ -2200,7 +2194,6 @@ static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_STRING, "-format", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, formatObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
-#endif /* USE_TEXT_DATA */
     {TK_OPTION_STRING, "-fill", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, fill.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL,  TEXT_CONF_FILL},
@@ -2239,12 +2232,10 @@ static int WorldChangedProcText(ElementArgs *args)
     int flagS = args->change.flagSelf;
     int mask = 0;
 
-#ifdef USE_TEXT_DATA
     if ((flagS | flagM) & (TEXT_CONF_DATA | TEXT_CONF_TEXTOBJ)) {
 	elemX->stringRepInvalid = TRUE;
 	mask |= CS_DISPLAY | CS_LAYOUT;
     }
-#endif /* USE_TEXT_DATA */
 
     if (elemX->stringRepInvalid ||
 	    ((flagS | flagM) & (TEXT_CONF_FONT | TEXT_CONF_LAYOUT)) ||
@@ -2259,8 +2250,6 @@ static int WorldChangedProcText(ElementArgs *args)
 
     return mask;
 }
-
-#ifdef USE_TEXT_DATA
 
 static void TextUpdateStringRep(ElementArgs *args)
 {
@@ -2409,8 +2398,6 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 }
 
-#endif /* USE_TEXT_DATA */
-
 static void TextUpdateLayout(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
@@ -2509,12 +2496,10 @@ static void DeleteProcText(ElementArgs *args)
 	PerStateGC_Free(tree, &elemX->gc);
     PerStateInfo_Free(tree, &pstColor, &elemX->fill);
     PerStateInfo_Free(tree, &pstFont, &elemX->font);
-#ifdef USE_TEXT_DATA
     if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
 	ckfree(elemX->text);
 	elemX->text = NULL;
     }
-#endif
     if (elemX->layout != NULL)
 	TextLayout_Free(elemX->layout);
 }
@@ -2584,9 +2569,7 @@ static int CreateProcText(ElementArgs *args)
 {
     ElementText *elemX = (ElementText *) args->elem;
 
-#ifdef USE_TEXT_DATA
     elemX->dataType = TDT_NULL;
-#endif
     elemX->justify = TK_JUSTIFY_NULL;
     elemX->lines = -1;
     elemX->wrap = TEXT_WRAP_NULL;
@@ -2710,7 +2693,6 @@ static void LayoutProcText(ElementArgs *args)
     int width = 0;
     TextLayout layout = NULL;
 
-#ifdef USE_TEXT_DATA
     if ((masterX != NULL) /* && (elemX != masterX) */ && masterX->stringRepInvalid) {
 	args->elem = (Element *) masterX;
 	TextUpdateStringRep(args);
@@ -2721,7 +2703,6 @@ static void LayoutProcText(ElementArgs *args)
 	TextUpdateStringRep(args);
 	elemX->stringRepInvalid = FALSE;
     }
-#endif
 
     if (elemX->layoutInvalid || (elemX->layoutWidth != args->layout.width)) {
 	TextUpdateLayout(args);
@@ -3080,6 +3061,12 @@ static int ConfigProcWindow(ElementArgs *args)
 	    }
 
 	    /* */
+	    if (args->config.flagSelf & EWIN_CONF_WINDOW) {
+		if ((elem->master == NULL) && (elemX->tkwin != NULL)){
+		    FormatResult(tree->interp, "can't specify -window for a master element");
+		    continue;
+		}
+	    }
 
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;

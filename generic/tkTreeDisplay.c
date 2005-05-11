@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.20 2005/05/10 22:13:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.21 2005/05/11 03:24:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -67,45 +67,37 @@ struct DItem
 struct DInfo
 {
     GC scrollGC;
-    int xOrigin; /* Last seen TreeCtrl.xOrigin */
-    int yOrigin; /* Last seen TreeCtrl.yOrigin */
-    int totalWidth; /* Last seen Tree_TotalWidth() */
-    int totalHeight; /* Last seen Tree_TotalHeight() */
-    int *columnWidth; /* Last seen column widths */
-    int columnWidthSize; /* Num elements in columnWidth */
-    int headerHeight; /* Last seen TreeCtrl.headerHeight */
-    DItem *dItem; /* Head of list for each visible item */
-    DItem *dItemLast; /* Temp for UpdateDInfo() */
-    Range *rangeFirst; /* Head of Ranges */
-    Range *rangeLast; /* Tail of Ranges */
-    RItem *rItem; /* Block of RItems for all Ranges */
-    int rItemMax; /* size of rItem */
-    Range *rangeFirstD; /* First range with valid display info */
-    Range *rangeLastD; /* Last range with valid display info */
-    int itemHeight; /* Observed max TreeItem height */
-    int itemWidth; /* Observed max TreeItem width */
-    Pixmap pixmap; /* DOUBLEBUFFER_WINDOW */
-    int dirty[4]; /* DOUBLEBUFFER_WINDOW */
-    int flags; /* DINFO_XXX */
-#ifdef INCREMENTS
-    int xScrollIncrement; /* Last seen TreeCtr.xScrollIncrement */
-    int yScrollIncrement; /* Last seen TreeCtr.yScrollIncrement */
-    int *xScrollIncrements; /* When tree->xScrollIncrement is zero */
-    int *yScrollIncrements; /* When tree->yScrollIncrement is zero */
+    int xOrigin;		/* Last seen TreeCtrl.xOrigin */
+    int yOrigin;		/* Last seen TreeCtrl.yOrigin */
+    int totalWidth;		/* Last seen Tree_TotalWidth() */
+    int totalHeight;		/* Last seen Tree_TotalHeight() */
+    int *columnWidth;		/* Last seen column widths */
+    int columnWidthSize;	/* Num elements in columnWidth */
+    int headerHeight;		/* Last seen TreeCtrl.headerHeight */
+    DItem *dItem;		/* Head of list for each visible item */
+    DItem *dItemLast;		/* Temp for UpdateDInfo() */
+    Range *rangeFirst;		/* Head of Ranges */
+    Range *rangeLast;		/* Tail of Ranges */
+    RItem *rItem;		/* Block of RItems for all Ranges */
+    int rItemMax;		/* size of rItem[] */
+    Range *rangeFirstD;		/* First range with valid display info */
+    Range *rangeLastD; 		/* Last range with valid display info */
+    int itemHeight;		/* Observed max TreeItem height */
+    int itemWidth;		/* Observed max TreeItem width */
+    Pixmap pixmap;		/* DOUBLEBUFFER_WINDOW */
+    int dirty[4];		/* DOUBLEBUFFER_WINDOW */
+    int flags;			/* DINFO_XXX */
+    int xScrollIncrement;	/* Last seen TreeCtr.xScrollIncrement */
+    int yScrollIncrement;	/* Last seen TreeCtr.yScrollIncrement */
+    int *xScrollIncrements;	/* When tree->xScrollIncrement is zero */
+    int *yScrollIncrements;	/* When tree->yScrollIncrement is zero */
     int xScrollIncrementCount;
     int yScrollIncrementCount;
-    int incrementTop; /* yScrollIncrement[] index of item at top */
-    int incrementLeft; /* xScrollIncrement[] index of item at left */
-#endif
-    TkRegion wsRgn; /* region containing whitespace */
-#define ITEM_VIS_HASH
-#ifdef ITEM_VIS_HASH
-    Tcl_HashTable itemVisHash;
-#endif
-#define DITEM_FREE
-#ifdef DITEM_FREE
-    DItem *dItemFree; /* list of unused DItems */
-#endif
+    int incrementTop;		/* yScrollIncrement[] index of item at top */
+    int incrementLeft;		/* xScrollIncrement[] index of item at left */
+    TkRegion wsRgn;		/* region containing whitespace */
+    Tcl_HashTable itemVisHash;	/* table of visible items */
+    DItem *dItemFree;		/* list of unused DItems */
 };
 
 /*========*/
@@ -605,7 +597,6 @@ Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
 	    goto panicNow;
     }
 
-#if 1
     if (tree->vertical) {
 	/* Binary search */
 	l = 0;
@@ -644,43 +635,12 @@ Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
 		l = i + 1;
 	}
     }
-#else
-    if (tree->vertical) {
-	rItem = range->first;
-	while (1) {
-	    if ((y >= rItem->offset) && (y < rItem->offset + rItem->size)) {
-		/* Range -> item coords */
-		(*x_) = x;
-		(*y_) = y - rItem->offset;
-		return rItem->item;
-	    }
-	    if (rItem == range->last)
-		break;
-	    rItem++;
-	}
-    }
-    else {
-	rItem = range->first;
-	while (1) {
-	    if ((x >= rItem->offset) && (x < rItem->offset + rItem->size)) {
-		/* Range -> item coords */
-		(*x_) = x - rItem->offset;
-		(*y_) = y;
-		return rItem->item;
-	    }
-	    if (rItem == range->last)
-		break;
-	    rItem++;
-	}
-    }
-#endif
+
     panicNow:
     panic("Range_ItemUnderPoint: can't find TreeItem in Range: x %d y %d W %d H %d",
 	    x, y, range->totalWidth, range->totalHeight);
     return NULL;
 }
-
-#ifdef INCREMENTS
 
 static int
 Increment_AddX(TreeCtrl *tree, int offset, int size)
@@ -1152,8 +1112,6 @@ B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
-#endif /* INCREMENTS */
-
 TreeItem
 Tree_ItemUnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
 {
@@ -1440,16 +1398,15 @@ DItem_Alloc(TreeCtrl *tree, RItem *rItem)
     if (dItem != NULL)
 	panic("tried to allocate duplicate DItem");
 
-#ifdef DITEM_FREE
+    /* Pop unused DItem from stack */
     if (dInfo->dItemFree != NULL) {
 	dItem = dInfo->dItemFree;
 	dInfo->dItemFree = dItem->nextFree;
+
+    /* No free DItems, alloc a new one */
     } else {
 	dItem = (DItem *) ckalloc(sizeof(DItem));
     }
-#else
-    dItem = (DItem *) ckalloc(sizeof(DItem));
-#endif
     memset(dItem, '\0', sizeof(DItem));
     strncpy(dItem->magic, "MAGC", 4);
     dItem->item = rItem->item;
@@ -1486,12 +1443,9 @@ DItem_Free(TreeCtrl *tree, DItem *dItem)
 	panic("DItem_Free: dItem.magic != MAGC");
     if (dItem->item != NULL)
 	TreeItem_SetDInfo(tree, dItem->item, (TreeItemDInfo) NULL);
-#ifdef DITEM_FREE
+    /* Push unused DItem on the stack */
     dItem->nextFree = dInfo->dItemFree;
     dInfo->dItemFree = dItem;
-#else
-    WFREE(dItem, DItem);
-#endif
     return next;
 }
 
@@ -1633,12 +1587,10 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
     TreeItem item;
     int maxX, maxY;
     int index, indexVis;
-#ifdef BG_IMAGE
     int bgImgWidth, bgImgHeight;
 
     if (tree->backgroundImage != NULL)
 	Tk_SizeOfImage(tree->backgroundImage, &bgImgWidth, &bgImgHeight);
-#endif
 
     maxX = Tk_Width(tree->tkwin) - tree->inset;
     maxY = Tk_Height(tree->tkwin) - tree->inset;
@@ -1693,14 +1645,12 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 			((dItem->oldY & 1) != (y & 1)))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-#ifdef BG_IMAGE
 		/* We can't copy the item to its new position unless it
 		 * has the same part of the background image behind it */
 		else if ((tree->backgroundImage != NULL) &&
 			(((dItem->oldY + dInfo->yOrigin) % bgImgHeight) !=
 				((y + tree->yOrigin) % bgImgHeight)))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
-#endif
 	    }
 
 	    /* Make a new DItem */
@@ -1790,14 +1740,12 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 			((dItem->oldY & 1) != (y & 1)))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-#ifdef BG_IMAGE
 		/* We can't copy the item to its new position unless it
 		 * has the same part of the background image behind it */
 		else if ((tree->backgroundImage != NULL) &&
 			(((dItem->oldX + dInfo->xOrigin) % bgImgWidth) !=
 				((x + tree->xOrigin) % bgImgWidth)))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
-#endif
 	    }
 
 	    /* Make a new DItem */
@@ -2003,9 +1951,7 @@ Range_RedoIfNeeded(TreeCtrl *tree)
 	tree->totalWidth = tree->totalHeight = -1;
 	(void) Tree_TotalWidth(tree);
 	(void) Tree_TotalHeight(tree);
-#ifdef INCREMENTS
 	dInfo->flags |= DINFO_REDO_INCREMENTS;
-#endif
     }
 }
 
@@ -2124,21 +2070,14 @@ ScrollVerticalComplex(TreeCtrl *tree)
 		    tree->copyGC,
 		    oldX, oldY, width, height,
 		    oldX, oldY + offset);
-#if 1
 	    if (offset < 0) {
 		dirtyMin = oldY + offset + height;
 		dirtyMax = oldY + height;
-	    }
-	    else {
+	    } else {
 		dirtyMin = oldY;
 		dirtyMax = oldY + offset;
 	    }
 	    Tree_InvalidateArea(tree, oldX, dirtyMin, oldX + width, dirtyMax);
-#else
-	    dirtyMin = MAX(oldY, oldY + offset + height);
-	    dirtyMax = MIN(oldY + height, oldY + offset);
-	    Tree_InvalidateArea(tree, oldX, dirtyMin, width, dirtyMax - dirtyMin);
-#endif
 	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX);
 	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY + offset);
 	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + width);
@@ -2457,19 +2396,14 @@ ScrollHorizontalComplex(TreeCtrl *tree)
 		    tree->copyGC,
 		    oldX, oldY, width, height,
 		    oldX + offset, oldY);
-#if 1
 	    if (offset < 0) {
 		dirtyMin = oldX + offset + width;
 		dirtyMax = oldX + width;
-	    }
-	    else {
+	    } else {
 		dirtyMin = oldX;
 		dirtyMax = oldX + offset;
 	    }
 	    Tree_InvalidateArea(tree, dirtyMin, oldY, dirtyMax, oldY + height);
-#else
-	    Tree_InvalidateArea(tree, oldX, oldY, width, height);
-#endif
 	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX + offset);
 	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY);
 	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + offset + width);
@@ -2622,7 +2556,6 @@ CalcWhiteSpaceRegion(TreeCtrl *tree)
     return wsRgn;
 }
 
-#ifdef BG_IMAGE
 /*
  *----------------------------------------------------------------------
  *
@@ -2679,7 +2612,6 @@ Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image,
 	    dstX += srcW;
 	};
 }
-#endif
 
 void
 Tree_Display(ClientData clientData)
@@ -2738,9 +2670,7 @@ Tree_Display(ClientData clientData)
 	    dInfo->flags |= DINFO_REDO_RANGES;
     }
     Range_RedoIfNeeded(tree);
-#ifdef INCREMENTS
     Increment_RedoIfNeeded(tree);
-#endif
     if (dInfo->xOrigin != tree->xOrigin) {
 	dInfo->flags |=
 	    DINFO_UPDATE_SCROLLBAR_X |
@@ -2847,7 +2777,6 @@ Tree_Display(ClientData clientData)
 	}
     }
 
-#ifdef BG_IMAGE
     if (tree->backgroundImage != NULL) {
 	wsRgnNew = CalcWhiteSpaceRegion(tree);
 
@@ -2855,8 +2784,7 @@ Tree_Display(ClientData clientData)
 	if (dInfo->xOrigin != tree->xOrigin ||
 		dInfo->yOrigin != tree->yOrigin) {
 	    wsRgnDif = wsRgnNew;
-	}
-	else {
+	} else {
 	    wsRgnDif = TkCreateRegion();
 	    TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
 	}
@@ -2906,7 +2834,6 @@ Tree_Display(ClientData clientData)
 	TkDestroyRegion(dInfo->wsRgn);
 	dInfo->wsRgn = wsRgnNew;
     }
-#endif
 
     dInfo->xOrigin = tree->xOrigin;
     dInfo->yOrigin = tree->yOrigin;
@@ -2914,9 +2841,7 @@ Tree_Display(ClientData clientData)
     /* Does this need to be here? */
     dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 
-#ifdef BG_IMAGE
     if (tree->backgroundImage == NULL) {
-#endif
 	/* Calculate the current whitespace region, subtract the old whitespace
 	 * region, and fill the difference with the background color. */
 	wsRgnNew = CalcWhiteSpaceRegion(tree);
@@ -2941,9 +2866,7 @@ Tree_Display(ClientData clientData)
 	TkDestroyRegion(wsRgnDif);
 	TkDestroyRegion(dInfo->wsRgn);
 	dInfo->wsRgn = wsRgnNew;
-#ifdef BG_IMAGE
     }
-#endif
 
     /* See if there are any dirty items */
     count = 0;
@@ -3013,22 +2936,6 @@ Tree_Display(ClientData clientData)
 			pixmap,
 			0, right - left,
 			dItem->index);
-#if 0
-		if (tree->columnTreeVis && tree->showLines) {
-		    TreeItem_DrawLines(tree, dItem->item,
-			    dItem->x - left,
-			    dItem->y - top,
-			    dItem->width, dItem->height,
-			    pixmap);
-		}
-		if (tree->columnTreeVis && tree->showButtons) {
-		    TreeItem_DrawButton(tree, dItem->item,
-			    dItem->x - left,
-			    dItem->y - top,
-			    dItem->width, dItem->height,
-			    pixmap);
-		}
-#endif
 		XCopyArea(tree->display, pixmap, drawable,
 			tree->copyGC,
 			0, 0,
@@ -3049,22 +2956,6 @@ Tree_Display(ClientData clientData)
 			pixmap,
 			minX, maxX,
 			dItem->index);
-#if 0
-		if (tree->columnTreeVis && tree->showLines) {
-		    TreeItem_DrawLines(tree, dItem->item,
-			    dItem->x,
-			    dItem->y,
-			    dItem->width, dItem->height,
-			    pixmap);
-		}
-		if (tree->columnTreeVis && tree->showButtons) {
-		    TreeItem_DrawButton(tree, dItem->item,
-			    dItem->x,
-			    dItem->y,
-			    dItem->width, dItem->height,
-			    pixmap);
-		}
-#endif
 	    }
 	    DisplayDelay(tree);
 	    numDraw++;
@@ -3123,7 +3014,12 @@ Tree_Display(ClientData clientData)
 	dInfo->flags &= ~DINFO_DRAW_BORDER;
     }
 
-#ifdef ITEM_VIS_HASH
+    /*
+     * When an item goes from visible to hidden, "window" elements in the
+     * item must be hidden. An item may become hidden because of scrolling,
+     * or because an ancestor was collapsed, or because the -visible option
+     * of the item changed.
+     */
     {
 	Tcl_HashEntry *hPtr, *h2Ptr;
 	Tcl_HashSearch search;
@@ -3145,10 +3041,12 @@ Tree_Display(ClientData clientData)
 
 	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
 	    if (hPtr == NULL) {
-/*		dbwin("item %d now visible\n", id); */
 		/* This item is now visible, wasn't before */
 		hPtr = Tcl_CreateHashEntry(&tableV, (char *) id, &isNew);
 	    } else {
+		/*
+		 * This item was visible and still is. Handle scrolling.
+		 */
 		TreeItem_UpdateWindowPositions(tree, dItem->item,
 		    dItem->x, dItem->y, dItem->width, dItem->height);
 	    }
@@ -3160,7 +3058,6 @@ Tree_Display(ClientData clientData)
 	    id = (int) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
 	    h2Ptr = Tcl_FindHashEntry(&table, (char *) id);
 	    if (h2Ptr == NULL) {
-/*		dbwin("item %d no longer visible\n", id); */
 		/* This item was visible but isn't now */
 		h2Ptr = Tcl_CreateHashEntry(&tableH, (char *) id, &isNew);
 		/* Item could have been deleted */
@@ -3201,7 +3098,6 @@ Tree_Display(ClientData clientData)
 	Tcl_DeleteHashTable(&tableV);
 	Tcl_DeleteHashTable(&tableH);
     }
-#endif /* ITEM_VIS_HASH */
 }
 
 static int
@@ -3243,31 +3139,26 @@ A_IncrementFindY(TreeCtrl *tree, int offset)
 int
 Increment_FindX(TreeCtrl *tree, int offset)
 {
-#ifdef INCREMENTS
     if (tree->xScrollIncrement <= 0) {
 	Increment_RedoIfNeeded(tree);
 	return B_IncrementFindX(tree, offset);
     }
-#endif
     return A_IncrementFindX(tree, offset);
 }
 
 int
 Increment_FindY(TreeCtrl *tree, int offset)
 {
-#ifdef INCREMENTS
     if (tree->yScrollIncrement <= 0) {
 	Increment_RedoIfNeeded(tree);
 	return B_IncrementFindY(tree, offset);
     }
-#endif
     return A_IncrementFindY(tree, offset);
 }
 
 int
 Increment_ToOffsetX(TreeCtrl *tree, int index)
 {
-#ifdef INCREMENTS
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
     if (tree->xScrollIncrement <= 0) {
@@ -3276,14 +3167,12 @@ Increment_ToOffsetX(TreeCtrl *tree, int index)
 		    index, dInfo->xScrollIncrementCount-1);
 	return dInfo->xScrollIncrements[index];
     }
-#endif
     return index * tree->xScrollIncrement;
 }
 
 int
 Increment_ToOffsetY(TreeCtrl *tree, int index)
 {
-#ifdef INCREMENTS
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
     if (tree->yScrollIncrement <= 0) {
@@ -3294,7 +3183,6 @@ Increment_ToOffsetY(TreeCtrl *tree, int index)
 	}
 	return dInfo->yScrollIncrements[index];
     }
-#endif
     return index * tree->yScrollIncrement;
 }
 
@@ -3414,9 +3302,7 @@ Tree_SetOriginX(TreeCtrl *tree, int xOrigin)
 	xOrigin = 0 - tree->inset;
 	if (xOrigin != tree->xOrigin) {
 	    tree->xOrigin = xOrigin;
-#ifdef INCREMENTS
 	    dInfo->incrementLeft = 0;
-#endif
 	    Tree_EventuallyRedraw(tree);
 	}
 	return;
@@ -3456,9 +3342,7 @@ Tree_SetOriginX(TreeCtrl *tree, int xOrigin)
 	return;
 
     tree->xOrigin = xOrigin;
-#ifdef INCREMENTS
     dInfo->incrementLeft = index;
-#endif
 
     Tree_EventuallyRedraw(tree);
 }
@@ -3479,9 +3363,7 @@ Tree_SetOriginY(TreeCtrl *tree, int yOrigin)
 	yOrigin = 0 - topInset;
 	if (yOrigin != tree->yOrigin) {
 	    tree->yOrigin = yOrigin;
-#ifdef INCREMENTS
 	    dInfo->incrementTop = 0;
-#endif
 	    Tree_EventuallyRedraw(tree);
 	}
 	return;
@@ -3520,9 +3402,7 @@ Tree_SetOriginY(TreeCtrl *tree, int yOrigin)
 	return;
 
     tree->yOrigin = yOrigin;
-#ifdef INCREMENTS
     dInfo->incrementTop = index;
-#endif
 
     Tree_EventuallyRedraw(tree);
 }
@@ -3803,9 +3683,7 @@ TreeDInfo_Init(TreeCtrl *tree)
     dInfo->columnWidthSize = 10;
     dInfo->columnWidth = (int *) ckalloc(sizeof(int) * dInfo->columnWidthSize);
     dInfo->wsRgn = TkCreateRegion();
-#ifdef ITEM_VIS_HASH
     Tcl_InitHashTable(&dInfo->itemVisHash, TCL_ONE_WORD_KEYS);
-#endif
     tree->dInfo = (TreeDInfo) dInfo;
 }
 
@@ -3817,7 +3695,6 @@ TreeDInfo_Free(TreeCtrl *tree)
 
     if (dInfo->rItem != NULL)
 	ckfree((char *) dInfo->rItem);
-#ifdef DITEM_FREE
     while (dInfo->dItem != NULL) {
 	DItem *next = dInfo->dItem->next;
 	WFREE(dInfo->dItem, DItem);
@@ -3828,9 +3705,6 @@ TreeDInfo_Free(TreeCtrl *tree)
 	WFREE(dInfo->dItemFree, DItem);
 	dInfo->dItemFree = next;
     }
-#else
-    FreeDItems(tree, dInfo->dItem, NULL, 0);
-#endif
     while (range != NULL)
 	range = Range_Free(tree, range);
     Tk_FreeGC(tree->display, dInfo->scrollGC);
@@ -3843,9 +3717,7 @@ TreeDInfo_Free(TreeCtrl *tree)
     if (dInfo->yScrollIncrements != NULL)
 	ckfree((char *) dInfo->yScrollIncrements);
     TkDestroyRegion(dInfo->wsRgn);
-#ifdef ITEM_VIS_HASH
     Tcl_DeleteHashTable(&dInfo->itemVisHash);
-#endif
     WFREE(dInfo, DInfo);
 }
 

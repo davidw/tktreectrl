@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.22 2005/05/10 22:10:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.23 2005/05/11 03:24:47 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -41,10 +41,7 @@
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-#define INCREMENTS
 #define SELECTION_VISIBLE
-#define BG_IMAGE
-#define THEME
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -112,8 +109,6 @@ struct TreeCtrlDebug
     GC gcErase;			/* for eraseColor */
 };
 
-#define COLUMN_DRAG_IMAGE
-#ifdef COLUMN_DRAG_IMAGE
 struct TreeCtrlColumnDrag
 {
     Tk_OptionTable optionTable;
@@ -123,11 +118,9 @@ struct TreeCtrlColumnDrag
     int offset;			/* -imageoffset */
     XColor *color;		/* -imagecolor */
     int alpha;			/* -imagealpha */
-#define SIDE_NONE 2
     int indColumn;		/* -indicatorcolumn */
     XColor *indColor;		/* -indicatorcolor */
 };
-#endif
 
 struct TreeCtrl
 {
@@ -203,9 +196,7 @@ struct TreeCtrl
     Tcl_Obj *wrapObj;		/* -wrap */
     PerStateInfo buttonImage;	/* -buttonimage */
     PerStateInfo buttonBitmap;	/* -buttonbitmap */
-#ifdef BG_IMAGE
     char *backgroundImageString; /* -backgroundimage */
-#endif
     int useIndent;		/* MAX of open/closed button width and
 				 * indent */
 #define BG_MODE_COLUMN 0
@@ -232,12 +223,9 @@ struct TreeCtrl
     GC textGC;
     GC buttonGC;
     GC lineGC;
-#ifdef BG_IMAGE
     Tk_Image backgroundImage;	/* -backgroundimage */
-#endif
-#ifdef THEME
     int useTheme;		/* -usetheme */
-#endif
+
     int prevWidth;
     int prevHeight;
     int drawableXOrigin;
@@ -320,12 +308,8 @@ struct TreeCtrl
 #define TREE_CONF_BUTTON 0x1000
 #define TREE_CONF_LINE 0x2000
 #define TREE_CONF_DEFSTYLE 0x4000
-#ifdef BG_IMAGE
 #define TREE_CONF_BG_IMAGE 0x8000
-#endif
-#ifdef THEME
 #define TREE_CONF_THEME 0x00010000
-#endif
 
 extern void Tree_AddItem(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveItem(TreeCtrl *tree, TreeItem item);
@@ -511,10 +495,7 @@ extern void TreeNotify_Selection(TreeCtrl *tree, TreeItem select[], TreeItem des
 extern int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern void TreeNotify_ActiveItem(TreeCtrl *tree, TreeItem itemOld, TreeItem itemNew);
 extern void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical);
-#define ALLOW_EVENT_ITEM_DELETED
-#ifdef ALLOW_EVENT_ITEM_DELETED
 extern void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count);
-#endif
 
 /* tkTreeColumn.c */
 extern void Tree_InitColumns(TreeCtrl *tree);
@@ -606,10 +587,8 @@ extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
 extern TreeItem *Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY);
 extern void TreeColumnProxy_Undisplay(TreeCtrl *tree);
 extern void TreeColumnProxy_Display(TreeCtrl *tree);
-#ifdef BG_IMAGE
 extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image, 
     int x1, int y1, int x2, int y2);
-#endif
 
 #define DINFO_OUT_OF_DATE 0x0001
 #define DINFO_CHECK_COLUMN_WIDTH 0x0002
@@ -626,7 +605,6 @@ extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image imag
 #define DINFO_REDO_INCREMENTS 0x1000
 extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
 
-#ifdef THEME
 extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
 
 /* tkTreeTheme.c */
@@ -636,7 +614,6 @@ extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int boun
 extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, int x, int y, int width, int height);
 extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
 extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
-#endif
 
 /* tkTreeUtils.c */
 extern void wipefree(char *memPtr, int size);

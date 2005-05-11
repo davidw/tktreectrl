@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.20 2005/05/10 22:32:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.21 2005/05/11 03:24:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1921,34 +1921,6 @@ static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item,
 	elem = Element_CreateAndConfig(tree, item, column, masterElem, NULL, NULL, 0, NULL);
 	if (elem == NULL)
 		return NULL;
-#if 0
-	elem = (Element *) ckalloc(masterElem->typePtr->size);
-	memset(elem, '\0', masterElem->typePtr->size);
-	elem->typePtr = masterElem->typePtr;
-	elem->name = masterElem->name;
-	elem->master = masterElem;
-	args.tree = tree;
-	args.item = item;
-	args.elem = elem;
-
-	/* FIXME: free memory if these calls could actually fail */
-	if ((*elem->typePtr->createProc)(&args) != TCL_OK)
-		return NULL;
-
-	if (Tk_InitOptions(tree->interp, (char *) elem,
-		elem->typePtr->optionTable, tree->tkwin) != TCL_OK)
-		return NULL;
-
-	args.config.objc = 0;
-	args.config.flagSelf = 0;
-	if ((*elem->typePtr->configProc)(&args) != TCL_OK)
-		return NULL;
-
-	args.change.flagSelf = args.config.flagSelf;
-	args.change.flagTree = 0;
-	args.change.flagMaster = 0;
-	(*elem->typePtr->changeProc)(&args);
-#endif
 
 	eLink->elem = elem;
 	if (isNew != NULL) (*isNew) = TRUE;
@@ -3714,7 +3686,6 @@ int ButtonMaxWidth(TreeCtrl *tree)
 	PerStateBitmap_MaxSize(tree, &tree->buttonBitmap, &w, &h);
 	width = MAX(width, w);
 
-#ifdef THEME
 	if (tree->useTheme)
 	{
 		if (TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
@@ -3724,7 +3695,7 @@ int ButtonMaxWidth(TreeCtrl *tree)
 			FALSE, &w, &h) == TCL_OK)
 			width = MAX(width, w);
 	}
-#endif
+
 	return MAX(width, tree->buttonSize);
 }
 
@@ -3746,12 +3717,11 @@ int ButtonHeight(TreeCtrl *tree, int state)
 		return h;
 	}
 
-#ifdef THEME
 	if (tree->useTheme &&
 		TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
 			(state & STATE_OPEN) != 0, &w, &h) == TCL_OK)
 		return h;
-#endif
+
 	return tree->buttonSize;
 }
 

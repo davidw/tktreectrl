@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.20 2005/05/10 21:58:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.21 2005/05/11 03:24:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -85,8 +85,6 @@ struct Column
     XColor **itemBgColor;
     GC bitmapGC;
     Column *next;
-#define COL_LAYOUT
-#ifdef COL_LAYOUT
     TextLayout textLayout;	/* multi-line titles */
     int textLayoutWidth;	/* width passed to TextLayout_Compute */
     int textLayoutInvalid;
@@ -95,7 +93,6 @@ struct Column
 #define TEXT_WRAP_WORD 1
     int textWrap;		/* -textwrap */
     int textLines;		/* -textlines */
-#endif
 };
 
 static char *arrowST[] = { "none", "up", "down", (char *) NULL };
@@ -205,12 +202,10 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_COLOR, "-textcolor", (char *) NULL, (char *) NULL,
      DEF_BUTTON_FG, -1, Tk_Offset(Column, textColor),
      0, (ClientData) NULL, COLU_CONF_DISPLAY},
-#ifdef COL_LAYOUT
     {TK_OPTION_INT, "-textlines", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(Column, textLines),
      0, (ClientData) NULL, COLU_CONF_TEXT | COLU_CONF_NWIDTH |
      COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
-#endif
     {TK_OPTION_CUSTOM, "-textpadx", (char *) NULL, (char *) NULL,
      "6", Tk_Offset(Column, textPadXObj),
      Tk_Offset(Column, textPadX), 0, (ClientData) &PadAmountOption,
@@ -647,86 +642,10 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[], int cr
 	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
     }
 
-#if 0
-    stateNew = Column_MakeState(column);
-    if (stateOld != stateNew) {
-	int csMask = 0;
-	if (column->arrowImage.obj != NULL) {
-	    Tk_Image image1, image2;
-	    Pixmap bitmap1, bitmap2;
-	    int arrowUp, arrowDown;
-	    int w1, h1, w2, h2;
-	    void *ptr1 = NULL, *ptr2 = NULL;
-
-	    /* image > bitmap > theme > draw */
-	    image1 = PerStateImage_ForState(tree, &column->arrowImage, stateOld, NULL);
-	    if (image1 != NULL) {
-		Tk_SizeOfImage(image1, &w1, &h1);
-		ptr1 = image1;
-	    }
-	    if (ptr1 == NULL) {
-		bitmap1 = PerStateBitmap_ForState(tree, &column->arrowBitmap, stateOld, NULL);
-		if (bitmap1 != None) {
-		    Tk_SizeOfBitmap(tree->display, bitmap1, &w1, &h1);
-		    ptr1 = (void *) bitmap1;
-		}
-	    }
-	    if (ptr1 == NULL) {
-		w1 = h1 = 1; /* any value will do */
-		ptr1 = (stateOld & (1L << 3)) ? &arrowUp : &arrowDown;
-	    }
-
-	    /* image > bitmap > theme > draw */
-	    image2 = PerStateImage_ForState(tree, &column->arrowImage, stateNew, NULL);
-	    if (image2 != NULL) {
-		Tk_SizeOfImage(image2, &w2, &h2);
-		ptr2 = image2;
-	    }
-	    if (ptr2 == NULL) {
-		bitmap2 = PerStateBitmap_ForState(tree, &column->arrowBitmap, stateNew, NULL);
-		if (bitmap2 != None) {
-		    Tk_SizeOfBitmap(tree->display, bitmap2, &w2, &h2);
-		    ptr2 = (void *) bitmap2;
-		}
-	    }
-	    if (ptr2 == NULL) {
-		w2 = h2 = 1; /* any value will do */
-		ptr2 = (stateNew & (1L << 3)) ? &arrowUp : &arrowDown;
-	    }
-
-	    if ((w1 != w2) || (h1 != h2)) {
-		csMask |= CS_LAYOUT | CS_DISPLAY;
-	    } else if (ptr1 != ptr2) {
-		csMask |= CS_DISPLAY;
-	    }
-	}
-	if (1 /* column->border.obj != NULL */ /* NEVER NULL */) {
-	    Tk_3DBorder border1, border2;
-	    border1 = PerStateBorder_ForState(tree, &column->border,
-		stateOld, NULL);
-	    border2 = PerStateBorder_ForState(tree, &column->border,
-		stateNew, NULL);
-	    if (border1 != border2) {
-		csMask |= CS_DISPLAY;
-	    }
-	}
-	if (csMask & CS_LAYOUT)
-	    mask |= COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT;
-	if (csMask & CS_DISPLAY)
-	    mask |= COLU_CONF_DISPLAY;
-#ifdef THEME
-	if (tree->useTheme)
-	    mask |= COLU_CONF_DISPLAY; /* assume no size changes */
-#endif
-    }
-#endif
-
-#ifdef COL_LAYOUT
     if (mask & (COLU_CONF_NWIDTH | COLU_CONF_TWIDTH))
 	mask |= COLU_CONF_NHEIGHT;
     if (mask & (COLU_CONF_JUSTIFY | COLU_CONF_TEXT))
 	column->textLayoutInvalid = TRUE;
-#endif
 
     if (mask & COLU_CONF_NWIDTH)
 	column->neededWidth = -1;
@@ -794,10 +713,8 @@ static Column *Column_Free(Column *column)
 	Tk_FreeGC(tree->display, column->bitmapGC);
     if (column->image != NULL)
 	Tk_FreeImage(column->image);
-#ifdef COL_LAYOUT
     if (column->textLayout != NULL)
 	TextLayout_Free(column->textLayout);
-#endif
     Tk_FreeConfigOptions((char *) column, column->optionTable, tree->tkwin);
     WFREE(column, Column);
     tree->columnCount--;
@@ -819,7 +736,6 @@ int TreeColumn_StepWidth(TreeColumn column_)
     return ((Column *) column_)->stepWidthObj ? ((Column *) column_)->stepWidth : -1;
 }
 
-#ifdef COL_LAYOUT
 static void Column_UpdateTextLayout(Column *column, int width)
 {
     Tk_Font tkfont;
@@ -857,7 +773,6 @@ static void Column_UpdateTextLayout(Column *column, int width)
     column->textLayout = TextLayout_Compute(tkfont, text,
 	    Tcl_NumUtfChars(text, textLen), width, justify, maxLines, flags);
 }
-#endif
 
 static void Column_GetArrowSize(Column *column, int *widthPtr, int *heightPtr)
 {
@@ -880,9 +795,7 @@ static void Column_GetArrowSize(Column *column, int *widthPtr, int *heightPtr)
 	    Tk_SizeOfBitmap(tree->display, bitmap, &arrowWidth, &arrowHeight);
 	}
     }
-#ifdef THEME
     /* FIXME: theme size */
-#endif
     if (arrowWidth == -1) {
 	Tk_Font tkfont = column->tkfont ? column->tkfont : tree->tkfont;
 	Tk_FontMetrics fm;
@@ -990,7 +903,6 @@ static void Column_DoLayoutH(Column *column, struct Layout *layout)
     }
     layout->bytesThatFit = 0;
     if (widthForText > 0) {
-#ifdef COL_LAYOUT
 	if (column->textLayoutInvalid || (column->textLayoutWidth != widthForText)) {
 	    Column_UpdateTextLayout(column, widthForText);
 	    column->textLayoutInvalid = FALSE;
@@ -1003,26 +915,23 @@ static void Column_DoLayoutH(Column *column, struct Layout *layout)
 	    padList[n + 1] = partText.padX[PAD_BOTTOM_RIGHT];
 	    iText = n++;
 	} else {
-#endif
-	layout->tkfont = column->tkfont ? column->tkfont : column->tree->tkfont;
-	Tk_GetFontMetrics(layout->tkfont, &layout->fm);
-	if (widthForText >= column->textWidth) {
-	    partText.width = column->textWidth;
-	    partText.height = layout->fm.linespace;
-	    layout->bytesThatFit = column->textLen;
-	} else {
-	    partText.width = widthForText;
-	    partText.height = layout->fm.linespace;
-	    layout->bytesThatFit = Ellipsis(layout->tkfont, column->text,
-		    column->textLen, &partText.width, "...", FALSE);
+	    layout->tkfont = column->tkfont ? column->tkfont : column->tree->tkfont;
+	    Tk_GetFontMetrics(layout->tkfont, &layout->fm);
+	    if (widthForText >= column->textWidth) {
+		partText.width = column->textWidth;
+		partText.height = layout->fm.linespace;
+		layout->bytesThatFit = column->textLen;
+	    } else {
+		partText.width = widthForText;
+		partText.height = layout->fm.linespace;
+		layout->bytesThatFit = Ellipsis(layout->tkfont, column->text,
+			column->textLen, &partText.width, "...", FALSE);
+	    }
+	    parts[n] = &partText;
+	    padList[n] = MAX(partText.padX[PAD_TOP_LEFT], padList[n]);
+	    padList[n + 1] = partText.padX[PAD_BOTTOM_RIGHT];
+	    iText = n++;
 	}
-	parts[n] = &partText;
-	padList[n] = MAX(partText.padX[PAD_TOP_LEFT], padList[n]);
-	padList[n + 1] = partText.padX[PAD_BOTTOM_RIGHT];
-	iText = n++;
-#ifdef COL_LAYOUT
-    }
-#endif
     }
     if ((column->arrow != ARROW_NONE) && (column->arrowSide == SIDE_RIGHT)) {
 	parts[n] = &partArrow;
@@ -1225,7 +1134,6 @@ int TreeColumn_NeededWidth(TreeColumn column_)
     if (column->textLen > 0) {
 	padList[n] = MAX(column->textPadX[PAD_TOP_LEFT], padList[n]);
 	padList[n + 1] = column->textPadX[PAD_BOTTOM_RIGHT];
-#ifdef COL_LAYOUT
 	if (column->textLayoutInvalid || (column->textLayoutWidth != 0)) {
 	    Column_UpdateTextLayout(column, 0);
 	    column->textLayoutInvalid = FALSE;
@@ -1234,8 +1142,7 @@ int TreeColumn_NeededWidth(TreeColumn column_)
 	if (column->textLayout != NULL)
 	    TextLayout_Size(column->textLayout, &widthList[n], NULL);
 	else
-#endif
-	widthList[n] = column->textWidth;
+	    widthList[n] = column->textWidth;
 	n++;
     }
     if ((column->arrow != ARROW_NONE) && (column->arrowSide == SIDE_RIGHT)) {
@@ -1259,9 +1166,7 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 {
     Column *column = (Column *) column_;
     TreeCtrl *tree = column->tree;
-#ifdef THEME
     int margins[4];
-#endif
 
     if (column->neededHeight >= 0)
 	return column->neededHeight;
@@ -1285,7 +1190,6 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 	column->neededHeight = MAX(column->neededHeight, imgHeight);
     }
     if (column->text != NULL) {
-#ifdef COL_LAYOUT
 	struct Layout layout;
 	layout.width = TreeColumn_UseWidth(column_);
 	layout.height = -1;
@@ -1297,18 +1201,14 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 		+ column->textPadY[PAD_BOTTOM_RIGHT];
 	    column->neededHeight = MAX(column->neededHeight, height);
 	} else {
-#endif
-	Tk_Font tkfont = column->tkfont ? column->tkfont : column->tree->tkfont;
-	Tk_FontMetrics fm;
-	Tk_GetFontMetrics(tkfont, &fm);
-	fm.linespace += column->textPadY[PAD_TOP_LEFT]
-	    + column->textPadY[PAD_BOTTOM_RIGHT];
-	column->neededHeight = MAX(column->neededHeight, fm.linespace);
-#ifdef COL_LAYOUT
+	    Tk_Font tkfont = column->tkfont ? column->tkfont : column->tree->tkfont;
+	    Tk_FontMetrics fm;
+	    Tk_GetFontMetrics(tkfont, &fm);
+	    fm.linespace += column->textPadY[PAD_TOP_LEFT]
+		+ column->textPadY[PAD_BOTTOM_RIGHT];
+	    column->neededHeight = MAX(column->neededHeight, fm.linespace);
 	}
-#endif
     }
-#ifdef THEME
     if (column->tree->useTheme &&
 	(TreeTheme_GetHeaderContentMargins(tree, column->state, margins) == TCL_OK)) {
 #ifdef WIN32
@@ -1319,9 +1219,9 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 	margins[3] = MAX(margins[3], bw);
 #endif /* WIN32 */
 	column->neededHeight += margins[1] + margins[3];
-    } else
-#endif /* THEME */
-    column->neededHeight += column->borderWidth * 2;
+    } else {
+	column->neededHeight += column->borderWidth * 2;
+    }
 
     return column->neededHeight;
 }
@@ -1803,7 +1703,6 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
 	return;
     }
 
-#ifdef THEME
     if (tree->useTheme) {
 	if (TreeTheme_DrawHeaderArrow(tree, drawable,
 	    column->arrow == ARROW_UP, x + layout.arrowLeft,
@@ -1811,7 +1710,6 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
 	    layout.arrowHeight) == TCL_OK)
 	    return;
     }
-#endif
 
     if (1) {
 	int arrowWidth = layout.arrowWidth;
@@ -1870,11 +1768,7 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
     }
 }
 
-#ifdef COLUMN_DRAG_IMAGE
 static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dragImage)
-#else
-static void Column_Draw(Column *column, Drawable drawable, int x, int y)
-#endif
 {
     TreeCtrl *tree = column->tree;
     int height = tree->headerHeight;
@@ -1883,9 +1777,7 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y)
     int sunken = column->state == COLUMN_STATE_PRESSED;
     int relief = sunken ? TK_RELIEF_SUNKEN : TK_RELIEF_RAISED;
     Tk_3DBorder border;
-#ifdef THEME
     int theme = TCL_ERROR;
-#endif
 
     layout.width = width;
     layout.height = height;
@@ -1896,24 +1788,18 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y)
     if (border == NULL)
 	border = tree->border;
 
-#ifdef COLUMN_DRAG_IMAGE
     if (dragImage) {
 	GC gc = Tk_GCForColor(tree->columnDrag.color, Tk_WindowId(tree->tkwin));
 	XFillRectangle(tree->display, drawable, gc, x, y, width, height);
     } else {
-#endif
-#ifdef THEME
-    if (tree->useTheme) {
-	theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state, x, y,
-		width, height);
+	if (tree->useTheme) {
+	    theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state, x, y,
+		    width, height);
+	}
+	if (theme != TCL_OK)
+	    Tk_Fill3DRectangle(tree->tkwin, drawable, border,
+		    x, y, width, height, 0, TK_RELIEF_FLAT);
     }
-    if (theme != TCL_OK)
-#endif
-    Tk_Fill3DRectangle(tree->tkwin, drawable, border,
-	    x, y, width, height, 0, TK_RELIEF_FLAT);
-#ifdef COLUMN_DRAG_IMAGE
-    }
-#endif
 
     if (column->image != NULL) {
 	int imgW, imgH, ix, iy, h;
@@ -1940,7 +1826,6 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y)
 	XSetClipOrigin(tree->display, column->bitmapGC, 0, 0);
     }
 
-#ifdef COL_LAYOUT
     if ((column->text != NULL) && (column->textLayout != NULL)) {
 	int h;
 	XGCValues gcValues;
@@ -1959,9 +1844,7 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y)
 		y + (height - h) / 2 + column->textPadY[PAD_TOP_LEFT] + sunken,
 		0, -1);
 	Tk_FreeGC(tree->display, gc);
-    } else
-#endif
-    if ((column->text != NULL) && (layout.bytesThatFit != 0)) {
+    } else if ((column->text != NULL) && (layout.bytesThatFit != 0)) {
 	XGCValues gcValues;
 	GC gc;
 	unsigned long mask;
@@ -1999,21 +1882,15 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y)
 	    ckfree(text);
     }
 
-#ifdef COLUMN_DRAG_IMAGE
     if (dragImage)
 	return;
-#endif
 
     Column_DrawArrow(column, drawable, x, y, layout);
 
-#ifdef THEME
     if (theme != TCL_OK)
-#endif
-    Tk_Draw3DRectangle(tree->tkwin, drawable, border,
-	    x, y, width, height, column->borderWidth, relief);
+	Tk_Draw3DRectangle(tree->tkwin, drawable, border,
+		x, y, width, height, column->borderWidth, relief);
 }
-
-#ifdef COLUMN_DRAG_IMAGE
 
 Tk_Image SetImageForColumn(TreeCtrl *tree, Column *column)
 {
@@ -2052,69 +1929,13 @@ Tk_Image SetImageForColumn(TreeCtrl *tree, Column *column)
 	NULL, (ClientData) NULL);
 }
 
-#if 0
-Tk_PhotoHandle SetImageForHeader(TreeCtrl *tree)
-{
-    Tk_PhotoHandle photoH;
-    Pixmap pixmap;
-    int width = Tk_Width(tree->tkwin) - tree->inset * 2;
-    int height = tree->headerHeight;
-    int doubleBuffer = tree->doubleBuffer;
-    XImage *ximage;
-
-    photoH = Tk_FindPhoto(tree->interp, "TreeCtrlHeaderImage");
-    if (photoH == NULL)
-	return NULL;
-
-    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tree->tkwin),
-	    width, height, Tk_Depth(tree->tkwin));
-
-    tree->doubleBuffer = DOUBLEBUFFER_NONE;
-    Tree_DrawHeader(tree, pixmap, 0 - tree->xOrigin - tree->inset, 0);
-    tree->doubleBuffer = doubleBuffer;
-
-    ximage = XGetImage(tree->display, pixmap, 0, 0,
-	    (unsigned int)width, (unsigned int)height, AllPlanes, ZPixmap);
-    if (ximage == NULL)
-	panic("ximage is NULL");
-
-    SetTkImageFromXImage(tree, photoH, ximage, 255);
-
-    XDestroyImage(ximage);
-    Tk_FreePixmap(tree->display, pixmap);
-
-    return photoH;
-}
-
-void CompositeColumnImageWithHeaderImage(TreeCtrl *tree, Column *column)
-{
-    Tk_PhotoImageBlock photoBlock;
-    Tk_PhotoHandle photoH1, photoH2;
-    int x, y;
-
-    photoH1 = SetImageForHeader(tree);
-    photoH2 = SetImageForColumn(tree);
-
-    if (!photoH1 || !photoH2)
-	return;
-
-    Tk_PhotoGetImage(photoH2, &photoBlock);
-
-    TK_PHOTOPUTBLOCK(interp, photoH1, &photoBlock, column->dragOffset, 0,
-	    photoBlock.width, photoBlock.height, TK_PHOTO_COMPOSITE_OVERLAY);
-}
-#endif
-#endif
-
 void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 {
     Column *column = (Column *) tree->columns;
     Tk_Window tkwin = tree->tkwin;
     int minX, maxX, width, height;
     Drawable pixmap;
-#ifdef COLUMN_DRAG_IMAGE
     int x2 = x;
-#endif
 
     /* Update layout if needed */
     (void) Tree_HeaderHeight(tree);
@@ -2132,11 +1953,7 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
     while (column != NULL) {
 	if (column->visible) {
 	    if ((x < maxX) && (x + column->useWidth > minX))
-#ifdef COLUMN_DRAG_IMAGE
 		Column_Draw(column, pixmap, x, y, FALSE);
-#else
-		Column_Draw(column, pixmap, x, y);
-#endif
 	    x += column->useWidth;
 	}
 	column = column->next;
@@ -2147,12 +1964,9 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 	column = (Column *) tree->columnTail;
 	width = maxX - x + column->borderWidth;
 	height = tree->headerHeight;
-#ifdef THEME
 	if (tree->useTheme &&
 	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, x, y, width, height) == TCL_OK)) {
-	} else
-#endif
-	{
+	} else {
 	    Tk_3DBorder border;
 	    border = PerStateBorder_ForState(tree, &column->border,
 		Column_MakeState(column), NULL);
@@ -2163,7 +1977,6 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 	}
     }
 
-#ifdef COLUMN_DRAG_IMAGE
     {
 	Tk_Image image = NULL;
 	int imageX = 0, imageW = 0, indDraw = FALSE, indX = 0;
@@ -2200,7 +2013,6 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 	    Tk_FreeImage(image);
 	}
     }
-#endif
 
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
 	XCopyArea(tree->display, pixmap, drawable,
@@ -2371,11 +2183,8 @@ void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT)
 	while (column != NULL) {
 	    if ((column->tkfont == NULL) && (column->textLen > 0)) {
 		column->textWidth = Tk_TextWidth(tree->tkfont, column->text, column->textLen);
-		column->neededHeight = -1;
-#ifdef COL_LAYOUT
+		column->neededWidth = column->neededHeight = -1;
 		column->textLayoutInvalid = TRUE;
-		column->neededWidth = -1;
-#endif
 	    }
 	    column = column->next;
 	}
