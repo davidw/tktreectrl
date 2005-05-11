@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.5 2005/03/29 20:40:24 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.6 2005/05/11 03:31:58 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -125,22 +125,22 @@ test column-3.10 {column configure/cget: -arrowgravity} -body {
     .t column cget column1 -arrowgravity
 } -result {right}
 
-test column-3.11 {column configure: invalid -arrowpad} -body {
-    .t column configure column1 -arrowpad x
+test column-3.11 {column configure: invalid -arrowpadx} -body {
+    .t column configure column1 -arrowpadx x
 } -returnCodes error -result {bad pad amount "x": must be a list of 1 or 2 positive screen distances}
 
-test column-3.11a {column configure: invalid 2 element -arrowpad} -body {
-    .t column configure column1 -arrowpad {3 x}
+test column-3.11a {column configure: invalid 2 element -arrowpadx} -body {
+    .t column configure column1 -arrowpadx {3 x}
 } -returnCodes error -result {bad pad amount "3 x": must be a list of 1 or 2 positive screen distances}
 
-test column-3.12 {column configure/cget: -arrowpad} -body {
-    .t column configure column1 -arrowpad 8
-    .t column cget column1 -arrowpad
+test column-3.12 {column configure/cget: -arrowpadx} -body {
+    .t column configure column1 -arrowpadx 8
+    .t column cget column1 -arrowpadx
 } -result {8}
 
-test column-3.12a {column configure/cget: 2 element -arrowpad} -body {
-    .t column configure column1 -arrowpad {8 5}
-    .t column cget column1 -arrowpad
+test column-3.12a {column configure/cget: 2 element -arrowpadx} -body {
+    .t column configure column1 -arrowpadx {8 5}
+    .t column cget column1 -arrowpadx
 } -result {8 5}
 
 test column-3.13 {column configure: invalid -bitmap} -body {
@@ -253,14 +253,14 @@ test column-3.34 {column configure/cget: -minwidth} -body {
     .t column cget column1 -minwidth
 } -result {25}
 
-test column-3.35 {column configure: invalid -relief} -body {
-    .t column configure column1 -relief yes
-} -returnCodes error -result {bad relief "yes": must be flat, groove, raised, ridge, solid, or sunken}
+test column-3.35 {column configure: invalid -state} -body {
+    .t column configure column1 -state yes
+} -returnCodes error -result {bad state "yes": must be normal, active, or pressed}
 
-test column-3.36 {column configure/cget: -relief} -body {
-    .t column configure column1 -relief sunken
-    .t column cget column1 -relief
-} -result {sunken}
+test column-3.36 {column configure/cget: -state} -body {
+    .t column configure column1 -state pressed
+    .t column cget column1 -state
+} -result {pressed}
 
 test column-3.37 {column configure: invalid -stepwidth} -body {
     .t column configure column1 -stepwidth "\t"
@@ -270,15 +270,6 @@ test column-3.38 {column configure/cget: -stepwidth} -body {
     .t column configure column1 -stepwidth 125
     .t column cget column1 -stepwidth
 } -result {125}
-
-test column-3.39 {column configure: invalid -sunken} -body {
-    .t column configure column1 -sunken groove
-} -returnCodes error -result {expected boolean value but got "groove"}
-
-test column-3.40 {column configure/cget: -sunken} -body {
-    .t column configure column1 -sunken on
-    .t column cget column1 -sunken
-} -result {1}
 
 test column-3.41 {column configure: -text} -body {
     .t column configure column1 -text "Text above Column 1"

@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.23 2005/03/29 20:43:25 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.24 2005/05/11 03:31:59 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -37,7 +37,7 @@ test treectrl-1.4 {configure: List all options} -body {
 } -result {{-background background Background white *}*} -match glob
 
 test treectrl-1.5 {configure -background with totally empty visible tree} -body {
-    pack .t
+    pack .t -expand yes -fill both
     update idletasks
     .t configure -background white
     update idletasks
@@ -75,42 +75,24 @@ test treectrl-1.12 {configure: -buttoncolor option} -body {
     .t configure -buttoncolor
 } -result {-buttoncolor buttonColor ButtonColor #808080 red}
 
-test treectrl-1.13 {configure: invalid -openbuttonbitmap option} -body {
-    .t configure -openbuttonbitmap foo
+test treectrl-1.13 {configure: invalid -buttonbitmap option} -body {
+    .t configure -buttonbitmap foo
 } -returnCodes error -result {bitmap "foo" not defined}
 
-test treectrl-1.14 {configure: -openbuttonbitmap option} -body {
-    .t configure -openbuttonbitmap hourglass
-    .t configure -openbuttonbitmap
-} -result {-openbuttonbitmap openButtonBitmap OpenButtonBitmap {} hourglass}
+test treectrl-1.14 {configure: -buttonbitmap option} -body {
+    .t configure -buttonbitmap hourglass
+    .t configure -buttonbitmap
+} -result {-buttonbitmap buttonBitmap ButtonBitmap {} hourglass}
 
-test treectrl-1.15 {configure: invalid -closedbuttonbitmap option} -body {
-    .t configure -closedbuttonbitmap foo
-} -returnCodes error -result {bitmap "foo" not defined}
-
-test treectrl-1.16 {configure: -closedbuttonbitmap option} -body {
-    .t configure -closedbuttonbitmap questhead
-    .t configure -closedbuttonbitmap
-} -result {-closedbuttonbitmap closedButtonBitmap ClosedButtonBitmap {} questhead}
-
-test treectrl-1.17 {configure: invalid -openbuttonimage option} -body {
-    .t configure -openbuttonimage foo
+test treectrl-1.17 {configure: invalid -buttonimage option} -body {
+    .t configure -buttonimage foo
 } -returnCodes error -result {image "foo" doesn't exist}
 
-test treectrl-1.18 {configure: -openbuttonimage option} -body {
+test treectrl-1.18 {configure: -buttonimage option} -body {
     image create photo emptyImg
-    .t configure -openbuttonimage emptyImg
-    .t configure -openbuttonimage
-} -result {-openbuttonimage openButtonImage OpenButtonImage {} emptyImg}
-
-test treectrl-1.19 {configure: invalid -closedbuttonimage option} -body {
-    .t configure -closedbuttonimage foo
-} -returnCodes error -result {image "foo" doesn't exist}
-
-test treectrl-1.20 {configure: -closedbuttonimage option} -body {
-    .t configure -closedbuttonimage emptyImg
-    .t configure -closedbuttonimage
-} -result {-closedbuttonimage closedButtonImage ClosedButtonImage {} emptyImg}
+    .t configure -buttonimage emptyImg
+    .t configure -buttonimage
+} -result {-buttonimage buttonImage ButtonImage {} emptyImg}
 
 test treectrl-1.21 {configure: invalid -doublebuffer option} -body {
     .t configure -doublebuffer foo
@@ -867,6 +849,7 @@ test treectrl-14.1 {rename and change some columns} -body {
 } -result {}
 
 test treectrl-15.1 {identify: missing args} -body {
+	wm geometry . 400x200 ; update
     .t identify
 } -returnCodes error -result {wrong # args: should be ".t identify x y"}
 
@@ -1000,10 +983,11 @@ test treectrl-17.3 {columnproxy: Negative screen distance} -body {
 
 test treectrl-17.4 {columnproxy: screen distance bigger than width} -body {
     # It is unclear if this should be forbiden...
-    .t configure -columnproxy [expr {[winfo width .t] + 10}]
+	set x [expr {[winfo width .t] + 10}]
+    .t configure -columnproxy $x
     update idletasks
-    .t cget -columnproxy
-} -result {216}
+    expr {[.t cget -columnproxy] == $x}
+} -result {1}
 
 test treectrl-17.5 {columnproxy} -body {
     .t configure -columnproxy 100
