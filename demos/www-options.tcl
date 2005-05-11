@@ -102,18 +102,6 @@ proc DemoInternetOptions {} {
 		TreeCtrl::OptionButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlOption <Button1-Motion> {
-		TreeCtrl::OptionMotion1 %W %x %y
-		break
-	}
-	bind TreeCtrlOption <Button1-Leave> {
-		TreeCtrl::OptionLeave1 %W %x %y
-		break
-	}
-	bind TreeCtrlOption <ButtonRelease-1> {
-		TreeCtrl::OptionRelease1 %W %x %y
-		break
-	}
 
 	bindtags $T [list $T TreeCtrlOption TreeCtrl [winfo toplevel $T] all]
 
@@ -251,18 +239,6 @@ proc DemoInternetOptions_2 {} {
 		TreeCtrl::OptionButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlOption <Button1-Motion> {
-		TreeCtrl::OptionMotion1 %W %x %y
-		break
-	}
-	bind TreeCtrlOption <Button1-Leave> {
-		TreeCtrl::OptionLeave1 %W %x %y
-		break
-	}
-	bind TreeCtrlOption <ButtonRelease-1> {
-		TreeCtrl::OptionRelease1 %W %x %y
-		break
-	}
 
 	bindtags $T [list $T TreeCtrlOption TreeCtrl [winfo toplevel $T] all]
 
@@ -300,37 +276,6 @@ proc TreeCtrl::OptionButton1_2 {T x y} {
 			$T item element configure $item 0 e1 -image internet-radio-on
 			set ::Option(setting,$item) on
 			set ::Option(current,$group) $item
-		}
-	}
-	return
-}
-proc TreeCtrl::OptionMotion1 {T x y} {
-	variable Priv
-	switch $Priv(buttonMode) {
-		default {
-			Motion1 $T $x $y
-		}
-	}
-	return
-}
-proc TreeCtrl::OptionLeave1 {T x y} {
-	variable Priv
-	# This is called when I do ButtonPress-1 on Unix for some reason,
-	# and buttonMode is undefined.
-	if {![info exists Priv(buttonMode)]} return
-	switch $Priv(buttonMode) {
-		default {
-			Leave1 $T $x $y
-		}
-	}
-	return
-}
-proc TreeCtrl::OptionRelease1 {T x y} {
-	variable Priv
-    if {![info exists Priv(buttonMode)]} return
-	switch $Priv(buttonMode) {
-		default {
-			Release1 $T $x $y
 		}
 	}
 	return

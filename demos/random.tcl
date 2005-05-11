@@ -142,10 +142,6 @@ proc DemoRandom {} {
 		TreeCtrl::RandomMotion1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <Button1-Leave> {
-		TreeCtrl::RandomLeave1 %W %x %y
-		break
-	}
 	bind TreeCtrlRandom <ButtonRelease-1> {
 		TreeCtrl::RandomRelease1 %W %x %y
 		break
@@ -329,18 +325,6 @@ proc TreeCtrl::RandomMotion {T x y} {
 		}
 		default {
 			Motion1 $T $x $y
-		}
-	}
-	return
-}
-proc TreeCtrl::RandomLeave1 {T x y} {
-	variable Priv
-	# This is called when I do ButtonPress-1 on Unix for some reason,
-	# and buttonMode is undefined.
-	if {![info exists Priv(buttonMode)]} return
-	switch $Priv(buttonMode) {
-		default {
-			Leave1 $T $x $y
 		}
 	}
 	return

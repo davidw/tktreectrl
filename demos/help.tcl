@@ -102,16 +102,10 @@ proc DemoHelpContents {} {
 		break
 	}
 	bind TreeCtrlHelp <Button1-Motion> {
-		TreeCtrl::HelpMotion1 %W %x %y
-		break
+		# noop
 	}
 	bind TreeCtrlHelp <Button1-Leave> {
-		TreeCtrl::HelpLeave1 %W %x %y
-		break
-	}
-	bind TreeCtrlHelp <ButtonRelease-1> {
-		TreeCtrl::HelpRelease1 %W %x %y
-		break
+		# noop
 	}
 	bind TreeCtrlHelp <Motion> {
 		TreeCtrl::HelpMotion %W %x %y
@@ -134,7 +128,7 @@ proc DemoHelpContents {} {
 
 # This is an alternate implementation that does not define a new item state
 # to change the appearance of the item under the cursor.
-proc DemoHelpContents2 {} {
+proc DemoHelpContents_2 {} {
 
 	set T .f2.f1.t
 
@@ -247,22 +241,16 @@ proc DemoHelpContents2 {} {
 		break
 	}
 	bind TreeCtrlHelp <Button1-Motion> {
-		TreeCtrl::HelpMotion1 %W %x %y
-		break
+		# noop
 	}
 	bind TreeCtrlHelp <Button1-Leave> {
-		TreeCtrl::HelpLeave1 %W %x %y
-		break
-	}
-	bind TreeCtrlHelp <ButtonRelease-1> {
-		TreeCtrl::HelpRelease1 %W %x %y
-		break
+		# noop
 	}
 	bind TreeCtrlHelp <Motion> {
-		TreeCtrl::HelpMotion2 %W %x %y
+		TreeCtrl::HelpMotion_2 %W %x %y
 	}
 	bind TreeCtrlHelp <Leave> {
-		TreeCtrl::HelpMotion2 %W %x %y
+		TreeCtrl::HelpMotion_2 %W %x %y
 	}
 	bind TreeCtrlHelp <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
@@ -310,37 +298,6 @@ proc TreeCtrl::HelpButton1 {w x y} {
 	}
 	return
 }
-proc TreeCtrl::HelpMotion1 {w x y} {
-	variable Priv
-	switch $Priv(buttonMode) {
-		default {
-			Motion1 $w $x $y
-		}
-	}
-	return
-}
-proc TreeCtrl::HelpLeave1 {w x y} {
-	variable Priv
-	# This is called when I do ButtonPress-1 on Unix for some reason,
-	# and buttonMode is undefined.
-	if {![info exists Priv(buttonMode)]} return
-	switch $Priv(buttonMode) {
-		default {
-			Leave1 $w $x $y
-		}
-	}
-	return
-}
-proc TreeCtrl::HelpRelease1 {w x y} {
-	variable Priv
-    if {![info exists Priv(buttonMode)]} return
-	switch $Priv(buttonMode) {
-		default {
-			Release1 $w $x $y
-		}
-	}
-	return
-}
 
 proc TreeCtrl::HelpMotion {w x y} {
 	variable Priv
@@ -368,7 +325,7 @@ proc TreeCtrl::HelpMotion {w x y} {
 }
 
 # Alternate implementation that does not rely on run-time states
-proc TreeCtrl::HelpMotion2 {w x y} {
+proc TreeCtrl::HelpMotion_2 {w x y} {
 	variable Priv
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "header"} {
