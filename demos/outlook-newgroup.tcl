@@ -199,7 +199,7 @@ proc MessageReadDelayed {} {
 }
 
 # Alternate implementation that does not rely on run-time states
-proc DemoOutlookNewsgroup2 {} {
+proc DemoOutlookNewsgroup_2 {} {
 
 	global Message
 
