@@ -1,14 +1,14 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.11 2005/03/29 21:20:40 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.12 2005/05/11 03:31:32 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.11 2005/03/29 21:20:40 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.12 2005/05/11 03:31:32 treectrl Exp $ treectrl.n
    -->
 
 <body>
-<h1> treectrl(n) 1.1  &quot;Tk Commands&quot;</h1>
+<h1> treectrl(n) 1.2  &quot;Tk Commands&quot;</h1>
 <h2><a name="name">NAME</a></h2>
 <p>
 <p> treectrl - Create and manipulate hierarchical multicolumn widgets
@@ -18,7 +18,7 @@
 
 <h2><a name="synopsis">SYNOPSIS</a></h2>
 <p>
-package require <b>treectrl 1.1</b><br>
+package require <b>treectrl 1.2</b><br>
 <br><table border=1 width=100% cellspacing=0 cellpadding=0><tr            bgcolor=lightyellow><td bgcolor=lightyellow><table 0 width=100% cellspacing=0 cellpadding=0><tr valign=top ><td ><a href="#1"><b class='cmd'>treectrl</b> <i class='arg'>pathName</i> ?<i class='arg'>options</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#2"><i class='arg'>pathName</i> <b class='cmd'>activate</b> <i class='arg'>itemDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#3"><i class='arg'>pathName</i> <b class='cmd'>canvasx</b> <i class='arg'>screenx</i></a></td></tr>
@@ -247,12 +247,32 @@ items are counted also for evaluating the background color,
 for <strong>visindex</strong> only the visible items are counted.
 
 <br><br>
+<dt>Command-Line Switch:	<strong>-buttonbitmap</strong><br>
+Database Name:	<strong>buttonBitmap</strong><br>
+Database Class:	<strong>ButtonBitmap</strong><br>
+<dd>
+Specifies the bitmap to be used as the expand/collapse button to the left of
+an item. This is a per-state option (see <a href="#perstateoptions">PER-STATE OPTIONS</a>). If
+a bitmap is specified for a certain item state, it overrides the effects of
+-usetheme.
+
+<br><br>
 <dt>Command-Line Switch:	<strong>-buttoncolor</strong><br>
 Database Name:	<strong>buttonColor</strong><br>
 Database Class:	<strong>ButtonColor</strong><br>
 <dd>
 Specifies the foreground color which should be used for drawing the outline
 and the plus or minus sign of the button to the left of an item.
+
+<br><br>
+<dt>Command-Line Switch:	<strong>-buttonimage</strong><br>
+Database Name:	<strong>buttonImage</strong><br>
+Database Class:	<strong>ButtonImage</strong><br>
+<dd>
+Specifies the image to be used as the expand/collapse button to the left of
+an item. This is a per-state option (see <a href="#perstateoptions">PER-STATE OPTIONS</a>).
+If an image is specified for a certain item state, it overrides the effects of
+-buttonbitmap and -usetheme.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-buttonsize</strong><br>
@@ -270,22 +290,6 @@ Database Class:	<strong>ButtonThickness</strong><br>
 Specifies the width of the outline and the plus or minus sign
 of the button to the left of an item
 in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-
-<br><br>
-<dt>Command-Line Switch:	<strong>-closedbuttonbitmap</strong><br>
-Database Name:	<strong>closedButtonBitmap</strong><br>
-Database Class:	<strong>ClosedButtonBitmap</strong><br>
-<dd>
-Specifies the bitmap to be used as the button to the left of a closed item
-in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-
-<br><br>
-<dt>Command-Line Switch:	<strong>-closedbuttonimage</strong><br>
-Database Name:	<strong>closedButtonImage</strong><br>
-Database Class:	<strong>ClosedButtonImage</strong><br>
-<dd>
-Specifies the image to be used as the button to the left of a closed item
-in any of the forms acceptable to <strong>Tk_GetImage</strong>.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-columnproxy</strong><br>
@@ -357,10 +361,11 @@ Database Name:	<strong>itemHeight</strong><br>
 Database Class:	<strong>ItemHeight</strong><br>
 <dd>
 Specifies a fixed height for every item
-in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
+in any of the forms acceptable to <strong>Tk_GetPixels</strong>. If non-zero, this
+option overrides the requested height of an item and the -minitemheight option.
 The default is 0, which means that
 every item has the height requested by the arrangement of elements
-in each column.
+in each column. Items are never shorter than the maximum height of a button.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-linecolor</strong><br>
@@ -387,20 +392,16 @@ Specifies the thickness of the connecting lines between related items
 in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
 
 <br><br>
-<dt>Command-Line Switch:	<strong>-openbuttonbitmap</strong><br>
-Database Name:	<strong>openButtonBitmap</strong><br>
-Database Class:	<strong>OpenButtonBitmap</strong><br>
+<dt>Command-Line Switch:	<strong>-minitemheight</strong><br>
+Database Name:	<strong>minItemHeight</strong><br>
+Database Class:	<strong>MinItemHeight</strong><br>
 <dd>
-Specifies the bitmap to be used as the button to the left of an opened item
-in any of the forms acceptable to <strong>Tk_GetBitmap</strong>.
-
-<br><br>
-<dt>Command-Line Switch:	<strong>-openbuttonimage</strong><br>
-Database Name:	<strong>openButtonImage</strong><br>
-Database Class:	<strong>OpenButtonImage</strong><br>
-<dd>
-Specifies the image to be used as the button to the left of an opened item
-in any of the forms acceptable to <strong>Tk_GetImage</strong>.
+Specifies a minimum height for every item
+in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
+The default is 0, which means that
+every item has the height requested by the arrangement of elements
+in each column. This option has no effect if the -itemheight option is specified.
+Items are never shorter than the maximum height of a button.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-scrollmargin</strong><br>
@@ -489,6 +490,15 @@ Database Class:	<strong>TreeColumn</strong><br>
 Specifies an integer value that determines which
 column displays the data in an hierarchical fashion.
 Default is 0 meaning that the first column displays the tree.
+
+<br><br>
+<dt>Command-Line Switch:	<strong>-usetheme</strong><br>
+Database Name:	<strong>useTheme</strong><br>
+Database Class:	<strong>UseTheme</strong><br>
+<dd>
+Specifies a boolean value that determines whether this widget should draw
+parts of itself using a platform-specific theme manager.
+The default is false.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-width</strong><br>
@@ -2233,8 +2243,12 @@ There is always one special column, the <strong>tail</strong> column, which fill
 all space to the right of the last ordinary column.
 This column has no number;
 it can only be specified by its tag <strong>tail</strong>, which cannot be modified.
-It is explicitely mentioned for a widget command,
-if its <i class='arg'>column</i> argument can also specify the tail column.
+
+<p>
+When a column configuration option is specified as <strong>per-state</strong>, the state
+names are <strong>normal</strong>, <strong>active</strong>, <strong>pressed</strong> or <strong>up</strong>, i.e.
+do not use item state names. See <a href="#perstateoptions">PER-STATE OPTIONS</a>
+for more info.
 
 <p>
 The following options are supported for columns:
@@ -2245,6 +2259,17 @@ Indicates whether or not an arrow should be drawn in the column header
 to the right of the column title.
 <i class='arg'>Direction</i> must have one of the values
 <strong>none</strong> (the default), <strong>up</strong>, or <strong>down</strong>.
+
+<br><br>
+<dt><strong><strong>-arrowbitmap</strong></strong> <i class='arg'>bitmap</i><dd>
+Specifies as a per-state option the bitmap to use to draw the arrow if
+this columns -arrow option is not <strong>none</strong>.
+
+<br><br>
+<dt><strong><strong>-arrowimage</strong></strong> <i class='arg'>image</i><dd>
+Specifies as a per-state option the image to use to draw the arrow if
+this columns -arrow option is not <strong>none</strong>. If an image is specified for
+a certain state, it overrides the -arrowbitmap option.
 
 <br><br>
 <dt><strong><strong>-arrowside</strong></strong> <i class='arg'>side</i><dd>
@@ -2258,11 +2283,19 @@ if there is more space available for drawing the arrow then needed.
 <i class='arg'>Side</i> must be either <strong>left</strong> (the default) or <strong>right</strong>.
 
 <br><br>
-<dt><strong><strong>-arrowpad</strong></strong> <i class='arg'>amount</i><dd>
+<dt><strong><strong>-arrowpadx</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
 leave on the left and right side of the arrow.
 <i class='arg'>Amount</i> may be a list
-of two values to specify padding for left and right separately,
+of two values to specify padding for left and right separately;
+it defaults to 6.
+
+<br><br>
+<dt><strong><strong>-arrowpady</strong></strong> <i class='arg'>amount</i><dd>
+<i class='arg'>Amount</i> specifies how much padding to
+leave on the top and bottom of the arrow.
+<i class='arg'>Amount</i> may be a list
+of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 <br><br>
@@ -2272,7 +2305,8 @@ to the left of the column title.
 
 <br><br>
 <dt><strong><strong>-background</strong></strong> <i class='arg'>color</i><dd>
-Specifies the color to use for the background of the column header.
+Specifies as a per-state option the color to use for the background of the
+column header.
 
 <br><br>
 <dt><strong><strong>-borderwidth</strong></strong> <i class='arg'>size</i><dd>
@@ -2306,12 +2340,18 @@ This option overrides the <strong>-bitmap</strong> column option.
 
 <br><br>
 <dt><strong><strong>-imagepadx</strong></strong> <i class='arg'>amount</i><dd>
+<i class='arg'>Amount</i> specifies how much padding to
+leave on the left and right side of the image.
+<i class='arg'>Amount</i> may be a list
+of two values to specify padding for left and right separately;
+it defaults to 6.
+
+<br><br>
 <dt><strong><strong>-imagepady</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the left and right (for <strong>-imagepadx</strong>)
-or top and bottom (for <strong>-imagepady</strong>) side of the image.
+leave on the top and bottom of the image.
 <i class='arg'>Amount</i> may be a list
-of two values to specify padding for the two sides separately,
+of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 <br><br>
@@ -2331,13 +2371,6 @@ Specifies the minimum size, in screen units,
 that will be permitted for this column.
 
 <br><br>
-<dt><strong><strong>-relief</strong></strong> <i class='arg'>relief</i><dd>
-Specifies the 3-D effect desired for the column header containing the title.
-Acceptable values are the typical relief values,
-but the value seems to be ignored anyway;
-better use the <strong>-sunken</strong> column option instead.
-
-<br><br>
 <dt><strong><strong>-squeeze</strong></strong> <i class='arg'>boolean</i><dd>
 Specifies a boolean value that indicates whether or not the column should
 shrink when the content width of the treectrl is less than the total needed width
@@ -2347,16 +2380,17 @@ of its <strong>-minwidth</strong> option, if specified. This option has no effec
 <strong>-width</strong> option is set.
 
 <br><br>
+<dt><strong><strong>-state</strong></strong> <i class='arg'>state</i><dd>
+Specifies one of three states for the column header: <strong>normal</strong>, <strong>active</strong>,
+or <strong>pressed</strong>. The active state is used when the mouse is over the header.
+The pressed state is used when the mouse button is pressed in the header.
+
+<br><br>
 <dt><strong><strong>-stepwidth</strong></strong> <i class='arg'>size</i><dd>
 Specifies a sort of tabbed alignment for columns that displays
 more than one item next to each other
 (typically in a treectrl widget with horizontal orientation).
 Every item will get an x-coordinate which is a multiple of <i class='arg'>size</i>.
-
-<br><br>
-<dt><strong><strong>-sunken</strong></strong> <i class='arg'>boolean</i><dd>
-Indicates whether or not the column header containing the column title
-will be displayed with a sunken relief.
 
 <br><br>
 <dt><strong><strong>-tag</strong></strong> <i class='arg'>tag</i><dd>
@@ -2373,13 +2407,26 @@ Specifies a color, which should be used as foreground color
 to display the column title.
 
 <br><br>
+<dt><strong><strong>-textlines</strong></strong> <i class='arg'>count</i><dd>
+Specifies the maximum number of lines of text to display in the column title.
+If this value is zero, the number of lines displayed is determined by any newline
+characters and the effects of wrapping when the column width is less than
+needed. The default is 1.
+
+<br><br>
 <dt><strong><strong>-textpadx</strong></strong> <i class='arg'>amount</i><dd>
+<i class='arg'>Amount</i> specifies how much padding to
+leave on the left and right side of the text.
+<i class='arg'>Amount</i> may be a list
+of two values to specify padding for left and right separately;
+it defaults to 6.
+
+<br><br>
 <dt><strong><strong>-textpady</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the left and right (for <strong>-textpadx</strong>)
-or top and bottom (for <strong>-textpady</strong>) side of the text.
+leave on the top and bottom of the text.
 <i class='arg'>Amount</i> may be a list
-of two values to specify padding for the two sides separately,
+of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 <br><br>
@@ -2444,7 +2491,7 @@ the descendants of the item are not displayed
 - the item is collapsed.
 For a new item this state is switched on.
 It can be modified by means of the widget commands
-<b class='cmd'>expand</b>, <b class='cmd'>collapse</b>, or <b class='cmd'>toggle</b>.
+<b class='cmd'>item expand</b>, <b class='cmd'>item collapse</b>, or <b class='cmd'>item toggle</b>.
 
 <br><br>
 <dt><strong>selected</strong><dd>
@@ -2470,18 +2517,49 @@ which should be a non empty list of <i class='arg'>stateDesc</i>s.
 The pattern matches, if for every element of the list
 the <i class='arg'>stateDesc</i> describes the same state as the item currently has.
 
+<h2><a name="perstateoptions">PER-STATE OPTIONS</a></h2>
+<p>
+
+The visual appearance of an item can change depending on the state the item
+is in, such as being the active item, being included in the selection, being
+collapsed, or some combination of those or other states. When a configuration
+option is described as <strong>per-state</strong>, it means the option describes a
+value which varies depending on the state of the item. If a per-state option is
+specified as a single value, the value is used for all states. Otherwise
+the per-state option must be specified as an even-numbered list. For example,
+to use the font &quot;Times 12 bold&quot; in a <strong>text</strong> element regardless of the
+item state you can write:
+<p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
+$T element configure MyTextElement -font {{Times 12 bold}}
+</pre></td></tr></table></p>
+However, to use a different font when the item is selected you could write:
+<p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
+$T element configure MyTextElement -font {{Courier 10} selected {Times 12 bold} {}}
+</pre></td></tr></table></p>
+In the second example above the -font option reads &quot;value stateList value stateList&quot;.
+If <i class='arg'>stateList</i> is an empty list, the preceding <i class='arg'>value</i> is used regardless
+of the item state. A non-empty stateList specifies a list of states which must be
+set for the item in order to use the preceding value. Each stateList can also
+include state names preceded by a ! sign, indicating the state must *not* be
+set for the item. For example:
+<p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
+$T element configure MyRectElement -fill {blue {selected focus} gray {selected !focus}}
+</pre></td></tr></table></p>
+In the example above, the <strong>rect</strong> element is filled with blue when the treectrl
+has the focus and the item is selected. If the treectrl does not have the focus, the
+example specifies that gray should be used for selected items. Also note that if the
+item is not selected, no color is specified for the -fill option.
+
 <h2><a name="elements">ELEMENTS</a></h2>
 <p>
-Elements are the smallest building block
+Elements are the smallest building blocks
 which are handled by a treectrl widget.
 One or more elements together can be combined to a style,
 which can be considered as a blueprint for an item.
-They can also be used to create an item directly
-by means of the <b class='cmd'>item complex</b> widget command.
 An element can be of type <strong>bitmap</strong>, <strong>border</strong>, <strong>image</strong>,
-<strong>rect</strong>, or <strong>text</strong>.
-For each element type there is a section below describing all options
-which can modify the behaviour of an element of this type.
+<strong>rect</strong>, <strong>text</strong> or <strong>window</strong>.
+For each element type there is a section below describing the options
+which can modify an element of that type.
 
 <p>
 There are some options which can be configured to get different values
@@ -2494,7 +2572,7 @@ For acceptable values of <i class='arg'>statePattern</i>
 see the section <a href="#states">STATES</a> above.
 The last <i class='arg'>statePattern</i> can be empty,
 implementing a sort of <em>otherwise clause</em>.
-The options with this behaviour are called <em>per state options</em>.
+The options with this behaviour are called <em>per-state options</em>.
 
 <h2><a name="bitmapelement">BITMAP ELEMENT</a></h2>
 <p>
@@ -2503,17 +2581,17 @@ The following options are supported for bitmap elements:
 
 <dl>
 <dt><strong><strong>-background</strong></strong> <i class='arg'>color</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color to use for each of the bitmap's '0' valued pixels.
 
 <br><br>
 <dt><strong><strong>-bitmap</strong></strong> <i class='arg'>bitmap</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the bitmap to display in the element.
 
 <br><br>
 <dt><strong><strong>-foreground</strong></strong> <i class='arg'>color</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color to use for each of the bitmap's '1' valued pixels.
 </dl>
 
@@ -2524,7 +2602,7 @@ The following options are supported for border elements:
 
 <dl>
 <dt><strong><strong>-background</strong></strong> <i class='arg'>color</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color to use for the background of the border.
 
 <br><br>
@@ -2539,7 +2617,7 @@ Specifies the height of the area of the border.
 
 <br><br>
 <dt><strong><strong>-relief</strong></strong> <i class='arg'>reliefList</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 relief of the border.
 For acceptable values see the description of the
 <strong>-relief</strong> option in the <b class='cmd'>options</b> manual page.
@@ -2564,7 +2642,7 @@ Specifies the height of the image.
 
 <br><br>
 <dt><strong><strong>-image</strong></strong> <i class='arg'>image</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the image to display in the element.
 
 <br><br>
@@ -2579,7 +2657,7 @@ The following options are supported for rectangle elements:
 
 <dl>
 <dt><strong><strong>-fill</strong></strong> <i class='arg'>fillColor</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color to be used to fill rectangle's area.
 <i class='arg'>Color</i> may have any of the forms accepted by <strong>Tk_GetColor</strong>.
 If <i class='arg'>color</i> is an empty string (the default), then
@@ -2600,7 +2678,7 @@ The default is the empty string, which causes the outline to be drawn completely
 
 <br><br>
 <dt><strong><strong>-outline</strong></strong> <i class='arg'>outlineColor</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color that should be used to draw the outline of the rectangle.
 <i class='arg'>Color</i> may have any of the forms accepted by <strong>Tk_GetColor</strong>.
 If <i class='arg'>color</i> is specified as an empty string (the default),
@@ -2642,7 +2720,7 @@ Specifies the datatype which should be used to convert the value of the
 
 <br><br>
 <dt><strong><strong>-fill</strong></strong> <i class='arg'>color</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the color to be used as foreground color of the text.
 <i class='arg'>Color</i> may have any of the forms accepted by <strong>Tk_GetColor</strong>.
 If <i class='arg'>color</i> is an empty string (the default), then
@@ -2660,7 +2738,7 @@ a valid format element of the <b class='cmd'>format</b> command.
 
 <br><br>
 <dt><strong><strong>-font</strong></strong> <i class='arg'>fontName</i><dd>
-Specifies as a per state option
+Specifies as a per-state option
 the font to use for the text.
 <i class='arg'>FontName</i> may be any string acceptable to <strong>Tk_GetFont</strong>.
 If this option isn't specified, it defaults to the font configured for
@@ -2697,6 +2775,22 @@ Specifies the width of the area of the text.
 <i class='arg'>Mode</i> specifies how to handle lines that are wider than the
 text's area.
 Acceptable values are <strong>char</strong> or <strong>word</strong>.
+</dl>
+
+<h2><a name="windowelement">WINDOW ELEMENT</a></h2>
+<p>
+An element of type <strong>window</strong> can be used to display a Tk window in an item.
+The following options are supported for window elements:
+
+<dl>
+<dt><strong><strong>-window</strong></strong> <i class='arg'>pathName</i><dd>
+Specifies the window to associate with this element. The window specified by
+<i class='arg'>pathName</i> must either be a child of the treectrl widget or a child of
+some ancestor of the treectrl widget. <i class='arg'>PathName</i> may not refer to a
+top-level window. This option cannot be specified by
+the <b class='cmd'>element create</b> or <b class='cmd'>element configure</b> commands, only by the
+<b class='cmd'>item element configure</b> command; i.e., the element must be associated
+with a particular item.
 </dl>
 
 <h2><a name="itemdescription">ITEM DESCRIPTION</a></h2>
@@ -2901,6 +2995,13 @@ Generated after an item is expanded.
 <br><br>
 <dl>
 <dt><strong>%I</strong><dd> The item id
+</dl>
+
+<dt><strong>&lt;ItemDelete&gt;</strong><dd>
+Generated when items are about to be deleted by the <b class='cmd'>item delete</b> command.
+<br><br>
+<dl>
+<dt><strong>%i</strong><dd> List of items ids being deleted.
 </dl>
 
 <dt><strong>&lt;Scroll-x&gt;</strong><dd>
