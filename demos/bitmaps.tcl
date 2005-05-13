@@ -17,7 +17,7 @@ proc DemoBitmaps {} {
 	# Create columns
 	#
 
-	$T column create -itembackground {gray90 {}}
+	$T column create -itembackground {gray90 {}} -tag C0
 
 	#
 	# Create elements
@@ -58,21 +58,21 @@ proc DemoBitmaps {} {
 	foreach name $bitmapNames {
 		set I [$T item create]
 #		$T item style set $I 0 $S
-		$T item text $I 0 $name
-		$T item element configure $I 0 elemBmp -bitmap $name
+		$T item text $I C0 $name
+		$T item element configure $I C0 elemBmp -bitmap $name
 		$T item lastchild root $I
 	}
 
 	foreach name $bitmapNames {
 		set I [$T item create]
-		$T item style set $I 0 $S
-		$T item text $I 0 $name
+		$T item style set $I C0 $S
+		$T item text $I C0 $name
 if 1 {
-		$T item element configure $I 0 elemBmp -bitmap $name \
+		$T item element configure $I C0 elemBmp -bitmap $name \
 			-foreground [list brown {}] \
 			-background {"" {}}
 } else {
-		$T item element configure $I 0 elemBmp -bitmap $name \
+		$T item element configure $I C0 elemBmp -bitmap $name \
 			-foreground [list $::SystemHighlight {selected focus} brown {}] \
 			-background {"" {}}
 }
