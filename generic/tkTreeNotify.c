@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.8 2005/05/11 03:24:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.9 2005/05/13 20:00:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -29,15 +29,14 @@ static int EVENT_SCROLL,
 	DETAIL_SCROLL_Y;
 static int EVENT_ITEM_DELETE;
 
-static void ExpandItem(int id, Tcl_DString *result)
+static void ExpandItem(TreeCtrl *tree, int id, Tcl_DString *result)
 {
-#ifdef ITEM_ID_IS_STRING
-	char buf[10 + TCL_INTEGER_SPACE];
-	(void) sprintf(buf, "%s%d", itemPrefix, id);
-	Tcl_DStringAppend(result, buf, -1);
-#else /* ITEM_ID_IS_STRING */
-	QE_ExpandNumber(id, result);
-#endif /* ITEM_ID_IS_STRING */
+	if (tree->itemPrefixLen) {
+		char buf[10 + TCL_INTEGER_SPACE];
+		(void) sprintf(buf, "%s%d", tree->itemPrefix, id);
+		Tcl_DStringAppend(result, buf, -1);
+	} else
+		QE_ExpandNumber(id, result);
 }
 
 /* Handle %? */
@@ -117,7 +116,7 @@ static void Percents_Expand(QE_ExpandArgs *args)
 	switch (args->which)
 	{
 		case 'I':
-			ExpandItem(data->id, args->result);
+			ExpandItem(data->tree, data->id, args->result);
 			break;
 
 		default:
@@ -134,6 +133,7 @@ static void Percents_Selection(QE_ExpandArgs *args)
 		int *deselect;
 		int count;
 	} *data = args->clientData;
+	TreeCtrl *tree = data->tree;
 	int *items = NULL;
 	int i = 0;
 
@@ -153,15 +153,15 @@ static void Percents_Selection(QE_ExpandArgs *args)
 			Tcl_DStringStartSublist(args->result);
 			while (items[i] != -1)
 			{
-#if ITEM_ID_IS_STRING
-				char buf[10 + TCL_INTEGER_SPACE];
-				(void) sprintf(buf, "%s%d", itemPrefix, items[i]);
-				Tcl_DStringAppendElement(args->result, buf);
-#else /* ITEM_ID_IS_STRING */
-				char string[TCL_INTEGER_SPACE];
-				TclFormatInt(string, items[i]);
-				Tcl_DStringAppendElement(args->result, string);
-#endif /* ITEM_ID_IS_STRING */
+				if (tree->itemPrefixLen) {
+					char buf[10 + TCL_INTEGER_SPACE];
+					(void) sprintf(buf, "%s%d", tree->itemPrefix, items[i]);
+					Tcl_DStringAppendElement(args->result, buf);
+				} else {
+					char string[TCL_INTEGER_SPACE];
+					TclFormatInt(string, items[i]);
+					Tcl_DStringAppendElement(args->result, string);
+				}
 				i++;
 			}
 			Tcl_DStringEndSublist(args->result);
@@ -184,11 +184,11 @@ static void Percents_ActiveItem(QE_ExpandArgs *args)
 	switch (args->which)
 	{
 		case 'c':
-			ExpandItem(data->current, args->result);
+			ExpandItem(data->tree, data->current, args->result);
 			break;
 
 		case 'p':
-			ExpandItem(data->prev, args->result);
+			ExpandItem(data->tree, data->prev, args->result);
 			break;
 
 		default:
@@ -438,6 +438,7 @@ static void Percents_ItemDeleted(QE_ExpandArgs *args)
 		int count;
 		int *itemIds;
 	} *data = args->clientData;
+	TreeCtrl *tree = data->tree;
 	int i;
 
 	switch (args->which)
@@ -446,15 +447,15 @@ static void Percents_ItemDeleted(QE_ExpandArgs *args)
 			Tcl_DStringStartSublist(args->result);
 			for (i = 0; i < data->count; i++)
 			{
-#if ITEM_ID_IS_STRING
-				char buf[10 + TCL_INTEGER_SPACE];
-				(void) sprintf(buf, "%s%d", itemPrefix, data->itemIds[i]);
-				Tcl_DStringAppendElement(args->result, buf);
-#else /* ITEM_ID_IS_STRING */
-				char string[TCL_INTEGER_SPACE];
-				TclFormatInt(string, data->itemIds[i]);
-				Tcl_DStringAppendElement(args->result, string);
-#endif /* ITEM_ID_IS_STRING */
+				if (tree->itemPrefixLen) {
+					char buf[10 + TCL_INTEGER_SPACE];
+					(void) sprintf(buf, "%s%d", tree->itemPrefix, data->itemIds[i]);
+					Tcl_DStringAppendElement(args->result, buf);
+				} else {
+					char string[TCL_INTEGER_SPACE];
+					TclFormatInt(string, data->itemIds[i]);
+					Tcl_DStringAppendElement(args->result, string);
+				}
 			}
 			Tcl_DStringEndSublist(args->result);
 			break;
