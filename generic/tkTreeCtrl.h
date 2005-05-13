@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.23 2005/05/11 03:24:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.24 2005/05/13 19:46:53 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -113,12 +113,12 @@ struct TreeCtrlColumnDrag
 {
     Tk_OptionTable optionTable;
     int enable;			/* -enable */
-    int column;			/* -imagecolumn */
+    TreeColumn column;		/* -imagecolumn */
     Tcl_Obj *offsetObj;		/* -imageoffset */
     int offset;			/* -imageoffset */
     XColor *color;		/* -imagecolor */
     int alpha;			/* -imagealpha */
-    int indColumn;		/* -indicatorcolumn */
+    TreeColumn indColumn;	/* -indicatorcolumn */
     XColor *indColor;		/* -indicatorcolor */
 };
 
@@ -176,7 +176,7 @@ struct TreeCtrl
     int width;			/* -width */
     Tcl_Obj *heightObj;		/* -height */
     int height;			/* -height */
-    int columnTree;		/* column where buttons/lines are drawn */
+    TreeColumn columnTree;	/* column where buttons/lines are drawn */
 #define DOUBLEBUFFER_NONE 0
 #define DOUBLEBUFFER_ITEM 1
 #define DOUBLEBUFFER_WINDOW 2
@@ -225,6 +225,8 @@ struct TreeCtrl
     GC lineGC;
     Tk_Image backgroundImage;	/* -backgroundimage */
     int useTheme;		/* -usetheme */
+    char *itemPrefix;		/* -itemprefix */
+    char *columnPrefix;		/* -columnprefix */
 
     int prevWidth;
     int prevHeight;
@@ -247,6 +249,7 @@ struct TreeCtrl
     TreeItem activeItem;
     TreeItem anchorItem;
     int nextItemId;
+    int nextColumnId;
     Tcl_HashTable itemHash;	/* TreeItem.id -> TreeItem */
     Tcl_HashTable elementHash;	/* Element.name -> Element */
     Tcl_HashTable styleHash;	/* Style.name -> Style */
@@ -273,8 +276,8 @@ struct TreeCtrl
 
     struct {
 	Tcl_Obj *xObj;
-	int x;		/* Window coords */
-	int sx;		/* Window coords */
+	int x;			/* Window coords */
+	int sx;			/* Window coords */
 	int onScreen;
     } columnProxy;
 
@@ -292,6 +295,8 @@ struct TreeCtrl
     } defaultStyle;
 
     Tk_OptionTable itemOptionTable;
+    int itemPrefixLen;		/* -itemprefix */
+    int columnPrefixLen;	/* -columnprefix */
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -328,9 +333,6 @@ extern void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item);
 extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
 
 /* tkTreeItem.c */
-
-extern char *itemPrefix;
-extern int itemPrefixLen;
 
 #define ITEM_ALL ((TreeItem) -1)
 #define IFO_ALLOK	0x0001	/* ItemFromObj flag: "all" is acceptable */
@@ -423,6 +425,7 @@ extern int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_, TreeItemCo
 extern TreeItemColumn TreeItem_FindColumn(TreeCtrl *tree, TreeItem item, int columnIndex);
 extern int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItemColumn *columnPtr, int *indexPtr);
 extern void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_);
+extern void TreeItem_RemoveAllColumns(TreeCtrl *tree, TreeItem item_);
 extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex, int beforeIndex);
 
 /* tkTreeElem.c */
@@ -460,7 +463,7 @@ extern void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn colu
 extern int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index);
 extern TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle master);
 extern int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj);
-extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
+extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
 extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
 extern void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_);
 extern TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_);
@@ -500,10 +503,15 @@ extern void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count);
 /* tkTreeColumn.c */
 extern void Tree_InitColumns(TreeCtrl *tree);
 extern TreeColumn Tree_FindColumn(TreeCtrl *tree, int columnIndex);
-#define CFO_NOT_TAIL 0x01
+#define COLUMN_ALL ((TreeColumn) -1)
+#define CFO_NOT_ALL 0x01
+#define CFO_NOT_NULL 0x02
+#define CFO_NOT_TAIL 0x04
 extern int Tree_FindColumnByTag(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, int flags);
-extern int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, int flags);
+extern int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, int flags);
+extern Tcl_Obj *TreeColumn_ToObj(TreeCtrl *tree, TreeColumn column_);
 extern int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+extern int TreeColumn_GetID(TreeColumn column_);
 extern int TreeColumn_Index(TreeColumn column_);
 extern TreeColumn TreeColumn_Next(TreeColumn column_);
 extern int TreeColumn_FixedWidth(TreeColumn column_);
@@ -603,6 +611,7 @@ extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image imag
 #define DINFO_SET_ORIGIN_Y 0x0400
 #define DINFO_UPDATE_SCROLLBAR_Y 0x0800
 #define DINFO_REDO_INCREMENTS 0x1000
+#define DINFO_REDO_COLUMN_WIDTH 0x2000
 extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
 
 extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
