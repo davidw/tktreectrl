@@ -74,6 +74,10 @@ proc DemoExplorerDetails {} {
 	$T column create -text Type -tag type -width 120
 	$T column create -text Modified -tag modified -width 120
 
+	# Demonstration of per-state column options and configure "all"
+	$T configure -usetheme no
+	$T column configure all -background {gray90 active gray70 normal gray50 pressed}
+
 	#
 	# Create elements
 	#
@@ -112,7 +116,9 @@ proc DemoExplorerDetails {} {
 	$T style elements $S txtDate
 	$T style layout $S txtDate -padx 6 -squeeze x -expand ns
 
-	set ::TreeCtrl::Priv(edit,$T) {e2}
+	set ::TreeCtrl::Priv(edit,$T) {
+		{name styName e2}
+	}
 	set ::TreeCtrl::Priv(sensitive,$T) {
 		{name styName e1 e2}
 	}
@@ -121,7 +127,7 @@ proc DemoExplorerDetails {} {
 	}
 
 	$T notify bind $T <Edit-accept> {
-		%T item text %I 0 %t
+		%T item element configure %I %C %E -text %t
 	}
 
 	#
@@ -130,7 +136,7 @@ proc DemoExplorerDetails {} {
 
 	set scriptDir {
 		set item [$T item create]
-		$T item style set $item 0 styName 2 styType 3 styDate
+		$T item style set $item name styName type styType modified styDate
 		$T item complex $item \
 			[list [list e2 -text [file tail $file]]] \
 			[list] \
@@ -141,7 +147,7 @@ proc DemoExplorerDetails {} {
 
 	set scriptFile {
 		set item [$T item create]
-		$T item style set $item 0 styName 1 stySize 2 styType 3 styDate
+		$T item style set $item name styName size stySize type styType modified styDate
 		switch [file extension $file] {
 			.dll { set img small-dll }
 			.exe { set img small-exe }
@@ -163,7 +169,7 @@ proc DemoExplorerDetails {} {
 
 	DemoExplorerAux $scriptDir $scriptFile
 
-	set ::SortColumn 0
+	set ::SortColumn name
 	$T notify bind $T <Header-invoke> { ExplorerHeaderInvoke %T %C }
 
 	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
@@ -173,7 +179,7 @@ proc DemoExplorerDetails {} {
 
 proc ExplorerHeaderInvoke {T C} {
 	global SortColumn
-	if {$C == $SortColumn} {
+	if {[$T column compare $C == $SortColumn]} {
 		if {[$T column cget $SortColumn -arrow] eq "down"} {
 			set order -increasing
 			set arrow up
@@ -200,17 +206,17 @@ proc ExplorerHeaderInvoke {T C} {
 			if {$dirCount} {
 				$T item sort root $order -last "root child $lastDir" -column $C -dictionary
 			}
-			if {$dirCount < [$T numitems] - 1} {
+			if {$dirCount < [$T item count] - 1} {
 				$T item sort root $order -first "root child $dirCount" -column $C -dictionary
 			}
 		}
 		size {
-			if {$dirCount < [$T numitems] - 1} {
+			if {$dirCount < [$T item count] - 1} {
 				$T item sort root $order -first "root child $dirCount" -column $C -integer -column name -dictionary
 			}
 		}
 		type {
-			if {$dirCount < [$T numitems] - 1} {
+			if {$dirCount < [$T item count] - 1} {
 				$T item sort root $order -first "root child $dirCount" -column $C -dictionary -column name -dictionary
 			}
 		}
@@ -218,7 +224,7 @@ proc ExplorerHeaderInvoke {T C} {
 			if {$dirCount} {
 				$T item sort root $order -last "root child $lastDir" -column $C -integer -column name -dictionary
 			}
-			if {$dirCount < [$T numitems] - 1} {
+			if {$dirCount < [$T item count] - 1} {
 				$T item sort root $order -first "root child $dirCount" -column $C -integer -column name -dictionary
 			}
 		}
@@ -248,7 +254,7 @@ proc DemoExplorerLargeIcons {} {
 	# Create columns
 	#
 
-	$T column create -width 75
+	$T column create -width 75 -tag C0
 
 	#
 	# Create elements
@@ -270,16 +276,18 @@ proc DemoExplorerLargeIcons {} {
 	$T style layout $S elemTxt -pady {4 0} -padx 2 -squeeze x -expand we
 	$T style layout $S elemSel -union [list elemTxt]
 
-	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
+	set ::TreeCtrl::Priv(edit,$T) {
+		{C0 STYLE elemTxt}
+	}
 	set ::TreeCtrl::Priv(sensitive,$T) {
-		{0 STYLE elemImg elemTxt}
+		{C0 STYLE elemImg elemTxt}
 	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
-		{0 STYLE elemImg elemTxt}
+		{C0 STYLE elemImg elemTxt}
 	}
 
 	$T notify bind $T <Edit-accept> {
-		%T item text %I 0 %t
+		%T item element configure %I %C %E -text %t
 	}
 
 	#
@@ -288,14 +296,14 @@ proc DemoExplorerLargeIcons {} {
 
 	set scriptDir {
 		set item [$T item create]
-		$T item style set $item 0 STYLE
-		$T item text $item 0 [file tail $file]
+		$T item style set $item C0 STYLE
+		$T item text $item C0 [file tail $file]
 		$T item lastchild root $item
 	}
 
 	set scriptFile {
 		set item [$T item create]
-		$T item style set $item 0 STYLE
+		$T item style set $item C0 STYLE
 		switch [file extension $file] {
 			.dll { set img big-dll }
 			.exe { set img big-exe }
@@ -314,11 +322,11 @@ proc DemoExplorerLargeIcons {} {
 
 	DemoExplorerAux $scriptDir $scriptFile
 
-	$T activate [$T index "root firstchild"]
+	$T activate [$T item id "root firstchild"]
 
 	$T notify bind $T <ActiveItem> {
-		%T item element configure %p 0 elemTxt -lines {}
-		%T item element configure %c 0 elemTxt -lines 3
+		%T item element configure %p C0 elemTxt -lines {}
+		%T item element configure %c C0 elemTxt -lines 3
 	}
 
 	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
@@ -332,7 +340,8 @@ proc DemoExplorerSmallIcons {} {
 	set T .f2.f1.t
 	DemoExplorerList
 	$T configure -orient horizontal -xscrollincrement 0
-	$T column configure 0 -width {} -stepwidth 110 -widthhack no
+	$T column configure C0 -width {} -stepwidth 110 -widthhack no
+	return
 }
 
 # Tree is vertical, wrapping occurs at bottom of window, each range has the
@@ -360,7 +369,7 @@ proc DemoExplorerList {} {
 	# Create columns
 	#
 
-	$T column create -widthhack yes
+	$T column create -widthhack yes -tag C0
 
 	#
 	# Create elements
@@ -382,16 +391,18 @@ proc DemoExplorerList {} {
 	$T style layout $S elemTxt -squeeze x -expand ns -padx {2 0}
 	$T style layout $S elemSel -union [list elemTxt] -iexpand ns -ipadx 2
 
-	set ::TreeCtrl::Priv(edit,$T) {elemTxt}
+	set ::TreeCtrl::Priv(edit,$T) {
+		{C0 STYLE elemTxt}
+	}
 	set ::TreeCtrl::Priv(sensitive,$T) {
-		{0 STYLE elemImg elemTxt}
+		{C0 STYLE elemImg elemTxt}
 	}
 	set ::TreeCtrl::Priv(dragimage,$T) {
-		{0 STYLE elemImg elemTxt}
+		{C0 STYLE elemImg elemTxt}
 	}
 
 	$T notify bind $T <Edit-accept> {
-		%T item text %I 0 %t
+		%T item element configure %I %C %E -text %t
 	}
 
 	#
@@ -400,14 +411,14 @@ proc DemoExplorerList {} {
 
 	set scriptDir {
 		set item [$T item create]
-		$T item style set $item 0 STYLE
-		$T item text $item 0 [file tail $file]
+		$T item style set $item C0 STYLE
+		$T item text $item C0 [file tail $file]
 		$T item lastchild root $item
 	}
 
 	set scriptFile {
 		set item [$T item create]
-		$T item style set $item 0 STYLE
+		$T item style set $item C0 STYLE
 		switch [file extension $file] {
 			.dll { set img small-dll }
 			.exe { set img small-exe }
@@ -420,7 +431,9 @@ proc DemoExplorerList {} {
 		}
 		append type "File"
 		$T item complex $item \
-			[list [list elemImg -image [list ${img}Sel {selected} $img {}]] [list elemTxt -text [file tail $file]]]
+			[list \
+				[list elemImg -image [list ${img}Sel {selected} $img {}]] \
+				[list elemTxt -text [file tail $file]]]
 		$T item lastchild root $item
 	}
 
