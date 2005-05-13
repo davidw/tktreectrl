@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.8 2005/05/01 01:33:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.9 2005/05/13 19:51:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -221,7 +221,6 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		/* T dragimage add I ?C? ?E ...? */
 		case COMMAND_ADD:
 		{
-#define STATIC_SIZE 20
 			XRectangle staticRects[STATIC_SIZE], *rects = staticRects;
 			TreeItem item;
 			TreeItemColumn itemColumn;
@@ -294,7 +293,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					totalWidth += TreeColumn_UseWidth(treeColumn);
 					treeColumn = TreeColumn_Next(treeColumn);
 				}
-				if (TreeColumn_Index(treeColumn) == tree->columnTree)
+				if (treeColumn == tree->columnTree)
 					indent = TreeItem_Indent(tree, item);
 				else
 					indent = 0;
@@ -302,7 +301,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				drawArgs.width = TreeColumn_UseWidth(treeColumn) - indent;
 				drawArgs.justify = TreeColumn_Justify(treeColumn);
 				if (objc - 5 > STATIC_SIZE)
-					rects = (XRectangle *) ckalloc(sizeof(XRectangle) * (objc - 5));
+				STATIC_ALLOC(rects, XRectangle, objc - 5);
 				count = TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5, rects);
 				if (count == -1)
 				{
@@ -328,7 +327,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					if (!TreeColumn_Visible(treeColumn))
 						goto nextColumn;
 					width = TreeColumn_UseWidth(treeColumn);
-					if (TreeColumn_Index(treeColumn) == tree->columnTree)
+					if (treeColumn == tree->columnTree)
 						indent = TreeItem_Indent(tree, item);
 					else
 						indent = 0;
@@ -339,8 +338,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						drawArgs.width = width - indent;
 						drawArgs.justify = TreeColumn_Justify(treeColumn);
 						count = TreeStyle_NumElements(tree, drawArgs.style);
-						if (count > STATIC_SIZE)
-							rects = (XRectangle *) ckalloc(sizeof(XRectangle) * count);
+						STATIC_ALLOC(rects, XRectangle, count);
 						count = TreeStyle_GetElemRects(&drawArgs, 0, NULL, rects);
 						if (count == -1)
 						{
