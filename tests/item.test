@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.9 2005/03/29 20:41:08 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.10 2005/05/13 20:40:14 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -92,11 +92,11 @@ test item-3.5 {item delete: item range without common ancestor} -body {
 
 test item-3.6 {item delete: don't delete "root" itemDesc} -body {
     .t item delete root
-    .t index root
+    .t item id root
 } -result {0}
 
 test item-3.7 {item delete: deleting root should be ignored} -body {
-    .t item delete [.t index root]
+    .t item delete [.t item id root]
     update idletasks
 } -result {}
 
@@ -447,7 +447,7 @@ test item-17.5 {item sort: missing arg to an option} -body {
 
 test item-17.6 {item sort: invalid column} -body {
     .t item sort root -column 3
-} -returnCodes error -result {bad column index "3": must be from 0 to 0}
+} -returnCodes error -result {column "3" doesn't exist}
 
 test item-17.7 {item sort: invalid column, second try} -body {
     .t item sort root -column tail
@@ -689,8 +689,8 @@ test item-17.48 {item sort -element: useless for -command} -body {
 } -result {1 2 3 4 5 6 7 8} ;# same result as in 17.39
 
 test item-17.49 {item sort -command: no columns} -body {
-    while {![catch {.t column configure 0}]} {
-	.t column delete 0
+    while {![catch {.t column configure "order 0"}]} {
+	.t column delete "order 0"
     }
     .t item sort root
 } -returnCodes error -result {there are no columns}

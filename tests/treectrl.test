@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.24 2005/05/11 03:31:59 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.25 2005/05/13 20:41:19 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -213,19 +213,14 @@ test treectrl-1.46 {configure: -showrootbutton option} -body {
 
 test treectrl-1.47 {configure: invalid -treecolumn option} -body {
     .t configure -treecolumn foo
-} -returnCodes error -result {expected integer but got "foo"}
-
-test treectrl-1.48 {configure: -treecolumn option with unknown column} -body {
-    .t configure -treecolumn 1
-    .t configure -treecolumn
-} -result {-treecolumn treeColumn TreeColumn 0 1}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test treectrl-1.49 {configure: -treecolumn option with known column} -body {
     .t column create -tag column0
     .t column create -tag column2
     .t configure -treecolumn 1
     .t configure -treecolumn
-} -result {-treecolumn treeColumn TreeColumn 0 1}
+} -result {-treecolumn treeColumn TreeColumn {} 1}
 
 test treectrl-1.50 {configure: invalid -wrap mode} -body {
     .t configure -wrap foo
@@ -251,14 +246,14 @@ test treectrl-1.54 {configure: -wrap empty option} -body {
 
 # For the tests of the item descriptions we use see,
 # if we want to generate an error on unknown items.
-# For the positive cases we use index since it returns the item number.
+# For the positive cases we use "item id" since it returns the item id.
 
 test treectrl-2.1 {bogus itemdesc} -body {
-    .t index foo
+    .t item id foo
 } -returnCodes error -result {bad item description "foo"}
 
 test treectrl-2.2 {is all allowed?} -body {
-    .t index all
+    .t item id all
 } -returnCodes error -result {can't specify "all" for this command}
 
 test treectrl-2.3 {itemdesc number unknown} -body {
@@ -266,24 +261,24 @@ test treectrl-2.3 {itemdesc number unknown} -body {
 } -returnCodes error -result {item "999" doesn't exist}
 
 test treectrl-2.4 {itemdesc number of root} -body {
-    .t index 0
+    .t item id 0
 } -result {0}
 
 test treectrl-2.5 {itemdesc active} -body {
-    .t index active
+    .t item id active
 } -result {0}
 
 test treectrl-2.6 {itemdesc abbreviated anchor} -body {
-    .t index an
+    .t item id an
 } -result {0}
 
 test treectrl-2.7 {itemdesc first} -body {
-    .t index first
+    .t item id first
 } -result {0}
 
 test treectrl-2.8 {itemdesc first visible} -body {
     .t configure -showroot 1
-    .t index "first visible"
+    .t item id "first visible"
 } -result {0}
 
 test treectrl-2.9 {itemdesc first visible without any node} -body {
@@ -292,12 +287,12 @@ test treectrl-2.9 {itemdesc first visible without any node} -body {
 } -returnCodes error -result {item "first visible" doesn't exist}
 
 test treectrl-2.10 {itemdesc last} -body {
-    .t index last
+    .t item id last
 } -result {0}
 
 test treectrl-2.11 {itemdesc last visible} -body {
     .t configure -showroot 1
-    .t index "last visible"
+    .t item id "last visible"
 } -result {0}
 
 test treectrl-2.12 {itemdesc last visible without any node} -body {
@@ -306,16 +301,16 @@ test treectrl-2.12 {itemdesc last visible without any node} -body {
 } -returnCodes error -result {item "last visible" doesn't exist}
 
 test treectrl-2.13 {itemdesc nearest without x/y} -body {
-    .t index nearest
+    .t item id nearest
 } -returnCodes error -result {bad item description "nearest"}
 
 test treectrl-2.14 {itemdesc nearest with invalid x/y} -body {
-    .t index "nearest foo bar"
+    .t item id "nearest foo bar"
 } -returnCodes error -result {bad item description "nearest foo bar"}
 
 test treectrl-2.15 {itemdesc nearest with valid x/y, but no item} -body {
     .t configure -showroot 0
-    .t index "nearest 10 10"
+    .t item id "nearest 10 10"
 } -result {}
 
 # Before continuing to test the item descriptions and their modifiers,
@@ -342,42 +337,42 @@ test treectrl-2.16 {create some items} -body {
 
 test treectrl-2.17 {itemdesc nearest with valid x/y} -body {
     # I think this should return an item, but it doesn't...
-    .t index "nearest 10 10"
+    .t item id "nearest 10 10"
 } -result {}
 
 test treectrl-2.18 {itemdesc rnc without r/c} -body {
-    .t index rnc
+    .t item id rnc
 } -returnCodes error -result {bad item description "rnc"}
 
 test treectrl-2.19 {itemdesc rnc with invalid r/c} -body {
-    .t index "rnc foo bar"
+    .t item id "rnc foo bar"
 } -returnCodes error -result {bad item description "rnc foo bar"}
 
 test treectrl-2.20 {itemdesc rnc with valid r/c} -body {
-    .t index "rnc 0 0"
+    .t item id "rnc 0 0"
 } -result {1}
 
 test treectrl-2.21 {itemdesc root} -body {
     .t configure -showroot 1 -orient vertical
-    .t index root
+    .t item id root
 } -result {0}
 
 test treectrl-2.22 {bogus modifier} -body {
-    .t index "0 foo"
+    .t item id "0 foo"
 } -returnCodes error -result {bad modifier "foo": must be *} -match glob
 
 test treectrl-2.23 {valid modifier with too less arguments} -body {
-    .t index "0 child"
+    .t item id "0 child"
 } -returnCodes error -result {bad item description "0 child"}
 
 test treectrl-2.24 {modifier visible alone generates an error} -body {
-    .t index "0 visible"
+    .t item id "0 visible"
 } -returnCodes error -result {bad item description "0 visible"}
 
 test treectrl-2.25 {modifier above} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n above"]
+	lappend res [.t item id "$n above"]
     }
     set res
 } -result {{} 0 1 2 3 4 5 6 7}
@@ -385,7 +380,7 @@ test treectrl-2.25 {modifier above} -body {
 test treectrl-2.26 {modifier below} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n below"]
+	lappend res [.t item id "$n below"]
     }
     set res
 } -result {1 2 3 4 5 6 7 8 {}}
@@ -393,7 +388,7 @@ test treectrl-2.26 {modifier below} -body {
 test treectrl-2.27 {modifier bottom} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n bottom"]
+	lappend res [.t item id "$n bottom"]
     }
     set res
 } -result {8 8 8 8 8 8 8 8 8}
@@ -402,7 +397,7 @@ test treectrl-2.28 {modifier child} -body {
     set res {}
     for {set n 0} {$n < 6} {incr n} {
 	for {set c 0} {$c < 3} {incr c} {
-	    lappend res [.t index "$n child $c"]
+	    lappend res [.t item id "$n child $c"]
 	}
     }
     set res
@@ -411,7 +406,7 @@ test treectrl-2.28 {modifier child} -body {
 test treectrl-2.29 {modifier firstchild} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n firstchild"]
+	lappend res [.t item id "$n firstchild"]
     }
     set res
 } -result {1 2 {} 4 {} 6 {} {} {}}
@@ -419,20 +414,20 @@ test treectrl-2.29 {modifier firstchild} -body {
 test treectrl-2.30 {modifier lastchild} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n lastchild"]
+	lappend res [.t item id "$n lastchild"]
     }
     set res
 } -result {8 3 {} 4 {} 7 {} {} {}}
 
 test treectrl-2.30 {modifier left, leftmost, right, and rightmost} -body {
-    list [.t index "1 left"] [.t index "1 right"] \
-	 [.t index "2 leftmost"] [.t index "3 rightmost"]
+    list [.t item id "1 left"] [.t item id "1 right"] \
+	 [.t item id "2 leftmost"] [.t item id "3 rightmost"]
 } -result {{} {} 2 3}
 
 test treectrl-2.31 {modifier next} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n next"]
+	lappend res [.t item id "$n next"]
     }
     set res
 } -result {1 2 3 4 5 6 7 8 {}}
@@ -440,7 +435,7 @@ test treectrl-2.31 {modifier next} -body {
 test treectrl-2.32 {modifier nextsibling} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n nextsibling"]
+	lappend res [.t item id "$n nextsibling"]
     }
     set res
 } -result {{} 5 3 {} {} 8 7 {} {}}
@@ -448,7 +443,7 @@ test treectrl-2.32 {modifier nextsibling} -body {
 test treectrl-2.33 {modifier parent} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n parent"]
+	lappend res [.t item id "$n parent"]
     }
     set res
 } -result {{} 0 1 1 3 0 5 5 0}
@@ -456,7 +451,7 @@ test treectrl-2.33 {modifier parent} -body {
 test treectrl-2.34 {modifier prev} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n prev"]
+	lappend res [.t item id "$n prev"]
     }
     set res
 } -result {{} 0 1 2 3 4 5 6 7}
@@ -464,7 +459,7 @@ test treectrl-2.34 {modifier prev} -body {
 test treectrl-2.34 {modifier prevsibling} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n prevsibling"]
+	lappend res [.t item id "$n prevsibling"]
     }
     set res
 } -result {{} {} {} 2 {} 1 {} 6 5}
@@ -473,7 +468,7 @@ test treectrl-2.35 {modifier sibling} -body {
     set res {}
     for {set n 0} {$n < 7} {incr n} {
 	for {set c 0} {$c < 3} {incr c} {
-	    lappend res [.t index "$n sibling $c"]
+	    lappend res [.t item id "$n sibling $c"]
 	}
     }
     set res
@@ -482,7 +477,7 @@ test treectrl-2.35 {modifier sibling} -body {
 test treectrl-2.36 {modifier top} -body {
     set res {}
     for {set n 0} {$n < 9} {incr n} {
-	lappend res [.t index "$n top"]
+	lappend res [.t item id "$n top"]
     }
     set res
 } -result {0 0 0 0 0 0 0 0 0}
@@ -495,7 +490,7 @@ test treectrl-2.37 {modifier cocktail} -body {
 	prevsibling prev nextsibling lastchild next
     } {
 	lappend itemDesc $mod
-	catch {lappend res [.t index $itemDesc]}
+	catch {lappend res [.t item id $itemDesc]}
     }
     set res
 } -result {8 8 1 5 4 3 2 1 5 7 8}
@@ -667,7 +662,7 @@ test treectrl-8.4 {selection anchor: always defined} -body {
 
 test treectrl-8.5 {selection anchor: modifies the anchor item} -body {
     .t selection anchor "root lastchild"
-    .t index anchor
+    .t item id anchor
 } -result {8}
 
 test treectrl-8.6 {selection count/get: still nothing selected} -body {
@@ -840,8 +835,8 @@ test treectrl-14.1 {rename and change some columns} -body {
     .t column delete column0
     .t column create -tag column1
     .t column create -tag column3
-    .t column move 0 2
-    .t column move 0 tail
+    .t column move "order 0" "order 2"
+    .t column move "order 0" tail
     .t element create eRect2 rect -fill blue -height 20 -width 150
     .t style create testStyle3
     .t style elements testStyle3 eRect2
@@ -935,7 +930,7 @@ test treectrl-16.7 {dragimage add: invalid item} -body {
 
 test treectrl-16.8 {dragimage add: invalid column} -body {
     .t dragimage add 1 foo
-} -returnCodes error -result {column with tag "foo" doesn't exist}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test treectrl-16.9 {dragimage add: invalid element} -body {
     .t dragimage add 1 2 foo
