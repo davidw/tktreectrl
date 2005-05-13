@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.33 2005/05/11 03:24:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.34 2005/05/13 19:44:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -40,6 +40,8 @@ static CONST char *lineStyleST[] = {
 static CONST char *orientStringTable[] = {
     "horizontal", "vertical", (char *) NULL
 };
+
+extern Tk_ObjCustomOption columnCustomOption_NOT_TAIL;
 
 static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BORDER, "-background", "background", "Background",
@@ -81,6 +83,8 @@ static Tk_OptionSpec optionSpecs[] = {
      "1", Tk_Offset(TreeCtrl, buttonThicknessObj),
      Tk_Offset(TreeCtrl, buttonThickness),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
+    {TK_OPTION_STRING, "-columnprefix", "columnPrefix", "ColumnPrefix",
+     "", -1, Tk_Offset(TreeCtrl, columnPrefix), 0, (ClientData) NULL, 0},
     {TK_OPTION_PIXELS, "-columnproxy", "columnProxy", "ColumnProxy",
      (char *) NULL, Tk_Offset(TreeCtrl, columnProxy.xObj),
      Tk_Offset(TreeCtrl, columnProxy.x),
@@ -139,6 +143,8 @@ static Tk_OptionSpec optionSpecs[] = {
      Tk_Offset(TreeCtrl, itemPadY),
      TK_CONFIG_NULL_OK, (ClientData) &PadAmountOption, 0},
 #endif
+    {TK_OPTION_STRING, "-itemprefix", "itemPrefix", "ItemPrefix",
+     "", -1, Tk_Offset(TreeCtrl, itemPrefix), 0, (ClientData) NULL, 0},
     {TK_OPTION_COLOR, "-linecolor", "lineColor", "LineColor",
      "#808080", -1, Tk_Offset(TreeCtrl, lineColor),
      0, (ClientData) NULL, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
@@ -186,9 +192,10 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_STRING, "-takefocus", "takeFocus", "TakeFocus",
      DEF_LISTBOX_TAKE_FOCUS, -1, Tk_Offset(TreeCtrl, takeFocus),
      TK_OPTION_NULL_OK, 0, 0},
-    {TK_OPTION_INT, "-treecolumn", "treeColumn", "TreeColumn",
-     "0", -1, Tk_Offset(TreeCtrl, columnTree),
-     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+    {TK_OPTION_CUSTOM, "-treecolumn", "treeColumn", "TreeColumn",
+     (char *) NULL, -1, Tk_Offset(TreeCtrl, columnTree),
+     TK_OPTION_NULL_OK, (ClientData) &columnCustomOption_NOT_TAIL,
+     TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-usetheme", "useTheme",
      "UseTheme", "0", -1, Tk_Offset(TreeCtrl, useTheme),
      0, (ClientData) NULL, TREE_CONF_THEME | TREE_CONF_RELAYOUT},
@@ -240,33 +247,6 @@ static Tk_OptionSpec debugSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
-static Tk_OptionSpec dragSpecs[] = {
-    {TK_OPTION_BOOLEAN, "-enable", (char *) NULL, (char *) NULL,
-     "0", -1, Tk_Offset(TreeCtrl, columnDrag.enable),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_INT, "-imagealpha", (char *) NULL, (char *) NULL,
-     "128", -1, Tk_Offset(TreeCtrl, columnDrag.alpha),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_COLOR, "-imagecolor", (char *) NULL, (char *) NULL,
-     "gray75", -1, Tk_Offset(TreeCtrl, columnDrag.color),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_INT, "-imagecolumn", (char *) NULL, (char *) NULL,
-     "-1", -1, Tk_Offset(TreeCtrl, columnDrag.column),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_PIXELS, "-imageoffset", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(TreeCtrl, columnDrag.offsetObj),
-     Tk_Offset(TreeCtrl, columnDrag.offset), 0, (ClientData) NULL, 0},
-    {TK_OPTION_COLOR, "-indicatorcolor", (char *) NULL, (char *) NULL,
-     "Black", -1, Tk_Offset(TreeCtrl, columnDrag.indColor),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_INT, "-indicatorcolumn", (char *) NULL, (char *) NULL,
-     "-1", -1, Tk_Offset(TreeCtrl, columnDrag.indColumn),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
-     (char *) NULL, 0, -1, 0, 0, 0}
-};
-
-
 static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[], int createFlag);
 static void TreeEventProc(ClientData clientData, XEvent * eventPtr);
@@ -279,7 +259,6 @@ static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Ob
 static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
 static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,Tcl_Obj *CONST objv[]);
-static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 static Tk_ClassProcs treectrlClass = {
     sizeof(Tk_ClassProcs),	/* size */
@@ -339,10 +318,6 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     (void) Tk_InitOptions(interp, (char *) tree, tree->debug.optionTable,
 	    tkwin);
 
-    tree->columnDrag.optionTable = Tk_CreateOptionTable(interp, dragSpecs);
-    (void) Tk_InitOptions(interp, (char *) tree, tree->columnDrag.optionTable,
-	    tkwin);
-
     Tcl_InitHashTable(&tree->itemHash, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable(&tree->elementHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
@@ -393,9 +368,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int result = TCL_OK;
     static CONST char *commandName[] = {
 	"activate", "canvasx", "canvasy", "cget", "collapse",
-	"column",
-	"columndrag",
-	"compare", "configure", "contentbox",
+	"column", "compare", "configure", "contentbox",
 	"debug", "depth", "dragimage",
 	"element", "expand", "identify", "index", "item",
 	"marquee", "notify", "numcolumns", "numitems", "orphans",
@@ -404,9 +377,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     };
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
-	COMMAND_COLLAPSE, COMMAND_COLUMN,
-	COMMAND_COLUMNDRAG,
-	COMMAND_COMPARE, COMMAND_CONFIGURE,
+	COMMAND_COLLAPSE, COMMAND_COLUMN, COMMAND_COMPARE, COMMAND_CONFIGURE,
 	COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
@@ -580,12 +551,6 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    break;
 	}
 
-	case COMMAND_COLUMNDRAG:
-	{
-	    result = TreeColumnDragCmd(clientData, interp, objc, objv);
-	    break;
-	}
-
 	case COMMAND_COMPARE:
 	{
 	    TreeItem item1, item2;
@@ -607,8 +572,8 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    TreeItem_RootAncestor(tree, item2)) {
 		FormatResult(interp,
 			"item %s%d and item %s%d don't share a common ancestor",
-			itemPrefix, TreeItem_GetID(tree, item1),
-			itemPrefix, TreeItem_GetID(tree, item2));
+			tree->itemPrefix, TreeItem_GetID(tree, item1),
+			tree->itemPrefix, TreeItem_GetID(tree, item2));
 		goto error;
 	    }
 	    TreeItem_ToIndex(tree, item1, &index1, NULL);
@@ -698,13 +663,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	    /* Point in header */
 	    if (y < tree->inset + Tree_HeaderHeight(tree)) {
-		int left = 0 - tree->xOrigin, columnIndex = 0;
+		int left = 0 - tree->xOrigin;
 		TreeColumn column = tree->columns;
 
 		while (column != NULL) {
 		    int width = TreeColumn_UseWidth(column);
 		    if ((x >= left) && (x < left + width)) {
-			sprintf(buf, "header %d", columnIndex);
+			sprintf(buf, "header %s%d", tree->columnPrefix,
+			    TreeColumn_GetID(column));
 			if (x < left + 4)
 			    sprintf(buf + strlen(buf), " left");
 			else if (x >= left + width - 4)
@@ -713,7 +679,6 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			goto done;
 		    }
 		    left += width;
-		    columnIndex++;
 		    column = TreeColumn_Next(column);
 		}
 		strcpy(buf, "header tail");
@@ -727,7 +692,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (item == NULL)
 		break;
 
-	    sprintf(buf, "item %s%d", itemPrefix, TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
+	    sprintf(buf, "item %s%d", tree->itemPrefix, TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 	    depth = TreeItem_GetDepth(tree, item);
 	    if (tree->showRoot || tree->showButtons || tree->showLines)
 		depth++;
@@ -753,14 +718,14 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    if ((sibling != NULL) &&
 			((TreeItem_GetParent(tree, sibling) != tree->root) ||
 			tree->showRootLines))
-			sprintf(buf + strlen(buf), " line %s%d", itemPrefix,
+			sprintf(buf + strlen(buf), " line %s%d", tree->itemPrefix,
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
 	    } else if (tree->columnCountVis == 1) {
 		char *elem;
 
-		sprintf(buf + strlen(buf), " column %d",
-			TreeColumn_Index(tree->columnVis));
+		sprintf(buf + strlen(buf), " column %s%d",
+			tree->columnPrefix, TreeColumn_GetID(tree->columnVis));
 		elem = TreeItem_Identify(tree, item, x, y);
 		if (elem != NULL)
 		    sprintf(buf + strlen(buf), " elem %s", elem);
@@ -776,8 +741,8 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    int width = TreeColumn_UseWidth(treeColumn);
 		    if ((x >= left) && (x < left + width)) {
 			char *elem;
-			sprintf(buf + strlen(buf), " column %d",
-				TreeColumn_Index(treeColumn));
+			sprintf(buf + strlen(buf), " column %s%d",
+				tree->columnPrefix, TreeColumn_GetID(treeColumn));
 			elem = TreeItem_Identify(tree, item, x, y);
 			if (elem != NULL)
 			    sprintf(buf + strlen(buf), " elem %s", elem);
@@ -892,8 +857,8 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    TreeItem_RootAncestor(tree, itemLast)) {
 		FormatResult(interp,
 			"item %s%d and item %s%d don't share a common ancestor",
-			itemPrefix, TreeItem_GetID(tree, itemFirst),
-			itemPrefix, TreeItem_GetID(tree, itemLast));
+			tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
+			tree->itemPrefix, TreeItem_GetID(tree, itemLast));
 		goto error;
 	    }
 	    TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -1283,6 +1248,9 @@ badWrap:
 	    return TCL_ERROR;
 	}
     }
+
+    tree->itemPrefixLen = strlen(tree->itemPrefix);
+    tree->columnPrefixLen = strlen(tree->columnPrefix);
 
     Tk_SetWindowBackground(tree->tkwin,
 	    Tk_3DBorderColor(tree->border)->pixel);
@@ -1900,8 +1868,8 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
 			TreeItem_RootAncestor(tree, itemLast)) {
 		    FormatResult(interp,
 			    "item %s%d and item %s%d don't share a common ancestor",
-			    itemPrefix, TreeItem_GetID(tree, itemFirst),
-			    itemPrefix, TreeItem_GetID(tree, itemLast));
+			    tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
+			    tree->itemPrefix, TreeItem_GetID(tree, itemLast));
 		    return TCL_ERROR;
 		}
 		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -2001,8 +1969,8 @@ doneADD:
 			TreeItem_RootAncestor(tree, itemLast)) {
 		    FormatResult(interp,
 			    "item %s%d and item %s%d don't share a common ancestor",
-			    itemPrefix, TreeItem_GetID(tree, itemFirst),
-			    itemPrefix, TreeItem_GetID(tree, itemLast));
+			    tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
+			    tree->itemPrefix, TreeItem_GetID(tree, itemLast));
 		    return TCL_ERROR;
 		}
 		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
@@ -2647,85 +2615,6 @@ static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    visHeight % yIncr,
 		    totHeight % yIncr
 		);
-	    break;
-	}
-    }
-
-    return TCL_OK;
-}
-
-static int TreeColumnDragCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
-{
-    TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = { "cget", "configure", (char *) NULL };
-    enum { COMMAND_CGET, COMMAND_CONFIGURE };
-    int index;
-
-    if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
-	return TCL_ERROR;
-    }
-
-    if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	    &index) != TCL_OK) {
-	return TCL_ERROR;
-    }
-
-    switch (index) {
-	/* T columndrag cget option */
-	case COMMAND_CGET:
-	{
-	    Tcl_Obj *resultObjPtr;
-
-	    if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "option");
-		return TCL_ERROR;
-	    }
-	    resultObjPtr = Tk_GetOptionValue(interp, (char *) tree,
-		    tree->columnDrag.optionTable, objv[3], tree->tkwin);
-	    if (resultObjPtr == NULL)
-		return TCL_ERROR;
-	    Tcl_SetObjResult(interp, resultObjPtr);
-	    break;
-	}
-
-	/* T columndrag configure ?option? ?value? ?option value ...? */
-	case COMMAND_CONFIGURE:
-	{
-	    Tcl_Obj *resultObjPtr;
-	    Tk_SavedOptions savedOptions;
-	    int mask, result;
-
-	    if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 3, objv, "?option? ?value?");
-		return TCL_ERROR;
-	    }
-	    if (objc <= 4) {
-		resultObjPtr = Tk_GetOptionInfo(interp, (char *) tree,
-			tree->columnDrag.optionTable,
-			(objc == 3) ? (Tcl_Obj *) NULL : objv[3],
-			tree->tkwin);
-		if (resultObjPtr == NULL)
-		    return TCL_ERROR;
-		Tcl_SetObjResult(interp, resultObjPtr);
-		break;
-	    }
-	    result = Tk_SetOptions(interp, (char *) tree,
-		    tree->columnDrag.optionTable, objc - 3, objv + 3, tree->tkwin,
-		    &savedOptions, &mask);
-	    if (result != TCL_OK) {
-		Tk_RestoreSavedOptions(&savedOptions);
-		return TCL_ERROR;
-	    }
-	    Tk_FreeSavedOptions(&savedOptions);
-
-	    if (tree->columnDrag.alpha < 0)
-		tree->columnDrag.alpha = 0;
-	    if (tree->columnDrag.alpha > 255)
-		tree->columnDrag.alpha = 255;
-
-	    Tree_DInfoChanged(tree, DINFO_DRAW_HEADER);
 	    break;
 	}
     }
