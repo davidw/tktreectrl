@@ -35,7 +35,8 @@ proc DemoOutlookNewsgroup {} {
 	$T column create -text Size -width 60 -justify right -tag size
 
 	# Would be nice if I could specify a column -tag too
-	$T configure -treecolumn 3
+	# *blink* The amazing code Genie makes it so!!!
+	$T configure -treecolumn subject
 
 	# State for a read message
 	$T state define read
@@ -95,7 +96,7 @@ proc DemoOutlookNewsgroup {} {
 
 	set thread 0
 	set Message(count,0) 0
-	set items [$T index root]
+	set items [$T item id root]
 	for {set i 1} {$i < $msgCnt} {incr i} {
 		set itemi [$T item create]
 		while 1 {
@@ -151,7 +152,7 @@ proc DemoOutlookNewsgroup {} {
 		}
 
 #		$T item style set $i 3 s1 4 s2.we 5 s2.we 6 s2.w
-		$T item text $itemi 3 $subject 4 $from 5 $sent 6 $size
+		$T item text $itemi subject $subject from $from sent $sent size $size
 	}
 
 	# Do something when the selection changes
