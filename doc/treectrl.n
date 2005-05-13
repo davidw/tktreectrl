@@ -6,14 +6,14 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.29 2005/05/11 03:31:33 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.30 2005/05/13 20:50:20 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 1.2  "Tk Commands"
+.TH "treectrl" n 2.0  "Tk Commands"
 .BS
 .SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
-package require \fBtreectrl  1.2\fR
+package require \fBtreectrl  2.0\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?\fR
 .sp
@@ -35,15 +35,25 @@ package require \fBtreectrl  1.2\fR
 .sp
 \fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
 .sp
+\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR\fR
+.sp
+\fIpathName\fR \fBcolumn count\fR\fR
+.sp
 \fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
 .sp
 \fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
 .sp
 \fIpathName\fR \fBcolumn index\fR \fIcolumn\fR\fR
 .sp
+\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR\fR
+.sp
+\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?\fR
+.sp
 \fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR\fR
 .sp
 \fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR\fR
+.sp
+\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?\fR
 .sp
 \fIpathName\fR \fBcolumn width\fR \fIcolumn\fR\fR
 .sp
@@ -109,9 +119,13 @@ package require \fBtreectrl  1.2\fR
 .sp
 \fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
 .sp
+\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+.sp
 \fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
 .sp
 \fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+.sp
+\fIpathName\fR \fBitem count\fR\fR
 .sp
 \fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
 .sp
@@ -131,7 +145,7 @@ package require \fBtreectrl  1.2\fR
 .sp
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
 .sp
-\fIpathName\fR \fBitem index\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem id\fR \fIitemDesc\fR\fR
 .sp
 \fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR\fR
 .sp
@@ -142,6 +156,8 @@ package require \fBtreectrl  1.2\fR
 \fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?\fR
 .sp
 \fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR\fR
+.sp
+\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?\fR
 .sp
 \fIpathName\fR \fBitem parent\fR \fIitemDesc\fR\fR
 .sp
@@ -848,7 +864,9 @@ for the column specified by \fIcolumn\fR,
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with the column specified by \fIcolumn\fR
 instead of modifying options for the overall treectrl widget.
-\fIColumn\fR may also be the string \fBtail\fR to specify the tail column.
+\fIColumn\fR may be the string \fBtail\fR to specify the tail column.
+If \fIcolumn\fR is the string \fBall\fR, at least one option-value pair
+must be given; in this case all the columns are configured.
 If no \fIoption\fR is specified, the command returns a list describing
 all of the available options for \fIcolumn\fR (see \fBTk_ConfigureInfo\fR
 for information on the format of this list).
@@ -862,22 +880,45 @@ in this case the command returns an empty string.
 .sp
 See \fBCOLUMNS\fR below for details on the options available for columns.
 .TP
+\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR\fR
+From both \fIcolumn\fRs the index is retrieved
+(as returned from the \fBcolumn order\fR widget command).
+Then these indexes are compared using the operator \fIop\fR, which must
+be either \fB<\fR,  \fB<=\fR,  \fB==\fR, \fB>=\fR, \fB>\fR,
+or \fB!=\fR.
+The return value of this command is 1 if the comparison evaluated to true,
+0 otherwise.
+.TP
+\fIpathName\fR \fBcolumn count\fR\fR
+Returns a decimal string giving the number of
+columns created by the \fBcolumn create\fR widget command which haven't been
+deleted by the \fBcolumn delete\fR widget command. The \fBtail\fR column
+is not counted.
+.TP
 \fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
 This command creates a new column in the treectrl widget. The new column is
 placed to the right of all other columns (except the \fBtail\fR column). Any
 \fIoption\fR-\fIvalue\fR arguments configure the new column according to the
-\fBcolumn configure\fR command. The return value is the zero-based index
+\fBcolumn configure\fR command. The return value is the unique identifier
 of the new column.
 .TP
 \fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
-Deletes the specified \fIcolumn\fR from the treectrl widget.
-All remaining columns of the treectrl widget will get new column numbers:
-in an unchanged order, but with succesive numbers.
+Deletes the specified \fIcolumn\fR from the treectrl widget. If \fIcolumn\fR
+is the string \fBall\fR, all columns except the tail column are deleted.
 .TP
 \fIpathName\fR \fBcolumn index\fR \fIcolumn\fR\fR
-This command returns a decimal string giving the column number
-of the column specified by \fIcolumn\fR,
-which may also be the string \fBtail\fR to specify the tail column.
+Deprecated. Use \fBcolumn id\fR
+.TP
+\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR\fR
+This command resolves the column description \fIcolumn\fR into a unique column
+identifier (see \fBCOLUMN DESCRIPTION\fR below).
+If the column described by \fIcolumn\fR doesn't exist, this command returns
+an empty string.
+.TP
+\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?\fR
+This command returns a list of identifiers for every column (except the tail)
+from left to right. If \fI-visible\fR is given, only columns whose -visible
+option is true are returned.
 .TP
 \fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR\fR
 Moves the specified \fIcolumn\fR to the left of the column
@@ -891,6 +932,13 @@ of the column specified by \fIcolumn\fR.
 The needed width is the maximum of the width of the column header
 and the width of the \fIwidest\fR currently visible item.
 .TP
+\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?\fR
+This command returns a decimal string giving the position of \fIcolumn\fR
+in the list of columns starting from zero for the leftmost column.
+If \fI-visible\fR is given, only columns whose -visible
+option is true are considered, and -1 is returned if \fIcolumn\fR's -visible
+option is false.
+.TP
 \fIpathName\fR \fBcolumn width\fR \fIcolumn\fR\fR
 This command returns a decimal string giving the width in pixels
 of the column specified by \fIcolumn\fR,
@@ -899,13 +947,7 @@ by means of the \fB-showheader\fR option.
 .RE
 .TP
 \fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
-From both items described by the \fIitemDesc\fRs the index is retrieved
-(as returned from the \fBitem index\fR widget command).
-Then these indexes are compared using the operator \fIop\fR, which must
-be either \fB<\fR,  \fB<=\fR,  \fB==\fR, \fB>=\fR, \fB>\fR,
-or \fB!=\fR.
-The return value of this command is 1 if the comparison evaulated to true,
-0 otherwise.
+Deprecated. Use the \fBitem compare\fR command instead.
 .TP
 \fIpathName\fR \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?\fR
 Query or modify the configuration options of the widget.
@@ -1159,9 +1201,7 @@ if the x coordinate is to the right of the elements;
 nothing otherwise.
 .TP
 \fIpathName\fR \fBindex\fR \fIitemDesc\fR\fR
-This command returns a decimal string giving the numerical id
-of the item specified by \fIitemDesc\fR
-(see \fBITEM DESCRIPTION\fR below).
+Deprecated. Use \fBitem id\fR instead.
 .TP
 \fIpathName\fR \fBitem\fR \fIoption\fR ?\fIarg ...\fR?\fR
 This command is used to manipulate items.
@@ -1212,6 +1252,15 @@ two events are generated:
 a \fB<Collapse-before>\fR event before the item state is changed,
 and a \fB<Collapse-after>\fR event after the item state was changed.
 .TP
+\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+From both items described by the \fIitemDesc\fRs the index is retrieved
+(as returned from the \fBitem order\fR widget command).
+Then these indexes are compared using the operator \fIop\fR, which must
+be either \fB<\fR,  \fB<=\fR,  \fB==\fR, \fB>=\fR, \fB>\fR,
+or \fB!=\fR.
+The return value of this command is 1 if the comparison evaluated to true,
+0 otherwise.
+.TP
 \fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
 Modifies the elements of the item described by \fIitemDesc\fR.
 For every column of the treectrl there may be specified one \fIlist\fR,
@@ -1233,6 +1282,12 @@ are specified, then the command modifies the given widget option(s) to have the
 given value(s); in this case the command returns an empty string. The options
 and values are the same as those permissible in the \fBitem create\fR command
 when the item was created.
+.TP
+\fIpathName\fR \fBitem count\fR\fR
+Returns a decimal string giving the number of
+items created by the \fBitem create\fR widget command which haven't been
+deleted by the \fBitem delete\fR widget command, plus 1 for the ever-present
+root item.
 .TP
 \fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
 Creates a new item and returns its unique identifier.
@@ -1349,13 +1404,10 @@ If \fIchild\fR is specified, it must described an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new first child of \fIparent\fR.
 .TP
-\fIpathName\fR \fBitem index\fR \fIitemDesc\fR\fR
-Returns a list of two integers, which corresponds to the row
-of the item described by \fIitemDesc\fR,
-if all items above are counted and if only the displayed items are counted.
-This command should not be confused with the \fBindex\fR widget command,
-which return the invariable item id.
-The index here is basically the row of the item.
+\fIpathName\fR \fBitem id\fR \fIitemDesc\fR\fR
+This command resolves the item description \fIitemDesc\fR into a unique item
+identifier (see \fBITEM DESCRIPTION\fR below). If the item described by
+\fIitemDesc\fR doesn't exist, this command returns an empty string.
 .TP
 \fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR\fR
 Returns 1 if the item described by \fIitemDesc\fR is a direct or indirect
@@ -1381,6 +1433,15 @@ Then it will become the new next sibling of \fIsibling\fR.
 .TP
 \fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR\fR
 Returns the number of children of the item described by \fIitemDesc\fR.
+.TP
+\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?\fR
+This command returns the position of the item \fIitemDesc\fR relative to
+its toplevel ancestor (usually the root item, unless the ancestor is an
+orphan). If you imagine all the items flattened into a vertical list, the
+result of this command is the row the item falls in. If the optional argument
+\fI-visible\fR is given, only the items whose ancestors are expanded, and whose
+-visible option is true, get counted; in this case -1 is returned if the item
+is not visible.
 .TP
 \fIpathName\fR \fBitem parent\fR \fIitemDesc\fR\fR
 Returns the numerical index of the parent of the item
@@ -1411,7 +1472,7 @@ which should be children of the item described by \fIitemDesc\fR;
 the order between these two limiting items doesn't matter.
 .sp
 The sort column can be specified by means of the \fB-column\fR option;
-this option can be used repeatedly to define a multi column sort.
+this option can be used repeatedly to define a multicolumn sort.
 The sorting is done by looking at the \fItext\fR
 of the element specified by the \fB-element\fR option,
 which must be a text element defined in the style of the sorting column,
@@ -1783,18 +1844,10 @@ Use \fBnotify uninstall\fR with a \fIpattern\fR of <\fIeventName\fR> instead.
 .RE
 .TP
 \fIpathName\fR \fBnumcolumns\fR\fR
-Returns a decimal string giving the number of
-columns created by the \fBcolumn create\fR widget command which haven't been
-deleted by the \fBcolumn delete\fR widget command. The \fBtail\fR column
-is not counted.
+Deprecated. Use the \fBcolumn count\fR command instead.
 .TP
 \fIpathName\fR \fBnumitems\fR\fR
-Returns a decimal string giving the number of
-items created by the \fBitem create\fR widget command which haven't been
-deleted by the \fBitem delete\fR widget command.
-This number is always positive,
-since a newly created treectrl widget has already the root item,
-which cannot be deleted.
+Deprecated. Use the \fBitem count\fR command instead.
 .TP
 \fIpathName\fR \fBorphans\fR\fR
 Returns a list containing the numerical ids of all items
@@ -2125,11 +2178,8 @@ A treectrl widget is capable of displaying multiple columns next to each
 other.
 An item can be considered as a row, which reaches over all columns.
 .PP
-Columns in a treectrl may be named in either of two ways: by number or by tag.
-If a number is given it must be an integer from zero to \fIN\fR, where \fIN\fR
-is one less than the result of the \fBnumcolumns\fR widget command.
-A column may also be named by the value of its \fB-tag\fR configuration
-option.
+Columns in a treectrl may be specified in a number of ways.
+See \fBCOLUMN DESCRIPTION\fR below.
 .PP
 There is always one special column, the \fBtail\fR column, which fills
 all space to the right of the last ordinary column.
@@ -2151,11 +2201,11 @@ to the right of the column title.
 .TP
 \fB\fB-arrowbitmap\fR\fR \fIbitmap\fR
 Specifies as a per-state option the bitmap to use to draw the arrow if
-this columns -arrow option is not \fBnone\fR.
+this column's -arrow option is not \fBnone\fR.
 .TP
 \fB\fB-arrowimage\fR\fR \fIimage\fR
 Specifies as a per-state option the image to use to draw the arrow if
-this columns -arrow option is not \fBnone\fR. If an image is specified for
+this column's -arrow option is not \fBnone\fR. If an image is specified for
 a certain state, it overrides the -arrowbitmap option.
 .TP
 \fB\fB-arrowside\fR\fR \fIside\fR
@@ -2310,6 +2360,52 @@ a) the tree \fB-orientation\fR option is \fBvertical\fR;
 b) only a single tree column is visible;
 c) the single visible tree column \fB-width\fR option is zero;
 d) and the tree \fB-wrap\fR option results in wrapping.
+.SH "COLUMN DESCRIPTION"
+Many of the commands and options for a treectrl take as an argument a
+description of which column to operate on.
+See the \fBEXAMPLES\fR section for examples.
+The initial part of a column description must begin with one of the following terms:
+.TP
+\fIid\fR
+Specifies the unique column identifier, where \fIid\fR should be
+the return value of a prior call of the \fBcolumn create\fR widget command.
+.TP
+\fItag\fR
+Specifies the value of a column's -tag option.
+.TP
+\fBall\fR
+Indicates every column, including the tail column. Not all commands accept this.
+.TP
+\fBfirst\fR ?\fBvisible\fR?
+Indicates the leftmost column of the treectrl.
+If \fBvisible\fR is specified, the leftmost column whose -visible option
+is true is used.
+.TP
+\fBlast\fR ?\fBvisible\fR?
+Indicates the rightmost column of the treectrl (but not the tail column).
+If \fBvisible\fR is specified, the rightmost column whose -visible option
+is true is used.
+.TP
+\fBorder\fR \fIn\fR ?\fBvisible\fR?
+Indicates the \fIn\fRth column in the list of columns as returned by the
+\fBcolumn order\fR command.
+.TP
+\fBtail\fR
+Indicates the ever-present tail column of the treectrl.
+.PP
+The initial part of the column description (matching any of the values above)
+may be followed by one or more \fImodifier\fRs.
+A modifier changes the column used relative to
+the description up to this point.
+It may be specified in any of the following forms:
+.TP
+\fBnext\fR ?\fBvisible\fR?
+Use the column to the right, or the column to the right whose -visible option
+is true.
+.TP
+\fBprev\fR ?\fBvisible\fR?
+Use the column to the left, or the column to the left whose -visible option
+is true.
 .SH "STATES"
 A state consists basically of just a string: its \fIstateName\fR.
 For every item a set of these states is managed,
@@ -2379,7 +2475,7 @@ However, to use a different font when the item is selected you could write:
 .nf
 $T element configure MyTextElement -font {{Courier 10} selected {Times 12 bold} {}}
 .fi
-In the second example above the -font option reads "value stateList value stateList".
+In the example above, the -font option reads "value stateList value stateList".
 If \fIstateList\fR is an empty list, the preceding \fIvalue\fR is used regardless
 of the item state. A non-empty stateList specifies a list of states which must be
 set for the item in order to use the preceding value. Each stateList can also
@@ -2585,15 +2681,15 @@ the \fBelement create\fR or \fBelement configure\fR commands, only by the
 \fBitem element configure\fR command; i.e., the element must be associated
 with a particular item.
 .SH "ITEM DESCRIPTION"
-Many of the widget commands for a treectrl take as one argument an
-indicator of which item of the treectrl to operate on.  These
-indicators are called \fIitemDesc\fRs and may be specified in
-any of the following forms:
+Many of the commands and options for a treectrl take as an argument a
+description of which item to operate on.
+See the \fBEXAMPLES\fR section for examples.
+The initial part of an item description must begin with one of the following terms:
 .TP
-\fInumber\fR
-Specifies the item numerically, where \fInumber\fR should be
+\fIid\fR
+Specifies the unique item identifier, where \fIid\fR should be
 the return value of a prior call of the \fBitem create\fR widget command,
-or \fB0\fR to specify the root item.
+or \fB0\fR to specify the ever-present root item.
 .TP
 \fBactive\fR
 Indicates the item that is currently active, i.e. normally
@@ -2627,8 +2723,9 @@ You can memorize \fBrnc\fR as abbreviation of "row 'n' column".
 \fBroot\fR
 Indicates the root item of the treectrl.
 .PP
-The \fIitemDesc\fR may be followed by one or more \fImodifier\fRs.
-A modifier changes the item described by the \fIitemDesc\fR relative to
+The initial part of the column description (matching any of the values above)
+may be followed by one or more \fImodifier\fRs.
+A modifier changes the item used relative to
 the description up to this point.
 It may be specified in any of the following forms:
 .TP
@@ -2879,6 +2976,32 @@ the Return key toggles the active item.
 The mousewheel scrolls the view of the widget four lines up or down
 depending on the direction, the wheel was turned.
 The active cursor or the selection is not affected.
+.SH "EXAMPLES"
+Get the unique identifier for the leftmost visible column:
+.nf
+set id [$T column index "first visible"]
+.fi
+Delete the leftmost column:
+.nf
+$T column delete "order 0"
+.fi
+Take the visible column that is to the left of the last column, and move that
+column in front of the tail column:
+.nf
+$T column move "last prev visible" tail
+.fi
+Get the unique identifier for the first visible item:
+.nf
+set id [$T item index "first visible"]
+.fi
+Delete the parent of the item that is under the point x,y:
+.nf
+$T item delete "nearest $x $y parent"
+.fi
+Add the 10th child of the second child of the root item to the selection:
+.nf
+$T selection add "root firstchild nextsibling child 10"
+.fi
 .SH "SEE ALSO"
 bind(n), bitmap(n), image(n), listbox(n), options(n)
 .SH "KEYWORDS"

@@ -3,11 +3,11 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.13 2005/05/11 03:31:32 treectrl Exp $}
-][manpage_begin treectrl n 1.2]
+  $Id: treectrl.man,v 1.14 2005/05/13 20:50:20 treectrl Exp $}
+][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
-[require treectrl 1.2]
+[require treectrl 2.0]
 
 [description]
 [list_begin definitions] 
@@ -378,7 +378,9 @@ for the column specified by [arg column],
 This command is similar to the [cmd configure] widget command except
 that it modifies options associated with the column specified by [arg column]
 instead of modifying options for the overall treectrl widget.
-[arg Column] may also be the string [const tail] to specify the tail column.
+[arg Column] may be the string [const tail] to specify the tail column.
+If [arg column] is the string [const all], at least one option-value pair
+must be given; in this case all the columns are configured.
 If no [arg option] is specified, the command returns a list describing
 all of the available options for [arg column] (see [fun Tk_ConfigureInfo]
 for information on the format of this list).
@@ -393,22 +395,45 @@ in this case the command returns an empty string.
 
 See [sectref COLUMNS] below for details on the options available for columns.
 
+[call [arg pathName] [cmd {column compare}] [arg column1] [arg op] [arg column2]]
+From both [arg column]s the index is retrieved
+(as returned from the [cmd {column order}] widget command).
+Then these indexes are compared using the operator [arg op], which must
+be either [const <],  [const <=],  [const ==], [const >=], [const >],
+or [const !=].
+The return value of this command is 1 if the comparison evaluated to true,
+0 otherwise.
+
+[call [arg pathName] [cmd {column count}]]
+Returns a decimal string giving the number of
+columns created by the [cmd "column create"] widget command which haven't been
+deleted by the [cmd "column delete"] widget command. The [const tail] column
+is not counted.
+
 [call [arg pathName] [cmd {column create}] [opt [arg {option value ...}]]]
 This command creates a new column in the treectrl widget. The new column is
 placed to the right of all other columns (except the [const tail] column). Any
 [arg option]-[arg value] arguments configure the new column according to the
-[cmd "column configure"] command. The return value is the zero-based index
+[cmd "column configure"] command. The return value is the unique identifier
 of the new column.
 
 [call [arg pathName] [cmd {column delete}] [arg column]]
-Deletes the specified [arg column] from the treectrl widget.
-All remaining columns of the treectrl widget will get new column numbers:
-in an unchanged order, but with succesive numbers.
+Deletes the specified [arg column] from the treectrl widget. If [arg column]
+is the string [const all], all columns except the tail column are deleted.
 
 [call [arg pathName] [cmd {column index}] [arg column]]
-This command returns a decimal string giving the column number
-of the column specified by [arg column],
-which may also be the string [const tail] to specify the tail column.
+Deprecated. Use [cmd {column id}]
+
+[call [arg pathName] [cmd {column id}] [arg column]]
+This command resolves the column description [arg column] into a unique column
+identifier (see [sectref {COLUMN DESCRIPTION}] below).
+If the column described by [arg column] doesn't exist, this command returns
+an empty string.
+
+[call [arg pathName] [cmd {column list}] [opt [arg -visible]]]
+This command returns a list of identifiers for every column (except the tail)
+from left to right. If [arg -visible] is given, only columns whose -visible
+option is true are returned.
 
 [call [arg pathName] [cmd {column move}] [arg column] [arg before]]
 Moves the specified [arg column] to the left of the column
@@ -422,6 +447,13 @@ of the column specified by [arg column].
 The needed width is the maximum of the width of the column header
 and the width of the [emph widest] currently visible item.
 
+[call [arg pathName] [cmd {column order}] [arg column] [opt [arg -visible]]]
+This command returns a decimal string giving the position of [arg column]
+in the list of columns starting from zero for the leftmost column.
+If [arg -visible] is given, only columns whose -visible
+option is true are considered, and -1 is returned if [arg column]'s -visible
+option is false.
+
 [call [arg pathName] [cmd {column width}] [arg column]]
 This command returns a decimal string giving the width in pixels
 of the column specified by [arg column],
@@ -430,13 +462,7 @@ by means of the [option -showheader] option.
 [list_end]
 
 [call [arg pathName] [cmd compare] [arg itemDesc1] [arg op] [arg itemDesc2]]
-From both items described by the [arg itemDesc]s the index is retrieved
-(as returned from the [cmd {item index}] widget command).
-Then these indexes are compared using the operator [arg op], which must
-be either [const <],  [const <=],  [const ==], [const >=], [const >],
-or [const !=].
-The return value of this command is 1 if the comparison evaulated to true,
-0 otherwise.
+Deprecated. Use the [cmd {item compare}] command instead.
 
 [call [arg pathName] [cmd configure] [opt [arg option]] \
      [opt [arg {value option value ...}]]]
@@ -702,9 +728,7 @@ if the x coordinate is to the right of the elements;
 nothing otherwise.
 
 [call [arg pathName] [cmd index] [arg itemDesc]]
-This command returns a decimal string giving the numerical id
-of the item specified by [arg itemDesc]
-(see [sectref {ITEM DESCRIPTION}] below).
+Deprecated. Use [cmd {item id}] instead.
 
 [call [arg pathName] [cmd item] [arg option] [opt [arg {arg ...}]]]
 This command is used to manipulate items.
@@ -756,6 +780,15 @@ two events are generated:
 a [const <Collapse-before>] event before the item state is changed,
 and a [const <Collapse-after>] event after the item state was changed.
 
+[call [arg pathName] [cmd {item compare}] [arg itemDesc1] [arg op] [arg itemDesc2]]
+From both items described by the [arg itemDesc]s the index is retrieved
+(as returned from the [cmd {item order}] widget command).
+Then these indexes are compared using the operator [arg op], which must
+be either [const <],  [const <=],  [const ==], [const >=], [const >],
+or [const !=].
+The return value of this command is 1 if the comparison evaluated to true,
+0 otherwise.
+
 [call [arg pathName] [cmd {item complex}] [arg itemDesc] [arg list] [arg ...]]
 Modifies the elements of the item described by [arg itemDesc].
 For every column of the treectrl there may be specified one [arg list],
@@ -777,6 +810,12 @@ are specified, then the command modifies the given widget option(s) to have the
 given value(s); in this case the command returns an empty string. The options
 and values are the same as those permissible in the [cmd "item create"] command
 when the item was created.
+
+[call [arg pathName] [cmd {item count}]]
+Returns a decimal string giving the number of
+items created by the [cmd "item create"] widget command which haven't been
+deleted by the [cmd "item delete"] widget command, plus 1 for the ever-present
+root item.
 
 [call [arg pathName] [cmd {item create}] [opt [arg {option value ...}]]]
 Creates a new item and returns its unique identifier.
@@ -900,13 +939,10 @@ If [arg child] is specified, it must described an item
 that is not an ancestor of [arg parent].
 Then it will become the new first child of [arg parent].
 
-[call [arg pathName] [cmd {item index}] [arg itemDesc]]
-Returns a list of two integers, which corresponds to the row 
-of the item described by [arg itemDesc],
-if all items above are counted and if only the displayed items are counted.
-This command should not be confused with the [cmd index] widget command,
-which return the invariable item id.
-The index here is basically the row of the item.
+[call [arg pathName] [cmd {item id}] [arg itemDesc]]
+This command resolves the item description [arg itemDesc] into a unique item
+identifier (see [sectref {ITEM DESCRIPTION}] below). If the item described by
+[arg itemDesc] doesn't exist, this command returns an empty string.
 
 [call [arg pathName] [cmd {item isancestor}] [arg itemDesc] [arg descendant]]
 Returns 1 if the item described by [arg itemDesc] is a direct or indirect
@@ -932,6 +968,15 @@ Then it will become the new next sibling of [arg sibling].
 
 [call [arg pathName] [cmd {item numchildren}] [arg itemDesc]]
 Returns the number of children of the item described by [arg itemDesc].
+
+[call [arg pathName] [cmd {item order}] [arg itemDesc] [opt [arg -visible]]]
+This command returns the position of the item [arg itemDesc] relative to
+its toplevel ancestor (usually the root item, unless the ancestor is an
+orphan). If you imagine all the items flattened into a vertical list, the
+result of this command is the row the item falls in. If the optional argument
+[arg -visible] is given, only the items whose ancestors are expanded, and whose
+-visible option is true, get counted; in this case -1 is returned if the item
+is not visible.
 
 [call [arg pathName] [cmd {item parent}] [arg itemDesc]]
 Returns the numerical index of the parent of the item
@@ -964,7 +1009,7 @@ the order between these two limiting items doesn't matter.
 [nl]
 
 The sort column can be specified by means of the [option -column] option;
-this option can be used repeatedly to define a multi column sort.
+this option can be used repeatedly to define a multicolumn sort.
 The sorting is done by looking at the [arg text]
 of the element specified by the [option -element] option,
 which must be a text element defined in the style of the sorting column,
@@ -1368,18 +1413,10 @@ Use [cmd {notify uninstall}] with a [arg pattern] of <[arg eventName]> instead.
 [list_end]
 
 [call [arg pathName] [cmd numcolumns]]
-Returns a decimal string giving the number of
-columns created by the [cmd "column create"] widget command which haven't been
-deleted by the [cmd "column delete"] widget command. The [const tail] column
-is not counted.
+Deprecated. Use the [cmd {column count}] command instead.
 
 [call [arg pathName] [cmd numitems]]
-Returns a decimal string giving the number of
-items created by the [cmd "item create"] widget command which haven't been
-deleted by the [cmd "item delete"] widget command.
-This number is always positive,
-since a newly created treectrl widget has already the root item,
-which cannot be deleted.
+Deprecated. Use the [cmd {item count}] command instead.
 
 [call [arg pathName] [cmd orphans]]
 Returns a list containing the numerical ids of all items
@@ -1720,11 +1757,8 @@ other.
 An item can be considered as a row, which reaches over all columns.
 
 [para]
-Columns in a treectrl may be named in either of two ways: by number or by tag.
-If a number is given it must be an integer from zero to [arg N], where [arg N]
-is one less than the result of the [cmd numcolumns] widget command.
-A column may also be named by the value of its [option -tag] configuration
-option.
+Columns in a treectrl may be specified in a number of ways.
+See [sectref {COLUMN DESCRIPTION}] below.
 
 [para]
 There is always one special column, the [const tail] column, which fills
@@ -1909,6 +1943,60 @@ a) the tree [option -orientation] option is [const vertical];
 b) only a single tree column is visible;
 c) the single visible tree column [option -width] option is zero;
 d) and the tree [option -wrap] option results in wrapping.
+
+[list_end]
+
+[section {COLUMN DESCRIPTION}]
+Many of the commands and options for a treectrl take as an argument a
+description of which column to operate on.
+See the [sectref EXAMPLES] section for examples.
+The initial part of a column description must begin with one of the following terms:
+
+[list_begin definitions]
+[lst_item [arg id]]
+Specifies the unique column identifier, where [arg id] should be
+the return value of a prior call of the [cmd {column create}] widget command.
+
+[lst_item [arg tag]]
+Specifies the value of a column's -tag option.
+
+[lst_item [const all]]
+Indicates every column, including the tail column. Not all commands accept this.
+
+[lst_item "[const first] [opt [const visible]]"]
+Indicates the leftmost column of the treectrl.
+If [const visible] is specified, the leftmost column whose -visible option
+is true is used.
+
+[lst_item "[const last] [opt [const visible]]"]
+Indicates the rightmost column of the treectrl (but not the tail column).
+If [const visible] is specified, the rightmost column whose -visible option
+is true is used.
+
+[lst_item "[const order] [arg n] [opt [const visible]]"]
+Indicates the [arg n]th column in the list of columns as returned by the
+[cmd {column order}] command.
+
+[lst_item [const tail]]
+Indicates the ever-present tail column of the treectrl.
+[list_end]
+
+[para]
+The initial part of the column description (matching any of the values above)
+may be followed by one or more [arg modifier]s.
+A modifier changes the column used relative to
+the description up to this point.
+It may be specified in any of the following forms:
+
+[list_begin definitions]
+
+[lst_item "[const next] [opt [const visible]]"]
+Use the column to the right, or the column to the right whose -visible option
+is true.
+
+[lst_item "[const prev] [opt [const visible]]"]
+Use the column to the left, or the column to the left whose -visible option
+is true.
 
 [list_end]
 
@@ -2215,16 +2303,16 @@ with a particular item.
 [list_end]
 
 [section {ITEM DESCRIPTION}]
-Many of the widget commands for a treectrl take as one argument an
-indicator of which item of the treectrl to operate on.  These
-indicators are called [arg itemDesc]s and may be specified in
-any of the following forms:
+Many of the commands and options for a treectrl take as an argument a
+description of which item to operate on.
+See the [sectref EXAMPLES] section for examples.
+The initial part of an item description must begin with one of the following terms:
 
 [list_begin definitions]
-[lst_item [arg number]]
-Specifies the item numerically, where [arg number] should be
+[lst_item [arg id]]
+Specifies the unique item identifier, where [arg id] should be
 the return value of a prior call of the [cmd {item create}] widget command,
-or [const 0] to specify the root item.
+or [const 0] to specify the ever-present root item.
 
 [lst_item [const active]]
 Indicates the item that is currently active, i.e. normally
@@ -2260,8 +2348,9 @@ Indicates the root item of the treectrl.
 [list_end]
 
 [para]
-The [arg itemDesc] may be followed by one or more [arg modifier]s.
-A modifier changes the item described by the [arg itemDesc] relative to
+The initial part of the item description (matching any of the values above)
+may be followed by one or more [arg modifier]s.
+A modifier changes the item used relative to
 the description up to this point.
 It may be specified in any of the following forms:
 
@@ -2505,6 +2594,40 @@ The mousewheel scrolls the view of the widget four lines up or down
 depending on the direction, the wheel was turned.
 The active cursor or the selection is not affected.
 [list_end]
+
+[section EXAMPLES]
+
+Get the unique identifier for the leftmost visible column:
+[example_begin]
+set id [lb]$T column index "first visible"[rb]
+[example_end]
+
+Delete the leftmost column:
+[example_begin]
+$T column delete "order 0"
+[example_end]
+
+Take the visible column that is to the left of the last column, and move that
+column in front of the tail column:
+[example_begin]
+$T column move "last prev visible" tail
+[example_end]
+
+
+Get the unique identifier for the first visible item:
+[example_begin]
+set id [lb]$T item index "first visible"[rb]
+[example_end]
+
+Delete the parent of the item that is under the point x,y:
+[example_begin]
+$T item delete "nearest $x $y parent"
+[example_end]
+
+Add the 10th child of the second child of the root item to the selection:
+[example_begin]
+$T selection add "root firstchild nextsibling child 10"
+[example_end]
 
 [see_also listbox(n) image(n) bitmap(n) bind(n) options(n)]
 [keywords tree widget]
