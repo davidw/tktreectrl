@@ -31,6 +31,8 @@ proc DemoRandom {} {
 	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag parent
 	$T column create -text Depth -justify center -itembackground {linen {}} -tag depth
 
+	$T configure -treecolumn item
+
 	#
 	# Create elements
 	#
@@ -79,7 +81,7 @@ proc DemoRandom {} {
 	#
 
 	set clicks [clock clicks]
-	set items [$T index root]
+	set items [$T item id root]
 	for {set i 1} {$i < $::RandomN} {incr i} {
 		set itemi [$T item create]
 		while 1 {
@@ -104,13 +106,13 @@ proc DemoRandom {} {
 		set numChildren [$T item numchildren $itemi]
 		if {$numChildren}  {
 			$T item configure $itemi -button yes
-			$T item style set $itemi 0 s1 1 s3 2 s3
+			$T item style set $itemi item s1 parent s3 depth s3
 			$T item complex $itemi \
 				[list [list e3 -text "Item $i"] [list e4 -text "($numChildren)"]] \
 				[list [list e6 -text "[$T item parent $itemi]"]] \
 				[list [list e6 -text "[$T depth $itemi]"]]
 		} else {
-			$T item style set $itemi 1 s3 2 s3 0 s2
+			$T item style set $itemi item s2 parent s3 depth s3
 			$T item complex $itemi \
 				[list [list e3 -text "Item $i"]] \
 				[list [list e6 -text "[$T item parent $itemi]"]] \
@@ -186,7 +188,7 @@ proc TreeCtrl::RandomButton1 {T x y} {
 						set C [lindex $list 0]
 						set S [lindex $list 1]
 						set eList [lrange $list 2 end]
-						if {$column != [$T column index $C]} continue
+						if {[$T column compare $column != $C]} continue
 						if {[$T item style set $item $C] ne $S} continue
 						if {[lsearch -exact $eList $E] == -1} continue
 						set ok 1
@@ -270,7 +272,7 @@ proc TreeCtrl::RandomMotion {T x y} {
 					set C [lindex $list 0]
 					set S [lindex $list 1]
 					set eList [lrange $list 2 end]
-					if {$column != [$T column index $C]} continue
+					if {[$T column compare $column != $C]} continue
 					if {[$T item style set $item $C] ne $S} continue
 					if {[lsearch -exact $eList $E] == -1} continue
 					set ok 1
@@ -417,7 +419,7 @@ proc RandomDrop {T target source pos} {
 	}
 
 	# Update the target that gained some children
-	if {[$T item style set $parent 0] ne "s1"} {
+	if {[$T item style set $parent item] ne "s1"} {
 		$T item configure $parent -button yes
 		$T item style map $parent item s1 {e3 e3}
 	}

@@ -99,8 +99,10 @@ proc DemoMailWasher {} {
 			set delete [expr int(rand() * 2)]
 			set bounce [expr int(rand() * 2)]
 			set attachments [lindex [list styNone styYes] [expr int(rand() * 2)]]
-			$T item style set $item 0 styCheck 1 styCheck 2 $status 3 styAny \
-				4 styAny 5 styAny 6 styAny 7 $attachments
+			$T item style set $item delete styCheck bounce styCheck \
+				status $status size styAny \
+				from styAny subject styAny received styAny \
+				attachments $attachments
 			if {$delete} {
 				$T item state forcolumn $item delete CHECK
 			}
@@ -111,7 +113,7 @@ proc DemoMailWasher {} {
 			set size [expr {$bytes / 1024 + 1}]KB
 			set seconds [expr {[clock seconds] - int(rand() * 100000)}]
 			set received [clock format $seconds -format "%d/%m/%y %I:%M %p"]
-			$T item text $item 3 $size 4 $from 5 $subject 6 $received
+			$T item text $item size $size from $from subject $subject received $received
 			$T item lastchild root $item
 		}
 	}
@@ -124,9 +126,9 @@ proc DemoMailWasher {} {
 		}
 	}
 
-	set ::SortColumn 6
+	set ::SortColumn received
 	$T notify bind $T <Header-invoke> {
-		if {%C == $SortColumn} {
+		if {[%T column compare %C == $SortColumn]} {
 			if {[%T column cget $SortColumn -arrow] eq "down"} {
 				set order -increasing
 				set arrow up
