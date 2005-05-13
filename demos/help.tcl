@@ -23,14 +23,16 @@ proc DemoHelpContents {} {
 	# Create columns
 	#
 
-	$T column create -text "Help Contents"
+	$T column create -text "Help Contents" -tag C0
 
-	# Define a new item state
-	$T state define mouseover
+	$T configure -treecolumn C0
 
 	#
 	# Create elements
 	#
+
+	# Define a new item state
+	$T state define mouseover
 
 	$T element create e1 image -image help-page
 	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
@@ -81,8 +83,8 @@ proc DemoHelpContents {} {
 					3 s1 "Why does the mouse have two buttons?"
 	} {
 		set item [$T item create]
-		$T item style set $item 0 $style
-		$T item element configure $item 0 e3 -text $text
+		$T item style set $item C0 $style
+		$T item element configure $item C0 e3 -text $text
 		$T item collapse $item
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
@@ -284,7 +286,7 @@ proc TreeCtrl::HelpButton1 {w x y} {
 			set item2 [lindex [$w selection get] 0]
 			$w item collapse $item2
 			foreach item2 [$w item ancestors $item2] {
-				if {[$w compare $item != $item2]} {
+				if {[$w item compare $item != $item2]} {
 					$w item collapse $item2
 				}
 			}
