@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.6 2005/05/11 03:31:58 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.7 2005/05/13 20:38:29 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -38,11 +38,11 @@ test column-1.2 {unknown command} -body {
 
 test column-1.3 {configure: no column exists with numerical index} -body {
     .t column configure 0
-} -returnCodes error -result {bad column index "0": there are no columns}
+} -returnCodes error -result {column "0" doesn't exist}
 
 test column-1.4 {configure: no column exists with tag} -body {
     .t column configure column0
-} -returnCodes error -result {column with tag "column0" doesn't exist}
+} -returnCodes error -result {column "column0" doesn't exist}
 
 test column-1.5 {configure: create and fill a column} -body {
 	.t column create
@@ -66,7 +66,7 @@ test column-2.1 {column bbox: missing args} -body {
 
 test column-2.2 {column bbox: invalid column} -body {
     .t column bbox foo
-} -returnCodes error -result {column with tag "foo" doesn't exist}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test column-2.3 {column bbox: tree doesn't show headers} -body {
     .t configure -showheader 0
@@ -88,7 +88,7 @@ test column-3.1 {column configure: missing args} -body {
 
 test column-3.2 {column configure: invalid column} -body {
     .t column configure foo
-} -returnCodes error -result {column with tag "foo" doesn't exist}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test column-3.3 {column configure: list all options} -body {
     .t column configure column1
@@ -326,7 +326,7 @@ test column-3.49 {column configure/cget: -widthhack} -body {
 test column-4.1 {column configure: -tag} -body {
     .t column configure column1 -tag column2
     .t column cget column1 -tag
-} -returnCodes error -result {column with tag "column1" doesn't exist}
+} -returnCodes error -result {column "column1" doesn't exist}
 
 test column-4.2 {column configure: -tag} -body {
     .t column cget column2 -tag
@@ -342,7 +342,7 @@ test column-4.4 {column configure/cget: -tag of tail} -body {
 
 test column-4.5 {column cget: specify tail by its tag} -body {
     .t column cget head -tag
-} -returnCodes error -result {column with tag "head" doesn't exist}
+} -returnCodes error -result {column "head" doesn't exist}
 
 test column-5.1 {column delete: missing args} -body {
     .t column delete
@@ -356,24 +356,36 @@ test column-5.3 {column delete: first column} -body {
     .t column delete 0
 } -result {}
 
-test column-5.4 {suprise, surprise: column 0 still exists} -body {
+test column-5.4 {deleted column doesn't exist} -body {
     .t column cget 0 -tag
-} -result {column2}
+} -returnCodes error -result {column "0" doesn't exist}
 
-test column-6.1 {column index: missing args} -body {
-    .t column index
-} -returnCodes error -result {wrong # args: should be ".t column index column"}
+test column-6.1 {column id: missing args} -body {
+    .t column id
+} -returnCodes error -result {wrong # args: should be ".t column id column"}
 
-test column-6.2 {column index: the easy case} -body {
-    .t column index 0
-} -result {0}
+test column-6.2 {column id: the easy case} -body {
+    .t column id 1
+} -result {1}
 
-test column-6.3 {column index} -body {
-    .t column index column2
-} -result {0}
+test column-6.3 {column id} -body {
+    .t column id column2
+} -result {1}
 
-test column-6.4 {column index: tail column} -body {
-    .t column index tail
+test column-6.4 {column id: tail column} -body {
+    .t column id tail
+} -result {tail}
+
+test column-6.5 {column id: first column} -body {
+    .t column id first
+} -result {1}
+
+test column-6.6 {column id: last column} -body {
+    .t column id last
+} -result {1}
+
+test column-6.7 {column id: tail prev} -body {
+    .t column id "tail prev"
 } -result {1}
 
 test column-7.1 {column move: missing args} -body {
@@ -382,30 +394,30 @@ test column-7.1 {column move: missing args} -body {
 
 test column-7.2 {column move: invalid column} -body {
     .t column move 0 2
-} -returnCodes error -result {bad column index "2": must be from 0 to 0}
+} -returnCodes error -result {column "0" doesn't exist}
 
-test column-7.3 {column move: invalid column} -body {
+test column-7.3 {column move: move column2} -body {
     .t column create -tag column1
     .t column create -tag column3
-    .t column move 0 2
-    .t column index column2
+    .t column move column2 column3
+    .t column order column2
 } -result {1}
 
 test column-7.4 {correct moved?} -body {
     set res {}
-    for {set x 0} {$x < [.t numcolumns]} {incr x} {
-	lappend res [.t column cget $x -tag]
+    for {set x 0} {$x < [.t column count]} {incr x} {
+	lappend res [.t column cget "order $x" -tag]
     }
     set res
 } -result {column1 column2 column3}
 
 test column-7.5 {column move: tail to the left} -body {
-    .t column move tail 0
+    .t column move tail column1
 } -returnCodes error -result {can't specify "tail" for this command}
 
 test column-7.6 {column move: tail as before is ok} -body {
-    .t column move 0 tail
-    .t column index column1
+    .t column move column1 tail
+    .t column order column1
 } -result {2}
 
 test column-8.1 {column width: missing args} -body {
@@ -414,7 +426,7 @@ test column-8.1 {column width: missing args} -body {
 
 test column-8.2 {column width: invalid column} -body {
     .t column width foo
-} -returnCodes error -result {column with tag "foo" doesn't exist}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test column-8.3 {column width: tail column returns always 0} -body {
     .t column width tail
@@ -435,7 +447,7 @@ test column-9.1 {column neededwidth: missing args} -body {
 
 test column-9.2 {column neededwidth: invalid column} -body {
     .t column neededwidth foo
-} -returnCodes error -result {column with tag "foo" doesn't exist}
+} -returnCodes error -result {column "foo" doesn't exist}
 
 test column-9.3 {column neededwidth: tail column returns always 0} -body {
     .t column neededwidth tail
