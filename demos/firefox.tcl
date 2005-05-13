@@ -39,8 +39,10 @@ proc DemoFirefoxPrivacy {} {
 	}
 
 	$T column create -expand yes -arrowimage {arrow-down !up arrow-up {}} \
-		-arrow up -arrowpadx {10 2} -textlines 0 \
+		-arrow up -arrowpadx {10 2} -textlines 0 -tag C0 \
 		-text "This is a multi-line column title\nwith an image for the arrow"
+
+	$T configure -treecolumn C0
 
 	# This binding toggles the sort arrow
 	$T notify bind $T <Header-invoke> {
@@ -84,10 +86,10 @@ proc DemoFirefoxPrivacy {} {
 		"Cookies"
 		"Cache"} {
 		set I [$T item create -button yes]
-		$T item style set $I 0 styCategory
-		$T item element configure $I 0 eText1 -text $category
+		$T item style set $I C0 styCategory
+		$T item element configure $I C0 eText1 -text $category
 		set b [button $T.b$I -text "Clear" -command "" -width 11]
-		$T item element configure $I 0 eWindow -window $b
+		$T item element configure $I C0 eWindow -window $b
 		$T item lastchild root $I
 	}
 
@@ -96,7 +98,7 @@ proc DemoFirefoxPrivacy {} {
 
 	# History
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	label $f.l1 -background $bg -text "Remember visited pages for the last"
 	entry $f.e1 -width 6 -background $bg
@@ -105,12 +107,12 @@ proc DemoFirefoxPrivacy {} {
 	pack $f.l1 -side left
 	pack $f.e1 -side left -padx 8
 	pack $f.l2 -side left
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 0"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 0" $I
 
 	# Saved Form Information
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Information entered in web page forms and the Search Bar is saved to make filling out forms and searching faster."
@@ -119,12 +121,12 @@ proc DemoFirefoxPrivacy {} {
 	$f.cb1 select
 	pack $f.t1 -side top -anchor w -fill x -padx {0 10} -pady {0 4}
 	pack $f.cb1 -side top -anchor w
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 1"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 1" $I
 
 	# Saved Passwords
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
@@ -143,12 +145,12 @@ proc DemoFirefoxPrivacy {} {
 	pack $fRight.b2 -side top -expand yes -fill x -pady {8 0}
 	pack $fLeft -side left -expand yes -fill x
 	pack $fRight -side right -padx 14 -anchor n
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 2"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 2" $I
 
 	# Download Manager History
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "The Download Manager keeps track of recently downloaded files."
@@ -169,12 +171,12 @@ proc DemoFirefoxPrivacy {} {
 	pack $f1.mb1 -side left -padx {8 10}
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10}
 	pack $f1 -side top -anchor w
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 3"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 3" $I
 
 	# Cookies
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Cookies are pieces of information stored by web pages on your computer. They are used to remember login information and other data."
@@ -211,12 +213,12 @@ proc DemoFirefoxPrivacy {} {
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10} -pady {0 8}
 	pack $fLeft -side left -expand yes -fill x
 	pack $fRight -side right -padx 14 -anchor n
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 4"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 4" $I
 
 	# Cache
 	set I [$T item create]
-	$T item style set $I 0 styFrame
+	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Pages you view are stored in the cache for quicker viewing later on."
@@ -231,8 +233,8 @@ proc DemoFirefoxPrivacy {} {
 	pack $f1.l2 -side left
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10}
 	pack $f1 -side top -anchor w
-	$T item element configure $I 0 eWindow -window $f
-	$T item lastchild [$T index "root child 5"] $I
+	$T item element configure $I C0 eWindow -window $f
+	$T item lastchild "root child 5" $I
 
 	# This binding configures the -height option of a Text widget to the
 	# number of lines it is displaying

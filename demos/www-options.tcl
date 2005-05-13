@@ -20,15 +20,17 @@ proc DemoInternetOptions {} {
 	# Create columns
 	#
 
-	$T column create -text "Internet Options"
+	$T column create -text "Internet Options" -tag C0
 
-	$T state define check
-	$T state define radio
-	$T state define on
+	$T configure -treecolumn C0
 
 	#
 	# Create elements
 	#
+
+	$T state define check
+	$T state define radio
+	$T state define on
 
 	$T element create e1 image -image {
 		internet-check-on {check on}
@@ -69,8 +71,8 @@ proc DemoInternetOptions {} {
 			1 off "Check for server certificate revocation (requires restart)" "o6" ""
 	} {
 		set item [$T item create]
-		$T item style set $item 0 s1
-		$T item element configure $item 0 e2 -text $text
+		$T item style set $item C0 s1
+		$T item element configure $item C0 e2 -text $text
 		set ::Option(option,$item) $option
 		set ::Option(group,$item) $group
 		if {($setting eq "on") || ($setting eq "off")} {
@@ -88,7 +90,7 @@ proc DemoInternetOptions {} {
 				$T item state set $item radio
 			}
 		} else {
-			$T item element configure $item 0 e1 -image internet-$setting
+			$T item element configure $item C0 e1 -image internet-$setting
 		}
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth

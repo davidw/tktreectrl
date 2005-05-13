@@ -17,7 +17,7 @@ proc DemoIMovie {} {
 	# Create columns
 	#
 
-	$T column create
+	$T column create -tag C0
 
 	InitPics imovie-*
 
@@ -79,10 +79,10 @@ proc DemoIMovie {} {
 			07:20 "Clip 7" imovie-07
 		} {
 			set I [$T item create]
-#			$T item style set $I 0 $S
-			$T item element configure $I 0 elemTime -text $time
-			$T item element configure $I 0 elemImg -image $image
-			$T item element configure $I 0 elemName -text $name
+#			$T item style set $I C0 $S
+			$T item element configure $I C0 elemTime -text $time
+			$T item element configure $I C0 elemImg -image $image
+			$T item element configure $I C0 elemName -text $name
 			$T item lastchild root $I
 		}
 	}
@@ -123,11 +123,11 @@ proc iMovieButton1 {T x y} {
 					set E [lindex $id end]
 					if {$E eq "elemName"} {
 						set exists [winfo exists $T.entry]
-						::TreeCtrl::EntryOpen $T $I 0 $E
+						::TreeCtrl::EntryOpen $T $I C0 $E
 						if {!$exists} {
 							$T.entry configure -borderwidth 0 -justify center \
 								-background #ffdc5a
-							scan [$T item bbox $I 0 $E] "%d %d %d %d" x1 y1 x2 y2
+							scan [$T item bbox $I C0 $E] "%d %d %d %d" x1 y1 x2 y2
 							place $T.entry -y [expr {$y1 - 1}]
 						}
 						$T.entry selection clear

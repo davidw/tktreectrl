@@ -16,7 +16,8 @@ proc DemoLayout {} {
 	# Create columns
 	#
 
-	$T column create -text Layout
+	$T column create -text Layout -tag C0
+	$T configure -treecolumn C0
 
 	#
 	# Create elements
@@ -52,12 +53,12 @@ proc DemoLayout {} {
 	#
 
 	set I [$T item create -button yes]
-	$T item style set $I 0 $S
+	$T item style set $I C0 $S
 	$T item lastchild root $I
 	set parent $I
 
 	set I [$T item create]
-	$T item style set $I 0 $S
+	$T item style set $I C0 $S
 	$T item lastchild $parent $I
 
 	###
@@ -69,11 +70,11 @@ proc DemoLayout {} {
 	$T style layout $S e4 -detach yes -iexpand es
 
 	set I [$T item create -button yes]
-	$T item style set $I 0 $S
+	$T item style set $I C0 $S
 	$T item lastchild root $I
 
 	set I2 [$T item create]
-	$T item style set $I2 0 $S
+	$T item style set $I2 C0 $S
 	$T item lastchild $I $I2
 
 	###
@@ -85,11 +86,11 @@ proc DemoLayout {} {
 	$T style layout $S e5 -ipady {0 20}
 
 	set I [$T item create -button yes]
-	$T item style set $I 0 $S
+	$T item style set $I C0 $S
 	$T item lastchild root $I
 
 	set I2 [$T item create]
-	$T item style set $I2 0 $S
+	$T item style set $I2 C0 $S
 	$T item lastchild $I $I2
 
 	###
@@ -106,14 +107,14 @@ proc DemoLayout {} {
 	$T style layout $S et -squeeze x
 
 	set I [$T item create -button yes]
-	$T item style set $I 0 $S
-	$T item text $I 0 $text
+	$T item style set $I C0 $S
+	$T item text $I C0 $text
 	$T item lastchild root $I
 	set parent $I
 
 	set I [$T item create]
-	$T item style set $I 0 $S
-	$T item text $I 0 $text
+	$T item style set $I C0 $S
+	$T item text $I C0 $text
 	$T item lastchild $parent $I
 
 	###
@@ -132,7 +133,7 @@ proc DemoLayout {} {
 			incr styleNum
 
 			set I [$T item create]
-			$T item style set $I 0 $S
+			$T item style set $I C0 $S
 			$T item lastchild root $I
 		}
 	}

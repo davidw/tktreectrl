@@ -23,7 +23,8 @@ proc DemoOutlookFolders {} {
 	# Create columns
 	#
 
-	$T column create -text Folders
+	$T column create -text Folders -tag C0
+	$T configure -treecolumn C0
 
 	#
 	# Create elements
@@ -77,7 +78,7 @@ proc DemoOutlookFolders {} {
 	# Create items and assign styles
 	#
 
-	$T item style set root 0 s1
+	$T item style set root C0 s1
 	$T item complex root [list [list e1 -image outlook-main] [list e2 -text "Outlook Express"]]
 
 	set parentList [list root {} {} {} {} {} {}]
@@ -101,18 +102,18 @@ proc DemoOutlookFolders {} {
 		set item [$T item create -button $button]
 		if {[string equal $img folder]} {
 			if {$unread} {
-				$T item style set $item 0 s4
+				$T item style set $item C0 s4
 				$T item complex $item [list [list e3 -text $text] [list e4 -text "($unread)"]]
 			} else {
-				$T item style set $item 0 s3
+				$T item style set $item C0 s3
 				$T item complex $item [list [list e2 -text $text]]
 			}
 		} else {
 			if {$unread} {
-				$T item style set $item 0 s2
+				$T item style set $item C0 s2
 				$T item complex $item [list [list e1 -image outlook-$img] [list e3 -text $text] [list e4 -text "($unread)"]]
 			} else {
-				$T item style set $item 0 s1
+				$T item style set $item C0 s1
 				$T item complex $item [list [list e1 -image outlook-$img] [list e2 -text $text]]
 			}
 		}
