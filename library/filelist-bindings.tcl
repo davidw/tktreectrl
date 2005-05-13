@@ -65,7 +65,7 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 			set C [lindex $list 0]
 			set S [lindex $list 1]
 			set eList [lrange $list 2 end]
-			if {$arg2 != [$T column index $C]} continue
+			if {[$T column compare $arg2 != $C]} continue
 			if {[$T item style set $item $C] ne $S} continue
 			if {[lsearch -exact $eList $E] == -1} continue
 			set ok 1
@@ -74,10 +74,13 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 		}
 		if {$ok} {
 		    set Priv(drag,motion) 0
+		    set Priv(drag,click,x) $x
+		    set Priv(drag,click,y) $y
 		    set Priv(drag,x) [$T canvasx $x]
 		    set Priv(drag,y) [$T canvasy $y]
 		    set Priv(drop) ""
 		    set Priv(drag,wasSel) [$T selection includes $item]
+		    set Priv(drag,C) $C
 		    set Priv(drag,E) $E
 		    $T activate $item
 		    if {$Priv(selectMode) eq "add"} {
@@ -89,7 +92,7 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 		    }
 
 		    # Changing the selection might change the list
-		    if {[$T index $item] eq ""} return
+		    if {[$T item id $item] eq ""} return
 
 		    # Click selected item to drag
 		    if {[$T selection includes $item]} {
@@ -154,7 +157,7 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 			    set sC [lindex $sList 0]
 			    set sS [lindex $sList 1]
 			    set sEList [lrange $sList 2 end]
-			    if {$column != [$T column index $sC]} continue
+			    if {[$T column compare $column != $sC]} continue
 			    if {[$T item style set $item $sC] ne $sS} continue
 			    if {[lsearch -exact $sEList $E] == -1} continue
 			    set ok 1
@@ -182,8 +185,11 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 	    $T selection modify $select all
 	}
 	"drag" {
-	    # Detect initial mouse movement
 	    if {!$Priv(drag,motion)} {
+		# Detect initial mouse movement
+		if {(abs($x - $Priv(drag,click,x)) <= 4) &&
+		    (abs($y - $Priv(drag,click,y)) <= 4)} return
+
 		set Priv(selection) [$T selection get]
 		set Priv(drop) ""
 		$T dragimage clear
@@ -198,11 +204,7 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 		    }
 		}
 		set Priv(drag,motion) 1
-		# Don't generate the event if it wasn't installed
-		if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-		    $T notify generate <Drag-begin> {} \
-			"::TreeCtrl::PercentsCmd $T"
-		}
+		TryEvent $T Drag begin {}
 	    }
 
 	    # Find the element under the cursor
@@ -217,7 +219,7 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 		    set C [lindex $list 0]
 		    set S [lindex $list 1]
 		    set eList [lrange $list 2 end]
-		    if {$column != [$T column index $C]} continue
+		    if {[$T column compare $column != $C]} continue
 		    if {[$T item style set $item $C] ne $S} continue
 		    if {[lsearch -exact $eList $E] == -1} continue
 		    set ok 1
@@ -229,7 +231,7 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 		# (i.e. not being dragged) and it is a directory,
 		# see if we can drop on it
 		if {[lsearch -exact $Priv(selection) $item] == -1} {
-		    if {[lindex [$T item index $item] 1] < $Priv(DirCnt,$T)} {
+		    if {[$T item order $item -visible] < $Priv(DirCnt,$T)} {
 			set drop $item
 			# We can drop if dragged item isn't an ancestor
 			foreach item2 $Priv(selection) {
@@ -288,29 +290,34 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
 		$T dragimage configure -visible no
 		if {$Priv(drop) ne ""} {
 		    $T selection modify {} $Priv(drop)
-		    if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-			$T notify generate <Drag-receive> \
-			    [list I $Priv(drop) l $Priv(selection)] \
-			    "::TreeCtrl::PercentsCmd $T"
-		    }
+		    TryEvent $T Drag receive \
+			[list I $Priv(drop) l $Priv(selection)]
 		}
-		if {[lsearch -exact [$T notify eventnames] Drag] != -1} {
-		    $T notify generate <Drag-end> {} \
-			"::TreeCtrl::PercentsCmd $T"
-		}
-
+		TryEvent $T Drag end {}
 	    } elseif {$Priv(selectMode) eq "toggle"} {
 		# don't rename
 
 		# Clicked/released a selected item, but didn't drag
 	    } elseif {$Priv(drag,wasSel)} {
-		set I [$T index active]
+		set I [$T item id active]
+		set C $Priv(drag,C)
 		set E $Priv(drag,E)
-		set S [$T item style set $I 0]
-		if {[lsearch -exact $Priv(edit,$T) $E] != -1} {
+		set S [$T item style set $I $C]
+		set ok 0
+		foreach list $Priv(edit,$T) {
+		    set eC [lindex $list 0]
+		    set eS [lindex $list 1]
+		    set eEList [lrange $list 2 end]
+		    if {[$T column compare $C != $eC]} continue
+		    if {$S ne $eS} continue
+		    if {[lsearch -exact $eEList $E] == -1} continue
+		    set ok 1
+		    break
+		}
+		if {$ok} {
 		    FileListEditCancel $T
 		    set Priv(editId,$T) \
-			[after 900 [list ::TreeCtrl::FileListEdit $T $I $S $E]]
+			[after 900 [list ::TreeCtrl::FileListEdit $T $I $C $S $E]]
 		}
 	    }
 	}
@@ -322,10 +329,10 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
     return
 }
 
-proc ::TreeCtrl::FileListEdit {T I S E} {
+proc ::TreeCtrl::FileListEdit {T I C S E} {
     variable Priv
     array unset Priv editId,$T
-    set lines [$T item element cget $I 0 $E -lines]
+    set lines [$T item element cget $I $C $E -lines]
     if {$lines eq ""} {
 	set lines [$T element cget $E -lines]
     }
@@ -335,7 +342,7 @@ proc ::TreeCtrl::FileListEdit {T I S E} {
 
     # Multi-line edit
     if {$lines ne "1"} {
-	scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
+	scan [$T item bbox $I $C] "%d %d %d %d" x1 y1 x2 y2
 	set padx [$T style layout $S $E -padx]
 	if {[llength $padx] == 2} {
 	    set padw [lindex $padx 0]
@@ -343,11 +350,11 @@ proc ::TreeCtrl::FileListEdit {T I S E} {
 	} else {
 	    set pade [set padw $padx]
 	}
-	TextExpanderOpen $T $I 0 $E [expr {$x2 - $x1 - $padw - $pade}]
+	TextExpanderOpen $T $I $C $E [expr {$x2 - $x1 - $padw - $pade}]
 
 	# Single-line edit
     } else {
-	EntryExpanderOpen $T $I 0 $E
+	EntryExpanderOpen $T $I $C $E
     }
     return
 }
@@ -536,11 +543,10 @@ proc ::TreeCtrl::EntryClose {T accept} {
     place forget $T.entry
     update
 
-    if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
-	$T notify generate <Edit-accept> \
+    if {$accept} {
+	TryEvent $T Edit accept \
 	    [list I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
-		E $Priv(entry,$T,element) t [$T.entry get]] \
-	    "::TreeCtrl::PercentsCmd $T"
+		E $Priv(entry,$T,element) t [$T.entry get]]
     }
 
     $T notify bind $T.entry <Scroll> {}
@@ -732,11 +738,10 @@ proc ::TreeCtrl::TextClose {T accept} {
     place forget $T.text
     update
 
-    if {$accept && ([lsearch -exact [$T notify eventnames] Edit] != -1)} {
-	$T notify generate <Edit-accept> \
+    if {$accept} {
+	TryEvent $T Edit accept \
 	    [list I $Priv(text,$T,item) C $Priv(text,$T,column) \
-		E $Priv(text,$T,element) t [$T.text get 1.0 end-1c]] \
-	    "::TreeCtrl::PercentsCmd $T"
+		E $Priv(text,$T,element) t [$T.text get 1.0 end-1c]]
     }
 
     $T notify bind $T.text <Scroll> {}
