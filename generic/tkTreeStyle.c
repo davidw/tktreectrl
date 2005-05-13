@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.21 2005/05/11 03:24:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.22 2005/05/13 20:04:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2671,7 +2671,8 @@ void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT)
 	}
 }
 
-int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj)
+int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj)
 {
 	Style *style = (Style *) style_;
 	Tcl_Obj *resultObjPtr = NULL;
@@ -2683,7 +2684,16 @@ int TreeStyle_ElementCget(TreeCtrl *tree, TreeStyle style_, Tcl_Obj *elemObj, Tc
 
 	eLink = Style_FindElem(tree, style, elem, NULL);
 	if ((eLink != NULL) && (eLink->elem == elem) && (style->master != NULL))
-		eLink = NULL;
+	{
+		int index = TreeItemColumn_Index(tree, item, column);
+		TreeColumn treeColumn = Tree_FindColumn(tree, index);
+
+		FormatResult(tree->interp,
+			"element %s is not configured in item %s%d column %s%d",
+			elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
+			tree->columnPrefix, TreeColumn_GetID(treeColumn));
+		return TCL_ERROR;
+	}
 	if (eLink == NULL)
 	{
 		FormatResult(tree->interp, "style %s does not use element %s",
@@ -2719,7 +2729,16 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item,
 
 		eLink = Style_FindElem(tree, style, elem, NULL);
 		if ((eLink != NULL) && (eLink->elem == elem) && (style->master != NULL))
-			eLink = NULL;
+		{
+			int index = TreeItemColumn_Index(tree, item, column);
+			TreeColumn treeColumn = Tree_FindColumn(tree, index);
+
+			FormatResult(tree->interp,
+				"element %s is not configured in item %s%d column %s%d",
+				elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
+				tree->columnPrefix, TreeColumn_GetID(treeColumn));
+			return TCL_ERROR;
+		}
 		if (eLink == NULL)
 		{
 			FormatResult(tree->interp, "style %s does not use element %s",
