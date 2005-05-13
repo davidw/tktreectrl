@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.21 2005/05/11 03:24:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.22 2005/05/13 19:50:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2634,6 +2634,27 @@ Tree_Display(ClientData clientData)
     if (tree->deleted) {
 	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 	return;
+    }
+    /* A column was deleted */
+    if (dInfo->flags & DINFO_REDO_COLUMN_WIDTH) {
+	TreeColumn treeColumn = tree->columns;
+	int columnIndex = 0;
+
+	if (dInfo->columnWidthSize < tree->columnCount) {
+	    dInfo->columnWidthSize = tree->columnCount + 10;
+	    dInfo->columnWidth = (int *) ckrealloc((char *) dInfo->columnWidth,
+		    sizeof(int) * dInfo->columnWidthSize);
+	}
+	while (treeColumn != NULL) {
+	    dInfo->columnWidth[columnIndex++] = TreeColumn_UseWidth(treeColumn);
+	    treeColumn = TreeColumn_Next(treeColumn);
+	}
+	dInfo->flags &= ~(DINFO_REDO_COLUMN_WIDTH | DINFO_CHECK_COLUMN_WIDTH);
+	dInfo->flags |=
+	    DINFO_INVALIDATE |
+	    DINFO_OUT_OF_DATE |
+	    DINFO_REDO_RANGES |
+	    DINFO_DRAW_HEADER;
     }
     /* The width of one or more columns *might* have changed */
     if (dInfo->flags & DINFO_CHECK_COLUMN_WIDTH) {
