@@ -23,11 +23,11 @@ bind TreeCtrl <ButtonRelease-1> {
 }
 bind TreeCtrl <Shift-ButtonPress-1> {
     set TreeCtrl::Priv(buttonMode) normal
-    TreeCtrl::BeginExtend %W [%W index {nearest %x %y}]
+    TreeCtrl::BeginExtend %W [%W item id {nearest %x %y}]
 }
 bind TreeCtrl <Control-ButtonPress-1> {
     set TreeCtrl::Priv(buttonMode) normal
-    TreeCtrl::BeginToggle %W [%W index {nearest %x %y}]
+    TreeCtrl::BeginToggle %W [%W item id {nearest %x %y}]
 }
 bind TreeCtrl <Button1-Leave> {
     TreeCtrl::Leave1 %W %x %y
@@ -100,7 +100,7 @@ bind TreeCtrl <Control-KeyPress-End> {
     %W selection modify active all
 }
 bind TreeCtrl <Shift-Control-KeyPress-End> {
-    TreeCtrl::DataExtend %W [%W index {last visible}]
+    TreeCtrl::DataExtend %W [%W item id {last visible}]
 }
 bind TreeCtrl <<Copy>> {
     if {[string equal [selection own -displayof %W] "%W"]} {
@@ -109,16 +109,16 @@ bind TreeCtrl <<Copy>> {
     }
 }
 bind TreeCtrl <KeyPress-space> {
-    TreeCtrl::BeginSelect %W [%W index active]
+    TreeCtrl::BeginSelect %W [%W item id active]
 }
 bind TreeCtrl <KeyPress-Select> {
-    TreeCtrl::BeginSelect %W [%W index active]
+    TreeCtrl::BeginSelect %W [%W item id active]
 }
 bind TreeCtrl <Control-Shift-KeyPress-space> {
-    TreeCtrl::BeginExtend %W [%W index active]
+    TreeCtrl::BeginExtend %W [%W item id active]
 }
 bind TreeCtrl <Shift-KeyPress-Select> {
-    TreeCtrl::BeginExtend %W [%W index active]
+    TreeCtrl::BeginExtend %W [%W item id active]
 }
 bind TreeCtrl <KeyPress-Escape> {
     TreeCtrl::Cancel %W
@@ -133,13 +133,13 @@ bind TreeCtrl <Control-KeyPress-backslash> {
 }
 
 bind TreeCtrl <KeyPress-plus> {
-    %W item expand [%W index active]
+    %W item expand [%W item id active]
 }
 bind TreeCtrl <KeyPress-minus> {
-    %W item collapse [%W index active]
+    %W item collapse [%W item id active]
 }
 bind TreeCtrl <KeyPress-Return> {
-    %W item toggle [%W index active]
+    %W item toggle [%W item id active]
 }
 
 
@@ -203,25 +203,8 @@ proc ::TreeCtrl::CursorCheck {w x y} {
     if {([llength $id] == 3) && ([lindex $id 0] eq "header")} {
 	set column [lindex $id 1]
 	set side [lindex $id 2]
-	set visCount 0
-	for {set i 0} {$i < [$w numcolumns]} {incr i} {
-	    if {[$w column cget $i -visible]} {
-		lappend visColumns $i
-		if {$i eq $column} {
-		    set columnIndex $visCount
-		}
-		incr visCount
-	    }
-	}
-	lappend visColumns tail
-	if {$column eq "tail"} {
-	    set columnIndex $visCount
-	}
-	if {$side eq "left"} {
-	    if {$column eq [lindex $visColumns 0]} {
-		return
-	    }
-	    set column [lindex $visColumns [expr {$columnIndex - 1}]]
+	if {($side eq "left") && [$w column compare $column == "first visible"]} {
+	    return
 	}
 	if {![info exists Priv(cursor,$w)]} {
 	    set Priv(cursor,$w) [$w cget -cursor]
@@ -279,7 +262,7 @@ proc ::TreeCtrl::MotionInHeader {w args} {
     set column ""
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
-	if {$column eq "tail"} {
+	if {[$w column compare $column == "tail"]} {
 	    set column ""
 	} elseif {![$w column cget $column -button]} {
 	    set column ""
@@ -319,27 +302,11 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     set Priv(buttonMode) ""
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
-	set visCount 0
-	for {set i 0} {$i < [$w numcolumns]} {incr i} {
-	    if {[$w column cget $i -visible]} {
-		lappend visColumns $i
-		if {$i eq $column} {
-		    set columnIndex $visCount
-		}
-		incr visCount
-	    }
-	}
-	lappend visColumns tail
-	if {$column eq "tail"} {
-	    set columnIndex $visCount
-	}
 	if {[llength $id] == 3} {
 	    set side [lindex $id 2]
-	    if {$side == "left"} {
-		if {$column eq [lindex $visColumns 0]} {
-		    return
-		}
-		set column [lindex $visColumns [expr {$columnIndex - 1}]]
+	    if {$side eq "left"} {
+		if {[$w column compare $column == "first visible"]} return
+		set column [$w column id "$column prev visible"]
 	    }
 	    set Priv(buttonMode) resize
 	    set Priv(column) $column
@@ -348,11 +315,15 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	    set Priv(width) [$w column width $column]
 	    return
 	}
-	if {$column eq "tail"} return
-	if {![$w column cget $column -button]} return
-	set Priv(buttonMode) header
+	if {[$w column compare $column == "tail"]} return
+	if {![$w column cget $column -button]} {
+	    if {![$w column dragcget -enable]} return
+	    set Priv(buttonMode) dragColumnWait
+	} else {
+	    set Priv(buttonMode) header
+	    $w column configure $column -state pressed
+	}
 	set Priv(column) $column
-	$w column configure $column -state pressed
 	set Priv(columnDrag,x) $x
 	set Priv(columnDrag,y) $y
 	return
@@ -380,29 +351,13 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
     }
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
-	set visCount 0
-	for {set i 0} {$i < [$w numcolumns]} {incr i} {
-	    if {[$w column cget $i -visible]} {
-		lappend visColumns $i
-		if {$i eq $column} {
-		    set columnIndex $visCount
-		}
-		incr visCount
-	    }
-	}
-	lappend visColumns tail
-	if {$column eq "tail"} {
-	    set columnIndex $visCount
-	}
 	if {[llength $id] == 3} {
 	    set side [lindex $id 2]
-	    if {$side == "left"} {
-		if {$column eq [lindex $visColumns 0]} {
-		    return
-		}
-		set column [lindex $visColumns [expr {$columnIndex - 1}]]
+	    if {$side eq "left"} {
+		if {[$w column compare $column == "first visible"]} return
+		set column [$w column id "$column prev visible"]
 	    }
-	    if {$column eq "tail"} return
+	    if {[$w column compare $column == "tail"]} return
 	    $w column configure $column -width ""
 	}
     }
@@ -423,13 +378,23 @@ proc ::TreeCtrl::Motion1 {w x y} {
 		if {[$w column cget $Priv(column) -state] ne "pressed"} {
 		    $w column configure $Priv(column) -state pressed
 		}
-		if {[$w columndrag cget -enable] &&
+		if {[$w column dragcget -enable] &&
 		    (abs($Priv(columnDrag,x) - $x) > 4)} {
-		    $w columndrag configure \
+		    $w column dragconfigure \
 			-imagecolumn $Priv(column) \
 			-imageoffset [expr {$x - $Priv(columnDrag,x)}]
 		    set Priv(buttonMode) dragColumn
+		    TryEvent $w ColumnDrag begin [list C $Priv(column)]
 		}
+	    }
+	}
+	dragColumnWait {
+	    if {(abs($Priv(columnDrag,x) - $x) > 4)} {
+		$w column dragconfigure \
+		    -imagecolumn $Priv(column) \
+		    -imageoffset [expr {$x - $Priv(columnDrag,x)}]
+		set Priv(buttonMode) dragColumn
+		TryEvent $w ColumnDrag begin [list C $Priv(column)]
 	    }
 	}
 	dragColumn {
@@ -439,35 +404,24 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    } else {
 		set inside 1
 	    }
-	    if {$inside && [$w columndrag cget -imagecolumn] == -1} {
-		$w columndrag configure -imagecolumn $Priv(column)
-	    } elseif {!$inside && [$w columndrag cget -imagecolumn] != -1} {
-		$w columndrag configure -imagecolumn -1 -indicatorcolumn -1
+	    if {$inside && ([$w column dragcget -imagecolumn] eq "")} {
+		$w column dragconfigure -imagecolumn $Priv(column)
+	    } elseif {!$inside && ([$w column dragcget -imagecolumn] ne "")} {
+		$w column dragconfigure -imagecolumn "" -indicatorcolumn ""
 	    }
 	    if {$inside} {
-		$w columndrag configure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
+		$w column dragconfigure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
 		set id [$w identify $x $Priv(columnDrag,y)]
 		if {[lindex $id 0] eq "header"} {
 		    set column [lindex $id 1]
-		    if {$column eq "tail"} {
-			$w columndrag configure -indicatorcolumn [$w column index tail]
+		    if {[$w column compare $column == "tail"]} {
+			$w column dragconfigure -indicatorcolumn tail
 		    } elseif {$column ne ""} {
 			scan [$w column bbox $column] "%d %d %d %d" x1 y1 x2 y2
 			if {$x < $x1 + ($x2 - $x1) / 2} {
-			    $w columndrag configure -indicatorcolumn $column
+			    $w column dragconfigure -indicatorcolumn $column
 			} else {
-			    set visColumns {}
-			    for {set i 0} {$i < [$w numcolumns]} {incr i} {
-				if {[$w column cget $i -visible]} {
-				    lappend visColumns $i
-				    if {$column == $i} {
-					set visIndex $i
-				    }
-				}
-			    }
-			    lappend visColumns [$w column index tail]
-			    set column [lindex $visColumns [expr {$visIndex + 1}]]
-			    $w columndrag configure -indicatorcolumn $column
+			    $w column dragconfigure -indicatorcolumn "$column next visible"
 			}
 		    }
 		}
@@ -477,8 +431,8 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	normal {
 	    set Priv(x) $x
 	    set Priv(y) $y
-	    SelectionMotion $w [$w index [list nearest $x $y]]
-	    set Priv(autoscan,command,$w) {SelectionMotion %T [%T index "nearest %x %y"]}
+	    SelectionMotion $w [$w item id [list nearest $x $y]]
+	    set Priv(autoscan,command,$w) {SelectionMotion %T [%T item id "nearest %x %y"]}
 	    AutoScanCheck $w $x $y
 	}
 	resize {
@@ -532,40 +486,35 @@ proc ::TreeCtrl::Release1 {w x y} {
 	header {
 	    if {[$w column cget $Priv(column) -state] eq "pressed"} {
 		$w column configure $Priv(column) -state active
-		# Don't generate the event if it wasn't installed
-		if {[lsearch -exact [$w notify eventnames] Header] != -1} {
-		    $w notify generate <Header-invoke> \
-			[list C $Priv(column)] \
-			"::TreeCtrl::PercentsCmd $w"
-		}
+		TryEvent $w Header invoke [list C $Priv(column)]
 	    }
 	}
 	dragColumn {
 	    AutoScanCancel $w
 	    $w column configure $Priv(column) -state normal
-	    set visible [expr {[$w columndrag cget -imagecolumn] != -1}]
+	    set visible [expr {[$w column dragcget -imagecolumn] ne ""}]
 	    if {$visible} {
-		$w columndrag configure -imagecolumn -1
-		set column [$w columndrag cget -indicatorcolumn]
-		if {$column != -1 && $column != $Priv(column)} {
-		    if {$column == [$w numcolumns]} {
-			set column tail
-		    }
-		    $w column move $Priv(column) $column
+		$w column dragconfigure -imagecolumn ""
+		set column [$w column dragcget -indicatorcolumn]
+		if {($column ne "") && [$w column compare $column != $Priv(column)]} {
+		    TryEvent $w ColumnDrag receive [list C $Priv(column) b $column]
 		}
-		$w columndrag configure  -indicatorcolumn -1
+		$w column dragconfigure -indicatorcolumn ""
 	    }
 	    set id [$w identify $x $y]
 	    if {[lindex $id 0] eq "header"} {
 		set column [lindex $id 1]
-		if {$column ne "" && $column ne "tail"} {
-		    $w column configure $column -state active
+		if {($column ne "") && [$w column compare $column != "tail"]} {
+		    if {[$w column cget $column -button]} {
+			$w column configure $column -state active
+		    }
 		}
 	    }
+	    TryEvent $w ColumnDrag end [list C $Priv(column)]
 	}
 	normal {
 	    AutoScanCancel $w
-	    $w activate [$w index [list nearest $x $y]]
+	    $w activate [$w item id [list nearest $x $y]]
 set Priv(prev) ""
 	}
 	resize {
@@ -649,17 +598,17 @@ proc ::TreeCtrl::SelectionMotion {w el} {
 	    if {![info exists Priv(selection)]} {
 		set Priv(selection) [$w selection get]
 	    }
-	    while {[$w compare $i < $el] && [$w compare $i < anchor]} {
+	    while {[$w item compare $i < $el] && [$w item compare $i < anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    $w selection add $i
 		}
-		set i [$w index "$i next visible"]
+		set i [$w item id "$i next visible"]
 	    }
-	    while {[$w compare $i > $el] && [$w compare $i > anchor]} {
+	    while {[$w item compare $i > $el] && [$w item compare $i > anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    $w selection add $i
 		}
-		set i [$w index "$i prev visible"]
+		set i [$w item id "$i prev visible"]
 	    }
 	    set Priv(prev) $el
 	}
@@ -685,7 +634,7 @@ proc ::TreeCtrl::SelectionMotion {w el} {
 	    if {$i eq ""} {
 		set i $el
 		lappend select $el
-		set hack [$w compare $el == anchor]
+		set hack [$w item compare $el == anchor]
 	    }
 	    if {[$w selection includes anchor] || $hack} {
 		set deselect [concat $deselect [$w range $i $el]]
@@ -697,17 +646,17 @@ proc ::TreeCtrl::SelectionMotion {w el} {
 	    if {![info exists Priv(selection)]} {
 		set Priv(selection) [$w selection get]
 	    }
-	    while {[$w compare $i < $el] && [$w compare $i < anchor]} {
+	    while {[$w item compare $i < $el] && [$w item compare $i < anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    lappend select $i
 		}
-		set i [$w index "$i next visible"]
+		set i [$w item id "$i next visible"]
 	    }
-	    while {[$w compare $i > $el] && [$w compare $i > anchor]} {
+	    while {[$w item compare $i > $el] && [$w item compare $i > anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    lappend select $i
 		}
-		set i [$w index "$i prev visible"]
+		set i [$w item id "$i prev visible"]
 	    }
 	    set Priv(prev) $el
 	    $w selection modify $select $deselect
@@ -856,7 +805,7 @@ proc ::TreeCtrl::ColumnDragScrollCheck {w x y} {
 	    set bbox2 [$w column bbox $Priv(column)]
 	    if {[lindex $bbox1 0] != [lindex $bbox2 0]} {
 		incr Priv(columnDrag,x) [expr {[lindex $bbox2 0] - [lindex $bbox1 0]}]
-		$w columndrag configure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
+		$w column dragconfigure -imageoffset [expr {$x - $Priv(columnDrag,x)}]
 	    }
 	    set Priv(autoscan,afterId,$w) [after 50 [list TreeCtrl::ColumnDragScrollCheckAux $w]]
 	}
@@ -902,8 +851,8 @@ proc ::TreeCtrl::UpDown {w n} {
     if {$rnc ne $Priv(rnc)} {
 	set Priv(col) $col
     }
-    set index [$w index "rnc $Priv(row) $Priv(col)"]
-    if {[$w compare active == $index]} {
+    set index [$w item id "rnc $Priv(row) $Priv(col)"]
+    if {[$w item compare active == $index]} {
 	set Priv(row) $row
     } else {
 	set Priv(rnc) [$w item rnc $index]
@@ -923,8 +872,8 @@ proc ::TreeCtrl::LeftRight {w n} {
     if {$rnc ne $Priv(rnc)} {
 	set Priv(row) $row
     }
-    set index [$w index "rnc $Priv(row) $Priv(col)"]
-    if {[$w compare active == $index]} {
+    set index [$w item id "rnc $Priv(row) $Priv(col)"]
+    if {[$w item compare active == $index]} {
 	set Priv(col) $col
     } else {
 	set Priv(rnc) [$w item rnc $index]
@@ -940,7 +889,7 @@ proc ::TreeCtrl::SetActiveItem {w index} {
     switch [$w cget -selectmode] {
 	extended {
 	    $w selection anchor active
-	    set Priv(prev) [$w index active]
+	    set Priv(prev) [$w item id active]
 	    set Priv(selection) {}
 	}
     }
@@ -962,16 +911,16 @@ proc ::TreeCtrl::ExtendUpDown {w amount} {
     if {[string compare [$w cget -selectmode] "extended"]} {
 	return
     }
-    set active [$w index active]
+    set active [$w item id active]
     if {![info exists Priv(selection)]} {
 	$w selection add $active
 	set Priv(selection) [$w selection get]
     }
-    set index [$w index "active $amount"]
+    set index [$w item id "active $amount"]
     if {$index eq ""} return
     $w activate $index
     $w see active
-    SelectionMotion $w [$w index active]
+    SelectionMotion $w [$w item id active]
     return
 }
 
@@ -1016,23 +965,23 @@ proc ::TreeCtrl::Cancel w {
     if {[string compare [$w cget -selectmode] "extended"]} {
 	return
     }
-    set first [$w index anchor]
+    set first [$w item id anchor]
     set last $Priv(prev)
     if { [string equal $last ""] } {
 	# Not actually doing any selection right now
 	return
     }
-    if {[$w compare $first > $last]} {
+    if {[$w item compare $first > $last]} {
 	set tmp $first
 	set first $last
 	set last $tmp
     }
     $w selection clear $first $last
-    while {[$w compare $first <= $last]} {
+    while {[$w item compare $first <= $last]} {
 	if {[lsearch $Priv(selection) $first] >= 0} {
 	    $w selection add $first
 	}
-	set first [$w index "$first next visible"]
+	set first [$w item id "$first next visible"]
     }
     return
 }
@@ -1093,6 +1042,17 @@ proc ::TreeCtrl::ScanDrag {w x y} {
     }
     if {[info exists Priv(mouseMoved)] && $Priv(mouseMoved)} {
 	$w scan dragto $x $y
+    }
+    return
+}
+
+proc ::TreeCtrl::TryEvent {T event detail charMap} {
+    if {[lsearch -exact [$T notify eventnames] $event] == -1} return
+    if {$detail ne ""} {
+	if {[lsearch -exact [$T notify detailnames $event] $detail] == -1} return
+	$T notify generate <$event-$detail> $charMap "::TreeCtrl::PercentsCmd $T"
+    } else {
+	$T notify generate <$event> $charMap "::TreeCtrl::PercentsCmd $T"
     }
     return
 }
