@@ -60,19 +60,23 @@ proc DemoFirefoxPrivacy {} {
 	$T element create eWindow window
 	$T element create eText1 text -font [list "[$T cget -font] bold"]
 	$T element create eText2 text
+	$T element create eRectTop rect -outline {black open} -fill {#FFFFCC open} -outlinewidth 1 -open s
+	$T element create eRectBottom rect -outline black -fill #FFFFCC -outlinewidth 1 -open n
 
 	#
 	# Create styles using the elements
 	#
 
 	set S [$T style create styCategory -orient horizontal]
-	$T style elements $S {eText1 eWindow}
-	$T style layout $S eText1 -expand ns
-	$T style layout $S eWindow -expand nws -padx 10 -pady 6
+	$T style elements $S {eRectTop eText1 eWindow}
+	$T style layout $S eRectTop -detach yes -indent no -iexpand es
+	$T style layout $S eText1 -expand ns -iexpand e
+	$T style layout $S eWindow -expand ns -padx 10 -pady 6
 
 	set S [$T style create styFrame -orient horizontal]
-	$T style elements $S eWindow
-	$T style layout $S eWindow -iexpand e -squeeze x
+	$T style elements $S {eRectBottom eWindow}
+	$T style layout $S eRectBottom -detach yes -indent no -iexpand es
+	$T style layout $S eWindow -iexpand e -squeeze x -padx {0 2} -pady {0 8}
 
 	#
 	# Create items and assign styles
@@ -93,7 +97,7 @@ proc DemoFirefoxPrivacy {} {
 		$T item lastchild root $I
 	}
 
-	set bg [$T cget -background]
+	set bg #FFFFCC
 	set textBg $bg
 
 	# History
@@ -101,7 +105,7 @@ proc DemoFirefoxPrivacy {} {
 	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 	label $f.l1 -background $bg -text "Remember visited pages for the last"
-	entry $f.e1 -width 6 -background $bg
+	entry $f.e1 -width 6
 	$f.e1 insert end 20
 	label $f.l2 -background $bg -text "days" -background $bg
 	pack $f.l1 -side left
@@ -119,7 +123,7 @@ proc DemoFirefoxPrivacy {} {
 	bindtags $f.t1 TextWrapBindTag
 	checkbutton $f.cb1 -background $bg -text "Save information I enter in web page forms and the Search Bar"
 	$f.cb1 select
-	pack $f.t1 -side top -anchor w -fill x -padx {0 10} -pady {0 4}
+	pack $f.t1 -side top -anchor w -fill x -padx {0 8} -pady {0 4}
 	pack $f.cb1 -side top -anchor w
 	$T item element configure $I C0 eWindow -window $f
 	$T item lastchild "root child 1" $I
@@ -135,7 +139,7 @@ proc DemoFirefoxPrivacy {} {
 	bindtags $fLeft.t1 TextWrapBindTag
 	checkbutton $fLeft.cb1 -background $bg -text "Remember Passwords"
 	$fLeft.cb1 select
-	pack $fLeft.t1 -side top -expand yes -fill x -pady {0 4}
+	pack $fLeft.t1 -side top -expand yes -fill x -pady {0 6}
 	pack $fLeft.cb1 -side top -anchor w
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
@@ -144,7 +148,7 @@ proc DemoFirefoxPrivacy {} {
 	pack $fRight.b1 -side top -expand yes -fill x
 	pack $fRight.b2 -side top -expand yes -fill x -pady {8 0}
 	pack $fLeft -side left -expand yes -fill x
-	pack $fRight -side right -padx 14 -anchor n
+	pack $fRight -side right -padx 12 -anchor n
 	$T item element configure $I C0 eWindow -window $f
 	$T item lastchild "root child 2" $I
 
@@ -225,7 +229,7 @@ proc DemoFirefoxPrivacy {} {
 	bindtags $f.t1 TextWrapBindTag
 	set f1 [frame $f.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Use up to:"
-	entry $f1.e1 -width 10 -background $bg
+	entry $f1.e1 -width 10
 	$f1.e1 insert end 50000
 	label $f1.l2 -background $bg -text "KB of disk space for the cache." -background $bg
 	pack $f1.l1 -side left
@@ -249,5 +253,68 @@ proc DemoFirefoxPrivacy {} {
 	}
 	$T item collapse all
 
+
+	bind DemoFirefoxPrivacy <ButtonPress-1> {
+		TreeCtrl::DemoFirefoxPrivacyButton1 %W %x %y
+		break
+	}
+	bind DemoFirefoxPrivacy <Button1-Motion> {
+		# noop
+	}
+	bind DemoFirefoxPrivacy <Button1-Leave> {
+		# noop
+	}
+	bind DemoFirefoxPrivacy <Motion> {
+		TreeCtrl::DemoFirefoxPrivacyMotion %W %x %y
+	}
+	bind DemoFirefoxPrivacy <Leave> {
+		TreeCtrl::DemoFirefoxPrivacyMotion %W %x %y
+	}
+
+	set ::TreeCtrl::Priv(demo,prev) ""
+	bindtags $T [list $T DemoFirefoxPrivacy TreeCtrl [winfo toplevel $T] all]
+
 	return
 }
+
+proc TreeCtrl::DemoFirefoxPrivacyButton1 {w x y} {
+	variable Priv
+	focus $w
+	set id [$w identify $x $y]
+	set Priv(buttonMode) ""
+	if {[lindex $id 0] eq "header"} {
+		ButtonPress1 $w $x $y
+	} elseif {[lindex $id 0] eq "item"} {
+		set item [lindex $id 1]
+		# click a button
+		if {[llength $id] != 6} {
+			ButtonPress1 $w $x $y
+			return
+		}
+		if {[lindex $id 5] eq "eText1"} {
+			$w toggle $item
+		}
+	}
+	return
+}
+
+proc TreeCtrl::DemoFirefoxPrivacyMotion {w x y} {
+	variable Priv
+	set id [$w identify $x $y]
+	if {[lindex $id 0] eq "item"} {
+		set item [lindex $id 1]
+		if {[llength $id] == 6 && [lindex $id 5] eq "eText1"} {
+			if {$item ne $Priv(demo,prev)} {
+				$w configure -cursor hand2
+				set Priv(demo,prev) $item
+			}
+			return
+		}
+	}
+	if {$Priv(demo,prev) ne ""} {
+		$w configure -cursor ""
+		set Priv(demo,prev) ""
+	}
+	return
+}
+
