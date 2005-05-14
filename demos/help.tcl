@@ -314,6 +314,7 @@ proc TreeCtrl::HelpMotion {w x y} {
 					$w item state set $Priv(help,prev) !mouseover
 				}
 				$w item state set $item mouseover
+				$w configure -cursor hand2
 				set Priv(help,prev) $item
 			}
 			return
@@ -321,6 +322,7 @@ proc TreeCtrl::HelpMotion {w x y} {
 	}
 	if {$Priv(help,prev) ne ""} {
 		$w item state set $Priv(help,prev) !mouseover
+		$w configure -cursor ""
 		set Priv(help,prev) ""
 	}
 	return
