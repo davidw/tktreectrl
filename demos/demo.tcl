@@ -722,7 +722,7 @@ proc MakeHeaderPopup {T} {
     $m add checkbutton -label "Squeeze" -variable Popup(squeeze) \
 	-command {$Popup(T) column configure $Popup(column) -squeeze $Popup(squeeze)}
     $m add checkbutton -label "Tree Column" -variable Popup(treecolumn) \
-	-command {$Popup(T) configure -treecolumn $Popup(column)}
+	-command {$Popup(T) configure -treecolumn [expr {$Popup(treecolumn) ? $Popup(column) : ""}]}
     return
 }
 
