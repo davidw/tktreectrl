@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.30 2005/05/13 20:50:20 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.31 2005/05/14 22:18:58 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2043,15 +2043,24 @@ managed by \fIstyle\fR.
 The following options are supported:
 .RS
 .TP
-\fB\fB-padx\fR\fR \fIamount\fR
+\fB\fB-detach\fR\fR \fIboolean\fR
+Specifies whether the element should be positioned by itself,
+i.e. independent from the other elements.
 .TP
-\fB\fB-pady\fR\fR \fIamount\fR
-\fIAmount\fR specifies how much external padding to
-leave on the left and right (for \fB-padx\fR)
-or top and bottom (for \fB-pady\fR) side of the element.
-\fIAmount\fR may be a list
-of two values to specify padding for the two sides separately,
-it defaults to 0.
+\fB\fB-expand\fR\fR \fIstyle\fR
+.TP
+\fB\fB-iexpand\fR\fR \fIstyle\fR
+It can happen that the element's space is larger than its requested dimensions.
+These options may be used to position (or stretch) the slave within its cell.
+\fIStyle\fR  is a string that contains zero or more of the characters
+\fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
+Each letter refers to a side (north, south,
+east, or west) in which direction the element will grow in.
+.TP
+\fB\fB-indent\fR\fR \fIboolean\fR
+Specifies whether the element should be positioned to the right of the
+button/line area in the tree column. This option is ignored unless the
+-detach option is true.
 .TP
 \fB\fB-ipadx\fR\fR \fIamount\fR
 .TP
@@ -2063,15 +2072,15 @@ or top and bottom (for \fB-ipady\fR) side of the element.
 of two values to specify padding for the two sides separately,
 it defaults to 0.
 .TP
-\fB\fB-expand\fR\fR \fIstyle\fR
+\fB\fB-padx\fR\fR \fIamount\fR
 .TP
-\fB\fB-iexpand\fR\fR \fIstyle\fR
-It can happen that the element's space is larger than its requested dimensions.
-These options may be used to position (or stretch) the slave within its cell.
-\fIStyle\fR  is a string that contains zero or more of the characters
-\fBn\fR, \fBs\fR, \fBe\fR or \fBw\fR.
-Each letter refers to a side (north, south,
-east, or west) in which direction the element will grow in.
+\fB\fB-pady\fR\fR \fIamount\fR
+\fIAmount\fR specifies how much external padding to
+leave on the left and right (for \fB-padx\fR)
+or top and bottom (for \fB-pady\fR) side of the element.
+\fIAmount\fR may be a list
+of two values to specify padding for the two sides separately,
+it defaults to 0.
 .TP
 \fB\fB-squeeze\fR\fR \fIstyle\fR
 If an element's area is smaller than its requested dimensions, this
@@ -2084,10 +2093,6 @@ option may be used to allow shrinking of the element.
 \fB\fB-union\fR\fR \fIelementList\fR
 Specifies a list of other \fIelement\fRs, which should be layed out
 inside the space of this element.
-.TP
-\fB\fB-detach\fR\fR \fIboolean\fR
-Specifies whether the element should be positioned by themselves,
-i.e. independent from the other elements.
 .RE
 .TP
 \fIpathName\fR \fBstyle names\fR\fR
@@ -2723,7 +2728,7 @@ You can memorize \fBrnc\fR as abbreviation of "row 'n' column".
 \fBroot\fR
 Indicates the root item of the treectrl.
 .PP
-The initial part of the column description (matching any of the values above)
+The initial part of the item description (matching any of the values above)
 may be followed by one or more \fImodifier\fRs.
 A modifier changes the item used relative to
 the description up to this point.
