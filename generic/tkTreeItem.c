@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.31 2005/05/13 19:59:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.32 2005/05/14 22:16:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1415,11 +1415,18 @@ int TreeItem_UseHeight(TreeCtrl *tree, TreeItem item_)
 	if (TreeColumn_Visible(treeColumn) && (column->style != NULL)) {
 	    drawArgs.state = item->state | column->cstate;
 	    drawArgs.style = column->style;
+#ifdef LAYOUTHAX
+	    drawArgs.indent = (treeColumn == tree->columnTree) ?
+		TreeItem_Indent(tree, item_) : 0;
+#endif
 	    if ((TreeColumn_FixedWidth(treeColumn) != -1) ||
 		    TreeColumn_Squeeze(treeColumn)) {
 		drawArgs.width = TreeColumn_UseWidth(treeColumn);
+#ifdef LAYOUTHAX
+#else
 		if (treeColumn == tree->columnTree)
 		    drawArgs.width -= TreeItem_Indent(tree, item_);
+#endif
 	    } else
 		drawArgs.width = -1;
 	    height = MAX(height, TreeStyle_UseHeight(&drawArgs));
@@ -1612,9 +1619,18 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 		if ((column != NULL) && (column->style != NULL)) {
 		    drawArgs.state = self->state | column->cstate;
 		    drawArgs.style = column->style;
+#ifdef LAYOUTHAX
+		    drawArgs.indent = indent;
+		    drawArgs.x = x + totalWidth;
+#else
 		    drawArgs.x = x + indent + totalWidth;
+#endif
 		    drawArgs.y = y;
+#ifdef LAYOUTHAX
+		    drawArgs.width = columnWidth;
+#else
 		    drawArgs.width = columnWidth - indent;
+#endif
 		    drawArgs.height = height;
 		    drawArgs.justify = TreeColumn_Justify(treeColumn);
 		    TreeStyle_Draw(&drawArgs);
@@ -1892,9 +1908,18 @@ void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
 	    if ((column != NULL) && (column->style != NULL)) {
 		drawArgs.state = self->state | column->cstate;
 		drawArgs.style = column->style;
+#ifdef LAYOUTHAX
+		drawArgs.indent = indent;
+		drawArgs.x = x + totalWidth;
+#else
 		drawArgs.x = x + indent + totalWidth;
+#endif
 		drawArgs.y = y;
+#ifdef LAYOUTHAX
+		drawArgs.width = columnWidth;
+#else
 		drawArgs.width = columnWidth - indent;
+#endif
 		drawArgs.height = height;
 		drawArgs.justify = TreeColumn_Justify(treeColumn);
 		TreeStyle_UpdateWindowPositions(&drawArgs);
@@ -2064,8 +2089,9 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
     if (column->style == NULL) {
 	FormatResult(interp,
-		"item %s%d column %d has no style",
-		tree->itemPrefix, item->id, columnIndex);
+		"item %s%d column %s%d has no style",
+		tree->itemPrefix, item->id,
+		tree->columnPrefix, TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
 	return TCL_ERROR;
     }
 
@@ -2154,8 +2180,10 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    }
 	    if (column->style == NULL) {
 		FormatResult(interp,
-			"item %s%d column %d has no style",
-			tree->itemPrefix, item->id, columnIndex);
+			"item %s%d column %s%d has no style",
+			tree->itemPrefix, item->id,
+			tree->columnPrefix,
+			TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
 		return TCL_ERROR;
 	    }
 	    TreeStyle_ListElements(tree, column->style);
@@ -2919,14 +2947,18 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	    column = Item_FindColumn(tree, walk, sortData.columns[i].column);
 	    if (column == NULL) {
-		FormatResult(interp, "item %s%d doesn't have column %d",
-			tree->itemPrefix, walk->id, sortData.columns[i].column);
+		FormatResult(interp, "item %s%d doesn't have column %s%d",
+			tree->itemPrefix, walk->id,
+			tree->columnPrefix,
+			TreeColumn_GetID(Tree_FindColumn(tree, sortData.columns[i].column)));
 		result = TCL_ERROR;
 		goto done;
 	    }
 	    if (column->style == NULL) {
-		FormatResult(interp, "item %s%d column %d has no style",
-			tree->itemPrefix, walk->id, sortData.columns[i].column);
+		FormatResult(interp, "item %s%d column %s%d has no style",
+			tree->itemPrefix, walk->id,
+			tree->columnPrefix,
+			TreeColumn_GetID(Tree_FindColumn(tree, sortData.columns[i].column)));
 		result = TCL_ERROR;
 		goto done;
 	    }
@@ -3660,16 +3692,24 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
 		if (drawArgs.style == NULL) {
 		    FormatResult(interp,
-			    "item %s%d column %d has no style",
-			    tree->itemPrefix, TreeItem_GetID(tree, item_), columnIndex);
+			    "item %s%d column %s%d has no style",
+			    tree->itemPrefix, TreeItem_GetID(tree, item_),
+			    tree->columnPrefix, TreeColumn_GetID(treeColumn));
 		    return TCL_ERROR;
 		}
 		drawArgs.tree = tree;
 		drawArgs.drawable = None;
 		drawArgs.state = TreeItem_GetState(tree, item_);
+#ifdef LAYOUTHAX
+		drawArgs.indent = indent;
+		drawArgs.x = x + totalWidth;
+		drawArgs.y = y;
+		drawArgs.width = TreeColumn_UseWidth(treeColumn);
+#else
 		drawArgs.x = x + indent + totalWidth;
 		drawArgs.y = y;
 		drawArgs.width = TreeColumn_UseWidth(treeColumn) - indent;
+#endif
 		drawArgs.height = h;
 		drawArgs.justify = TreeColumn_Justify(treeColumn);
 		if (TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5,
@@ -3809,8 +3849,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    for (i = 4; i < objc; i++, columnIndex++) {
 		column = Item_FindColumn(tree, item, columnIndex);
 		if (column == NULL) {
-		    FormatResult(interp, "item %s%d doesn't have column %d",
-			    tree->itemPrefix, item->id, columnIndex);
+		    FormatResult(interp, "item %s%d doesn't have column %s%d",
+			    tree->itemPrefix, item->id,
+			    tree->columnPrefix,
+			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
 		    result = TCL_ERROR;
 		    goto doneComplex;
 		}
@@ -3823,8 +3865,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (objc1 == 0)
 		    continue;
 		if (column->style == NULL) {
-		    FormatResult(interp, "item %s%d column %d has no style",
-			    tree->itemPrefix, item->id, columnIndex);
+		    FormatResult(interp, "item %s%d column %s%d has no style",
+			    tree->itemPrefix, item->id,
+			    tree->columnPrefix,
+			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
 		    result = TCL_ERROR;
 		    goto doneComplex;
 		}
@@ -4227,8 +4271,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (Item_CreateColumnFromObj(tree, item, objv[i], &column, &columnIndex) != TCL_OK)
 		    return TCL_ERROR;
 		if (column->style == NULL) {
-		    FormatResult(interp, "item %s%d column %d has no style",
-			    tree->itemPrefix, item->id, columnIndex);
+		    FormatResult(interp, "item %s%d column %s%d has no style",
+			    tree->itemPrefix, item->id,
+			    tree->columnPrefix,
+			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
 		    return TCL_ERROR;
 		}
 		TreeStyle_SetText(tree, (TreeItem) item, (TreeItemColumn) column, column->style, objv[i + 1]);
@@ -4441,9 +4487,16 @@ char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 		if (column->style != NULL) {
 		    drawArgs.state = self->state | column->cstate;
 		    drawArgs.style = column->style;
+#ifdef LAYOUTHAX
+		    drawArgs.indent = indent;
+		    drawArgs.x = totalWidth;
+		    drawArgs.y = 0;
+		    drawArgs.width = columnWidth;
+#else
 		    drawArgs.x = indent + totalWidth;
 		    drawArgs.y = 0;
 		    drawArgs.width = columnWidth - indent;
+#endif
 		    drawArgs.height = height;
 		    drawArgs.justify = TreeColumn_Justify(treeColumn);
 		    return TreeStyle_Identify(&drawArgs, x, y);
@@ -4496,9 +4549,16 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 		if ((column != NULL) && (column->style != NULL)) {
 		    drawArgs.state = self->state | column->cstate;
 		    drawArgs.style = column->style;
+#ifdef LAYOUTHAX
+		    drawArgs.indent = indent;
+		    drawArgs.x = x + totalWidth;
+		    drawArgs.y = y;
+		    drawArgs.width = columnWidth;
+#else
 		    drawArgs.x = x + totalWidth + indent;
 		    drawArgs.y = y;
 		    drawArgs.width = columnWidth - indent;
+#endif
 		    drawArgs.height = h;
 		    drawArgs.justify = TreeColumn_Justify(treeColumn);
 		    TreeStyle_Identify2(&drawArgs, x1, y1, x2, y2, subListObj);
