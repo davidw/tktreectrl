@@ -132,6 +132,7 @@ foreach file {
     outlook-folders
     outlook-newgroup
     random
+    textvariable
     www-options
 } {
     source [Path $file.tcl]
@@ -840,6 +841,7 @@ proc InitDemoList {} {
 	"Bitmaps" DemoBitmaps bitmaps.tcl \
 	"iMovie" DemoIMovie imovie.tcl \
 	"Firefox Privacy" DemoFirefoxPrivacy firefox.tcl \
+	"Textvariable" DemoTextvariable textvariable.tcl \
 	] {
 	set item [$t item create]
 	$t item lastchild root $item
