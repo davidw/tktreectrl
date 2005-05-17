@@ -254,6 +254,14 @@ proc DemoFirefoxPrivacy {} {
 	$T item collapse all
 
 
+	bind DemoFirefoxPrivacy <Double-ButtonPress-1> {
+		if {[lindex [%W identify %x %y] 0] eq "header"} {
+			TreeCtrl::DoubleButton1 %W %x %y
+		} else {
+			TreeCtrl::DemoFirefoxPrivacyButton1 %W %x %y
+		}
+		break
+	}
 	bind DemoFirefoxPrivacy <ButtonPress-1> {
 		TreeCtrl::DemoFirefoxPrivacyButton1 %W %x %y
 		break
@@ -293,6 +301,7 @@ proc TreeCtrl::DemoFirefoxPrivacyButton1 {w x y} {
 		}
 		if {[lindex $id 5] eq "eText1"} {
 			$w toggle $item
+			DisplayStylesInItem $item
 		}
 	}
 	return
