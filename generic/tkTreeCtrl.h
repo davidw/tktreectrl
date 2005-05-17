@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.25 2005/05/14 22:17:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.26 2005/05/17 01:19:05 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -42,6 +42,7 @@
 #endif
 
 #define SELECTION_VISIBLE
+#define ALLOC_HAX
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -297,6 +298,9 @@ struct TreeCtrl
     Tk_OptionTable itemOptionTable;
     int itemPrefixLen;		/* -itemprefix */
     int columnPrefixLen;	/* -columnprefix */
+#ifdef ALLOC_HAX
+	ClientData allocData;
+#endif
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -723,6 +727,15 @@ extern int PerStateRelief_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
 extern void PSTSave(PerStateInfo *pInfo, PerStateInfo *pSave);
 extern void PSTRestore(TreeCtrl *tree, PerStateType *typePtr,
     PerStateInfo *pInfo, PerStateInfo *pSave);
+
+#ifdef ALLOC_HAX
+extern ClientData AllocHax_Init(void);
+extern void AllocHax_Finalize(ClientData data);
+extern char *AllocHax_Alloc(ClientData data, int size);
+extern char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp);
+extern void AllocHax_Free(ClientData data, char *ptr, int size);
+extern void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp);
+#endif
 
 /*****/
 

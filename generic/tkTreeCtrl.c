@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.34 2005/05/13 19:44:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.35 2005/05/17 01:19:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -136,12 +136,12 @@ static Tk_OptionSpec optionSpecs[] = {
      "0",
      Tk_Offset(TreeCtrl, itemPadXObj),
      Tk_Offset(TreeCtrl, itemPadX),
-     TK_CONFIG_NULL_OK, (ClientData) &PadAmountOption, 0},
-    {TK_OPTION_PIXELS, "-itempady", (char *) NULL, (char *) NULL,
+     0, (ClientData) &PadAmountOption, 0},
+    {TK_OPTION_CUSTOM, "-itempady", (char *) NULL, (char *) NULL,
      "0",
      Tk_Offset(TreeCtrl, itemPadYObj),
      Tk_Offset(TreeCtrl, itemPadY),
-     TK_CONFIG_NULL_OK, (ClientData) &PadAmountOption, 0},
+     0, (ClientData) &PadAmountOption, 0},
 #endif
     {TK_OPTION_STRING, "-itemprefix", "itemPrefix", "ItemPrefix",
      "", -1, Tk_Offset(TreeCtrl, itemPrefix), 0, (ClientData) NULL, 0},
@@ -322,6 +322,10 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     Tcl_InitHashTable(&tree->elementHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->imageHash, TCL_STRING_KEYS);
+
+#ifdef ALLOC_HAX
+	tree->allocData = AllocHax_Init();
+#endif
 
     Tree_InitColumns(tree);
     TreeItem_Init(tree);
@@ -1451,6 +1455,10 @@ static void TreeDestroy(char *memPtr)
     Tk_FreeConfigOptions((char *) tree, tree->optionTable, tree->tkwin);
 
     Tcl_DeleteHashTable(&tree->selection);
+
+#ifdef ALLOC_HAX
+    AllocHax_Finalize(tree->allocData);
+#endif
 
     WFREE(tree, TreeCtrl);
 }

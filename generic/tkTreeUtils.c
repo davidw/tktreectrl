@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.13 2005/05/10 22:38:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.14 2005/05/17 01:21:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2049,3 +2049,139 @@ void PSTRestore(
     pInfo->count = pSave->count;
 }
 
+#ifdef ALLOC_HAX
+#define ALLOC_BLOCK_SIZE 128
+
+typedef struct AllocElem AllocElem;
+typedef struct AllocList AllocList;
+typedef struct AllocData AllocData;
+
+struct AllocElem
+{
+	AllocElem *next;
+	int free;
+	char d[1];
+};
+
+struct AllocList
+{
+	int size;
+	AllocElem *head;
+	AllocList *next;
+	AllocElem **blocks;
+	int blockCount;
+};
+
+struct AllocData
+{
+	AllocList *freeLists;
+};
+
+char *AllocHax_Alloc(ClientData data, int size)
+{
+	AllocList *freeLists = ((AllocData *) data)->freeLists;
+	AllocList *freeList = freeLists;
+	AllocElem *elem, *result;
+	int i;
+
+	while ((freeList != NULL) && (freeList->size != size))
+		freeList = freeList->next;
+
+	if (freeList == NULL) {
+		freeList = (AllocList *) ckalloc(sizeof(AllocList));
+		freeList->size = size;
+		freeList->head = NULL;
+		freeList->next = freeLists;
+		freeList->blocks = NULL;
+		freeList->blockCount = 0;
+		freeLists = freeList;
+		((AllocData *) data)->freeLists = freeLists;
+	}
+
+	if (freeList->head != NULL) {
+		elem = freeList->head;
+		freeList->head = elem->next;
+		result = elem;
+	} else {
+		AllocElem *block;
+		freeList->blockCount += 1;
+		freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks, sizeof(AllocElem *) * freeList->blockCount);
+		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) * ALLOC_BLOCK_SIZE);
+		freeList->blocks[freeList->blockCount - 1] = block;
+/* dbwin("AllocHax_Alloc alloc %d of size %d\n", ALLOC_BLOCK_SIZE, size); */
+		freeList->head = block;
+		elem = freeList->head;
+		for (i = 1; i < ALLOC_BLOCK_SIZE - 1; i++) {
+			elem->free = 1;
+			elem->next = (AllocElem *) (((char *) freeList->head) + (sizeof(AllocElem) - 1 + size) * i);
+			elem = elem->next;
+		}
+		elem->next = NULL;
+		elem->free = 1;
+		result = freeList->head;
+		freeList->head = result->next;
+	}
+
+	if (!result->free)
+		panic("AllocHax_Alloc: element not marked free");
+
+	result->free = 0;
+	return result->d;
+}
+
+void AllocHax_Free(ClientData data, char *ptr, int size)
+{
+	AllocList *freeLists = ((AllocData *) data)->freeLists;
+	AllocList *freeList = freeLists;
+	AllocElem *elem = (AllocElem *) (ptr - sizeof(AllocElem) + sizeof(int));
+
+	if (elem->free)
+		panic("AllocHax_Free: element already marked free");
+
+	while (freeList != NULL && freeList->size != size)
+		freeList = freeList->next;
+memset(ptr, 0xAA, size);
+	elem->next = freeList->head;
+	elem->free = 1;
+	freeList->head = elem;
+}
+
+char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp)
+{
+	int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
+	return AllocHax_Alloc(data, size * n);
+}
+
+void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp)
+{
+	int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
+	AllocHax_Free(data, ptr, size * n);
+}
+
+ClientData AllocHax_Init(void)
+{
+	AllocData *data = (AllocData *) ckalloc(sizeof(AllocData));
+	data->freeLists = NULL;
+	return data;
+}
+
+void AllocHax_Finalize(ClientData data)
+{
+	AllocList *freeList = ((AllocData *) data)->freeLists;
+	int i;
+
+	while (freeList != NULL) {
+		AllocList *nextList = freeList->next;
+		for (i = 0; i < freeList->blockCount; i++) {
+			AllocElem *block = freeList->blocks[i];
+			ckfree((char *) block);
+		}
+		ckfree((char *) freeList->blocks);
+		ckfree((char *) freeList);
+		freeList = nextList;
+	}
+
+	ckfree((char *) data);
+}
+
+#endif /* ALLOC_HAX */
