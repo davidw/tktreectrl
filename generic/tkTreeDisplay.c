@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.22 2005/05/13 19:50:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.23 2005/05/17 01:18:03 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -60,7 +60,6 @@ struct DItem
 #define DITEM_ALL_DIRTY 0x0002
     int flags;
     DItem *next;
-    DItem *nextFree;
 };
 
 /* Display information for a TreeCtrl */
@@ -1401,7 +1400,7 @@ DItem_Alloc(TreeCtrl *tree, RItem *rItem)
     /* Pop unused DItem from stack */
     if (dInfo->dItemFree != NULL) {
 	dItem = dInfo->dItemFree;
-	dInfo->dItemFree = dItem->nextFree;
+	dInfo->dItemFree = dItem->next;
 
     /* No free DItems, alloc a new one */
     } else {
@@ -1444,7 +1443,7 @@ DItem_Free(TreeCtrl *tree, DItem *dItem)
     if (dItem->item != NULL)
 	TreeItem_SetDInfo(tree, dItem->item, (TreeItemDInfo) NULL);
     /* Push unused DItem on the stack */
-    dItem->nextFree = dInfo->dItemFree;
+    dItem->next = dInfo->dItemFree;
     dInfo->dItemFree = dItem;
     return next;
 }
@@ -3722,7 +3721,7 @@ TreeDInfo_Free(TreeCtrl *tree)
 	dInfo->dItem = next;
     }
     while (dInfo->dItemFree != NULL) {
-	DItem *next = dInfo->dItemFree->nextFree;
+	DItem *next = dInfo->dItemFree->next;
 	WFREE(dInfo->dItemFree, DItem);
 	dInfo->dItemFree = next;
     }
