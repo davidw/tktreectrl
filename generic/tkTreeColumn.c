@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.22 2005/05/13 19:37:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.23 2005/05/17 01:19:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -415,10 +415,11 @@ int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, i
     Tcl_Obj **objv, *elemPtr;
     Column *column = NULL;
     static CONST char *indexName[] = {
-	"all", "first", "last", "order", "tail", (char *) NULL
+	"all", "first", "last", "order", "tail", "tree", (char *) NULL
     };
     enum indexEnum {
-	INDEX_ALL, INDEX_FIRST, INDEX_LAST, INDEX_ORDER, INDEX_TAIL
+	INDEX_ALL, INDEX_FIRST, INDEX_LAST, INDEX_ORDER, INDEX_TAIL,
+	INDEX_TREE
     } ;
     static CONST char *modifiers[] = {
 	"next", "prev", "visible", (char *) NULL
@@ -515,6 +516,11 @@ int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, i
 		    return TCL_ERROR;
 		}
 		column = (Column *) tree->columnTail;
+		break;
+	    }
+	    case INDEX_TREE:
+	    {
+		column = (Column *) tree->columnTree;
 		break;
 	    }
 	}
