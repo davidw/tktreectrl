@@ -97,15 +97,15 @@ proc DemoInternetOptions {} {
 		set parentList [lreplace $parentList $depth $depth $item]
 	}
 
-	bind TreeCtrlOption <Double-ButtonPress-1> {
+	bind DemoInternetOptions <Double-ButtonPress-1> {
 		TreeCtrl::DoubleButton1 %W %x %y
 	}
-	bind TreeCtrlOption <ButtonPress-1> {
+	bind DemoInternetOptions <ButtonPress-1> {
 		TreeCtrl::OptionButton1 %W %x %y
 		break
 	}
 
-	bindtags $T [list $T TreeCtrlOption TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoInternetOptions TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
@@ -234,15 +234,15 @@ proc DemoInternetOptions_2 {} {
 		set parentList [lreplace $parentList $depth $depth $item]
 	}
 
-	bind TreeCtrlOption <Double-ButtonPress-1> {
+	bind DemoInternetOptions <Double-ButtonPress-1> {
 		TreeCtrl::DoubleButton1 %W %x %y
 	}
-	bind TreeCtrlOption <ButtonPress-1> {
+	bind DemoInternetOptions <ButtonPress-1> {
 		TreeCtrl::OptionButton1 %W %x %y
 		break
 	}
 
-	bindtags $T [list $T TreeCtrlOption TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoInternetOptions TreeCtrl [winfo toplevel $T] all]
 
 	return
 }

@@ -121,35 +121,35 @@ proc DemoRandom {} {
 	}
 	puts "configured $::RandomN items in [expr [clock clicks] - $clicks] clicks"
 
-	bind TreeCtrlRandom <Double-ButtonPress-1> {
+	bind DemoRandom <Double-ButtonPress-1> {
 		TreeCtrl::DoubleButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <Control-ButtonPress-1> {
+	bind DemoRandom <Control-ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) toggle
 		TreeCtrl::RandomButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <Shift-ButtonPress-1> {
+	bind DemoRandom <Shift-ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) add
 		TreeCtrl::RandomButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <ButtonPress-1> {
+	bind DemoRandom <ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) set
 		TreeCtrl::RandomButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <Button1-Motion> {
+	bind DemoRandom <Button1-Motion> {
 		TreeCtrl::RandomMotion1 %W %x %y
 		break
 	}
-	bind TreeCtrlRandom <ButtonRelease-1> {
+	bind DemoRandom <ButtonRelease-1> {
 		TreeCtrl::RandomRelease1 %W %x %y
 		break
 	}
 
-	bindtags $T [list $T TreeCtrlRandom TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoRandom TreeCtrl [winfo toplevel $T] all]
 
 	return
 }

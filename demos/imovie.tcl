@@ -91,11 +91,11 @@ proc DemoIMovie {} {
 		%T item element configure %I %C %E -text %t
 	}
 
-	bind iMovie <ButtonPress-1> {
+	bind DemoIMovie <ButtonPress-1> {
 		iMovieButton1 %W %x %y
 	}
 
-	bindtags $T [list $T iMovie TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoIMovie TreeCtrl [winfo toplevel $T] all]
 
 	return
 }

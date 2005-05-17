@@ -91,7 +91,7 @@ proc DemoHelpContents {} {
 		set parentList [lreplace $parentList $depth $depth $item]
 	}
 
-	bind TreeCtrlHelp <Double-ButtonPress-1> {
+	bind DemoHelpContents <Double-ButtonPress-1> {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
 			TreeCtrl::DoubleButton1 %W %x %y
 		} else {
@@ -99,23 +99,23 @@ proc DemoHelpContents {} {
 		}
 		break
 	}
-	bind TreeCtrlHelp <ButtonPress-1> {
+	bind DemoHelpContents <ButtonPress-1> {
 		TreeCtrl::HelpButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlHelp <Button1-Motion> {
+	bind DemoHelpContents <Button1-Motion> {
 		# noop
 	}
-	bind TreeCtrlHelp <Button1-Leave> {
+	bind DemoHelpContents <Button1-Leave> {
 		# noop
 	}
-	bind TreeCtrlHelp <Motion> {
+	bind DemoHelpContents <Motion> {
 		TreeCtrl::HelpMotion %W %x %y
 	}
-	bind TreeCtrlHelp <Leave> {
+	bind DemoHelpContents <Leave> {
 		TreeCtrl::HelpMotion %W %x %y
 	}
-	bind TreeCtrlHelp <KeyPress-Return> {
+	bind DemoHelpContents <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
 			%W item toggle [lindex [%W selection get] 0]
 		}
@@ -123,7 +123,7 @@ proc DemoHelpContents {} {
 	}
 
 	set ::TreeCtrl::Priv(help,prev) ""
-	bindtags $T [list $T TreeCtrlHelp TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoHelpContents TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
@@ -230,7 +230,7 @@ proc DemoHelpContents_2 {} {
 		set parentList [lreplace $parentList $depth $depth $item]
 	}
 
-	bind TreeCtrlHelp <Double-ButtonPress-1> {
+	bind DemoHelpContents <Double-ButtonPress-1> {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
 			TreeCtrl::DoubleButton1 %W %x %y
 		} else {
@@ -238,23 +238,23 @@ proc DemoHelpContents_2 {} {
 		}
 		break
 	}
-	bind TreeCtrlHelp <ButtonPress-1> {
+	bind DemoHelpContents <ButtonPress-1> {
 		TreeCtrl::HelpButton1 %W %x %y
 		break
 	}
-	bind TreeCtrlHelp <Button1-Motion> {
+	bind DemoHelpContents <Button1-Motion> {
 		# noop
 	}
-	bind TreeCtrlHelp <Button1-Leave> {
+	bind DemoHelpContents <Button1-Leave> {
 		# noop
 	}
-	bind TreeCtrlHelp <Motion> {
+	bind DemoHelpContents <Motion> {
 		TreeCtrl::HelpMotion_2 %W %x %y
 	}
-	bind TreeCtrlHelp <Leave> {
+	bind DemoHelpContents <Leave> {
 		TreeCtrl::HelpMotion_2 %W %x %y
 	}
-	bind TreeCtrlHelp <KeyPress-Return> {
+	bind DemoHelpContents <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
 			%W item toggle [lindex [%W selection get] 0]
 		}
@@ -262,7 +262,7 @@ proc DemoHelpContents_2 {} {
 	}
 
 	set ::TreeCtrl::Priv(help,prev) ""
-	bindtags $T [list $T TreeCtrlHelp TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoHelpContents TreeCtrl [winfo toplevel $T] all]
 
 	return
 }

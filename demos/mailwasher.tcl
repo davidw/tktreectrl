@@ -174,7 +174,7 @@ proc DemoMailWasher {} {
 		}
 	}
 
-	bind MailWasher <ButtonPress-1> {
+	bind DemoMailWasher <ButtonPress-1> {
 		set id [%W identify %x %y]
 		if {$id eq ""} {
 		} elseif {[lindex $id 0] eq "header"} {
@@ -190,7 +190,7 @@ proc DemoMailWasher {} {
 		}
 	}
 
-	bindtags $T [list $T MailWasher TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoMailWasher TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
