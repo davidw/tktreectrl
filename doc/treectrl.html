@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.14 2005/05/14 22:18:58 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.15 2005/05/17 01:31:16 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.14 2005/05/14 22:18:58 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.15 2005/05/17 01:31:16 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -2559,6 +2559,10 @@ Indicates the <i class='arg'>n</i>th column in the list of columns as returned b
 <br><br>
 <dt><strong>tail</strong><dd>
 Indicates the ever-present tail column of the treectrl.
+
+<br><br>
+<dt><strong>tree</strong><dd>
+Indicates the column specified by the -treecolumn option of the treectrl.
 </dl>
 
 <p>
@@ -2887,11 +2891,17 @@ an ellipsis.
 
 <br><br>
 <dt><strong><strong>-text</strong></strong> <i class='arg'>string</i><dd>
-<i class='arg'>String</i> specifies the characters to be displayed in the text.
+<i class='arg'>String</i> specifies the characters to be displayed by the element.
 Non printable characters are displayed in their escaped form
 (e.g. a new line character is displayed as the two characters <strong>\n</strong>).
 If this option is specified, any values of <strong>-data</strong>, <strong>-datatype</strong>,
 and <strong>-format</strong> are ignored.
+
+<br><br>
+<dt><strong><strong>-textvariable</strong></strong> <i class='arg'>varName</i><dd>
+Specifies the name of a variable.  The value of the variable is a text string
+to be displayed by the element;  if the variable value changes then the element
+will automatically update itself to reflect the new value.
 
 <br><br>
 <dt><strong><strong>-width</strong></strong> <i class='arg'>size</i><dd>

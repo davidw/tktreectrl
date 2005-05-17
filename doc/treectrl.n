@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.31 2005/05/14 22:18:58 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.32 2005/05/17 01:31:17 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2397,6 +2397,9 @@ Indicates the \fIn\fRth column in the list of columns as returned by the
 .TP
 \fBtail\fR
 Indicates the ever-present tail column of the treectrl.
+.TP
+\fBtree\fR
+Indicates the column specified by the -treecolumn option of the treectrl.
 .PP
 The initial part of the column description (matching any of the values above)
 may be followed by one or more \fImodifier\fRs.
@@ -2660,11 +2663,16 @@ configured width, it will be truncated at the right end and filled up with
 an ellipsis.
 .TP
 \fB\fB-text\fR\fR \fIstring\fR
-\fIString\fR specifies the characters to be displayed in the text.
+\fIString\fR specifies the characters to be displayed by the element.
 Non printable characters are displayed in their escaped form
 (e.g. a new line character is displayed as the two characters \fB\\n\fR).
 If this option is specified, any values of \fB-data\fR, \fB-datatype\fR,
 and \fB-format\fR are ignored.
+.TP
+\fB\fB-textvariable\fR\fR \fIvarName\fR
+Specifies the name of a variable.  The value of the variable is a text string
+to be displayed by the element;  if the variable value changes then the element
+will automatically update itself to reflect the new value.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
 Specifies the width of the area of the text.
