@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.32 2005/05/14 22:16:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.33 2005/05/17 01:24:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -60,9 +60,13 @@ static Tk_OptionSpec itemOptionSpecs[] = {
 
 /*****/
 
-static Column *Column_Alloc(void)
+static Column *Column_Alloc(TreeCtrl *tree)
 {
+#ifdef ALLOC_HAX
+    Column *column = (Column *) AllocHax_Alloc(tree->allocData, sizeof(Column));
+#else
     Column *column = (Column *) ckalloc(sizeof(Column));
+#endif
     memset(column, '\0', sizeof(Column));
     return column;
 }
@@ -129,7 +133,11 @@ Column *Column_FreeResources(TreeCtrl *tree, Column *self)
 
     if (self->style != NULL)
 	TreeStyle_FreeResources(tree, self->style);
+#ifdef ALLOC_HAX
+    AllocHax_Free(tree->allocData, self, sizeof(Column));
+#else
     WFREE(self, Column);
+#endif
     return next;
 }
 
@@ -194,7 +202,11 @@ void Tree_UpdateItemIndex(TreeCtrl *tree)
 
 static Item *Item_Alloc(TreeCtrl *tree)
 {
+#ifdef ALLOC_HAX
+    Item *item = (Item *) AllocHax_Alloc(tree->allocData, sizeof(Item));
+#else
     Item *item = (Item *) ckalloc(sizeof(Item));
+#endif
     memset(item, '\0', sizeof(Item));
     if (Tk_InitOptions(tree->interp, (char *) item,
 		tree->itemOptionTable, tree->tkwin) != TCL_OK)
@@ -1301,14 +1313,14 @@ static Column *Item_CreateColumn(TreeCtrl *tree, Item *self, int columnIndex, in
     if (isNew != NULL) (*isNew) = FALSE;
     column = self->columns;
     if (column == NULL) {
-	column = Column_Alloc();
+	column = Column_Alloc(tree);
 	column->neededWidth = column->neededHeight = -1;
 	self->columns = column;
 	if (isNew != NULL) (*isNew) = TRUE;
     }
     for (i = 0; i < columnIndex; i++) {
 	if (column->next == NULL) {
-	    column->next = Column_Alloc();
+	    column->next = Column_Alloc(tree);
 	    column->next->neededWidth = column->next->neededHeight = -1;
 	    if (isNew != NULL) (*isNew) = TRUE;
 	}
@@ -1347,7 +1359,7 @@ void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int bef
     if (move == NULL && before == NULL)
 	return;
     if (move == NULL)
-	move = Column_Alloc();
+	move = Column_Alloc(tree);
     else {
 	if (before == NULL) {
 	    prevB = Item_CreateColumn(tree, self, beforeIndex - 1, NULL);
@@ -1382,7 +1394,11 @@ void TreeItem_FreeResources(TreeCtrl *tree, TreeItem item_)
 	Tree_FreeItemDInfo(tree, item_, NULL);
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
+#ifdef ALLOC_HAX
+    AllocHax_Free(tree->allocData, self, sizeof(Item));
+#else
     WFREE(self, Item);
+#endif
 }
 
 int TreeItem_NeededHeight(TreeCtrl *tree, TreeItem item_)
