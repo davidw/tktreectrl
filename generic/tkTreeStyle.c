@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.23 2005/05/14 22:14:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.24 2005/05/17 01:22:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -640,7 +640,11 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	/* Now handle column justification */
 	/* If any elements expand horizontally, then all the extra space
 	 * has already been consumed. */
+#ifdef LAYOUTHAX
+	if ((drawArgs->width > style->neededWidth + drawArgs->indent) && !numExpandWE)
+#else
 	if ((drawArgs->width > style->neededWidth) && !numExpandWE)
+#endif
 	{
 		for (i = 0; i < eLinkCount; i++)
 		{
@@ -655,12 +659,21 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 			{
 				case TK_JUSTIFY_LEFT:
 					break;
+#ifdef LAYOUTHAX
+				case TK_JUSTIFY_RIGHT:
+					layout->x += drawArgs->width - (style->neededWidth + drawArgs->indent);
+					break;
+				case TK_JUSTIFY_CENTER:
+					layout->x += (drawArgs->width - (style->neededWidth + drawArgs->indent)) / 2;
+					break;
+#else
 				case TK_JUSTIFY_RIGHT:
 					layout->x += drawArgs->width - style->neededWidth;
 					break;
 				case TK_JUSTIFY_CENTER:
 					layout->x += (drawArgs->width - style->neededWidth) / 2;
 					break;
+#endif
 			}
 		}
 	}
@@ -1927,7 +1940,11 @@ static void Element_FreeResources(TreeCtrl *tree, Element *elem)
 	Tk_FreeConfigOptions((char *) elem,
 		elem->typePtr->optionTable,
 		tree->tkwin);
+#ifdef ALLOC_HAX
+	AllocHax_Free(tree->allocData, elem, elem->typePtr->size);
+#else
 	WFREE(elem, Element);
+#endif
 }
 
 static ElementLink *ElementLink_Init(ElementLink *eLink, Element *elem)
@@ -1963,10 +1980,18 @@ void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
 	{
 		for (i = 0; i < style->numElements; i++)
 			ElementLink_FreeResources(tree, &style->elements[i]);
+#ifdef ALLOC_HAX
+		AllocHax_CFree(tree->allocData, style->elements, sizeof(ElementLink), style->numElements, 5);
+#else
 		wipefree((char *) style->elements, sizeof(ElementLink) *
 			style->numElements);
+#endif
 	}
+#ifdef ALLOC_HAX
+	AllocHax_Free(tree->allocData, style, sizeof(Style));
+#else
 	WFREE(style, Style);
+#endif
 }
 
 static ElementLink *Style_FindElem(TreeCtrl *tree, Style *style, Element *master, int *index)
@@ -2009,7 +2034,11 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 		name = masterElem->name;
 	}
 
+#ifdef ALLOC_HAX
+	elem = (Element *) AllocHax_Alloc(tree->allocData, type->size);
+#else
 	elem = (Element *) ckalloc(type->size);
+#endif
 	memset(elem, '\0', type->size);
 	elem->name = Tk_GetUid(name);
 	elem->typePtr = type;
@@ -2020,12 +2049,23 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 	args.create.item = item;
 	args.create.column = column;
 	if ((*type->createProc)(&args) != TCL_OK)
+	{
+#ifdef ALLOC_HAX
+		AllocHax_Free(tree->allocData, elem, type->size);
+#else
+		WFREE(elem, Element);
+#endif
 		return NULL;
+	}
 
 	if (Tk_InitOptions(tree->interp, (char *) elem,
 		type->optionTable, tree->tkwin) != TCL_OK)
 	{
+#ifdef ALLOC_HAX
+		AllocHax_Free(tree->allocData, elem, type->size);
+#else
 		WFREE(elem, Element);
+#endif
 		return NULL;
 	}
 	args.config.objc = objc;
@@ -2037,7 +2077,11 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 		Tk_FreeConfigOptions((char *) elem,
 			elem->typePtr->optionTable,
 			tree->tkwin);
+#ifdef ALLOC_HAX
+		AllocHax_Free(tree->allocData, elem, type->size);
+#else
 		WFREE(elem, Element);
+#endif
 		return NULL;
 	}
 
@@ -2101,7 +2145,11 @@ TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle style_)
 	ElementLink *eLink;
 	int i;
 
+#ifdef ALLOC_HAX
+	copy = (Style *) AllocHax_Alloc(tree->allocData, sizeof(Style));
+#else
 	copy = (Style *) ckalloc(sizeof(Style));
+#endif
 	memset(copy, '\0', sizeof(Style));
 	copy->name = style->name;
 	copy->neededWidth = -1;
@@ -2110,7 +2158,11 @@ TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle style_)
 	copy->numElements = style->numElements;
 	if (style->numElements > 0)
 	{
+#ifdef ALLOC_HAX
+		copy->elements = (ElementLink *) AllocHax_CAlloc(tree->allocData, sizeof(ElementLink), style->numElements, 5);
+#else
 		copy->elements = (ElementLink *) ckalloc(sizeof(ElementLink) * style->numElements);
+#endif
 		memset(copy->elements, '\0', sizeof(ElementLink) * style->numElements);
 		for (i = 0; i < style->numElements; i++)
 		{
@@ -2231,7 +2283,11 @@ static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Ele
 	STATIC_ALLOC(keep, int, style->numElements);
 
 	if (count > 0)
+#ifdef ALLOC_HAX
+		eLinks = (ElementLink *) AllocHax_CAlloc(tree->allocData, sizeof(ElementLink), count, 5);
+#else
 		eLinks = (ElementLink *) ckalloc(sizeof(ElementLink) * count);
+#endif
 
 	/* Assume we are discarding all the old ElementLinks */
 	for (i = 0; i < style->numElements; i++)
@@ -2259,8 +2315,12 @@ static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Ele
 			if (!keep[i])
 				ElementLink_FreeResources(tree, &style->elements[i]);
 		}
+#ifdef ALLOC_HAX
+		AllocHax_CFree(tree->allocData, style->elements, sizeof(ElementLink), style->numElements, 5);
+#else
 		wipefree((char *) style->elements, sizeof(ElementLink) *
 			style->numElements);
+#endif
 	}
 
 	STATIC_FREE(keep, int, style->numElements);
@@ -3178,7 +3238,11 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 {
 	Style *style;
 
+#ifdef ALLOC_HAX
+	style = (Style *) AllocHax_Alloc(tree->allocData, sizeof(Style));
+#else
 	style = (Style *) ckalloc(sizeof(Style));
+#endif
 	memset(style, '\0', sizeof(Style));
 	style->optionTable = Tk_CreateOptionTable(tree->interp, styleOptionSpecs); 
 	style->name = Tk_GetUid(name);
@@ -3186,7 +3250,11 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 	if (Tk_InitOptions(tree->interp, (char *) style,
 		style->optionTable, tree->tkwin) != TCL_OK)
 	{
+#ifdef ALLOC_HAX
+		AllocHax_Free(tree->allocData, style, sizeof(Style));
+#else
 		WFREE(style, Style);
+#endif
 		return NULL;
 	}
 
@@ -3195,7 +3263,11 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 		NULL, NULL) != TCL_OK)
 	{
 		Tk_FreeConfigOptions((char *) style, style->optionTable, tree->tkwin);
+#ifdef ALLOC_HAX
+		AllocHax_Free(tree->allocData, style, sizeof(Style));
+#else
 		WFREE(style, Style);
+#endif
 		return NULL;
 	}
 
@@ -4141,11 +4213,17 @@ int TreeStyle_Remap(TreeCtrl *tree, TreeStyle styleFrom_, TreeStyle styleTo_, in
 
 	if (styleFrom->numElements != styleTo->numElements)
 	{
+#ifdef ALLOC_HAX
+		if (styleFrom->numElements > 0)
+			AllocHax_CFree(tree->allocData, styleFrom->elements, sizeof(ElementLink), styleFrom->numElements, 5);
+		styleFrom->elements = (ElementLink *) AllocHax_CAlloc(tree->allocData, sizeof(ElementLink), styleTo->numElements, 5);
+#else
 		if (styleFrom->numElements > 0)
 			wipefree((char *) styleFrom->elements, sizeof(ElementLink) *
 			styleFrom->numElements);
 		styleFrom->elements = (ElementLink *) ckalloc(sizeof(ElementLink) *
 			styleTo->numElements);
+#endif
 		memset(styleFrom->elements, '\0', sizeof(ElementLink) * styleTo->numElements);
 	}
 	for (i = 0; i < styleTo->numElements; i++)
