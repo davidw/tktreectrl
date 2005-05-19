@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.24 2005/05/17 01:22:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.25 2005/05/19 00:40:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1941,7 +1941,7 @@ static void Element_FreeResources(TreeCtrl *tree, Element *elem)
 		elem->typePtr->optionTable,
 		tree->tkwin);
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, elem, elem->typePtr->size);
+	AllocHax_Free(tree->allocData, (char *) elem, elem->typePtr->size);
 #else
 	WFREE(elem, Element);
 #endif
@@ -1981,14 +1981,14 @@ void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
 		for (i = 0; i < style->numElements; i++)
 			ElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
-		AllocHax_CFree(tree->allocData, style->elements, sizeof(ElementLink), style->numElements, 5);
+		AllocHax_CFree(tree->allocData, (char *) style->elements, sizeof(ElementLink), style->numElements, 5);
 #else
 		wipefree((char *) style->elements, sizeof(ElementLink) *
 			style->numElements);
 #endif
 	}
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, style, sizeof(Style));
+	AllocHax_Free(tree->allocData, (char *) style, sizeof(Style));
 #else
 	WFREE(style, Style);
 #endif
@@ -2051,7 +2051,7 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 	if ((*type->createProc)(&args) != TCL_OK)
 	{
 #ifdef ALLOC_HAX
-		AllocHax_Free(tree->allocData, elem, type->size);
+		AllocHax_Free(tree->allocData, (char *) elem, type->size);
 #else
 		WFREE(elem, Element);
 #endif
@@ -2062,7 +2062,7 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 		type->optionTable, tree->tkwin) != TCL_OK)
 	{
 #ifdef ALLOC_HAX
-		AllocHax_Free(tree->allocData, elem, type->size);
+		AllocHax_Free(tree->allocData, (char *) elem, type->size);
 #else
 		WFREE(elem, Element);
 #endif
@@ -2078,7 +2078,7 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 			elem->typePtr->optionTable,
 			tree->tkwin);
 #ifdef ALLOC_HAX
-		AllocHax_Free(tree->allocData, elem, type->size);
+		AllocHax_Free(tree->allocData, (char *) elem, type->size);
 #else
 		WFREE(elem, Element);
 #endif
@@ -2316,7 +2316,7 @@ static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Ele
 				ElementLink_FreeResources(tree, &style->elements[i]);
 		}
 #ifdef ALLOC_HAX
-		AllocHax_CFree(tree->allocData, style->elements, sizeof(ElementLink), style->numElements, 5);
+		AllocHax_CFree(tree->allocData, (char *) style->elements, sizeof(ElementLink), style->numElements, 5);
 #else
 		wipefree((char *) style->elements, sizeof(ElementLink) *
 			style->numElements);
@@ -3251,7 +3251,7 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 		style->optionTable, tree->tkwin) != TCL_OK)
 	{
 #ifdef ALLOC_HAX
-		AllocHax_Free(tree->allocData, style, sizeof(Style));
+		AllocHax_Free(tree->allocData, (char *) style, sizeof(Style));
 #else
 		WFREE(style, Style);
 #endif
@@ -3264,7 +3264,7 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 	{
 		Tk_FreeConfigOptions((char *) style, style->optionTable, tree->tkwin);
 #ifdef ALLOC_HAX
-		AllocHax_Free(tree->allocData, style, sizeof(Style));
+		AllocHax_Free(tree->allocData, (char *) style, sizeof(Style));
 #else
 		WFREE(style, Style);
 #endif
@@ -4215,7 +4215,7 @@ int TreeStyle_Remap(TreeCtrl *tree, TreeStyle styleFrom_, TreeStyle styleTo_, in
 	{
 #ifdef ALLOC_HAX
 		if (styleFrom->numElements > 0)
-			AllocHax_CFree(tree->allocData, styleFrom->elements, sizeof(ElementLink), styleFrom->numElements, 5);
+			AllocHax_CFree(tree->allocData, (char *) styleFrom->elements, sizeof(ElementLink), styleFrom->numElements, 5);
 		styleFrom->elements = (ElementLink *) AllocHax_CAlloc(tree->allocData, sizeof(ElementLink), styleTo->numElements, 5);
 #else
 		if (styleFrom->numElements > 0)

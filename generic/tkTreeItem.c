@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.33 2005/05/17 01:24:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.34 2005/05/19 00:40:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -134,7 +134,7 @@ Column *Column_FreeResources(TreeCtrl *tree, Column *self)
     if (self->style != NULL)
 	TreeStyle_FreeResources(tree, self->style);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, self, sizeof(Column));
+    AllocHax_Free(tree->allocData, (char *) self, sizeof(Column));
 #else
     WFREE(self, Column);
 #endif
@@ -1395,7 +1395,7 @@ void TreeItem_FreeResources(TreeCtrl *tree, TreeItem item_)
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, self, sizeof(Item));
+    AllocHax_Free(tree->allocData, (char *) self, sizeof(Item));
 #else
     WFREE(self, Item);
 #endif
@@ -1585,9 +1585,10 @@ static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
     if (gc == None)
 	gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
     XFillRectangle(tree->display, drawable, gc, x, y, width, height);
-    if (tree->backgroundImage != NULL) 
-		Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
-			x + width, y + height);
+    if (tree->backgroundImage != NULL) {
+	Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
+		x + width, y + height);
+    }
 }
 
 void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
@@ -1833,6 +1834,7 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
 	XCopyPlane(tree->display, bitmap, drawable, gc,
 		0, 0, (unsigned int) bmpW, (unsigned int) bmpH,
 		bx, by, 1);
+	XSetClipOrigin(tree->display, gc, 0, 0);
 	Tk_FreeGC(tree->display, gc);
 	return;
     }
