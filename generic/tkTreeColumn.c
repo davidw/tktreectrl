@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.23 2005/05/17 01:19:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.24 2005/05/19 20:32:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2317,6 +2317,7 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
 		0, 0,
 		(unsigned int) layout.arrowWidth, (unsigned int) layout.arrowHeight,
 		bx, by, 1);
+	XSetClipOrigin(tree->display, gc, 0, 0);
 	Tk_FreeGC(tree->display, gc);
 	return;
     }

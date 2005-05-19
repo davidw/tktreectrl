@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.19 2005/05/17 01:23:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.20 2005/05/19 20:30:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -476,6 +476,7 @@ static void DisplayProcBitmap(ElementArgs *args)
 	XCopyPlane(tree->display, bitmap, args->display.drawable, gc,
 		0, 0, (unsigned int) imgW, (unsigned int) imgH,
 		bx, by, 1);
+	XSetClipOrigin(tree->display, gc, 0, 0);
 	Tk_FreeGC(tree->display, gc);
     }
 }
@@ -1861,8 +1862,8 @@ static void DisplayProcRect(ElementArgs *args)
 	    color = color2;
     }
     if (color != NULL) {
-	XFillRectangle(tree->display, args->display.drawable,
-		Tk_GCForColor(color, Tk_WindowId(tree->tkwin)),
+	GC gc = Tk_GCForColor(color, Tk_WindowId(tree->tkwin));
+	XFillRectangle(tree->display, args->display.drawable, gc,
 		args->display.x, args->display.y,
 		args->display.width, args->display.height);
     }
@@ -1875,11 +1876,11 @@ static void DisplayProcRect(ElementArgs *args)
     }
     if ((color != NULL) && (outlineWidth > 0)) {
 	GC gc = Tk_GCForColor(color, Tk_WindowId(tree->tkwin));
+#if 0
 	int w1, w2;
 
 	w1 = outlineWidth / 2;
 	w2 = outlineWidth - w1;
-#if 0
 	if (open == 0) {
 	    XDrawRectangle(tree->display, args->display.drawable, gc,
 		    args->display.x + w1, args->display.y + w1,
