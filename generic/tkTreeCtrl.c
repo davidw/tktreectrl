@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.35 2005/05/17 01:19:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.36 2005/05/19 20:32:05 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -324,7 +324,7 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     Tcl_InitHashTable(&tree->imageHash, TCL_STRING_KEYS);
 
 #ifdef ALLOC_HAX
-	tree->allocData = AllocHax_Init();
+    tree->allocData = AllocHax_Init();
 #endif
 
     Tree_InitColumns(tree);
@@ -2820,8 +2820,7 @@ int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
     return TCL_OK;
 }
 
-#ifndef WIN32
-#ifndef TARGET_OS_MAC
+#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
 
 int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
 {
@@ -2966,8 +2965,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
     return TCL_OK;
 }
 
-#endif /* not TARGET_OS_MAC */
-#endif /* not WIN32 */
+#endif /* not WIN32 && not MAC_TCL && not MAC_OSX_TK */
 
 /* Taken from tkFont.c */
 static void RecomputeWidgets(TkWindow *winPtr)
@@ -3032,11 +3030,9 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
 
     /* Hack for colorizing a image (like Win98 explorer) */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
-#ifndef WIN32
-#ifndef TARGET_OS_MAC
+#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
     /* Screen magnifier to check those dotted lines */
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
-#endif
 #endif
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK) {

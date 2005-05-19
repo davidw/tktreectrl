@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.23 2005/05/17 01:18:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.24 2005/05/19 20:31:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2429,7 +2429,7 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
     unsigned long gcMask;
     GC gc;
 
-#if defined(TARGET_OS_MAC)
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
     gcValues.function = GXxor;
 #else
     gcValues.function = GXinvert;
@@ -2439,7 +2439,7 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
     gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
 
     /* GXinvert doesn't work with XFillRectangle() on Win32 */
-#if defined(WIN32) || defined(TARGET_OS_MAC)
+#if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
     XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc,
 	    tree->columnProxy.sx,
 	    tree->inset,
