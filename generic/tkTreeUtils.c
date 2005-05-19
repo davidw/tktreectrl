@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.15 2005/05/19 00:42:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.16 2005/05/19 20:28:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -14,10 +14,8 @@
 #endif
 
 /* OffsetRgn() on Mac */
-#ifdef TARGET_OS_MAC
+#ifdef MAC_OSX_TK
 #include <Carbon/Carbon.h>
-#include "tkMacOSXInt.h"
-static PixPathHandle gPenPat = NULL;
 #endif
 
 /*
@@ -281,7 +279,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	sw = !(wx & 1) == !((wy + height - 1) & 1);
 	se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
 
-#if defined(TARGET_OS_MAC)
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
 	gcValues.function = GXxor;
 #else
 	gcValues.function = GXinvert;
@@ -374,7 +372,7 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 	gcValues.line_width = 1;
 	gcValues.dash_offset = 0;
 	gcValues.dashes = 1;
-#if defined(TARGET_OS_MAC)
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
 	gcValues.function = GXxor;
 #else
 	gcValues.function = GXinvert;
@@ -471,25 +469,6 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 	FillRgn(dc, (HRGN) rgn, brush);
 	DeleteObject(brush);
 	TkWinReleaseDrawableDC(drawable, dc, &dcState);
-#elif defined(TARGET_OS_MAC)
-	MacDrawable *macWin = (MacDrawable *) d;
-	CGrafPtr saveWorld;
-	GDHandle saveDevice;
-	GWorldPtr destPort;
-	RGBColor macColor;
-
-	destPort = TkMacOSXGetDrawablePort(drawable);
-	if (gPenPat == NULL)
-		gPenPat = NewPixPat();
-	if (TkSetMacColor(gc->foreground, &macColor) == true)
-		MakeRGBPat(gPenPath, &macColor);
-	display->request++;
-	GetGWorld(&saveWorld, &saveDevice);
-	SetGWorld(destPort, NULL);
-	TkMacOSXSetUpClippingRgn(drawable);
-	TkMacOSXSetUpGraphicsPort(gc, destPort);
-	FillCRgn((RgnHandle) rgn, gPenPat);
-	SetGWorld(saveWorld, saveDevice);
 #else
 	XRectangle box;
 
@@ -504,7 +483,7 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 {
 #ifdef WIN32
 	OffsetRgn((HRGN) region, xOffset, yOffset);
-#elif defined(TARGET_OS_MAC)
+#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
 	OffsetRgn((RgnHandle) region, (short) xOffset, (short) yOffset);
 #else
 	XOffsetRegion((Region) region, xOffset, yOffset);
@@ -527,13 +506,13 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 #define TK_PHOTOPUTZOOMEDBLOCK	Tk_PhotoPutZoomedBlock
 #endif
 
-#if defined(WIN32) || defined(TARGET_OS_MAC)
+#if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
 void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha)
 {
     Tk_PhotoImageBlock photoBlock;
     unsigned char *pixelPtr;
     int x, y, w = ximage->width, h = ximage->height;
-#ifdef TARGET_OS_MAC
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
     unsigned long red_shift, green_shift, blue_shift;
 #endif
 
@@ -541,7 +520,7 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 
     /* See TkPoscriptImage */
 
-#ifdef TARGET_OS_MAC
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
     red_shift = green_shift = blue_shift = 0;
     while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
 	red_shift++;
@@ -574,7 +553,7 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 	    g = GetGValue(pixel);
 	    b = GetBValue(pixel);
 #endif
-#ifdef TARGET_OS_MAC
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
 	    r = (pixel & ximage->red_mask) >> red_shift;
 	    g = (pixel & ximage->green_mask) >> green_shift;
 	    b = (pixel & ximage->blue_mask) >> blue_shift;
