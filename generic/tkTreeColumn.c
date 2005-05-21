@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.24 2005/05/19 20:32:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.25 2005/05/21 19:36:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -22,6 +22,8 @@ struct Column
     Tcl_Obj *widthObj;		/* -width */
     int minWidth;		/* -minwidth */
     Tcl_Obj *minWidthObj;	/* -minwidth */
+    int maxWidth;		/* -maxwidth */
+    Tcl_Obj *maxWidthObj;	/* -maxwidth */
     int stepWidth;		/* -stepwidth */
     Tcl_Obj *stepWidthObj;	/* -stepwidth */
     int widthHack;		/* -widthhack */
@@ -179,6 +181,10 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_JUSTIFY, "-justify", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, justify),
      0, (ClientData) NULL, COLU_CONF_DISPLAY | COLU_CONF_JUSTIFY},
+    {TK_OPTION_PIXELS, "-maxwidth", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(Column, maxWidthObj),
+     Tk_Offset(Column, maxWidth),
+     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TWIDTH},
     {TK_OPTION_PIXELS, "-minwidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, minWidthObj),
      Tk_Offset(Column, minWidth),
@@ -1118,6 +1124,11 @@ int TreeColumn_MinWidth(TreeColumn column_)
     return ((Column *) column_)->minWidthObj ? ((Column *) column_)->minWidth : -1;
 }
 
+int TreeColumn_MaxWidth(TreeColumn column_)
+{
+    return ((Column *) column_)->maxWidthObj ? ((Column *) column_)->maxWidth : -1;
+}
+
 int TreeColumn_StepWidth(TreeColumn column_)
 {
     return ((Column *) column_)->stepWidthObj ? ((Column *) column_)->stepWidth : -1;
@@ -1557,6 +1568,14 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 
     if (column->neededHeight >= 0)
 	return column->neededHeight;
+
+#ifdef MAC_OSX_TK
+    /* List headers are a fixed height on Aqua */
+    if (tree->useTheme) {
+	(void) TreeTheme_GetHeaderFixedHeight(tree, &column->neededHeight);
+	return column->neededHeight;
+    }
+#endif
 
     column->neededHeight = 0;
     if (column->arrow != ARROW_NONE) {
@@ -2689,6 +2708,8 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 		width = TreeColumn_WidthOfItems((TreeColumn) column);
 		width = MAX(width, TreeColumn_NeededWidth((TreeColumn) column));
 		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
+		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
+		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
 		if (column->expand)
 		    numExpand++;
 		if (column->squeeze) {
@@ -2737,20 +2758,29 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 
     /* Expand columns */
     if ((visWidth > totalWidth) && (numExpand > 0)) {
-	int extraWidth = (visWidth - totalWidth) / numExpand;
-	int fudge = (visWidth - totalWidth) - extraWidth * numExpand;
-	int seen = 0;
-
-	column = (Column *) tree->columns;
-	while (column != NULL) {
-	    if (column->visible && column->expand && (column->widthObj == NULL)) {
-		column->useWidth += extraWidth;
-		if (++seen == numExpand) {
-		    column->useWidth += fudge;
-		    break;
+	int allow, each;
+	allow = visWidth - totalWidth;
+	while ((allow > 0) && (numExpand > 0)) {
+	    if (allow >= numExpand)
+		each = allow / numExpand;
+	    else
+		each = 1;
+	    numExpand = 0;
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+		if (column->visible && column->expand && (column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
+			column->useWidth += add;
+			allow -= add;
+			if (!allow) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand++;
+		    }
 		}
+		column = column->next;
 	    }
-	    column = column->next;
 	}
     }
 }
