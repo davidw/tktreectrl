@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.20 2005/05/22 18:49:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.21 2005/05/22 22:16:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -262,7 +262,7 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 	}
 
 	TkWinReleaseDrawableDC(drawable, dc, &state);
-#else
+#else /* WIN32 */
 	int wx = x + tree->drawableXOrigin;
 	int wy = y + tree->drawableYOrigin;
 	int w = !(open & 0x01);
@@ -389,7 +389,7 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 	gcValues.line_width = 1;
 	gcValues.dash_offset = 0;
 	gcValues.dashes = 1;
-#if defined(MAC_TCL) || defined(MAC_OSX_TK)
+#if defined(MAC_TCL)
 	gcValues.function = GXxor;
 #else
 	gcValues.function = GXinvert;
@@ -512,6 +512,30 @@ void DotRect_Restore(DotState *p)
 	Tk_FreeGC(dotState->tree->display, dotState->gc);
 #endif
 }
+
+#ifdef MAC_OSX_TK
+void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
+	int x2, int y2)
+{
+    MacDrawable *macWin = (MacDrawable *) drawable;
+	CGrafPtr saveWorld;
+	GDHandle saveDevice;
+	GWorldPtr destPort;
+
+	destPort = TkMacOSXGetDrawablePort(drawable);
+	display->request++;
+	GetGWorld(&saveWorld, &saveDevice);
+	SetGWorld(destPort, NULL);
+	TkMacOSXSetUpClippingRgn(drawable);
+	TkMacOSXSetUpGraphicsPort(gc, destPort);
+	PenMode(patXor);
+	ShowPen();
+	MoveTo(macWin->xOff + x1, macWin->yOff + y1);
+	LineTo(macWin->xOff + x2, macWin->yOff + y2);
+	HidePen();
+	SetGWorld(saveWorld, saveDevice);
+}
+#endif
 
 void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 {
