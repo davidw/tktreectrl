@@ -20,7 +20,7 @@ proc DemoRandom {} {
 	#
 
 	$T configure -itemheight $height -selectmode extended \
-		-showroot yes -showrootbutton yes -showbuttons yes -showlines yes \
+		-showroot yes -showrootbutton yes -showbuttons yes -showlines $::ShowLines \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
 	#

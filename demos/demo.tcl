@@ -517,9 +517,11 @@ proc MakeMainWindow {} {
 	macintosh -
 	macosx {
 	    wm geometry . +40+40
+	    set ::ShowLines 0
 	}
 	default {
 	    wm geometry . +0+0
+	    set ::ShowLines 1
 	}
     }
 
@@ -534,13 +536,13 @@ proc MakeMainWindow {} {
 
     # Tree + scrollbar: styles + elements in list
     TreePlusScrollbarsInAFrame .f4 0 1
-    .f4.t configure -showroot no -height 140
+    .f4.t configure -showlines $::ShowLines -showroot no -height 140
     .f4.t column create -text "Elements and Styles" -expand yes -button no -tag C0
     .f4.t configure -treecolumn C0
 
     # Tree + scrollbar: styles + elements in selected item
     TreePlusScrollbarsInAFrame .f3 0 1
-    .f3.t configure -showroot no
+    .f3.t configure -showlines $::ShowLines -showroot no
     .f3.t column create -text "Styles in Item" -expand yes -button no -tag C0
     .f3.t configure -treecolumn C0
 

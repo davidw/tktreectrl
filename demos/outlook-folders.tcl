@@ -17,7 +17,7 @@ proc DemoOutlookFolders {} {
 	#
 
 	$T configure -itemheight $height -selectmode browse \
-		-showroot yes -showrootbutton no -showbuttons yes -showlines yes
+		-showroot yes -showrootbutton no -showbuttons yes -showlines $::ShowLines
 
 	#
 	# Create columns

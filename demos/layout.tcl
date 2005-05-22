@@ -10,7 +10,7 @@ proc DemoLayout {} {
 	#
 
 	$T configure -showroot no -showrootbutton yes -showbuttons yes \
-		-showlines yes -itemheight 0 -selectmode browse
+		-showlines $::ShowLines -itemheight 0 -selectmode browse
 
 	#
 	# Create columns
