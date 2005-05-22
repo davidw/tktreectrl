@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.6 2005/05/21 19:35:51 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.7 2005/05/22 18:53:40 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -165,7 +165,7 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 }
 
 int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
-    int x, int y, int width, int height)
+    int arrow, int x, int y, int width, int height)
 {
     Window win = Tk_WindowId(tree->tkwin);
     HWND hwnd = Tk_GetHWND(win);
@@ -276,7 +276,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     return TCL_OK;
 }
 
-int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4])
+int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4])
 {
     Window win = Tk_WindowId(tree->tkwin);
     HWND hwnd = Tk_GetHWND(win);
@@ -629,28 +629,32 @@ int TreeTheme_Init(Tcl_Interp *interp)
 #include "tkMacOSXInt.h"
 
 int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
-    int x, int y, int width, int height)
+    int arrow, int x, int y, int width, int height)
 {
+    MacDrawable *macWin = (MacDrawable *) drawable;
     Rect bounds;
     ThemeButtonDrawInfo info;
     CGrafPtr saveWorld;
     GDHandle saveDevice;
+    GWorldPtr destPort;
 
-    bounds.left = x;
-    bounds.top = y;
-    bounds.right = x + width;
-    bounds.bottom = y + height;
+    bounds.left = macWin->xOff + x;
+    bounds.top = macWin->yOff + y;
+    bounds.right = bounds.left + width;
+    bounds.bottom = bounds.top + height;
 
     switch (state) {
 	case 1: info.state = kThemeStateRollover; break;
 	case 2: info.state = kThemeStatePressed; break;
 	default: info.state = kThemeStateActive; break;
     }
-    info.value = kThemeButtonOff; /* ??? */
-    info.adornment = kThemeAdornmentNone;
+    info.value = arrow ? kThemeButtonOn : kThemeButtonOff;
+    info.adornment = (arrow == 1) ? kThemeAdornmentHeaderButtonSortUp : kThemeAdornmentNone;
 
+    destPort = TkMacOSXGetDrawablePort(drawable);
     GetGWorld(&saveWorld, &saveDevice);
-    SetGWorld(TkMacOSXGetDrawablePort(drawable), 0);
+    SetGWorld(destPort, 0);
+    TkMacOSXSetUpClippingRgn(drawable);
 
     (void) DrawThemeButton(&bounds, kThemeListHeaderButton, &info,
 	NULL,	/*prevInfo*/
@@ -673,7 +677,7 @@ int TreeTheme_GetHeaderFixedHeight(TreeCtrl *tree, int *heightPtr)
     return TCL_OK;
 }
 
-int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4])
+int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4])
 {
     Rect inBounds, outBounds;
     ThemeButtonDrawInfo info;
@@ -690,8 +694,8 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4])
 	case 2: info.state = kThemeStatePressed; break;
 	default: info.state = kThemeStateActive; break;
     }
-    info.value = kThemeButtonOff; /* ??? */
-    info.adornment = kThemeAdornmentNone;
+    info.value = arrow ? kThemeButtonOn : kThemeButtonOff;
+    info.adornment = (arrow == 1) ? kThemeAdornmentHeaderButtonSortUp : kThemeAdornmentNone;
 
     (void) GetThemeButtonContentBounds(
 	&inBounds,
@@ -714,22 +718,26 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, int x, 
 
 int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height)
 {
+    MacDrawable *macWin = (MacDrawable *) drawable;
     Rect bounds;
     ThemeButtonDrawInfo info;
     CGrafPtr saveWorld;
     GDHandle saveDevice;
+    GWorldPtr destPort;
 
-    bounds.left = x;
-    bounds.top = y;
-    bounds.right = x + width;
-    bounds.bottom = y + height;
+    bounds.left = macWin->xOff + x;
+    bounds.top = macWin->yOff + y;
+    bounds.right = bounds.left + width;
+    bounds.bottom = bounds.top + height;
 
     info.state = kThemeStateActive;
     info.value = open ? kThemeDisclosureDown : kThemeDisclosureRight;
     info.adornment = kThemeAdornmentNone;
 
+    destPort = TkMacOSXGetDrawablePort(drawable);
     GetGWorld(&saveWorld, &saveDevice);
-    SetGWorld(TkMacOSXGetDrawablePort(drawable), 0);
+    SetGWorld(destPort, 0);
+    TkMacOSXSetUpClippingRgn(drawable);
 
     (void) DrawThemeButton(&bounds, kThemeDisclosureButton, &info,
 	NULL,	/*prevInfo*/
@@ -766,12 +774,12 @@ int TreeTheme_Init(Tcl_Interp *interp)
 
 #else /* not MAC_OSX_TK */
 
-int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int x, int y, int width, int height)
+int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int arrow, int x, int y, int width, int height)
 {
     return TCL_ERROR;
 }
 
-int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4])
+int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4])
 {
     return TCL_ERROR;
 }
