@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.7 2005/05/22 18:53:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.8 2005/05/22 22:19:23 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -13,6 +13,11 @@
 #endif
 
 #include "tkTreeCtrl.h"
+
+/* These must agree with tkTreeColumn.c */
+#define COLUMN_STATE_NORMAL 0
+#define COLUMN_STATE_ACTIVE 1
+#define COLUMN_STATE_PRESSED 2
 
 #ifdef WIN32
 #include "tkWinInt.h"
@@ -180,8 +185,8 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
 
     switch (state)
     {
-	case 1 : iStateId = HIS_HOT; break;
-	case 2 : iStateId = HIS_PRESSED; break;
+	case COLUMN_STATE_ACTIVE:  iStateId = HIS_HOT; break;
+	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
 
     if (!themeData->themeEnabled || !procs)
@@ -291,8 +296,8 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
 
     switch (state)
     {
-	case 1 : iStateId = HIS_HOT; break;
-	case 2 : iStateId = HIS_PRESSED; break;
+	case COLUMN_STATE_ACTIVE:  iStateId = HIS_HOT; break;
+	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
 
     if (!themeData->themeEnabled || !procs)
@@ -644,11 +649,14 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     bounds.bottom = bounds.top + height;
 
     switch (state) {
-	case 1: info.state = kThemeStateRollover; break;
-	case 2: info.state = kThemeStatePressed; break;
-	default: info.state = kThemeStateActive; break;
+	case COLUMN_STATE_ACTIVE:  info.state = kThemeStateActive /* kThemeStateRollover */; break;
+	case COLUMN_STATE_PRESSED: info.state = kThemeStatePressed; break;
+	default:		   info.state = kThemeStateActive; break;
     }
-    info.value = arrow ? kThemeButtonOn : kThemeButtonOff;
+    /* Background window */
+    if (!tree->isActive)
+	info.state = kThemeStateInactive;
+    info.value = (arrow != 0) ? kThemeButtonOn : kThemeButtonOff;
     info.adornment = (arrow == 1) ? kThemeAdornmentHeaderButtonSortUp : kThemeAdornmentNone;
 
     destPort = TkMacOSXGetDrawablePort(drawable);
@@ -690,11 +698,14 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
     inBounds.bottom = metric;
 
     switch (state) {
-	case 1: info.state = kThemeStateRollover; break;
-	case 2: info.state = kThemeStatePressed; break;
-	default: info.state = kThemeStateActive; break;
+	case COLUMN_STATE_ACTIVE:  info.state = kThemeStateActive /* kThemeStateRollover */; break;
+	case COLUMN_STATE_PRESSED: info.state = kThemeStatePressed; break;
+	default:		   info.state = kThemeStateActive; break;
     }
-    info.value = arrow ? kThemeButtonOn : kThemeButtonOff;
+    /* Background window */
+    if (!tree->isActive)
+	info.state = kThemeStateInactive;
+    info.value = (arrow != 0) ? kThemeButtonOn : kThemeButtonOff;
     info.adornment = (arrow == 1) ? kThemeAdornmentHeaderButtonSortUp : kThemeAdornmentNone;
 
     (void) GetThemeButtonContentBounds(
@@ -772,7 +783,7 @@ int TreeTheme_Init(Tcl_Interp *interp)
     return TCL_OK;
 }
 
-#else /* not MAC_OSX_TK */
+#else /* MAC_OSX_TK */
 
 int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int arrow, int x, int y, int width, int height)
 {
