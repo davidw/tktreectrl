@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.36 2005/05/19 20:32:05 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.37 2005/05/22 22:25:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -335,7 +335,7 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
     TreeDInfo_Init(tree);
 
     Tk_CreateEventHandler(tree->tkwin,
-	    ExposureMask|StructureNotifyMask|FocusChangeMask,
+	    ExposureMask|StructureNotifyMask|FocusChangeMask|ActivateMask,
 	    TreeEventProc, (ClientData) tree);
 
     /* Must do this on Unix because Tk_GCForColor() uses
@@ -1363,32 +1363,48 @@ static void TreeEventProc(ClientData clientData, XEvent *eventPtr)
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
 
-    if (eventPtr->type == Expose) {
-	int x = eventPtr->xexpose.x;
-	int y = eventPtr->xexpose.y;
-	Tree_RedrawArea(tree, x, y,
-		x + eventPtr->xexpose.width,
-		y + eventPtr->xexpose.height);
-    } else if (eventPtr->type == ConfigureNotify) {
-	if ((tree->prevWidth != Tk_Width(tree->tkwin)) ||
-		(tree->prevHeight != Tk_Height(tree->tkwin))) {
-	    tree->widthOfColumns = -1;
-	    Tree_RelayoutWindow(tree);
-	    tree->prevWidth = Tk_Width(tree->tkwin);
-	    tree->prevHeight = Tk_Height(tree->tkwin);
+    switch (eventPtr->type) {
+	case Expose:
+	{
+	    int x = eventPtr->xexpose.x;
+	    int y = eventPtr->xexpose.y;
+	    Tree_RedrawArea(tree, x, y,
+		    x + eventPtr->xexpose.width,
+		    y + eventPtr->xexpose.height);
+	    break;
 	}
-    } else if (eventPtr->type == FocusIn) {
-	if (eventPtr->xfocus.detail != NotifyInferior)
-	    Tree_FocusChanged(tree, 1);
-    } else if (eventPtr->type == FocusOut) {
-	if (eventPtr->xfocus.detail != NotifyInferior)
-	    Tree_FocusChanged(tree, 0);
-    } else if (eventPtr->type == DestroyNotify) {
-	if (!tree->deleted) {
-	    tree->deleted = 1;
-	    Tcl_DeleteCommandFromToken(tree->interp, tree->widgetCmd);
-	    Tcl_EventuallyFree((ClientData) tree, TreeDestroy);
+	case ConfigureNotify:
+	{
+	    if ((tree->prevWidth != Tk_Width(tree->tkwin)) ||
+		    (tree->prevHeight != Tk_Height(tree->tkwin))) {
+		tree->widthOfColumns = -1;
+		Tree_RelayoutWindow(tree);
+		tree->prevWidth = Tk_Width(tree->tkwin);
+		tree->prevHeight = Tk_Height(tree->tkwin);
+	    }
+	    break;
 	}
+	case FocusIn:
+	    if (eventPtr->xfocus.detail != NotifyInferior)
+		Tree_FocusChanged(tree, 1);
+	    break;
+	case FocusOut:
+	    if (eventPtr->xfocus.detail != NotifyInferior)
+		Tree_FocusChanged(tree, 0);
+	    break;
+	case ActivateNotify:
+	    Tree_Activate(tree, 1);
+	    break;
+	case DeactivateNotify:
+	    Tree_Activate(tree, 0);
+	    break;
+	case DestroyNotify:
+	    if (!tree->deleted) {
+		tree->deleted = 1;
+		Tcl_DeleteCommandFromToken(tree->interp, tree->widgetCmd);
+		Tcl_EventuallyFree((ClientData) tree, TreeDestroy);
+	    }
+	    break;
     }
 }
 
