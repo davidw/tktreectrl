@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.32 2005/05/17 01:31:17 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.33 2005/05/22 19:00:30 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2292,9 +2292,19 @@ See also the \fB-backgroundmode\fR widget option for more on this.
 This option determines how the items (and the title) line up with each other.
 Must be one of \fBleft\fR (the default), \fBcenter\fR, or \fBright\fR.
 .TP
+\fB\fB-maxwidth\fR\fR \fIsize\fR
+Specifies the maximum size, in screen units, that will be permitted for this column.
+If \fIsize\fR is an empty string, then there is no limit on the maximum size of the column.
+This option has no effect if the \fB-width\fR option is set.
+.TP
 \fB\fB-minwidth\fR\fR \fIsize\fR
-Specifies the minimum size, in screen units,
-that will be permitted for this column.
+Specifies the minimum size, in screen units, that will be permitted for this column.
+If \fIsize\fR is an empty string, then the minimum size of the column is zero.
+This option has no effect if the \fB-width\fR option is set.
+.TP
+\fB\fB-resize\fR\fR \fIboolean\fR
+Specifies a boolean value that indicates whether the user should be allowed to
+resize the column by dragging the right edge of the column's header. Default is true.
 .TP
 \fB\fB-squeeze\fR\fR \fIboolean\fR
 Specifies a boolean value that indicates whether or not the column should

@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.15 2005/05/17 01:31:16 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.16 2005/05/22 19:00:30 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.15 2005/05/17 01:31:16 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.16 2005/05/22 19:00:30 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -2431,9 +2431,21 @@ This option determines how the items (and the title) line up with each other.
 Must be one of <strong>left</strong> (the default), <strong>center</strong>, or <strong>right</strong>.
 
 <br><br>
+<dt><strong><strong>-maxwidth</strong></strong> <i class='arg'>size</i><dd>
+Specifies the maximum size, in screen units, that will be permitted for this column.
+If <i class='arg'>size</i> is an empty string, then there is no limit on the maximum size of the column.
+This option has no effect if the <strong>-width</strong> option is set.
+
+<br><br>
 <dt><strong><strong>-minwidth</strong></strong> <i class='arg'>size</i><dd>
-Specifies the minimum size, in screen units,
-that will be permitted for this column.
+Specifies the minimum size, in screen units, that will be permitted for this column.
+If <i class='arg'>size</i> is an empty string, then the minimum size of the column is zero.
+This option has no effect if the <strong>-width</strong> option is set.
+
+<br><br>
+<dt><strong><strong>-resize</strong></strong> <i class='arg'>boolean</i><dd>
+Specifies a boolean value that indicates whether the user should be allowed to
+resize the column by dragging the right edge of the column's header. Default is true.
 
 <br><br>
 <dt><strong><strong>-squeeze</strong></strong> <i class='arg'>boolean</i><dd>
