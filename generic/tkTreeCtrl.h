@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.28 2005/05/22 18:44:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.29 2005/05/22 22:24:02 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -209,6 +209,7 @@ struct TreeCtrl
     int gotFocus;		/* flag */
     int deleted;		/* flag */
     int updateIndex;		/* flag */
+    int isActive;		/* flag: mac & win "active" toplevel */
     int inset;			/* borderWidth + highlightWidth */
     int xOrigin;		/* offset from content x=0 to window x=0 */
     int yOrigin;		/* offset from content y=0 to window y=0 */
@@ -594,6 +595,7 @@ extern void Tree_InvalidateWindow(TreeCtrl *tree);
 extern void Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_RedrawItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
+extern void Tree_Activate(TreeCtrl *tree, int isActive);
 extern TreeItem *Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY);
 extern void TreeColumnProxy_Undisplay(TreeCtrl *tree);
 extern void TreeColumnProxy_Display(TreeCtrl *tree);
@@ -650,6 +652,8 @@ extern void TextLayout_Free(TextLayout textLayout);
 extern void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr);
 extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
+extern void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
+	int x2, int y2);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
