@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.37 2005/05/22 22:25:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.38 2005/05/22 22:37:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1385,12 +1385,22 @@ static void TreeEventProc(ClientData clientData, XEvent *eventPtr)
 	    break;
 	}
 	case FocusIn:
-	    if (eventPtr->xfocus.detail != NotifyInferior)
+	    /* Handle focus as Tile does */
+	    if (   eventPtr->xfocus.detail == NotifyInferior
+		|| eventPtr->xfocus.detail == NotifyAncestor
+		|| eventPtr->xfocus.detail == NotifyNonlinear)
+	    {
 		Tree_FocusChanged(tree, 1);
+	    }
 	    break;
 	case FocusOut:
-	    if (eventPtr->xfocus.detail != NotifyInferior)
+	    /* Handle focus as Tile does */
+	    if (   eventPtr->xfocus.detail == NotifyInferior
+		|| eventPtr->xfocus.detail == NotifyAncestor
+		|| eventPtr->xfocus.detail == NotifyNonlinear)
+	    {
 		Tree_FocusChanged(tree, 0);
+	    }
 	    break;
 	case ActivateNotify:
 	    Tree_Activate(tree, 1);
