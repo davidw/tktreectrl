@@ -6,15 +6,12 @@ bind TreeCtrl <Leave> {
     TreeCtrl::CursorCancel %W
     TreeCtrl::MotionInHeader %W
 }
-
 bind TreeCtrl <ButtonPress-1> {
     TreeCtrl::ButtonPress1 %W %x %y
 }
-
 bind TreeCtrl <Double-ButtonPress-1> {
     TreeCtrl::DoubleButton1 %W %x %y
 }
-
 bind TreeCtrl <Button1-Motion> {
     TreeCtrl::Motion1 %W %x %y
 }
@@ -203,9 +200,11 @@ proc ::TreeCtrl::CursorCheck {w x y} {
     if {([llength $id] == 3) && ([lindex $id 0] eq "header")} {
 	set column [lindex $id 1]
 	set side [lindex $id 2]
-	if {($side eq "left") && [$w column compare $column == "first visible"]} {
-	    return
+	if {$side eq "left"} {
+	    if {[$w column compare $column == "first visible"]} return
+	    set column [$w column id "$column prev visible"]
 	}
+	if {![$w column cget $column -resize]} return
 	if {![info exists Priv(cursor,$w)]} {
 	    set Priv(cursor,$w) [$w cget -cursor]
 	    $w configure -cursor sb_h_double_arrow
@@ -262,6 +261,11 @@ proc ::TreeCtrl::MotionInHeader {w args} {
     set column ""
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
+	if {[lindex $id 2] eq "left"} {
+	    if {[$w column compare $column != "first visible"]} {
+		set column [$w column id "$column prev visible"]
+	    }
+	}
 	if {[$w column compare $column == "tail"]} {
 	    set column ""
 	} elseif {![$w column cget $column -button]} {
@@ -308,6 +312,7 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 		if {[$w column compare $column == "first visible"]} return
 		set column [$w column id "$column prev visible"]
 	    }
+	    if {![$w column cget $column -resize]} return
 	    set Priv(buttonMode) resize
 	    set Priv(column) $column
 	    set Priv(x) $x
@@ -333,7 +338,6 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     return
 }
 
-# Double-click between columns to set default column width
 proc ::TreeCtrl::DoubleButton1 {w x y} {
     set id [$w identify $x $y]
     if {$id eq ""} {
@@ -351,6 +355,7 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
     }
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
+	# Double-click between columns to set default column width
 	if {[llength $id] == 3} {
 	    set side [lindex $id 2]
 	    if {$side eq "left"} {
@@ -438,11 +443,15 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	resize {
 	    set width [expr {$Priv(width) + $x - $Priv(x)}]
 	    set minWidth [$w column cget $Priv(column) -minwidth]
+	    set maxWidth [$w column cget $Priv(column) -maxwidth]
 	    if {$minWidth eq ""} {
 		set minWidth 0
 	    }
 	    if {$width < $minWidth} {
 		set width $minWidth
+	    }
+	    if {($maxWidth ne "") && ($width > $maxWidth)} {
+		set width $maxWidth
 	    }
 	    if {$width == 0} {
 		incr width
