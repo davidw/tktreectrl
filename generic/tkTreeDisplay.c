@@ -1,11 +1,11 @@
 /* 
- * tkTreeColumn.c --
+ * tkTreeDisplay.c --
  *
- *	This module implements treectrl widget's columns.
+ *	This module implements treectrl widget's main display code.
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.24 2005/05/19 20:31:26 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.25 2005/05/22 18:45:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2086,7 +2086,7 @@ ScrollVerticalComplex(TreeCtrl *tree)
 
 	/* Copy */
 	damageRgn = TkCreateRegion();
-	if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
+	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    oldX, oldY, width, height, 0, offset, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
@@ -2171,7 +2171,7 @@ ScrollHorizontalSimple(TreeCtrl *tree)
 	    return;
 	}
 
-	if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
+	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    x, minY, width, maxY - minY, offset, 0, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
@@ -2263,7 +2263,7 @@ ScrollVerticalSimple(TreeCtrl *tree)
 	    return;
 	}
 
-	if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
+	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    minX, y, maxX - minX, height, 0, offset, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
@@ -2412,7 +2412,7 @@ ScrollHorizontalComplex(TreeCtrl *tree)
 
 	/* Copy */
 	damageRgn = TkCreateRegion();
-	if (TkScrollWindow(tree->tkwin, dInfo->scrollGC,
+	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    oldX, oldY, width, height, offset, 0, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
@@ -2438,7 +2438,7 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
     gcMask = GCFunction | GCGraphicsExposures;
     gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
 
-    /* GXinvert doesn't work with XFillRectangle() on Win32 */
+    /* GXinvert doesn't work with XFillRectangle() on Win32 or Mac */
 #if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
     XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc,
 	    tree->columnProxy.sx,
