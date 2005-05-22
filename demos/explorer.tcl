@@ -75,7 +75,6 @@ proc DemoExplorerDetails {} {
 	$T column create -text Modified -tag modified -width 120
 
 	# Demonstration of per-state column options and configure "all"
-	$T configure -usetheme no
 	$T column configure all -background {gray90 active gray70 normal gray50 pressed}
 
 	#
