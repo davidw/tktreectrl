@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.19 2005/05/21 19:34:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.20 2005/05/22 18:49:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -335,6 +335,9 @@ struct DotStatePriv
 	HDC dc;
 	TkWinDCState dcState;
 	HRGN rgn;
+#elif defined(MAC_OSX_TK)
+	CGrafPtr saveWorld;
+	GDHandle saveDevice;
 #else
 	GC gc;
 	TkRegion rgn;
@@ -345,6 +348,8 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 {
 	struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
+#elif defined(MAC_OSX_TK)
+	GWorldPtr destPort;
 #else
 	XGCValues gcValues;
 	unsigned long mask;
@@ -369,6 +374,16 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 		Tk_Width(tree->tkwin) - tree->inset,
 		Tk_Height(tree->tkwin) - tree->inset);
 	SelectClipRgn(dotState->dc, dotState->rgn);
+#elif defined(MAC_OSX_TK)
+	tree->display->request++;
+	destPort = TkMacOSXGetDrawablePort(drawable);
+	GetGWorld(&dotState->saveWorld, &dotState->saveDevice);
+	SetGWorld(destPort, NULL);
+	TkMacOSXSetUpClippingRgn(drawable);
+	PenNormal();
+	PenMode(patXor);
+	ShowPen();
+	/* FIXME: clipping region */
 #else
 	gcValues.line_style = LineOnOffDash;
 	gcValues.line_width = 1;
@@ -439,7 +454,43 @@ void DotRect_Draw(DotState *p, int x, int y, int width, int height)
 		LineTo(dc, x + i + 1, y + height - 1);
 	}
 #endif
-#else
+#elif defined(MAC_OSX_TK)
+    MacDrawable *macWin = (MacDrawable *) dotState->drawable;
+	int i;
+	int wx = x + dotState->tree->drawableXOrigin;
+	int wy = y + dotState->tree->drawableYOrigin;
+	int nw, ne, sw, se;
+
+	/* Dots on even pixels only */
+	nw = !(wx & 1) == !(wy & 1);
+	ne = !((wx + width - 1) & 1) == !(wy & 1);
+	sw = !(wx & 1) == !((wy + height - 1) & 1);
+	se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
+
+	x += macWin->xOff;
+	y += macWin->yOff;
+
+	for (i = !nw; i < height; i += 2)
+	{
+		MoveTo(x, y + i);
+		LineTo(x, y + i);
+	}
+	for (i = nw ? 2 : 1; i < width; i += 2)
+	{
+		MoveTo(x + i, y);
+		LineTo(x + i, y);
+	}
+	for (i = ne ? 2 : 1; i < height; i += 2)
+	{
+		MoveTo(x + width, y + i);
+		LineTo(x + width, y + i);
+	}
+	for (i = sw ? 2 : 1; i < width - se; i += 2)
+	{
+		MoveTo(x + i, y + height - 1);
+		LineTo(x + i, y + height - 1);
+	}
+#else /* MAC_OSX_TK */
 	XDrawRectangle(dotState->tree->display, dotState->drawable, dotState->gc,
 		x, y, width - 1, height - 1);
 #endif
@@ -452,6 +503,10 @@ void DotRect_Restore(DotState *p)
 	SelectClipRgn(dotState->dc, NULL);
 	DeleteObject(dotState->rgn);
 	TkWinReleaseDrawableDC(dotState->drawable, dotState->dc, &dotState->dcState);
+#elif defined(MAC_OSX_TK)
+	HidePen();
+	/* FIXME: clipping region */
+	SetGWorld(dotState->saveWorld, dotState->saveDevice);
 #else
 	XSetClipMask(dotState->tree->display, dotState->gc, None);
 	Tk_FreeGC(dotState->tree->display, dotState->gc);
@@ -471,8 +526,8 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 	FillRgn(dc, (HRGN) rgn, brush);
 	DeleteObject(brush);
 	TkWinReleaseDrawableDC(drawable, dc, &dcState);
-#elif defined(TARGET_OS_MAC)
-    MacDrawable *macWin = (MacDrawable *) d;
+#elif defined(MAC_OSX_TK)
+    MacDrawable *macWin = (MacDrawable *) drawable;
 	CGrafPtr saveWorld;
 	GDHandle saveDevice;
 	GWorldPtr destPort;
@@ -489,7 +544,9 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 	TkMacOSXSetUpClippingRgn(drawable);
 	TkMacOSXSetUpGraphicsPort(gc, destPort);
 	OffsetRgn((RgnHandle) rgn, macWin->xOff, macWin->yOff);
+	ShowPen(); /* seemed to work without this */
 	FillCRgn((RgnHandle) rgn, gPenPat);
+	HidePen(); /* seemed to work without this */
 	OffsetRgn((RgnHandle) rgn, -macWin->xOff, -macWin->yOff);
 	SetGWorld(saveWorld, saveDevice);
 #else
@@ -511,6 +568,21 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 #else
 	XOffsetRegion((Region) region, xOffset, yOffset);
 #endif
+}
+
+int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
+	int width, int height, int dx, int dy, TkRegion damageRgn)
+{
+	int result = TkScrollWindow(tree->tkwin, gc, x, y, width, height, dx, dy,
+		damageRgn);
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
+	{
+	    MacDrawable *macWin = (MacDrawable *) Tk_WindowId(tree->tkwin);
+		/* BUG IN TK? */
+		OffsetRgn((RgnHandle) damageRgn, -macWin->xOff, -macWin->yOff);
+	}
+#endif
+	return result;
 }
 
 /*
