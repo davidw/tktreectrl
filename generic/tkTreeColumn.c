@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.25 2005/05/21 19:36:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.26 2005/05/22 18:42:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -36,6 +36,7 @@ struct Column
     int expand;			/* -expand */
     int squeeze;		/* -squeeze */
     int visible;		/* -visible */
+    int resize;			/* -resize */
     char *tag;			/* -tag */
     char *imageString;		/* -image */
     PerStateInfo arrowBitmap;	/* -arrowbitmap */
@@ -189,6 +190,8 @@ static Tk_OptionSpec columnSpecs[] = {
      (char *) NULL, Tk_Offset(Column, minWidthObj),
      Tk_Offset(Column, minWidth),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TWIDTH},
+    {TK_OPTION_BOOLEAN, "-resize", (char *) NULL, (char *) NULL,
+     "1", -1, Tk_Offset(Column, resize), 0, (ClientData) NULL, 0},
     {TK_OPTION_BOOLEAN, "-squeeze", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(Column, squeeze),
      0, (ClientData) NULL, COLU_CONF_TWIDTH},
@@ -1237,12 +1240,30 @@ struct LayoutPart
 
 static void Column_DoLayoutH(Column *column, struct Layout *layout)
 {
+#if defined(MAC_OSX_TK)
+    TreeCtrl *tree = column->tree;
+#endif
     struct LayoutPart *parts[3];
     struct LayoutPart partArrow, partImage, partText;
     int i, padList[4], widthList[3], n = 0;
     int iArrow = -1, iImage = -1, iText = -1;
     int left, right;
     int widthForText = 0;
+#if defined(MAC_OSX_TK)
+    int margins[4];
+    int arrow = column->arrow;
+    int arrowSide = column->arrowSide;
+    int arrowGravity = column->arrowGravity;
+#endif
+
+#if defined(MAC_OSX_TK)
+    /* Under Aqua, we let the Appearance Manager draw the sort arrow */
+    if (tree->useTheme) {
+	column->arrow = ARROW_NONE;
+	column->arrowSide = SIDE_RIGHT;
+	column->arrowGravity = SIDE_RIGHT;
+    }
+#endif
 
     if (column->arrow != ARROW_NONE) {
 	Column_GetArrowSize(column, &partArrow.width, &partArrow.height);
@@ -1337,6 +1358,26 @@ static void Column_DoLayoutH(Column *column, struct Layout *layout)
 	padList[n + 1] = partArrow.padX[PAD_BOTTOM_RIGHT];
 	iArrow = n++;
     }
+
+#if defined(MAC_OSX_TK)
+    /* Under Aqua, we let the Appearance Manager draw the sort arrow */
+    /* This code assumes the arrow is on the right */
+    if (tree->useTheme && (arrow != ARROW_NONE)) {
+	if (TreeTheme_GetHeaderContentMargins(tree, column->state,
+		arrow, margins) == TCL_OK) {
+	    parts[n] = &partArrow;
+	    partArrow.width = margins[2];
+	    padList[n] = MAX(0, padList[n]); /* ignore -arrowpadx */
+	    padList[n + 1] = 0;
+	    iArrow = n++;
+	}
+    }
+    if (n == 0) {
+	column->arrow = arrow;
+	column->arrowSide = arrowSide;
+	column->arrowGravity = arrowGravity;
+    }
+#endif
 
     if (n == 0)
 	return;
@@ -1495,6 +1536,13 @@ finish:
 	layout->textLeft = partText.left;
 	layout->textWidth = partText.width;
     }
+
+#if defined(MAC_OSX_TK)
+    /* Under Aqua, we let the Appearance Manager draw the sort arrow */
+    column->arrow = arrow;
+    column->arrowSide = arrowSide;
+    column->arrowGravity = arrowGravity;
+#endif
 }
 
 int TreeColumn_NeededWidth(TreeColumn column_)
@@ -1503,12 +1551,22 @@ int TreeColumn_NeededWidth(TreeColumn column_)
     TreeCtrl *tree = column->tree;
     int i, widthList[3], padList[4], n = 0;
     int arrowWidth, arrowHeight;
+#if defined(MAC_OSX_TK)
+    int margins[4];
+    int arrow = column->arrow;
+#endif
 
     if (column->neededWidth >= 0)
 	return column->neededWidth;
 
     for (i = 0; i < 3; i++) widthList[i] = 0;
     for (i = 0; i < 4; i++) padList[i] = 0;
+
+#if defined(MAC_OSX_TK)
+    /* Under OSX we let the Appearance Manager draw the sort arrow. */
+    if (tree->useTheme)
+	column->arrow = ARROW_NONE;
+#endif
 
     if (column->arrow != ARROW_NONE)
 	Column_GetArrowSize(column, &arrowWidth, &arrowHeight);
@@ -1555,6 +1613,19 @@ int TreeColumn_NeededWidth(TreeColumn column_)
 	column->neededWidth += widthList[i] + padList[i];
     column->neededWidth += padList[n];
 
+#if defined(MAC_OSX_TK)
+    if (tree->useTheme)
+	column->arrow = arrow;
+
+    /* Under OSX we let the Appearance Manager draw the sort arrow. This code
+     * assumes the arrow is on the right. */
+    if (tree->useTheme &&
+	(TreeTheme_GetHeaderContentMargins(tree, column->state, column->arrow,
+		margins) == TCL_OK)) {
+	column->neededWidth += margins[2];
+    }
+#endif
+
     /* Notice I'm not considering column->borderWidth. */
 
     return column->neededWidth;
@@ -1569,7 +1640,7 @@ int TreeColumn_NeededHeight(TreeColumn column_)
     if (column->neededHeight >= 0)
 	return column->neededHeight;
 
-#ifdef MAC_OSX_TK
+#if defined(MAC_OSX_TK)
     /* List headers are a fixed height on Aqua */
     if (tree->useTheme) {
 	(void) TreeTheme_GetHeaderFixedHeight(tree, &column->neededHeight);
@@ -1616,7 +1687,8 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 	}
     }
     if (column->tree->useTheme &&
-	(TreeTheme_GetHeaderContentMargins(tree, column->state, margins) == TCL_OK)) {
+	(TreeTheme_GetHeaderContentMargins(tree, column->state,
+		column->arrow, margins) == TCL_OK)) {
 #ifdef WIN32
 	/* I'm hacking these margins since the default XP theme does not give
 	 * reasonable ContentMargins for HP_HEADERITEM */
@@ -2431,8 +2503,8 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dra
 	XFillRectangle(tree->display, drawable, gc, x, y, width, height);
     } else {
 	if (tree->useTheme) {
-	    theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state, x, y,
-		    width, height);
+	    theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state,
+		    column->arrow, x, y, width, height);
 	}
 	if (theme != TCL_OK)
 	    Tk_Fill3DRectangle(tree->tkwin, drawable, border,
@@ -2523,6 +2595,10 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dra
     if (dragImage)
 	return;
 
+#if defined(MAC_OSX_TK)
+    /* Under Aqua, we let the Appearance Manager draw the sort arrow */
+    if (theme != TCL_OK)
+#endif
     Column_DrawArrow(column, drawable, x, y, layout);
 
     if (theme != TCL_OK)
@@ -2603,7 +2679,7 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 	width = maxX - x + column->borderWidth;
 	height = tree->headerHeight;
 	if (tree->useTheme &&
-	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, x, y, width, height) == TCL_OK)) {
+	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, 0, x, y, width, height) == TCL_OK)) {
 	} else {
 	    Tk_3DBorder border;
 	    border = PerStateBorder_ForState(tree, &column->border,
