@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.25 2005/05/22 18:45:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.26 2005/05/22 22:22:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2425,11 +2425,18 @@ ScrollHorizontalComplex(TreeCtrl *tree)
 void
 TreeColumnProxy_Draw(TreeCtrl *tree)
 {
+#if defined(MAC_OSX_TK)
+    DrawXORLine(tree->display, Tk_WindowId(tree->tkwin),
+	    tree->columnProxy.sx,
+	    tree->inset,
+	    tree->columnProxy.sx,
+	    Tk_Height(tree->tkwin) - tree->inset);
+#else
     XGCValues gcValues;
     unsigned long gcMask;
     GC gc;
 
-#if defined(MAC_TCL) || defined(MAC_OSX_TK)
+#if defined(MAC_TCL)
     gcValues.function = GXxor;
 #else
     gcValues.function = GXinvert;
@@ -2439,7 +2446,7 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
     gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
 
     /* GXinvert doesn't work with XFillRectangle() on Win32 or Mac */
-#if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
+#if defined(WIN32) || defined(MAC_TCL)
     XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc,
 	    tree->columnProxy.sx,
 	    tree->inset,
@@ -2454,6 +2461,7 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
 #endif
 
     Tk_FreeGC(tree->display, gc);
+#endif
 }
 
 void
@@ -3524,6 +3532,25 @@ Tree_FocusChanged(TreeCtrl *tree, int gotFocus)
     }
     if (redraw)
 	Tree_EventuallyRedraw(tree);
+}
+
+void
+Tree_Activate(TreeCtrl *tree, int isActive)
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+
+    tree->isActive = isActive;
+
+    /* TODO: Like Tree_FocusChanged, change state of every item. */
+    /* Would need a new item state STATE_ACTIVEWINDOW or something. */
+    /* Would want to merge this with Tree_FocusChanged code to avoid
+     * double-iteration of items. */
+
+    /* Aqua column header looks different when window is not active */
+    if (tree->useTheme && tree->showHeader) {
+	dInfo->flags |= DINFO_DRAW_HEADER;
+	Tree_EventuallyRedraw(tree);
+    }
 }
 
 void
