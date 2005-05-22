@@ -1,5 +1,5 @@
 /* 
- * tkTreeCtrl.c --
+ * tkTreeCtrl.h --
  *
  *	This module is the header for treectrl widgets for the Tk toolkit.
  *
@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.27 2005/05/19 20:32:06 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.28 2005/05/22 18:44:22 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -517,6 +517,7 @@ extern int TreeColumn_Index(TreeColumn column_);
 extern TreeColumn TreeColumn_Next(TreeColumn column_);
 extern int TreeColumn_FixedWidth(TreeColumn column_);
 extern int TreeColumn_MinWidth(TreeColumn column_);
+extern int TreeColumn_MaxWidth(TreeColumn column_);
 extern int TreeColumn_StepWidth(TreeColumn column_);
 extern int TreeColumn_NeededWidth(TreeColumn column_);
 extern int TreeColumn_UseWidth(TreeColumn column_);
@@ -619,8 +620,9 @@ extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
 
 /* tkTreeTheme.c */
 extern int TreeTheme_Init(Tcl_Interp *interp);
-extern int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int x, int y, int width, int height);
-extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int bounds[4]);
+extern int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int arrow, int x, int y, int width, int height);
+extern int TreeTheme_GetHeaderFixedHeight(TreeCtrl *tree, int *heightPtr);
+extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4]);
 extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, int x, int y, int width, int height);
 extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
 extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
@@ -650,6 +652,8 @@ extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
+extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
+	int width, int height, int dx, int dy, TkRegion damageRgn);
 extern void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha);
 
 #define PAD_TOP_LEFT     0
