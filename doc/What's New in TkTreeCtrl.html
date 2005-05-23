@@ -1,0 +1,380 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+  <meta content="text/html; charset=ISO-8859-1"
+ http-equiv="content-type">
+  <title>What's New in TkTreeCtrl</title>
+  <meta content="Tim Baker" name="author">
+</head>
+<body>
+<h1>What's New in TkTreeCtrl 2.0</h1>
+<h2>TreeCtrl Configuration Options</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Replaced</th>
+      <th style="background-color: rgb(204, 255, 255);">What to use
+instead</th>
+    </tr>
+    <tr>
+      <td>-openbuttonimage</td>
+      <td>-buttonimage</td>
+    </tr>
+    <tr>
+      <td>-closedbuttonimage</td>
+      <td>-buttonimage</td>
+    </tr>
+    <tr>
+      <td>-openbuttonbitmap</td>
+      <td>-buttonbitmap</td>
+    </tr>
+    <tr>
+      <td>-closedbuttonbitmap</td>
+      <td>-buttonbitmap</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Usage
+Changed</th>
+      <th style="background-color: rgb(204, 255, 255);">How it changed</th>
+    </tr>
+    <tr>
+      <td>-treecolumn</td>
+      <td>This used to be any integer value which may or may not have
+corresponded to an actual column. Now the value must be a valid column
+description, or an empty string to indicate no column should display
+buttons/lines.</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">New</th>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-backgroundimage</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-columnprefix</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-itemprefix</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-minitemheight</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-usetheme</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<h2>TreeCtrl Commands</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="width: 50%; background-color: rgb(255, 255, 204);">Deprecated</th>
+      <th style="background-color: rgb(204, 255, 255);">What to use
+instead</th>
+    </tr>
+    <tr>
+      <td>compare</td>
+      <td>item compare</td>
+    </tr>
+    <tr>
+      <td>index</td>
+      <td>item id</td>
+    </tr>
+    <tr>
+      <td>numcolumns</td>
+      <td>column count</td>
+    </tr>
+    <tr>
+      <td>numitems</td>
+      <td>item count</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Column Configuration Options</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Removed</th>
+      <th style="background-color: rgb(204, 255, 255);">What to use
+instead</th>
+    </tr>
+    <tr>
+      <td>-relief<br>
+      </td>
+      <td>-state</td>
+    </tr>
+    <tr>
+      <td>-sunken</td>
+      <td>-state</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">Renamed<br>
+      </th>
+      <th style="background-color: rgb(204, 255, 255);">New name</th>
+    </tr>
+    <tr>
+      <td>-arrowpad</td>
+      <td>-arrowpadx</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">New<br>
+      </th>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-arrowbitmap<br>
+      </td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-arrowimage</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-arrowpady</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-maxwidth</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-resize</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-state</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-textlines</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<h2>Column Command</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">Deprecated</th>
+      <th style="background-color: rgb(204, 255, 255);">What to use
+instead</th>
+    </tr>
+    <tr>
+      <td>column index</td>
+      <td>column id</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Arguments/Result
+Changed</th>
+      <th style="background-color: rgb(204, 255, 255);">What changed</th>
+    </tr>
+    <tr>
+      <td>column configure<br>
+      </td>
+      <td>A column description of "all" is allowed if at least one
+option-value pair is given.<br>
+      </td>
+    </tr>
+    <tr>
+      <td>column create</td>
+      <td>The result is a unique identifier. The result used to be an
+index in the list of columns.</td>
+    </tr>
+    <tr>
+      <td>column delete</td>
+      <td>A column description of "all" is allowed.</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">New</th>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column compare</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column count</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column dragconfigure</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column dragcget</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column id</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column list</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>column order</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<h2>Item Command</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">Removed</th>
+      <th style="background-color: rgb(204, 255, 255);">What to use
+instead</th>
+    </tr>
+    <tr>
+      <td>item index</td>
+      <td>item order</td>
+    </tr>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
+      <th></th>
+    </tr>
+    <tr>
+      <td>item compare</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>item count</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>item id</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>item order</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
+<h2>Notify Command</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">Arguments/Result
+Changed</th>
+      <th style="background-color: rgb(204, 255, 255);">What changed</th>
+    </tr>
+    <tr>
+      <td>notify generate<br>
+      </td>
+      <td>Added optional <span style="font-style: italic;">percentsCommand</span>
+argument</td>
+    </tr>
+    <tr>
+      <td>notify install</td>
+      <td>Old syntax (supported but deprecated):<br>
+      <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install event</span> <span
+ style="font-style: italic;">eventName</span></pre>
+      <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install detail</span> <span
+ style="font-style: italic;">eventName</span> <span
+ style="font-style: italic;">detail</span></pre>
+New syntax:<br>
+      <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install</span> &lt;<span
+ style="font-style: italic;">eventName</span>&gt;</pre>
+      <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install</span> &lt;<span
+ style="font-style: italic;">eventName</span>-<span
+ style="font-style: italic;">detail</span>&gt;</pre>
+      </td>
+    </tr>
+    <tr>
+      <td>notify linkage</td>
+      <td>Old syntax (supported but deprecated):<br>
+      <div style="margin-left: 40px;">
+      <pre><span style="font-weight: bold;">notify linkage</span> <span
+ style="font-style: italic;">eventName</span></pre>
+      <pre><span style="font-weight: bold;">notify linkage</span> <span
+ style="font-style: italic;">eventName</span> <span
+ style="font-style: italic;">detail</span></pre>
+      </div>
+New syntax:<br>
+      <div style="margin-left: 40px;">
+      <pre><span style="font-weight: bold;">notify linkage</span> &lt;<span
+ style="font-style: italic;">eventName</span>&gt;</pre>
+      <pre><span style="font-weight: bold;">notify linkage</span> &lt;<span
+ style="font-style: italic;">eventName</span>-<span
+ style="font-style: italic;">detail</span>&gt;</pre>
+      </div>
+      </td>
+    </tr>
+    <tr>
+      <td>notify uninstall</td>
+      <td>see <span style="font-weight: bold;">notify install</span>
+above</td>
+    </tr>
+  </tbody>
+</table>
+<h2>Library Script Changes</h2>
+<h3>filelist-bindings.tcl:</h3>
+<ul>
+  <li>The Priv(edit) variable, which is used to specify which text
+elements may be edited, now has the same format as Priv(sensitive).
+Previously only elements in the first column could be edited.</li>
+</ul>
+<h2>Other Changes</h2>
+<ul>
+  <li>On WinXP, the column headers and open/close buttons are drawn
+using the system theme if <span style="font-weight: bold;">-usetheme</span>
+is true. The sort arrow is drawn the old-fashioned way.</li>
+  <li>On OSX,&nbsp; the column headers and open/close buttons are drawn
+using the system theme if <span style="font-weight: bold;">-usetheme</span>
+is true. The sort arrow will be drawn by the Appearance Manager as
+well. This will override the <span style="font-weight: bold;">-arrowside</span>
+and <span style="font-weight: bold;">-arrowgravity</span> options.</li>
+  <li>Columns can be moved by drag-and-drop. See <span
+ style="font-weight: bold;">column dragconfigure</span> in the help
+file.</li>
+  <li>New %-substitution characters %P and %? allowed in binding
+scripts. See the EVENTS AND SCRIPT SUBSTITUTIONS section in the help
+file.</li>
+  <li>New static event &lt;ItemDelete&gt;. See the EVENTS AND SCRIPT
+SUBSTITUTIONS section in the help file.</li>
+  <li>New <span style="font-weight: bold;">text</span> element option <span
+ style="font-weight: bold;">-textvariable</span>. See the new demo
+"Textvariable" and the ELEMENTS section in the help file.</li>
+  <li>New element type&nbsp;<span style="font-weight: bold;">window</span>.
+See the new demo "Firefox Privacy" and the ELEMENTS section in the help
+file.</li>
+  <li>Columns can be specified in new ways. See the COLUMN DESCRIPTION
+section in the help file.</li>
+  <li>Added new section DYNAMIC EVENTS to the help file.</li>
+  <li>Added new section PER-STATE OPTIONS to the help file.</li>
+  <li>New style layout option <span style="font-weight: bold;">-indent</span>
+allows elements to be displayed in the button/line area. See the <span
+ style="font-weight: bold;">style layout</span> command in the help
+file and the new demo "Firefox Privacy".</li>
+</ul>
+<h2>Demo Changes</h2>
+<ul>
+  <li>New demo "Firefox Privacy". Demonstrates the new <span
+ style="font-weight: bold;">window</span> element type and <span
+ style="font-weight: bold;">-indent</span> style layout option.</li>
+  <li>New demo "Textvariable". Demonstrates the new <span
+ style="font-weight: bold;">-textvariable</span> option of the <span
+ style="font-weight: bold;">text</span> element.</li>
+  <li>Added a new Event Browser window to display events generated by
+the main treectrl widget.</li>
+  <li>The context menu can be popped up in all the demo lists. A
+&lt;Command-ButtonPress-1&gt; binding for this was added under Aqua.</li>
+</ul>
+<h2></h2>
+</body>
+</html>
