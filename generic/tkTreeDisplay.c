@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.26 2005/05/22 22:22:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.27 2005/05/24 23:40:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1605,7 +1605,9 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 
 	    TreeItem_ToIndex(tree, item, &index, &indexVis);
 	    switch (tree->backgroundMode) {
-		case BG_MODE_INDEX: break;
+		case BG_MODE_INDEX:
+		case BG_MODE_ORDER: break;
+		case BG_MODE_ORDERVIS:
 		case BG_MODE_VISINDEX: index = indexVis; break;
 		case BG_MODE_COLUMN: index = range->index; break;
 		case BG_MODE_ROW: index = rItem->index; break;
@@ -1701,7 +1703,9 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 
 	    TreeItem_ToIndex(tree, item, &index, &indexVis);
 	    switch (tree->backgroundMode) {
-		case BG_MODE_INDEX: break;
+		case BG_MODE_INDEX:
+		case BG_MODE_ORDER: break;
+		case BG_MODE_ORDERVIS:
 		case BG_MODE_VISINDEX: index = indexVis; break;
 		case BG_MODE_COLUMN: index = rItem->index; break;
 		case BG_MODE_ROW: index = range->index; break;
