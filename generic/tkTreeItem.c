@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.35 2005/05/19 20:28:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.36 2005/05/24 23:44:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1823,20 +1823,12 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
     if (bitmap != None) {
 	int bmpW, bmpH;
 	int bx, by;
-	XGCValues gcValues;
-	GC gc;
 	Tk_SizeOfBitmap(tree->display, bitmap, &bmpW, &bmpH);
-	gcValues.clip_mask = bitmap;
-	gcValues.graphics_exposures = False;
-	gc = Tk_GetGC(tree->tkwin, GCClipMask | GCGraphicsExposures, &gcValues);
 	bx = left + (tree->useIndent - bmpW) / 2;
 	by = y + (height - bmpH) / 2;
-	XSetClipOrigin(tree->display, gc, bx, by);
-	XCopyPlane(tree->display, bitmap, drawable, gc,
+	Tree_DrawBitmap(tree, bitmap, drawable, NULL, NULL,
 		0, 0, (unsigned int) bmpW, (unsigned int) bmpH,
-		bx, by, 1);
-	XSetClipOrigin(tree->display, gc, 0, 0);
-	Tk_FreeGC(tree->display, gc);
+		bx, by);
 	return;
     }
 

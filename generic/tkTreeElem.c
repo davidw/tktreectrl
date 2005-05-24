@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.20 2005/05/19 20:30:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.21 2005/05/24 23:44:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -441,9 +441,6 @@ static void DisplayProcBitmap(ElementArgs *args)
 	int bx = args->display.x /* + args->display.pad[LEFT] */;
 	int by = args->display.y /* + args->display.pad[TOP] */;
 	int dx = 0, dy = 0;
-	XGCValues gcValues;
-	GC gc;
-	unsigned long mask = 0;
 
 	Tk_SizeOfBitmap(tree->display, bitmap, &imgW, &imgH);
 	if (imgW < args->display.width)
@@ -458,26 +455,9 @@ static void DisplayProcBitmap(ElementArgs *args)
 	bx += dx;
 	by += dy;
 
-	if (fg != NULL) {
-	    gcValues.foreground = fg->pixel;
-	    mask |= GCForeground;
-	}
-	if (bg != NULL) {
-	    gcValues.background = bg->pixel;
-	    mask |= GCBackground;
-	} else {
-	    gcValues.clip_mask = bitmap;
-	    mask |= GCClipMask;
-	}
-	gcValues.graphics_exposures = False;
-	mask |= GCGraphicsExposures;
-	gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
-	XSetClipOrigin(tree->display, gc, bx, by);
-	XCopyPlane(tree->display, bitmap, args->display.drawable, gc,
-		0, 0, (unsigned int) imgW, (unsigned int) imgH,
-		bx, by, 1);
-	XSetClipOrigin(tree->display, gc, 0, 0);
-	Tk_FreeGC(tree->display, gc);
+	Tree_DrawBitmap(tree, bitmap, args->display.drawable, fg, bg,
+	    0, 0, (unsigned int) imgW, (unsigned int) imgH,
+	    bx, by);
     }
 }
 
