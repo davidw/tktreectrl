@@ -622,7 +622,7 @@ proc MakeListPopup {T} {
     $m add cascade -label "Background Image" -menu $m2
 
     set m2 [menu $m.mBgMode -tearoff no]
-    foreach value {column index row visindex} {
+    foreach value {column order ordervisible row} {
         $m2 add radiobutton -label $value -variable Popup(bgmode) -value $value \
 	    -command {$Popup(T) configure -backgroundmode $Popup(bgmode)}
     }
