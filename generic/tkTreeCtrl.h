@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.29 2005/05/22 22:24:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.30 2005/05/24 23:41:22 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -193,9 +193,11 @@ struct TreeCtrl
     int useIndent;		/* MAX of open/closed button width and
 				 * indent */
 #define BG_MODE_COLUMN 0
-#define BG_MODE_INDEX 1
-#define BG_MODE_ROW 2
-#define BG_MODE_VISINDEX 3
+#define BG_MODE_ORDER 1
+#define BG_MODE_ORDERVIS 2
+#define BG_MODE_ROW 3
+#define BG_MODE_INDEX 4		/* compatibility */
+#define BG_MODE_VISINDEX 5	/* compatibility */
     int backgroundMode;		/* -backgroundmode */
     int *itemPadX;		/* -itempadx */
     Tcl_Obj *itemPadXObj;	/* -itempadx */
@@ -652,8 +654,15 @@ extern void TextLayout_Free(TextLayout textLayout);
 extern void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr);
 extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 	TextLayout layout, int x, int y, int firstChar, int lastChar);
+#ifdef MAC_OSX_TK
 extern void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
 	int x2, int y2);
+#endif
+extern void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
+	GC gc, int src_x, int src_y, int width, int height, int dest_x, int dest_y);
+extern void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
+	XColor *fg, XColor *bg,
+	int src_x, int src_y, int width, int height, int dest_x, int dest_y);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
