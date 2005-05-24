@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.21 2005/05/22 22:16:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.22 2005/05/24 23:51:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -607,6 +607,66 @@ int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
 	}
 #endif
 	return result;
+}
+
+void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
+	GC gc, int src_x, int src_y, int width, int height, int dest_x, int dest_y)
+{
+    TkpClipMask *clipPtr = (TkpClipMask *) gc->clip_mask;
+
+	XSetClipOrigin(tree->display, gc, dest_x, dest_y);
+#ifdef WIN32
+	/*
+	 * It seems as though the device context is not set up properly
+	 * when drawing a transparent bitmap into a window. Normally Tk draws
+	 * into an offscreen pixmap which gets a temporary device context.
+	 * This fixes a bug with -doublebuffer none in the demo "Bitmaps".
+	 */
+	if (drawable == Tk_WindowId(tree->tkwin)) {
+		if ((clipPtr != NULL) &&
+			(clipPtr->type == TKP_CLIP_PIXMAP) &&
+			(clipPtr->value.pixmap == bitmap)) {
+			HDC dc;
+			TkWinDCState dcState;
+
+			dc = TkWinGetDrawableDC(tree->display, drawable, &dcState);
+			SetTextColor(dc, RGB(0,0,0));
+			SetBkColor(dc, RGB(255,255,255));
+			TkWinReleaseDrawableDC(drawable, dc, &dcState);
+		}
+	}
+#endif
+	XCopyPlane(tree->display, bitmap, drawable, gc,
+		src_x, src_y, (unsigned int) width, (unsigned int) height,
+		dest_x, dest_y, 1);
+	XSetClipOrigin(tree->display, gc, 0, 0);
+}
+
+void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
+	XColor *fg, XColor *bg,
+	int src_x, int src_y, int width, int height, int dest_x, int dest_y)
+{
+	XGCValues gcValues;
+	GC gc;
+	unsigned long mask = 0;
+
+	if (fg != NULL) {
+		gcValues.foreground = fg->pixel;
+		mask |= GCForeground;
+	}
+	if (bg != NULL) {
+		gcValues.background = bg->pixel;
+		mask |= GCBackground;
+	} else {
+		gcValues.clip_mask = bitmap;
+		mask |= GCClipMask;
+	}
+	gcValues.graphics_exposures = False;
+	mask |= GCGraphicsExposures;
+	gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
+	Tree_DrawBitmapWithGC(tree, bitmap, drawable, gc,
+		src_x, src_y, width, height, dest_x, dest_y);
+	Tk_FreeGC(tree->display, gc);
 }
 
 /*
