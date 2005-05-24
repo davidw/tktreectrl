@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.38 2005/05/22 22:37:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.39 2005/05/24 23:42:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -29,7 +29,7 @@
 #endif
 
 static CONST char *bgModeST[] = {
-    "column", "index", "row", "visindex", (char *) NULL
+    "column", "order", "ordervisible", "row", "index", "visindex", (char *) NULL
 };
 static CONST char *doubleBufferST[] = {
     "none", "item", "window", (char *) NULL
