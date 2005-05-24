@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.34 2005/05/23 21:32:49 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.35 2005/05/24 23:56:27 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -391,16 +391,19 @@ Database Name:	\fBbackgroundMode\fR
 Database Class:	\fBBackgroundMode\fR
 .fi
 .IP
-Specifies the desired mode for changing the background of individual items.
-The value should be one of \fBrow\fR, \fBcolumn\fR, \fBindex\fR,
-or \fBvisindex\fR. The default is \fBrow\fR.
+Specifies how the background color of items is chosen in each column.
+The value should be one of \fBrow\fR, \fBcolumn\fR, \fBorder\fR,
+or \fBordervisible\fR. The default is \fBrow\fR.
 This option has only an effect
 for columns which have \fB-itembackground\fR defined as list of two or more
-colors (see section \fBCOLUMNS\fR below for more on this). The color
-of items is changed for any row or column, if \fBrow\fR or \fBcolumn\fR
-is specified respectively. When \fBindex\fR is specified, collapsed
-items are counted also for evaluating the background color,
-for \fBvisindex\fR only the visible items are counted.
+colors (see section \fBCOLUMNS\fR below for more on this). If \fBrow\fR or
+\fBcolumn\fR is specified, the background color is chosen based on the location
+of the item in the 1- or 2-dimensional grid of items as layed out on the screen;
+this layout of items is affected by the \fB-orient\fR and \fB-wrap\fR options as
+well as item visibility.
+When \fBorder\fR or \fBordervisible\fR is specified,
+the background color is chosen based on the result of the \fBitem order\fR
+command, regardless of the layout of items.
 .LP
 .nf
 .ta 6c
@@ -2329,8 +2332,7 @@ change the sorting order of the tree.
 \fB\fB-expand\fR\fR \fIboolean\fR
 Indicates whether or not any extra horizontal space should be distributed
 to this column.
-This option will actually only work if the column has no fixed width defined
-by means of the \fB-width\fR column option.
+This option has no effect if the \fB-width\fR option is set.
 .TP
 \fB\fB-font\fR\fR \fIfontName\fR
 Specifies the font to use for the column title inside the column header.
@@ -2397,8 +2399,8 @@ more than one item next to each other
 Every item will get an x-coordinate which is a multiple of \fIsize\fR.
 .TP
 \fB\fB-tag\fR\fR \fItag\fR
-Defines a unique name for the columns which can be used in subsequent calls
-of the treectrl widget commands, wherever a column must be specified.
+Defines a unique name for the column which can be used
+whenever a column must be specified.
 .TP
 \fB\fB-text\fR\fR \fItext\fR
 Specifies a text to be displayed inside the column title.
@@ -2411,7 +2413,10 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1.
+needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+treectrl's \fB-usetheme\fR option is true, because the Appearance Manager
+uses a fixed height for the column header; there is only room for a single line
+of text.
 .TP
 \fB\fB-textpadx\fR\fR \fIamount\fR
 \fIAmount\fR specifies how much padding to
@@ -2431,21 +2436,22 @@ it defaults to 0.
 Indicates whether or not the column should be displayed.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
-Specifies a fixed width for the column. If this value is zero, the column width
-is calculated as the maximum of:
+Specifies a fixed width for the column. If this value is an empty string,
+the column width is calculated as the maximum of:
 a) the width requested by items;
-b) the width requested the column header;
-c) and the column \fB-minwidth\fR.
-This calculated width is also affected by the \fB-expand\fR option of all
-columns.
+b) the width requested by the column's header;
+and c) the column's \fB-minwidth\fR option.
+This calculated width is also affected by the \fB-expand\fR option and the
+\fB-squeeze\fR option. In any case, the calculated width will not be greater
+than the \fB-maxwidth\fR option, if specified.
 .TP
 \fB\fB-widthhack\fR\fR \fIboolean\fR
 Indicates whether or not all items should have the same width. This option only
 has effect when all of these conditions are met:
-a) the tree \fB-orientation\fR option is \fBvertical\fR;
-b) only a single tree column is visible;
-c) the single visible tree column \fB-width\fR option is zero;
-d) and the tree \fB-wrap\fR option results in wrapping.
+a) the treectrl's \fB-orientation\fR option is \fBvertical\fR;
+b) only a single column is visible;
+c) the single visible column's \fB-width\fR option is an empty string;
+and d) the treectrl's \fB-wrap\fR option results in wrapping.
 .SH "COLUMN DESCRIPTION"
 Many of the commands and options for a treectrl take as an argument a
 description of which column to operate on.

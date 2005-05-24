@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.18 2005/05/23 21:32:49 treectrl Exp $}
+  $Id: treectrl.man,v 1.19 2005/05/24 23:56:27 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -78,16 +78,19 @@ tiled horizontally and vertically to fill the content area of the list. If
 the image is transparent it is drawn on top of the background color(s).
 
 [tkoption_def -backgroundmode backgroundMode BackgroundMode]
-Specifies the desired mode for changing the background of individual items.
-The value should be one of [const row], [const column], [const index],
-or [const visindex]. The default is [const row].
+Specifies how the background color of items is chosen in each column.
+The value should be one of [const row], [const column], [const order],
+or [const ordervisible]. The default is [const row].
 This option has only an effect
 for columns which have [option -itembackground] defined as list of two or more
-colors (see section [sectref COLUMNS] below for more on this). The color
-of items is changed for any row or column, if [const row] or [const column]
-is specified respectively. When [const index] is specified, collapsed
-items are counted also for evaluating the background color,
-for [const visindex] only the visible items are counted.
+colors (see section [sectref COLUMNS] below for more on this). If [const row] or
+[const column] is specified, the background color is chosen based on the location
+of the item in the 1- or 2-dimensional grid of items as layed out on the screen;
+this layout of items is affected by the [option -orient] and [option -wrap] options as
+well as item visibility.
+When [const order] or [const ordervisible] is specified,
+the background color is chosen based on the result of the [cmd {item order}]
+command, regardless of the layout of items.
 
 [tkoption_def -buttonbitmap buttonBitmap ButtonBitmap]
 Specifies the bitmap to be used as the expand/collapse button to the left of
@@ -1899,8 +1902,7 @@ change the sorting order of the tree.
 [opt_def [option -expand] [arg boolean]]
 Indicates whether or not any extra horizontal space should be distributed
 to this column.
-This option will actually only work if the column has no fixed width defined
-by means of the [option -width] column option.
+This option has no effect if the [option -width] option is set.
 
 [opt_def [option -font] [arg fontName]]
 Specifies the font to use for the column title inside the column header.
@@ -1967,8 +1969,8 @@ more than one item next to each other
 Every item will get an x-coordinate which is a multiple of [arg size].
 
 [opt_def [option -tag] [arg tag]]
-Defines a unique name for the columns which can be used in subsequent calls
-of the treectrl widget commands, wherever a column must be specified.
+Defines a unique name for the column which can be used 
+whenever a column must be specified.
 
 [opt_def [option -text] [arg text]]
 Specifies a text to be displayed inside the column title.
@@ -1981,7 +1983,10 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1.
+needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+treectrl's [option -usetheme] option is true, because the Appearance Manager
+uses a fixed height for the column header; there is only room for a single line
+of text.
 
 [opt_def [option -textpadx] [arg amount]]
 [arg Amount] specifies how much padding to
@@ -2001,21 +2006,22 @@ it defaults to 0.
 Indicates whether or not the column should be displayed.
 
 [opt_def [option -width] [arg size]]
-Specifies a fixed width for the column. If this value is zero, the column width
-is calculated as the maximum of:
+Specifies a fixed width for the column. If this value is an empty string,
+the column width is calculated as the maximum of:
 a) the width requested by items;
-b) the width requested the column header;
-c) and the column [option -minwidth].
-This calculated width is also affected by the [option -expand] option of all
-columns.
+b) the width requested by the column's header;
+and c) the column's [option -minwidth] option.
+This calculated width is also affected by the [option -expand] option and the
+[option -squeeze] option. In any case, the calculated width will not be greater
+than the [option -maxwidth] option, if specified.
 
 [opt_def [option -widthhack] [arg boolean]]
 Indicates whether or not all items should have the same width. This option only
 has effect when all of these conditions are met:
-a) the tree [option -orientation] option is [const vertical];
-b) only a single tree column is visible;
-c) the single visible tree column [option -width] option is zero;
-d) and the tree [option -wrap] option results in wrapping.
+a) the treectrl's [option -orientation] option is [const vertical];
+b) only a single column is visible;
+c) the single visible column's [option -width] option is an empty string;
+and d) the treectrl's [option -wrap] option results in wrapping.
 
 [list_end]
 

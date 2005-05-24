@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.17 2005/05/23 21:32:48 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.18 2005/05/24 23:56:25 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.17 2005/05/23 21:32:48 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.18 2005/05/24 23:56:25 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -245,16 +245,19 @@ the image is transparent it is drawn on top of the background color(s).
 Database Name:	<strong>backgroundMode</strong><br>
 Database Class:	<strong>BackgroundMode</strong><br>
 <dd>
-Specifies the desired mode for changing the background of individual items.
-The value should be one of <strong>row</strong>, <strong>column</strong>, <strong>index</strong>,
-or <strong>visindex</strong>. The default is <strong>row</strong>.
+Specifies how the background color of items is chosen in each column.
+The value should be one of <strong>row</strong>, <strong>column</strong>, <strong>order</strong>,
+or <strong>ordervisible</strong>. The default is <strong>row</strong>.
 This option has only an effect
 for columns which have <strong>-itembackground</strong> defined as list of two or more
-colors (see section <a href="#columns">COLUMNS</a> below for more on this). The color
-of items is changed for any row or column, if <strong>row</strong> or <strong>column</strong>
-is specified respectively. When <strong>index</strong> is specified, collapsed
-items are counted also for evaluating the background color,
-for <strong>visindex</strong> only the visible items are counted.
+colors (see section <a href="#columns">COLUMNS</a> below for more on this). If <strong>row</strong> or
+<strong>column</strong> is specified, the background color is chosen based on the location
+of the item in the 1- or 2-dimensional grid of items as layed out on the screen;
+this layout of items is affected by the <strong>-orient</strong> and <strong>-wrap</strong> options as
+well as item visibility.
+When <strong>order</strong> or <strong>ordervisible</strong> is specified,
+the background color is chosen based on the result of the <b class='cmd'>item order</b>
+command, regardless of the layout of items.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-buttonbitmap</strong><br>
@@ -2465,8 +2468,7 @@ change the sorting order of the tree.
 <dt><strong><strong>-expand</strong></strong> <i class='arg'>boolean</i><dd>
 Indicates whether or not any extra horizontal space should be distributed
 to this column.
-This option will actually only work if the column has no fixed width defined
-by means of the <strong>-width</strong> column option.
+This option has no effect if the <strong>-width</strong> option is set.
 
 <br><br>
 <dt><strong><strong>-font</strong></strong> <i class='arg'>fontName</i><dd>
@@ -2546,8 +2548,8 @@ Every item will get an x-coordinate which is a multiple of <i class='arg'>size</
 
 <br><br>
 <dt><strong><strong>-tag</strong></strong> <i class='arg'>tag</i><dd>
-Defines a unique name for the columns which can be used in subsequent calls
-of the treectrl widget commands, wherever a column must be specified.
+Defines a unique name for the column which can be used 
+whenever a column must be specified.
 
 <br><br>
 <dt><strong><strong>-text</strong></strong> <i class='arg'>text</i><dd>
@@ -2563,7 +2565,10 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1.
+needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+treectrl's <strong>-usetheme</strong> option is true, because the Appearance Manager
+uses a fixed height for the column header; there is only room for a single line
+of text.
 
 <br><br>
 <dt><strong><strong>-textpadx</strong></strong> <i class='arg'>amount</i><dd>
@@ -2587,22 +2592,23 @@ Indicates whether or not the column should be displayed.
 
 <br><br>
 <dt><strong><strong>-width</strong></strong> <i class='arg'>size</i><dd>
-Specifies a fixed width for the column. If this value is zero, the column width
-is calculated as the maximum of:
+Specifies a fixed width for the column. If this value is an empty string,
+the column width is calculated as the maximum of:
 a) the width requested by items;
-b) the width requested the column header;
-c) and the column <strong>-minwidth</strong>.
-This calculated width is also affected by the <strong>-expand</strong> option of all
-columns.
+b) the width requested by the column's header;
+and c) the column's <strong>-minwidth</strong> option.
+This calculated width is also affected by the <strong>-expand</strong> option and the
+<strong>-squeeze</strong> option. In any case, the calculated width will not be greater
+than the <strong>-maxwidth</strong> option, if specified.
 
 <br><br>
 <dt><strong><strong>-widthhack</strong></strong> <i class='arg'>boolean</i><dd>
 Indicates whether or not all items should have the same width. This option only
 has effect when all of these conditions are met:
-a) the tree <strong>-orientation</strong> option is <strong>vertical</strong>;
-b) only a single tree column is visible;
-c) the single visible tree column <strong>-width</strong> option is zero;
-d) and the tree <strong>-wrap</strong> option results in wrapping.
+a) the treectrl's <strong>-orientation</strong> option is <strong>vertical</strong>;
+b) only a single column is visible;
+c) the single visible column's <strong>-width</strong> option is an empty string;
+and d) the treectrl's <strong>-wrap</strong> option results in wrapping.
 
 </dl>
 
