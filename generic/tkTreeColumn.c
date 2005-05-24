@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.26 2005/05/22 18:42:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.27 2005/05/24 23:43:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1162,6 +1162,13 @@ static void Column_UpdateTextLayout(Column *column, int width)
 	    break;
 	}
     }
+
+#ifdef MAC_OSX_TK
+    /* The height of the header is fixed on Aqua. There is only room for
+     * a single line of text. */
+    if (tree->useTheme)
+	maxLines = 1;
+#endif
 
     if (!multiLine && ((maxLines == 1) || (!width || (width >= column->textWidth))))
 	return;
@@ -2396,20 +2403,12 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
     bitmap = PerStateBitmap_ForState(tree, &column->arrowBitmap, state, NULL);
     if (bitmap != None) {
 	int bx, by;
-	XGCValues gcValues;
-	GC gc;
-	gcValues.clip_mask = bitmap;
-	gcValues.graphics_exposures = False;
-	gc = Tk_GetGC(tree->tkwin, GCClipMask | GCGraphicsExposures, &gcValues);
 	bx = x + layout.arrowLeft + sunken;
 	by = y + (height - (layout.arrowHeight + arrowPadY)) / 2 + sunken;
-	XSetClipOrigin(tree->display, gc, bx, by);
-	XCopyPlane(tree->display, bitmap, drawable, gc,
+	Tree_DrawBitmap(tree, bitmap, drawable, NULL, NULL,
 		0, 0,
 		(unsigned int) layout.arrowWidth, (unsigned int) layout.arrowHeight,
-		bx, by, 1);
-	XSetClipOrigin(tree->display, gc, 0, 0);
-	Tk_FreeGC(tree->display, gc);
+		bx, by);
 	return;
     }
 
@@ -2529,11 +2528,9 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dra
 	    + column->imagePadY[PAD_BOTTOM_RIGHT];
 	by = y + (height - h) / 2 + sunken;
 	by += column->imagePadY[PAD_TOP_LEFT];
-	XSetClipOrigin(tree->display, column->bitmapGC, bx, by);
-	XCopyPlane(tree->display, column->bitmap, drawable, column->bitmapGC,
+	Tree_DrawBitmapWithGC(tree, column->bitmap, drawable, column->bitmapGC,
 		0, 0, (unsigned int) imgW, (unsigned int) imgH,
-		bx, by, 1);
-	XSetClipOrigin(tree->display, column->bitmapGC, 0, 0);
+		bx, by);
     }
 
     if ((column->text != NULL) && (column->textLayout != NULL)) {
