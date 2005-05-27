@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.22 2005/05/24 23:51:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.23 2005/05/27 20:02:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -527,7 +527,11 @@ void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
 	GetGWorld(&saveWorld, &saveDevice);
 	SetGWorld(destPort, NULL);
 	TkMacOSXSetUpClippingRgn(drawable);
+#if 1
+	PenNormal();
+#else
 	TkMacOSXSetUpGraphicsPort(gc, destPort);
+#endif
 	PenMode(patXor);
 	ShowPen();
 	MoveTo(macWin->xOff + x1, macWin->yOff + y1);
