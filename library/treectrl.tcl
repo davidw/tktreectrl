@@ -456,10 +456,19 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    if {$width == 0} {
 		incr width
 	    }
-	    scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
-	    # Use "ne" because -columnproxy could be ""
-	    if {($x1 + $width - 1) ne [$w cget -columnproxy]} {
-		$w configure -columnproxy [expr {$x1 + $width - 1}]
+	    switch -- [$w cget -columnresizemode] {
+		proxy {
+		    scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
+		    # Use "ne" because -columnproxy could be ""
+		    if {($x1 + $width - 1) ne [$w cget -columnproxy]} {
+			$w configure -columnproxy [expr {$x1 + $width - 1}]
+		    }
+		}
+		realtime {
+		    if {[$w column cget $Priv(column) -width] != $width} {
+			$w column configure $Priv(column) -width $width
+		    }
+		}
 	    }
 	}
     }

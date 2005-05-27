@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.35 2005/05/24 23:56:27 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.36 2005/05/27 20:05:13 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -490,6 +490,19 @@ and uses an inverting color
 (i.e black on lighter background, white on darker background).
 This line can be used to give the user a visual feedback
 during column resizing.
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-columnresizemode\fR
+Database Name:	\fBcolumnResizeMode\fR
+Database Class:	\fBColumnResizeMode\fR
+.fi
+.IP
+Specifies the visual feedback used when resizing columns. The value should be
+one of \fBproxy\fR or \fBrealtime\fR. For \fBproxy\fR, a 1-pixel thick
+vertical line is drawn representing where the right edge of the column will
+be after resizing. For \fBrealtime\fR, the column's size is changed while
+the user is dragging the right edge of the column.
 .LP
 .nf
 .ta 6c

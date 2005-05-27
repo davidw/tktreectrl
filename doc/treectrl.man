@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.19 2005/05/24 23:56:27 treectrl Exp $}
+  $Id: treectrl.man,v 1.20 2005/05/27 20:05:13 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -135,6 +135,13 @@ and uses an inverting color
 (i.e black on lighter background, white on darker background).
 This line can be used to give the user a visual feedback
 during column resizing.
+
+[tkoption_def -columnresizemode columnResizeMode ColumnResizeMode]
+Specifies the visual feedback used when resizing columns. The value should be
+one of [const proxy] or [const realtime]. For [const proxy], a 1-pixel thick
+vertical line is drawn representing where the right edge of the column will
+be after resizing. For [const realtime], the column's size is changed while
+the user is dragging the right edge of the column.
 
 [tkoption_def -defaultstyle defaultStyle DefaultStyle]
 Specifies a list of styles, one per column, to apply to each item created by
