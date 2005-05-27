@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.27 2005/05/24 23:43:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.28 2005/05/27 20:04:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1166,7 +1166,7 @@ static void Column_UpdateTextLayout(Column *column, int width)
 #ifdef MAC_OSX_TK
     /* The height of the header is fixed on Aqua. There is only room for
      * a single line of text. */
-    if (tree->useTheme)
+    if (column->tree->useTheme)
 	maxLines = 1;
 #endif
 
