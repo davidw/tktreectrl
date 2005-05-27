@@ -559,6 +559,18 @@ proc MakeMainWindow {} {
     # Give it a big border to debug drawing
     .f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
 
+    # Resizing columns can be done in realtime or by displaying a proxy line
+    switch -- $::thisPlatform {
+	macosx {
+	    .f2.f1.t configure -columnresizemode realtime
+	}
+	windows {
+	    if {$::tcl_platform(os) eq "Windows NT"} {
+		.f2.f1.t configure -columnresizemode realtime
+	    }
+	}
+    }
+
     grid columnconfigure .f2 0 -weight 1
     grid rowconfigure .f2 0 -weight 1
     grid configure .f2.f1 -row 0 -column 0 -sticky news -pady 0
