@@ -22,7 +22,12 @@ bind TreeCtrl <Shift-ButtonPress-1> {
     set TreeCtrl::Priv(buttonMode) normal
     TreeCtrl::BeginExtend %W [%W item id {nearest %x %y}]
 }
-bind TreeCtrl <Control-ButtonPress-1> {
+# Command-click should provide a discontinuous selection on OSX
+switch -- [tk windowingsystem] {
+    "aqua" { set modifier Command }
+    default { set modifier Control }
+}
+bind TreeCtrl <$modifier-ButtonPress-1> {
     set TreeCtrl::Priv(buttonMode) normal
     TreeCtrl::BeginToggle %W [%W item id {nearest %x %y}]
 }
