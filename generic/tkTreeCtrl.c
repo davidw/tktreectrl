@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.40 2005/05/27 20:03:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.41 2005/05/28 21:56:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -713,7 +713,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		depth = (tree->showButtons && tree->showRootButton) ? 1 : 0;
 
 	    /* Point is in a line or button */
-	    if ((x >= tree->columnTreeLeft) &&
+	    if (tree->columnTreeVis && (x >= tree->columnTreeLeft) &&
 		    (x < tree->columnTreeLeft + depth * tree->useIndent)) {
 		int column = (x - tree->columnTreeLeft) / tree->useIndent + 1;
 		if (column == depth) {
@@ -3068,7 +3068,7 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
 #endif
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
-    if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_VERSION) != TCL_OK) {
+    if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_PATCHLEVEL) != TCL_OK) {
 	return TCL_ERROR;
     }
     return Tcl_EvalEx(interp, initScript, -1, TCL_EVAL_GLOBAL);
