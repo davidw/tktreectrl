@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.41 2005/05/28 21:56:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.42 2005/05/28 22:14:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -714,6 +714,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	    /* Point is in a line or button */
 	    if (tree->columnTreeVis && (x >= tree->columnTreeLeft) &&
+		    (x < tree->columnTreeLeft + TreeColumn_UseWidth(tree->columnTree)) &&
 		    (x < tree->columnTreeLeft + depth * tree->useIndent)) {
 		int column = (x - tree->columnTreeLeft) / tree->useIndent + 1;
 		if (column == depth) {
