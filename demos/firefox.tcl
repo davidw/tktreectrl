@@ -78,6 +78,16 @@ proc DemoFirefoxPrivacy {} {
 	$T style layout $S eRectBottom -detach yes -indent no -iexpand es
 	$T style layout $S eWindow -iexpand e -squeeze x -padx {0 2} -pady {0 8}
 
+	set buttonCmd button
+	set checkbuttonCmd checkbutton
+	set tile 0
+	catch {
+		package require tile 0.6
+		set buttonCmd ttk::button
+#		set checkbuttonCmd ttk::checkbutton
+		set tile 1
+	}
+
 	#
 	# Create items and assign styles
 	#
@@ -92,7 +102,7 @@ proc DemoFirefoxPrivacy {} {
 		set I [$T item create -button yes]
 		$T item style set $I C0 styCategory
 		$T item element configure $I C0 eText1 -text $category
-		set b [button $T.b$I -text "Clear" -command "" -width 11]
+		set b [$buttonCmd $T.b$I -text "Clear" -command "" -width 11]
 		$T item element configure $I C0 eWindow -window $b
 		$T item lastchild root $I
 	}
@@ -121,8 +131,9 @@ proc DemoFirefoxPrivacy {} {
 	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Information entered in web page forms and the Search Bar is saved to make filling out forms and searching faster."
 	bindtags $f.t1 TextWrapBindTag
-	checkbutton $f.cb1 -background $bg -text "Save information I enter in web page forms and the Search Bar"
-	$f.cb1 select
+	$checkbuttonCmd $f.cb1 -background $bg -text "Save information I enter in web page forms and the Search Bar" \
+		-variable ::cbvar($f.cb1)
+	set ::cbvar($f.cb1) 1
 	pack $f.t1 -side top -anchor w -fill x -padx {0 8} -pady {0 4}
 	pack $f.cb1 -side top -anchor w
 	$T item element configure $I C0 eWindow -window $f
@@ -137,14 +148,14 @@ proc DemoFirefoxPrivacy {} {
 	text $fLeft.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
 	$fLeft.t1 insert end "Login information for web pages can be kept in the Password Manager so that you do not need to re-enter your login details every time you visit."
 	bindtags $fLeft.t1 TextWrapBindTag
-	checkbutton $fLeft.cb1 -background $bg -text "Remember Passwords"
-	$fLeft.cb1 select
+	$checkbuttonCmd $fLeft.cb1 -background $bg -text "Remember Passwords" -variable ::cbvar($fLeft.cb1)
+	set ::cbvar($fLeft.cb1) 1
 	pack $fLeft.t1 -side top -expand yes -fill x -pady {0 6}
 	pack $fLeft.cb1 -side top -anchor w
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	button $fRight.b1 -text "View Saved Passwords"
-	button $fRight.b2 -text "Change Master Password..."
+	$buttonCmd $fRight.b1 -text "View Saved Passwords"
+	$buttonCmd $fRight.b2 -text "Change Master Password..."
 	pack $fRight.b1 -side top -expand yes -fill x
 	pack $fRight.b2 -side top -expand yes -fill x -pady {8 0}
 	pack $fLeft -side left -expand yes -fill x
@@ -162,14 +173,23 @@ proc DemoFirefoxPrivacy {} {
 
 	set f1 [frame $f.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Remove files from the Download Manager:"
-	menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m -text Manually \
-		-width [string length "Upon successful download"] -justify left
-	set m [menu $f1.mb1.m -tearoff no]
-	foreach label {
-		"Upon successful download"
-		"When firefox exits"
-		Manually} {
-		$m add command -label $label -command [list $f1.mb1 configure -text $label]
+	if {$tile} {
+		ttk::combobox $f1.mb1 -values {
+			"Upon successful download"
+			"When firefox exits"
+			Manually
+		} -state readonly -width [string length "Upon successful download"]
+		$f1.mb1 current 2
+	} else {
+		menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m -text Manually \
+			-width [string length "Upon successful download"] -justify left
+		set m [menu $f1.mb1.m -tearoff no]
+		foreach label {
+			"Upon successful download"
+			"When firefox exits"
+			Manually} {
+			$m add command -label $label -command [list $f1.mb1 configure -text $label]
+		}
 	}
 	pack $f1.l1 -side left
 	pack $f1.mb1 -side left -padx {8 10}
@@ -187,28 +207,41 @@ proc DemoFirefoxPrivacy {} {
 	bindtags $f.t1 TextWrapBindTag
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
-	checkbutton $fLeft.cb1 -background $bg -text "Allow sites to set cookies"
-	$fLeft.cb1 select
-	checkbutton $fLeft.cb2 -background $bg -text "for the originating web site only"
+	$checkbuttonCmd $fLeft.cb1 -background $bg -text "Allow sites to set cookies" \
+		-variable ::cbvar($fLeft.cb1)
+	set ::cbvar($fLeft.cb1) 1
+	$checkbuttonCmd $fLeft.cb2 -background $bg -text "for the originating web site only" \
+		-variable ::cbar($fLeft.cb2)
+	set ::cbar($fLeft.cb2) 0
 	pack $fLeft.cb1 -side top -anchor w
 	pack $fLeft.cb2 -side top -anchor w -padx {20 0}
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	button $fRight.b1 -text "Exceptions"
-	button $fRight.b2 -text "View Cookies"
+	$buttonCmd $fRight.b1 -text "Exceptions"
+	$buttonCmd $fRight.b2 -text "View Cookies"
 	pack $fRight.b1 -side left -padx {0 10}
 	pack $fRight.b2 -side left
 
 	set f1 [frame $fLeft.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Keep Cookies:"
-	menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m -text "until they expire" \
-		-width [string length "until I close Firefox"] -justify left
-	set m [menu $f1.mb1.m -tearoff no]
-	foreach label {
-		"until they expire"
-		"until I close Firefox"
-		"ask me every time"} {
-		$m add command -label $label -command [list $f1.mb1 configure -text $label]
+	if {$tile} {
+		ttk::combobox $f1.mb1 -values {
+				"until they expire"
+				"until I close Firefox"
+				"ask me every time"
+			} -state readonly -width [string length "until I close Firefox"]
+		$f1.mb1 current 0
+	} else {
+		menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m -text "until they expire" \
+			-width [string length "until I close Firefox"] -justify left
+		set m [menu $f1.mb1.m -tearoff no]
+		foreach label {
+			"until they expire"
+			"until I close Firefox"
+			"ask me every time"
+		} {
+			$m add command -label $label -command [list $f1.mb1 configure -text $label]
+		}
 	}
 	pack $f1.l1 -side left
 	pack $f1.mb1 -side left -padx {8 0}
