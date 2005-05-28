@@ -502,7 +502,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
 	ShowPopup %W %x %y %X %Y
     }
     if {[tk windowingsystem] eq "aqua"} {
-	bind $f.t <Command-ButtonPress-1> {
+	bind $f.t <Control-ButtonPress-1> {
 	    ShowPopup %W %x %y %X %Y
 	}
     }
