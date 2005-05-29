@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.21 2005/05/24 23:44:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.22 2005/05/29 02:44:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2313,8 +2313,9 @@ static void TextUpdateStringRep(ElementArgs *args)
 	Tcl_Obj *objv[5], *resultObj = NULL;
 	static Tcl_Obj *staticObj[3] = { NULL };
 	static Tcl_Obj *staticFormat[4] = { NULL };
-	Tcl_ObjCmdProc *clockObjCmd = NULL;
-	Tcl_ObjCmdProc *formatObjCmd = NULL;
+	Tcl_ObjCmdProc *clockObjCmd = NULL, *formatObjCmd = NULL;
+	ClientData clockClientData = NULL, formatClientData = NULL;
+	Tcl_CmdInfo cmdInfo;
 
 	if (staticFormat[0] == NULL) {
 	    staticFormat[0] = Tcl_NewStringObj("%g", -1);
@@ -2331,17 +2332,13 @@ static void TextUpdateStringRep(ElementArgs *args)
 	    for (i = 0; i < 3; i++)
 		Tcl_IncrRefCount(staticObj[i]);
 	}
-	if (clockObjCmd == NULL) {
-	    Tcl_CmdInfo cmdInfo;
-
-	    if (Tcl_GetCommandInfo(tree->interp, "::clock", &cmdInfo) == 1)
-		clockObjCmd = cmdInfo.objProc;
+	if (Tcl_GetCommandInfo(tree->interp, "::clock", &cmdInfo) == 1) {
+	    clockObjCmd = cmdInfo.objProc;
+	    clockClientData = cmdInfo.objClientData;
 	}
-	if (formatObjCmd == NULL) {
-	    Tcl_CmdInfo cmdInfo;
-
-	    if (Tcl_GetCommandInfo(tree->interp, "::format", &cmdInfo) == 1)
-		formatObjCmd = cmdInfo.objProc;
+	if (Tcl_GetCommandInfo(tree->interp, "::format", &cmdInfo) == 1) {
+	    formatObjCmd = cmdInfo.objProc;
+	    formatClientData = cmdInfo.objClientData;
 	}
 
 	/* Important to remove any shared result object, otherwise
@@ -2356,7 +2353,8 @@ static void TextUpdateStringRep(ElementArgs *args)
 		objv[objc++] = staticObj[1]; /* format */
 		objv[objc++] = formatObj;
 		objv[objc++] = dataObj;
-		if (formatObjCmd(NULL, tree->interp, objc, objv) == TCL_OK)
+		if (formatObjCmd(formatClientData, tree->interp, objc, objv)
+			    == TCL_OK)
 		    resultObj = Tcl_GetObjResult(tree->interp);
 		break;
 	    case TDT_INTEGER:
@@ -2366,7 +2364,8 @@ static void TextUpdateStringRep(ElementArgs *args)
 		objv[objc++] = staticObj[1]; /* format */
 		objv[objc++] = formatObj;
 		objv[objc++] = dataObj;
-		if (formatObjCmd(NULL, tree->interp, objc, objv) == TCL_OK)
+		if (formatObjCmd(formatClientData, tree->interp, objc, objv)
+			    == TCL_OK)
 		    resultObj = Tcl_GetObjResult(tree->interp);
 		break;
 	    case TDT_LONG:
@@ -2376,7 +2375,8 @@ static void TextUpdateStringRep(ElementArgs *args)
 		objv[objc++] = staticObj[1]; /* format */
 		objv[objc++] = formatObj;
 		objv[objc++] = dataObj;
-		if (formatObjCmd(NULL, tree->interp, objc, objv) == TCL_OK)
+		if (formatObjCmd(formatClientData, tree->interp, objc, objv)
+			    == TCL_OK)
 		    resultObj = Tcl_GetObjResult(tree->interp);
 		break;
 	    case TDT_STRING:
@@ -2386,7 +2386,8 @@ static void TextUpdateStringRep(ElementArgs *args)
 		objv[objc++] = staticObj[1]; /* format */
 		objv[objc++] = formatObj;
 		objv[objc++] = dataObj;
-		if (formatObjCmd(NULL, tree->interp, objc, objv) == TCL_OK)
+		if (formatObjCmd(formatClientData, tree->interp, objc, objv)
+			    == TCL_OK)
 		    resultObj = Tcl_GetObjResult(tree->interp);
 		break;
 	    case TDT_TIME:
@@ -2399,7 +2400,8 @@ static void TextUpdateStringRep(ElementArgs *args)
 		    objv[objc++] = staticObj[2];
 		    objv[objc++] = formatObj;
 		}
-		if (clockObjCmd(NULL, tree->interp, objc, objv) == TCL_OK)
+		if (clockObjCmd(clockClientData, tree->interp, objc, objv)
+			    == TCL_OK)
 		    resultObj = Tcl_GetObjResult(tree->interp);
 		break;
 	    default:
@@ -3158,7 +3160,6 @@ static void DeleteProcWindow(ElementArgs *args)
 	}
 	Tk_UnmapWindow(elemX->tkwin);
     }
-
 }
 
 static int WorldChangedProcWindow(ElementArgs *args)
