@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.23 2005/05/27 20:02:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.24 2005/05/29 02:43:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -748,7 +748,7 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 	}
     }
 
-    TK_PHOTOPUTBLOCK(tree->interp, photoH, &photoBlock, 0, 0, w, h,
+    TK_PHOTOPUTBLOCK(interp, photoH, &photoBlock, 0, 0, w, h,
 	    TK_PHOTO_COMPOSITE_SET);
 
     Tcl_Free((char *) pixelPtr);
