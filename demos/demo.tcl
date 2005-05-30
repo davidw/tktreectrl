@@ -113,7 +113,12 @@ foreach list [info loaded] {
     puts "demo.tcl: using '$file'"
     break
 }
-puts "demo.tcl: TREECTRL_LIBRARY=$env(TREECTRL_LIBRARY)"
+if {[info exists env(TREECTRL_LIBRARY)]} {
+	puts "demo.tcl: TREECTRL_LIBRARY=$env(TREECTRL_LIBRARY)"
+} else {
+	puts "demo.tcl: TREECTRL_LIBRARY undefined"
+}
+puts "demo.tcl: treectrl_library=$treectrl_library"
 
 option add *TreeCtrl.useTheme 1
 #option add *TreeCtrl.itemPrefix item
