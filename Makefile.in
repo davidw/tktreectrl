@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.5 2005/05/28 21:50:30 treectrl Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.6 2005/05/30 19:33:59 treectrl Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -283,12 +283,13 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 pkgIndex.tcl:
 	(\
 	echo 'if {[catch {package require Tcl 8.4}]} return';\
+	echo 'set script ""';\
 	echo 'if {![info exists ::env(TREECTRL_LIBRARY)]';\
 	echo '    && [file exists [file join $$dir treectrl.tcl]]} {';\
-	echo '    set ::env(TREECTRL_LIBRARY) $$dir';\
+	echo '    append script "set ::treectrl_library \"$$dir\"\n"';\
 	echo '}';\
-	echo 'package ifneeded $(PACKAGE_NAME) $(PACKAGE_PATCHLEVEL) \
-	    [list load [file join $$dir $(PKG_LIB_FILE)] $(PACKAGE_NAME)]'\
+	echo 'append script "load \"[file join $$dir $(PKG_LIB_FILE)]\" $(PACKAGE_NAME)"';\
+	echo 'package ifneeded $(PACKAGE_NAME) $(PACKAGE_PATCHLEVEL) $$script'\
 	) > pkgIndex.tcl
 
 #========================================================================
