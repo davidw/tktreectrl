@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.37 2005/06/02 05:18:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.38 2005/06/02 22:06:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -685,6 +685,7 @@ static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv,
   %W index "root MODIFIERS"
   %W index "first ?visible? MODIFIERS"
   %W index "last ?visible? MODIFIERS"
+  %W index "end ?visible? MODIFIERS"
   %W index "rnc row col MODIFIERS"
   %W index "ID MODIFIERS"
   MODIFIERS:
@@ -722,12 +723,12 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
     Tcl_Obj **objv, *elemPtr;
     Item *item = NULL;
     static CONST char *indexName[] = {
-	"active", "all", "anchor", "first", "last",
+	"active", "all", "anchor", "end", "first", "last",
 	"nearest", "rnc", "root", (char *) NULL
     };
     enum indexEnum {
-	INDEX_ACTIVE, INDEX_ALL, INDEX_ANCHOR, INDEX_FIRST, INDEX_LAST,
-	INDEX_NEAREST, INDEX_RNC, INDEX_ROOT
+	INDEX_ACTIVE, INDEX_ALL, INDEX_ANCHOR, INDEX_END, INDEX_FIRST,
+	INDEX_LAST, INDEX_NEAREST, INDEX_RNC, INDEX_ROOT
     } ;
     static CONST char *modifiers[] = {
 	"above", "below", "bottom", "child",
@@ -790,6 +791,7 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
 		}
 		break;
 	    }
+	    case INDEX_END:
 	    case INDEX_LAST:
 	    {
 		item = (Item *) tree->root;
