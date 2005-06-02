@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.42 2005/05/28 22:14:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.43 2005/06/02 04:49:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3032,7 +3032,7 @@ static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
   namespace eval ::TreeCtrl {}\n\
   proc ::TreeCtrl::Init {} {\n\
     global treectrl_library\n\
-    tcl_findLibrary treectrl " PACKAGE_VERSION " " PACKAGE_VERSION " treectrl.tcl TREECTRL_LIBRARY treectrl_library\n\
+    tcl_findLibrary treectrl " PACKAGE_PATCHLEVEL " " PACKAGE_PATCHLEVEL " treectrl.tcl TREECTRL_LIBRARY treectrl_library\n\
   }\n\
 }\n\
 ::TreeCtrl::Init";
