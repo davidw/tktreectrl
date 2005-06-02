@@ -93,12 +93,12 @@ proc DemoExplorerDetails {} {
 	# Create styles using the elements
 	#
 
-	# image + text
+	# column 0: image + text
 	set S [$T style create styName -orient horizontal]
 	$T style elements $S {e4 e1 e2}
-	$T style layout $S e1 -expand ns
-	$T style layout $S e2 -padx {2 0} -squeeze x -expand ns
-	$T style layout $S e4 -union [list e2] -iexpand ns -ipadx 2
+	$T style layout $S e1 -padx {2 0} -expand ns
+	$T style layout $S e2 -squeeze x -expand ns
+	$T style layout $S e4 -union [list e2] -ipadx 2 -iexpand ns
 
 	# column 1: text
 	set S [$T style create stySize]
@@ -115,18 +115,35 @@ proc DemoExplorerDetails {} {
 	$T style elements $S txtDate
 	$T style layout $S txtDate -padx 6 -squeeze x -expand ns
 
-	set ::TreeCtrl::Priv(edit,$T) {
+	# List of lists: {column style element ...} specifying text elements
+	# the user can edit
+	TreeCtrl::SetEditable $T {
 		{name styName e2}
 	}
-	set ::TreeCtrl::Priv(sensitive,$T) {
-		{name styName e1 e2}
-	}
-	set ::TreeCtrl::Priv(dragimage,$T) {
+
+	# List of lists: {column style element ...} specifying elements
+	# the user can click on or select with the selection rectangle
+	TreeCtrl::SetSensitive $T {
 		{name styName e1 e2}
 	}
 
+	# List of lists: {column style element ...} specifying elements
+	# added to the drag image when dragging selected items
+	TreeCtrl::SetDragImage $T {
+		{name styName e1 e2}
+	}
+
+	# During editing, hide the text and selection-rectangle elements.
+	$T notify bind $T <Edit-begin> {
+		%T item element configure %I %C e2 -draw no
+		%T item element configure %I %C e4 -draw no
+	}
 	$T notify bind $T <Edit-accept> {
 		%T item element configure %I %C %E -text %t
+	}
+	$T notify bind $T <Edit-end> {
+		%T item element configure %I %C e2 -draw yes
+		%T item element configure %I %C e4 -draw yes
 	}
 
 	#
@@ -272,21 +289,39 @@ proc DemoExplorerLargeIcons {} {
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemSel elemImg elemTxt}
 	$T style layout $S elemImg -expand we
-	$T style layout $S elemTxt -pady {4 0} -padx 2 -squeeze x -expand we
-	$T style layout $S elemSel -union [list elemTxt]
+	$T style layout $S elemTxt -pady {4 0} -squeeze x -expand we
+	$T style layout $S elemSel -union [list elemTxt] -ipadx 2
 
-	set ::TreeCtrl::Priv(edit,$T) {
+	# List of lists: {column style element ...} specifying text elements
+	# the user can edit
+	TreeCtrl::SetEditable $T {
 		{C0 STYLE elemTxt}
 	}
-	set ::TreeCtrl::Priv(sensitive,$T) {
-		{C0 STYLE elemImg elemTxt}
-	}
-	set ::TreeCtrl::Priv(dragimage,$T) {
+
+	# List of lists: {column style element ...} specifying elements
+	# the user can click on or select with the selection rectangle
+	TreeCtrl::SetSensitive $T {
 		{C0 STYLE elemImg elemTxt}
 	}
 
+	# List of lists: {column style element ...} specifying elements
+	# added to the drag image when dragging selected items
+	TreeCtrl::SetDragImage $T {
+		{C0 STYLE elemImg elemTxt}
+	}
+
+	# During editing, hide the text and selection-rectangle elements.
+	$T state define edit
+	$T element configure elemTxt -draw {no edit}
+	$T element configure elemSel -draw {no edit}
+	$T notify bind $T <Edit-begin> {
+		%T item state set %I ~edit
+	}
 	$T notify bind $T <Edit-accept> {
 		%T item element configure %I %C %E -text %t
+	}
+	$T notify bind $T <Edit-end> {
+		%T item state set %I ~edit
 	}
 
 	#
@@ -327,6 +362,7 @@ proc DemoExplorerLargeIcons {} {
 		%T item element configure %p C0 elemTxt -lines {}
 		%T item element configure %c C0 elemTxt -lines 3
 	}
+	$T item element configure active C0 elemTxt -lines 3
 
 	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
 
@@ -390,18 +426,35 @@ proc DemoExplorerList {} {
 	$T style layout $S elemTxt -squeeze x -expand ns -padx {2 0}
 	$T style layout $S elemSel -union [list elemTxt] -iexpand ns -ipadx 2
 
-	set ::TreeCtrl::Priv(edit,$T) {
+	# List of lists: {column style element ...} specifying text elements
+	# the user can edit
+	TreeCtrl::SetEditable $T {
 		{C0 STYLE elemTxt}
 	}
-	set ::TreeCtrl::Priv(sensitive,$T) {
-		{C0 STYLE elemImg elemTxt}
-	}
-	set ::TreeCtrl::Priv(dragimage,$T) {
+
+	# List of lists: {column style element ...} specifying elements
+	# the user can click on or select with the selection rectangle
+	TreeCtrl::SetSensitive $T {
 		{C0 STYLE elemImg elemTxt}
 	}
 
+	# List of lists: {column style element ...} specifying elements
+	# added to the drag image when dragging selected items
+	TreeCtrl::SetDragImage $T {
+		{C0 STYLE elemImg elemTxt}
+	}
+
+	# During editing, hide the text and selection-rectangle elements.
+	$T notify bind $T <Edit-begin> {
+		%T item element configure %I %C elemSel -draw no
+		%T item element configure %I %C elemTxt -draw no
+	}
 	$T notify bind $T <Edit-accept> {
 		%T item element configure %I %C %E -text %t
+	}
+	$T notify bind $T <Edit-end> {
+		%T item element configure %I %C elemSel -draw yes
+		%T item element configure %I %C elemTxt -draw yes
 	}
 
 	#
