@@ -1,7 +1,7 @@
-<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.4 2005/05/27 20:11:47 treectrl Exp $ -->
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
+<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.5 2005/06/02 22:09:47 treectrl Exp $ -->
   <meta content="text/html; charset=ISO-8859-1"
  http-equiv="content-type">
   <title>What's New in TkTreeCtrl</title>
@@ -41,7 +41,8 @@ Changed</th>
     </tr>
     <tr>
       <td>-backgroundmode</td>
-      <td>The value "order" should be used instead of "index", and
+      <td>The values "index" and "visindex" are deprecated. The value
+"order" should be used instead of "index", and
 "ordervisible" should be used instead of "visindex". This brings
 agreement with the new "item order" command which replaces the "item
 index" command.</td>
@@ -209,7 +210,8 @@ option-value pair is given.<br>
     </tr>
     <tr>
       <td>column create</td>
-      <td>The result is a unique identifier. The result used to be an
+      <td>The result is a unique identifier. Previously the result was
+an
 index in the list of columns.</td>
     </tr>
     <tr>
@@ -290,7 +292,7 @@ instead</th>
  cellspacing="2">
   <tbody>
     <tr>
-      <th style="background-color: rgb(255, 255, 204);">Arguments/Result
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Arguments/Result
 Changed</th>
       <th style="background-color: rgb(204, 255, 255);">What changed</th>
     </tr>
@@ -343,19 +345,56 @@ above</td>
     </tr>
   </tbody>
 </table>
+<h2>Element Changes</h2>
+<ul>
+  <li>A new element type&nbsp;<span style="font-weight: bold;">window</span>
+was added.
+See the new demo "Firefox Privacy" and the ELEMENTS section in the help
+file.</li>
+  <li>All element types (except for the new <span
+ style="font-weight: bold;">window</span> element type) have a new
+per-state boolean option called <span style="font-weight: bold;">-draw</span>.</li>
+  <li>The <span style="font-weight: bold;">text</span> element type
+has a new option called <span style="font-weight: bold;">-textvariable</span>.
+See the new demo
+"Textvariable" and the ELEMENTS section in the help file.</li>
+</ul>
+<h2>Event Changes</h2>
+<ul>
+  <li>2 new %-substitution characters <span style="font-weight: bold;">%P</span>
+and <span style="font-weight: bold;">%?</span> are allowed in binding
+scripts. See the EVENTS AND SCRIPT SUBSTITUTIONS section in the help
+file.</li>
+  <li>The new static event <span style="font-weight: bold;">&lt;ItemDelete&gt;</span>
+is generated when items are deleted. See the EVENTS AND SCRIPT
+SUBSTITUTIONS section in the help file.</li>
+</ul>
 <h2>Library Script Changes</h2>
-<h3>filelist-bindings.tcl:</h3>
+<h3 style="margin-left: 40px;">filelist-bindings.tcl:</h3>
 <ul>
   <li>The Priv(edit) variable, which is used to specify which text
 elements may be edited, now has the same format as Priv(sensitive).
 Previously only elements in the first column could be edited.</li>
+  <li>3 new commands in the TreeCtrl namespace should be used to access
+the Priv(dragimage), Priv(edit) and Priv(sensitive) variables. The
+commands are SetDragImage, SetEditable and SetSensitive.</li>
+  <li>Two new dynamic events <span style="font-weight: bold;">&lt;Edit-begin&gt;</span>
+and <span style="font-weight: bold;">&lt;Edit-end&gt;</span> are
+generated when editing a file name.</li>
+</ul>
+<h3 style="margin-left: 40px;">treectrl.tcl:</h3>
+<ul>
+  <li>On OSX/Aqua, the Command key is used to perform discontinuous
+selection. Previously the Control key was used but Command is specified
+by Apple's user-interface guidelines.</li>
 </ul>
 <h2>Other Changes</h2>
 <ul>
   <li>On WinXP, the column headers and open/close buttons are drawn
 using the system theme if <span style="font-weight: bold;">-usetheme</span>
 is true. The sort arrow is drawn the old-fashioned way.</li>
-  <li>On OSX,&nbsp; the column headers and open/close buttons are drawn
+  <li>On OSX/Aqua,&nbsp; the column headers and open/close buttons are
+drawn
 using the system theme if <span style="font-weight: bold;">-usetheme</span>
 is true. The sort arrow will be drawn by the Appearance Manager as
 well. This will override the <span style="font-weight: bold;">-arrowside</span>
@@ -363,25 +402,22 @@ and <span style="font-weight: bold;">-arrowgravity</span> options.</li>
   <li>Columns can be moved by drag-and-drop. See <span
  style="font-weight: bold;">column dragconfigure</span> in the help
 file.</li>
-  <li>New %-substitution characters %P and %? allowed in binding
-scripts. See the EVENTS AND SCRIPT SUBSTITUTIONS section in the help
-file.</li>
-  <li>New static event &lt;ItemDelete&gt;. See the EVENTS AND SCRIPT
-SUBSTITUTIONS section in the help file.</li>
-  <li>New <span style="font-weight: bold;">text</span> element option <span
- style="font-weight: bold;">-textvariable</span>. See the new demo
-"Textvariable" and the ELEMENTS section in the help file.</li>
-  <li>New element type&nbsp;<span style="font-weight: bold;">window</span>.
-See the new demo "Firefox Privacy" and the ELEMENTS section in the help
-file.</li>
   <li>Columns can be specified in new ways. See the COLUMN DESCRIPTION
 section in the help file.</li>
   <li>Added new section DYNAMIC EVENTS to the help file.</li>
   <li>Added new section PER-STATE OPTIONS to the help file.</li>
-  <li>New style layout option <span style="font-weight: bold;">-indent</span>
+  <li>The new style layout option <span style="font-weight: bold;">-indent</span>
 allows elements to be displayed in the button/line area. See the <span
  style="font-weight: bold;">style layout</span> command in the help
 file and the new demo "Firefox Privacy".</li>
+  <li>The new item description <span style="font-weight: bold;">end</span>
+is equivalent to <span style="font-weight: bold;">last</span>.</li>
+  <li><span style="color: rgb(255, 0, 0);">If you have version 1.1
+installed, replace the old pkgIndex.tcl file with the one from this
+version (but replace the version number 2.0 with 1.1).<span
+ style="color: rgb(0, 0, 0);"> Otherwise the old pkgIndex.tcl file will
+set the TREECTRL_LIBRARY variable which will override where the library
+scripts are found.</span></span></li>
 </ul>
 <h2>Demo Changes</h2>
 <ul>
@@ -394,8 +430,9 @@ file and the new demo "Firefox Privacy".</li>
   <li>Added a new Event Browser window to display events generated by
 the main treectrl widget.</li>
   <li>The context menu can be popped up in all the demo lists. A
-&lt;Command-ButtonPress-1&gt; binding for this was added under Aqua.</li>
+&lt;Control-ButtonPress-1&gt; binding for this was added under OSX/Aqua.</li>
+  <li>In the "Explorer" demos, the file name is hidden while editing
+the file name.</li>
 </ul>
-<h2></h2>
 </body>
 </html>
