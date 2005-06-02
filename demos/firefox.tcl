@@ -63,6 +63,10 @@ proc DemoFirefoxPrivacy {} {
 	$T element create eRectTop rect -outline {black open} -fill {#FFFFCC open} -outlinewidth 1 -open s
 	$T element create eRectBottom rect -outline black -fill #FFFFCC -outlinewidth 1 -open n
 
+	# Destroy the window when the element is deleted. Could also bind to the
+	# <ItemDelete> event.
+	$T element configure eWindow -destroy yes
+
 	#
 	# Create styles using the elements
 	#
