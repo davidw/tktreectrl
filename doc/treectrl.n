@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.37 2005/06/02 06:01:12 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.38 2005/06/02 22:11:45 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2426,7 +2426,7 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+needed. The default is 1. Note: Under OSX/Aqua this value is always set to 1 when the
 treectrl's \fB-usetheme\fR option is true, because the Appearance Manager
 uses a fixed height for the column header; there is only room for a single line
 of text.
@@ -2474,6 +2474,7 @@ The initial part of a column description must begin with one of the following te
 \fIid\fR
 Specifies the unique column identifier, where \fIid\fR should be
 the return value of a prior call of the \fBcolumn create\fR widget command.
+See also the \fB-columnprefix\fR option.
 .TP
 \fItag\fR
 Specifies the value of a column's -tag option.
@@ -2485,6 +2486,8 @@ Indicates every column, including the tail column. Not all commands accept this.
 Indicates the leftmost column of the treectrl.
 If \fBvisible\fR is specified, the leftmost column whose -visible option
 is true is used.
+.TP
+\fBend\fR ?\fBvisible\fR?
 .TP
 \fBlast\fR ?\fBvisible\fR?
 Indicates the rightmost column of the treectrl (but not the tail column).
@@ -2810,6 +2813,12 @@ Acceptable values are \fBchar\fR or \fBword\fR.
 An element of type \fBwindow\fR can be used to display a Tk window in an item.
 The following options are supported for window elements:
 .TP
+\fB\fB-destroy\fR\fR \fIboolean\fR
+Specifies whether the associated Tk window should be destroyed when the
+element is deleted. The element is deleted when the item containing the
+element is deleted, when the column containing the element is deleted,
+or when the style associated with the item's column is changed.
+.TP
 \fB\fB-window\fR\fR \fIpathName\fR
 Specifies the window to associate with this element. The window specified by
 \fIpathName\fR must either be a child of the treectrl widget or a child of
@@ -2827,7 +2836,8 @@ The initial part of an item description must begin with one of the following ter
 \fIid\fR
 Specifies the unique item identifier, where \fIid\fR should be
 the return value of a prior call of the \fBitem create\fR widget command,
-or \fB0\fR to specify the ever-present root item.
+or \fB0\fR to specify the ever-present root item. See also the
+\fB-itemprefix\fR option.
 .TP
 \fBactive\fR
 Indicates the item that is currently active, i.e. normally
@@ -2844,6 +2854,8 @@ Indicates the first item of the treectrl, i.e. the root item.
 If \fBvisible\fR is specified and the widget is configured with
 \fB-showroot\fR \fBno\fR, the first visible child of the root node
 is specified instead.
+.TP
+\fBend\fR ?\fBvisible\fR?
 .TP
 \fBlast\fR ?\fBvisible\fR?
 Indicates the last item of the treectrl.

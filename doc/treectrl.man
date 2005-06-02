@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.21 2005/06/02 06:01:12 treectrl Exp $}
+  $Id: treectrl.man,v 1.22 2005/06/02 22:11:45 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1990,7 +1990,7 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+needed. The default is 1. Note: Under OSX/Aqua this value is always set to 1 when the
 treectrl's [option -usetheme] option is true, because the Appearance Manager
 uses a fixed height for the column header; there is only room for a single line
 of text.
@@ -2042,6 +2042,7 @@ The initial part of a column description must begin with one of the following te
 [lst_item [arg id]]
 Specifies the unique column identifier, where [arg id] should be
 the return value of a prior call of the [cmd {column create}] widget command.
+See also the [option -columnprefix] option.
 
 [lst_item [arg tag]]
 Specifies the value of a column's -tag option.
@@ -2054,6 +2055,7 @@ Indicates the leftmost column of the treectrl.
 If [const visible] is specified, the leftmost column whose -visible option
 is true is used.
 
+[lst_item "[const end] [opt [const visible]]"]
 [lst_item "[const last] [opt [const visible]]"]
 Indicates the rightmost column of the treectrl (but not the tail column).
 If [const visible] is specified, the rightmost column whose -visible option
@@ -2411,6 +2413,12 @@ An element of type [const window] can be used to display a Tk window in an item.
 The following options are supported for window elements:
 
 [list_begin opt]
+[opt_def [option -destroy] [arg boolean]]
+Specifies whether the associated Tk window should be destroyed when the
+element is deleted. The element is deleted when the item containing the
+element is deleted, when the column containing the element is deleted,
+or when the style associated with the item's column is changed.
+
 [opt_def [option -window] [arg pathName]]
 Specifies the window to associate with this element. The window specified by
 [arg pathName] must either be a child of the treectrl widget or a child of
@@ -2431,7 +2439,8 @@ The initial part of an item description must begin with one of the following ter
 [lst_item [arg id]]
 Specifies the unique item identifier, where [arg id] should be
 the return value of a prior call of the [cmd {item create}] widget command,
-or [const 0] to specify the ever-present root item.
+or [const 0] to specify the ever-present root item. See also the
+[option -itemprefix] option.
 
 [lst_item [const active]]
 Indicates the item that is currently active, i.e. normally
@@ -2449,6 +2458,7 @@ If [const visible] is specified and the widget is configured with
 [option -showroot] [const no], the first visible child of the root node
 is specified instead.
 
+[lst_item "[const end] [opt [const visible]]"]
 [lst_item "[const last] [opt [const visible]]"]
 Indicates the last item of the treectrl.
 If [const visible] is specified and the last item is currently not visible,

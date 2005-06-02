@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.20 2005/06/02 06:01:12 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.21 2005/06/02 22:11:39 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.20 2005/06/02 06:01:12 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.21 2005/06/02 22:11:39 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -2576,7 +2576,7 @@ to display the column title.
 Specifies the maximum number of lines of text to display in the column title.
 If this value is zero, the number of lines displayed is determined by any newline
 characters and the effects of wrapping when the column width is less than
-needed. The default is 1. Note: Under OSX this value is always set to 1 when the
+needed. The default is 1. Note: Under OSX/Aqua this value is always set to 1 when the
 treectrl's <strong>-usetheme</strong> option is true, because the Appearance Manager
 uses a fixed height for the column header; there is only room for a single line
 of text.
@@ -2634,6 +2634,7 @@ The initial part of a column description must begin with one of the following te
 <dt><i class='arg'>id</i><dd>
 Specifies the unique column identifier, where <i class='arg'>id</i> should be
 the return value of a prior call of the <b class='cmd'>column create</b> widget command.
+See also the <strong>-columnprefix</strong> option.
 
 <br><br>
 <dt><i class='arg'>tag</i><dd>
@@ -2650,6 +2651,7 @@ If <strong>visible</strong> is specified, the leftmost column whose -visible opt
 is true is used.
 
 <br><br>
+<dt><strong>end</strong> ?<strong>visible</strong>?<dd>
 <dt><strong>last</strong> ?<strong>visible</strong>?<dd>
 Indicates the rightmost column of the treectrl (but not the tail column).
 If <strong>visible</strong> is specified, the rightmost column whose -visible option
@@ -3054,6 +3056,13 @@ An element of type <strong>window</strong> can be used to display a Tk window in
 The following options are supported for window elements:
 
 <dl>
+<dt><strong><strong>-destroy</strong></strong> <i class='arg'>boolean</i><dd>
+Specifies whether the associated Tk window should be destroyed when the
+element is deleted. The element is deleted when the item containing the
+element is deleted, when the column containing the element is deleted,
+or when the style associated with the item's column is changed.
+
+<br><br>
 <dt><strong><strong>-window</strong></strong> <i class='arg'>pathName</i><dd>
 Specifies the window to associate with this element. The window specified by
 <i class='arg'>pathName</i> must either be a child of the treectrl widget or a child of
@@ -3075,7 +3084,8 @@ The initial part of an item description must begin with one of the following ter
 <dt><i class='arg'>id</i><dd>
 Specifies the unique item identifier, where <i class='arg'>id</i> should be
 the return value of a prior call of the <b class='cmd'>item create</b> widget command,
-or <strong>0</strong> to specify the ever-present root item.
+or <strong>0</strong> to specify the ever-present root item. See also the
+<strong>-itemprefix</strong> option.
 
 <br><br>
 <dt><strong>active</strong><dd>
@@ -3097,6 +3107,7 @@ If <strong>visible</strong> is specified and the widget is configured with
 is specified instead.
 
 <br><br>
+<dt><strong>end</strong> ?<strong>visible</strong>?<dd>
 <dt><strong>last</strong> ?<strong>visible</strong>?<dd>
 Indicates the last item of the treectrl.
 If <strong>visible</strong> is specified and the last item is currently not visible,
