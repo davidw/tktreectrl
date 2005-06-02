@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.31 2005/05/27 20:03:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.32 2005/06/02 04:51:22 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -684,6 +684,7 @@ extern Tcl_Obj * TreeCtrl_NewPadAmountObj(int *padAmounts);
 extern int ObjectIsEmpty(Tcl_Obj *obj);
 
 extern PerStateType pstBitmap;
+extern PerStateType pstBoolean;
 extern PerStateType pstBorder;
 extern PerStateType pstColor;
 extern PerStateType pstFont;
@@ -721,6 +722,8 @@ extern Pixmap PerStateBitmap_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
     int state, int *match);
 extern void PerStateBitmap_MaxSize(TreeCtrl *tree, PerStateInfo *pInfo,
     int *widthPtr, int *heightPtr);
+extern int PerStateBoolean_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
+    int state, int *match);
 extern Tk_3DBorder PerStateBorder_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
     int state, int *match);
 extern XColor *PerStateColor_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
