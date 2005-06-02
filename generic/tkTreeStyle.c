@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.26 2005/05/28 22:49:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.27 2005/06/02 05:28:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -514,7 +514,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 
 		layout->eLink = eLink2;
 		layout->master = eLink1;
-#if 1
+#if 1 /* bug */
 		layout->x = x + abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
 #else
 		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
@@ -1230,17 +1230,21 @@ static void Layout_Size(int vertical, int numLayouts, struct Layout layouts[], i
 	int i, W, N, E, S;
 	int width = 0, height = 0;
 
-	W = 10000, N = 10000, E = -10000, S = -10000;
+	W = 1000000, N = 1000000, E = -1000000, S = -1000000;
 
 	for (i = 0; i < numLayouts; i++)
 	{
 		struct Layout *layout = &layouts[i];
 		int w, n, e, s;
+		int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
 
-		w = layout->x + layout->ePadX[PAD_TOP_LEFT] - MAX(layout->ePadX[PAD_TOP_LEFT], layout->uPadX[PAD_TOP_LEFT]);
-		n = layout->y + layout->ePadY[PAD_TOP_LEFT] - MAX(layout->ePadY[PAD_TOP_LEFT], layout->uPadY[PAD_TOP_LEFT]);
-		e = layout->x + layout->eWidth - layout->ePadX[PAD_BOTTOM_RIGHT] + MAX(layout->ePadX[PAD_BOTTOM_RIGHT], layout->uPadX[PAD_BOTTOM_RIGHT]);
-		s = layout->y + layout->eHeight - layout->ePadY[PAD_BOTTOM_RIGHT] + MAX(layout->ePadY[PAD_BOTTOM_RIGHT], layout->uPadY[PAD_BOTTOM_RIGHT]);
+		ePadX = layout->ePadX, iPadX = layout->iPadX, uPadX = layout->uPadX;
+		ePadY = layout->ePadY, iPadY = layout->iPadY, uPadY = layout->uPadY;
+
+		w = layout->x + ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]);
+		n = layout->y + ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]);
+		e = layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
+		s = layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
 
 		if (vertical)
 		{
@@ -1589,8 +1593,13 @@ static void Style_NeededSize(TreeCtrl *tree, Style *style, int state, int *width
 			continue;
 
 		layout->eLink = eLink2;
+#if 1 /* bug */
+		layout->x = x + abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
+		layout->y = y + abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
+#else
 		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
 		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
+#endif
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
@@ -1744,8 +1753,13 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 	struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
 	int debugDraw = FALSE;
 
+#ifdef LAYOUTHAX
+	if (drawArgs->width < style->minWidth + drawArgs->indent)
+		drawArgs->width = style->minWidth + drawArgs->indent;
+#else
 	if (drawArgs->width < style->minWidth)
 		drawArgs->width = style->minWidth;
+#endif
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
@@ -2276,7 +2290,11 @@ static void Style_Changed(TreeCtrl *tree, Style *masterStyle)
 		if (layout)
 		{
 			TreeItem_InvalidateHeight(tree, item);
+#if 1
+			Tree_FreeItemDInfo(tree, item, NULL);
+#else
 			Tree_InvalidateItemDInfo(tree, item, NULL);
+#endif
 			updateDInfo = TRUE;
 		}
 		hPtr = Tcl_NextHashEntry(&search);
@@ -2430,7 +2448,11 @@ static void Style_ChangeElements(TreeCtrl *tree, Style *masterStyle, int count, 
 		if (layout)
 		{
 			TreeItem_InvalidateHeight(tree, item);
+#if 1
+			Tree_FreeItemDInfo(tree, item, NULL);
+#else
 			Tree_InvalidateItemDInfo(tree, item, NULL);
+#endif
 			updateDInfo = TRUE;
 		}
 		hPtr = Tcl_NextHashEntry(&search);
@@ -2503,6 +2525,9 @@ static void Style_ElemChanged(TreeCtrl *tree, Style *masterStyle,
 		if (iMask & CS_LAYOUT)
 		{
 			TreeItem_InvalidateHeight(tree, item);
+#if 1
+			Tree_FreeItemDInfo(tree, item, NULL);
+#endif
 			updateDInfo = TRUE;
 		}
 		if (iMask & CS_DISPLAY)
@@ -2851,6 +2876,9 @@ void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 		TreeItemColumn_InvalidateSize(tree, column);
 		TreeItem_InvalidateHeight(tree, item);
+#if 1
+		Tree_FreeItemDInfo(tree, item, NULL);
+#endif
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	}
 	if (mask & CS_DISPLAY)
@@ -2868,6 +2896,9 @@ void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
 		Tree_InvalidateColumnWidth(iter->tree, iter->columnIndex);
 		TreeItemColumn_InvalidateSize(iter->tree, iter->column);
 		TreeItem_InvalidateHeight(iter->tree, iter->item);
+#if 1
+		Tree_FreeItemDInfo(iter->tree, iter->item, NULL);
+#endif
 		Tree_DInfoChanged(iter->tree, DINFO_REDO_RANGES);
 	}
 	if (mask & CS_DISPLAY)
@@ -4465,6 +4496,9 @@ void TreeStyle_UndefineState(TreeCtrl *tree, int state)
 		if (iMask & CS_LAYOUT)
 		{
 			TreeItem_InvalidateHeight(tree, item);
+#if 1
+			Tree_FreeItemDInfo(tree, item, NULL);
+#endif
 			updateDInfo = TRUE;
 		}
 		if (iMask & CS_DISPLAY)
