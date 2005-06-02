@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.24 2005/05/29 02:43:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.25 2005/06/02 05:25:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1918,6 +1918,54 @@ void PerStateBitmap_MaxSize(
 
 /*****/
 
+typedef struct PerStateDataBoolean PerStateDataBoolean;
+struct PerStateDataBoolean
+{
+    PerStateData header;
+    int value;
+};
+
+static int PSDBooleanFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBoolean *pBoolean)
+{
+    if (ObjectIsEmpty(obj)) {
+	pBoolean->value = -1;
+    } else {
+	if (Tcl_GetBooleanFromObj(tree->interp, obj, &pBoolean->value) != TCL_OK)
+	    return TCL_ERROR;
+    }
+    return TCL_OK;
+}
+
+static void PSDBooleanFree(TreeCtrl *tree, PerStateDataBoolean *pBoolean)
+{
+}
+
+PerStateType pstBoolean =
+{
+#ifdef DEBUG_PSI
+    "Boolean",
+#endif
+    sizeof(PerStateDataBoolean),
+    (PerStateType_FromObjProc) PSDBooleanFromObj,
+    (PerStateType_FreeProc) PSDBooleanFree
+};
+
+int PerStateBoolean_ForState(
+    TreeCtrl *tree,
+    PerStateInfo *pInfo,
+    int state,
+    int *match)
+{
+    PerStateDataBoolean *pData;
+
+    pData = (PerStateDataBoolean *) PerStateInfo_ForState(tree, &pstBoolean, pInfo, state, match);
+    if (pData != NULL)
+	return pData->value;
+    return -1;
+}
+
+/*****/
+
 typedef struct PerStateDataBorder PerStateDataBorder;
 struct PerStateDataBorder
 {
@@ -2322,6 +2370,7 @@ void AllocHax_Free(ClientData data, char *ptr, int size)
 
 	while (freeList != NULL && freeList->size != size)
 		freeList = freeList->next;
+/* WFREE */
 memset(ptr, 0xAA, size);
 	elem->next = freeList->head;
 	elem->free = 1;
