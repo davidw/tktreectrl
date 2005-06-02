@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.22 2005/05/29 02:44:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.23 2005/06/02 05:22:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -274,6 +274,7 @@ typedef struct ElementBitmap ElementBitmap;
 struct ElementBitmap
 {
     Element header;
+    PerStateInfo draw;
     PerStateInfo bitmap;
     PerStateInfo fg;
     PerStateInfo bg;
@@ -282,6 +283,7 @@ struct ElementBitmap
 #define BITMAP_CONF_BITMAP 0x0001
 #define BITMAP_CONF_FG 0x0002
 #define BITMAP_CONF_BG 0x0004
+#define BITMAP_CONF_DRAW 0x0008
 
 static Tk_OptionSpec bitmapOptionSpecs[] = {
     {TK_OPTION_STRING, "-background", (char *) NULL, (char *) NULL,
@@ -290,6 +292,9 @@ static Tk_OptionSpec bitmapOptionSpecs[] = {
     {TK_OPTION_STRING, "-bitmap", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementBitmap, bitmap.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BITMAP},
+    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBitmap, draw.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_DRAW},
     {TK_OPTION_STRING, "-foreground", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementBitmap, fg.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_FG},
@@ -303,6 +308,7 @@ static void DeleteProcBitmap(ElementArgs *args)
     Element *elem = args->elem;
     ElementBitmap *elemX = (ElementBitmap *) elem;
 
+    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     PerStateInfo_Free(tree, &pstBitmap, &elemX->bitmap);
     PerStateInfo_Free(tree, &pstColor, &elemX->fg);
     PerStateInfo_Free(tree, &pstColor, &elemX->bg);
@@ -317,7 +323,7 @@ static int WorldChangedProcBitmap(ElementArgs *args)
     if ((flagS | flagM) & BITMAP_CONF_BITMAP)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (BITMAP_CONF_FG | BITMAP_CONF_BG))
+    if ((flagS | flagM) & (BITMAP_CONF_DRAW | BITMAP_CONF_FG | BITMAP_CONF_BG))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -343,12 +349,19 @@ static int ConfigProcBitmap(ElementArgs *args)
 		continue;
 	    }
 
+	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
+		PSTSave(&elemX->draw, &savedX.draw);
 	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
 		PSTSave(&elemX->bitmap, &savedX.bitmap);
 	    if (args->config.flagSelf & BITMAP_CONF_FG)
 		PSTSave(&elemX->fg, &savedX.fg);
 	    if (args->config.flagSelf & BITMAP_CONF_BG)
 		PSTSave(&elemX->bg, &savedX.bg);
+
+	    if (args->config.flagSelf & BITMAP_CONF_DRAW) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
+		    continue;
+	    }
 
 	    if (args->config.flagSelf & BITMAP_CONF_BITMAP) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap, &elemX->bitmap) != TCL_OK)
@@ -365,6 +378,8 @@ static int ConfigProcBitmap(ElementArgs *args)
 		    continue;
 	    }
 
+	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
+		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
 		PerStateInfo_Free(tree, &pstBitmap, &savedX.bitmap);
 	    if (args->config.flagSelf & BITMAP_CONF_FG)
@@ -377,6 +392,9 @@ static int ConfigProcBitmap(ElementArgs *args)
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
+		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
 
 	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
 		PSTRestore(tree, &pstBitmap, &elemX->bitmap, &savedX.bitmap);
@@ -409,9 +427,19 @@ static void DisplayProcBitmap(ElementArgs *args)
     ElementBitmap *masterX = (ElementBitmap *) elem->master;
     int state = args->state;
     int match, match2;
+    int draw;
     Pixmap bitmap;
     XColor *fg, *bg;
     int imgW, imgH;
+
+    draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
+	if (match2 > match)
+	    draw = draw2;
+    }
+    if (!draw)
+	return;
 
     bitmap = PerStateBitmap_ForState(tree, &elemX->bitmap, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -493,10 +521,20 @@ static int StateProcBitmap(ElementArgs *args)
     ElementBitmap *elemX = (ElementBitmap *) elem;
     ElementBitmap *masterX = (ElementBitmap *) elem->master;
     int match, match2;
+    int draw1, draw2;
     Pixmap bitmap1, bitmap2;
     XColor *fg1, *fg2;
     XColor *bg1, *bg2;
     int mask = 0;
+
+    draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
+	if (match2 > match)
+	    draw1 = draw;
+    }
+    if (draw1 == -1)
+	draw1 = 1;
 
     bitmap1 = PerStateBitmap_ForState(tree, &elemX->bitmap,
 	    args->states.state1, &match);
@@ -525,6 +563,15 @@ static int StateProcBitmap(ElementArgs *args)
 	    bg1 = bg;
     }
 
+    draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
+	if (match2 > match)
+	    draw2 = draw;
+    }
+    if (draw2 == -1)
+	draw2 = 1;
+
     bitmap2 = PerStateBitmap_ForState(tree, &elemX->bitmap,
 	    args->states.state2, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -552,7 +599,7 @@ static int StateProcBitmap(ElementArgs *args)
 	    bg2 = bg;
     }
 
-    if ((fg1 != fg2) || (bg1 != bg2) || (bitmap1 != bitmap2))
+    if ((draw1 != draw2) || (fg1 != fg2) || (bg1 != bg2) || (bitmap1 != bitmap2))
 	mask |= CS_DISPLAY;
 
     if (bitmap1 != bitmap2) {
@@ -574,6 +621,7 @@ static void UndefProcBitmap(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementBitmap *elemX = (ElementBitmap *) args->elem;
 
+    PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     PerStateInfo_Undefine(tree, &pstColor, &elemX->fg, args->state);
     PerStateInfo_Undefine(tree, &pstColor, &elemX->bg, args->state);
     PerStateInfo_Undefine(tree, &pstBitmap, &elemX->bitmap, args->state);
@@ -666,6 +714,7 @@ typedef struct ElementBorder ElementBorder;
 struct ElementBorder
 {
     Element header; /* Must be first */
+    PerStateInfo draw;
     PerStateInfo border;
     PerStateInfo relief;
     int thickness;
@@ -682,11 +731,15 @@ struct ElementBorder
 #define BORDER_CONF_SIZE 0x0004
 #define BORDER_CONF_THICKNESS 0x0008
 #define BORDER_CONF_FILLED 0x0010
+#define BORDER_CONF_DRAW 0x0020
 
 static Tk_OptionSpec borderOptionSpecs[] = {
     {TK_OPTION_STRING, "-background", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementBorder, border.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_BG},
+    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBorder, draw.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_DRAW},
     {TK_OPTION_CUSTOM, "-filled", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementBorder, filled),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, BORDER_CONF_FILLED},
@@ -715,6 +768,7 @@ static void DeleteProcBorder(ElementArgs *args)
     Element *elem = args->elem;
     ElementBorder *elemX = (ElementBorder *) elem;
 
+    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     PerStateInfo_Free(tree, &pstBorder, &elemX->border);
     PerStateInfo_Free(tree, &pstRelief, &elemX->relief);
 }
@@ -728,8 +782,9 @@ static int WorldChangedProcBorder(ElementArgs *args)
     if ((flagS | flagM) & BORDER_CONF_SIZE)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (BORDER_CONF_BG | BORDER_CONF_RELIEF |
-		BORDER_CONF_THICKNESS | BORDER_CONF_FILLED))
+    if ((flagS | flagM) & (BORDER_CONF_DRAW | BORDER_CONF_BG |
+		BORDER_CONF_RELIEF | BORDER_CONF_THICKNESS |
+		BORDER_CONF_FILLED))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -755,10 +810,17 @@ static int ConfigProcBorder(ElementArgs *args)
 		continue;
 	    }
 
+	    if (args->config.flagSelf & BORDER_CONF_DRAW)
+		PSTSave(&elemX->draw, &savedX.draw);
 	    if (args->config.flagSelf & BORDER_CONF_BG)
 		PSTSave(&elemX->border, &savedX.border);
 	    if (args->config.flagSelf & BORDER_CONF_RELIEF)
 		PSTSave(&elemX->relief, &savedX.relief);
+
+	    if (args->config.flagSelf & BORDER_CONF_DRAW) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
+		    continue;
+	    }
 
 	    if (args->config.flagSelf & BORDER_CONF_BG) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBorder, &elemX->border) != TCL_OK)
@@ -770,6 +832,8 @@ static int ConfigProcBorder(ElementArgs *args)
 		    continue;
 	    }
 
+	    if (args->config.flagSelf & BORDER_CONF_DRAW)
+		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    if (args->config.flagSelf & BORDER_CONF_BG)
 		PerStateInfo_Free(tree, &pstBorder, &savedX.border);
 	    if (args->config.flagSelf & BORDER_CONF_RELIEF)
@@ -780,6 +844,9 @@ static int ConfigProcBorder(ElementArgs *args)
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & BORDER_CONF_DRAW)
+		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
 
 	    if (args->config.flagSelf & BORDER_CONF_BG)
 		PSTRestore(tree, &pstBorder, &elemX->border, &savedX.border);
@@ -813,9 +880,19 @@ static void DisplayProcBorder(ElementArgs *args)
     ElementBorder *masterX = (ElementBorder *) elem->master;
     int state = args->state;
     int match, match2;
+    int draw;
     Tk_3DBorder border;
     int relief, filled = FALSE;
     int thickness = 0;
+
+    draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
+	if (match2 > match)
+	    draw = draw2;
+    }
+    if (!draw)
+	return;
 
     border = PerStateBorder_ForState(tree, &elemX->border, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -892,9 +969,19 @@ static int StateProcBorder(ElementArgs *args)
     ElementBorder *elemX = (ElementBorder *) elem;
     ElementBorder *masterX = (ElementBorder *) elem->master;
     int match, match2;
+    int draw1, draw2;
     Tk_3DBorder border1, border2;
     int relief1, relief2;
     int mask = 0;
+
+    draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
+	if (match2 > match)
+	    draw1 = draw;
+    }
+    if (draw1 == -1)
+	draw1 = 1;
 
     border1 = PerStateBorder_ForState(tree, &elemX->border,
 	    args->states.state1, &match);
@@ -914,6 +1001,15 @@ static int StateProcBorder(ElementArgs *args)
 	    relief1 = relief;
     }
 
+    draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
+	if (match2 > match)
+	    draw2 = draw;
+    }
+    if (draw2 == -1)
+	draw2 = 1;
+
     border2 = PerStateBorder_ForState(tree, &elemX->border,
 	    args->states.state2, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -932,7 +1028,7 @@ static int StateProcBorder(ElementArgs *args)
 	    relief2 = relief;
     }
 
-    if ((border1 != border2) || (relief1 != relief2))
+    if ((draw1 != draw2) || (border1 != border2) || (relief1 != relief2))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -943,6 +1039,7 @@ static void UndefProcBorder(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementBorder *elemX = (ElementBorder *) args->elem;
 
+    PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     PerStateInfo_Undefine(tree, &pstBorder, &elemX->border, args->state);
     PerStateInfo_Undefine(tree, &pstRelief, &elemX->relief, args->state);
 }
@@ -1349,6 +1446,7 @@ typedef struct ElementImage ElementImage;
 struct ElementImage
 {
     Element header;
+    PerStateInfo draw;
     PerStateInfo image;
     int width;
     Tcl_Obj *widthObj;
@@ -1358,8 +1456,12 @@ struct ElementImage
 
 #define IMAGE_CONF_IMAGE 0x0001
 #define IMAGE_CONF_SIZE 0x0002
+#define IMAGE_CONF_DRAW 0x0004
 
 static Tk_OptionSpec imageOptionSpecs[] = {
+    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementImage, draw.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DRAW},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, heightObj),
      Tk_Offset(ElementImage, height),
@@ -1381,6 +1483,7 @@ static void DeleteProcImage(ElementArgs *args)
     Element *elem = args->elem;
     ElementImage *elemX = (ElementImage *) elem;
 
+    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     PerStateInfo_Free(tree, &pstImage, &elemX->image);
 }
 
@@ -1390,7 +1493,7 @@ static int WorldChangedProcImage(ElementArgs *args)
     int flagS = args->change.flagSelf;
     int mask = 0;
 
-    if ((flagS | flagM) & (IMAGE_CONF_IMAGE | IMAGE_CONF_SIZE))
+    if ((flagS | flagM) & (IMAGE_CONF_DRAW | IMAGE_CONF_IMAGE | IMAGE_CONF_SIZE))
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
     return mask;
@@ -1416,14 +1519,23 @@ static int ConfigProcImage(ElementArgs *args)
 		continue;
 	    }
 
+	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
+		PSTSave(&elemX->draw, &savedX.draw);
 	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
 		PSTSave(&elemX->image, &savedX.image);
+
+	    if (args->config.flagSelf & IMAGE_CONF_DRAW) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
+		    continue;
+	    }
 
 	    if (args->config.flagSelf & IMAGE_CONF_IMAGE) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstImage, &elemX->image) != TCL_OK)
 		    continue;
 	    }
 
+	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
+		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
 		PerStateInfo_Free(tree, &pstImage, &savedX.image);
 	    Tk_FreeSavedOptions(&savedOptions);
@@ -1432,6 +1544,9 @@ static int ConfigProcImage(ElementArgs *args)
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
+		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
 
 	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
 		PSTRestore(tree, &pstImage, &elemX->image, &savedX.image);
@@ -1457,16 +1572,26 @@ static void DisplayProcImage(ElementArgs *args)
     ElementImage *elemX = (ElementImage *) elem;
     ElementImage *masterX = (ElementImage *) elem->master;
     int state = args->state;
-    int match, matchM;
+    int match, match2;
+    int draw;
     Tk_Image image;
     int imgW, imgH;
     int dx = 0, dy = 0;
 
+    draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
+	if (match2 > match)
+	    draw = draw2;
+    }
+    if (!draw)
+	return;
+
     image = PerStateImage_ForState(tree, &elemX->image, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	Tk_Image imageM = PerStateImage_ForState(tree, &masterX->image,
-		state, &matchM);
-	if (matchM > match)
+		state, &match2);
+	if (match2 > match)
 	    image = imageM;
     }
 
@@ -1528,8 +1653,18 @@ static int StateProcImage(ElementArgs *args)
     ElementImage *elemX = (ElementImage *) elem;
     ElementImage *masterX = (ElementImage *) elem->master;
     int match, match2;
+    int draw1, draw2;
     Tk_Image image1, image2;
     int mask = 0;
+
+    draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
+	if (match2 > match)
+	    draw1 = draw;
+    }
+    if (draw1 == -1)
+	draw1 = 1;
 
     image1 = PerStateImage_ForState(tree, &elemX->image,
 	    args->states.state1, &match);
@@ -1538,6 +1673,15 @@ static int StateProcImage(ElementArgs *args)
 	if (match2 > match)
 	    image1 = image;
     }
+
+    draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
+	if (match2 > match)
+	    draw2 = draw;
+    }
+    if (draw2 == -1)
+	draw2 = 1;
 
     image2 = PerStateImage_ForState(tree, &elemX->image,
 	    args->states.state2, &match);
@@ -1558,7 +1702,8 @@ static int StateProcImage(ElementArgs *args)
 		mask |= CS_LAYOUT;
 	} else
 	    mask |= CS_LAYOUT;
-    }
+    } else if (draw1 != draw2)
+	mask |= CS_DISPLAY;
 
     return mask;
 }
@@ -1568,6 +1713,7 @@ static void UndefProcImage(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementImage *elemX = (ElementImage *) args->elem;
 
+    PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     PerStateInfo_Undefine(tree, &pstImage, &elemX->image, args->state);
 }
 
@@ -1628,6 +1774,7 @@ typedef struct ElementRect ElementRect;
 struct ElementRect
 {
     Element header;
+    PerStateInfo draw;
     int width;
     Tcl_Obj *widthObj;
     int height;
@@ -1647,8 +1794,12 @@ struct ElementRect
 #define RECT_CONF_OPEN 0x0008
 #define RECT_CONF_SIZE 0x0010
 #define RECT_CONF_FOCUS 0x0020
+#define RECT_CONF_DRAW 0x0040
 
 static Tk_OptionSpec rectOptionSpecs[] = {
+    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementRect, draw.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_DRAW},
     {TK_OPTION_STRING, "-fill", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementRect, fill.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_FILL},
@@ -1682,6 +1833,7 @@ static void DeleteProcRect(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementRect *elemX = (ElementRect *) args->elem;
 
+    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     PerStateInfo_Free(tree, &pstColor, &elemX->fill);
     PerStateInfo_Free(tree, &pstColor, &elemX->outline);
 }
@@ -1695,7 +1847,7 @@ static int WorldChangedProcRect(ElementArgs *args)
     if ((flagS | flagM) & (RECT_CONF_SIZE | RECT_CONF_OUTWIDTH))
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (RECT_CONF_FILL | RECT_CONF_OUTLINE |
+    if ((flagS | flagM) & (RECT_CONF_DRAW | RECT_CONF_FILL | RECT_CONF_OUTLINE |
 		RECT_CONF_OPEN | RECT_CONF_FOCUS))
 	mask |= CS_DISPLAY;
 
@@ -1723,12 +1875,19 @@ static int ConfigProcRect(ElementArgs *args)
 		continue;
 	    }
 
+	    if (args->config.flagSelf & RECT_CONF_DRAW)
+		PSTSave(&elemX->draw, &savedX.draw);
 	    if (args->config.flagSelf & RECT_CONF_FILL)
 		PSTSave(&elemX->fill, &savedX.fill);
 	    if (args->config.flagSelf & RECT_CONF_OUTLINE)
 		PSTSave(&elemX->outline, &savedX.outline);
 	    if (args->config.flagSelf & RECT_CONF_OPEN)
 		savedX.open = elemX->open;
+
+	    if (args->config.flagSelf & RECT_CONF_DRAW) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
+		    continue;
+	    }
 
 	    if (args->config.flagSelf & RECT_CONF_FILL) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
@@ -1770,6 +1929,8 @@ static int ConfigProcRect(ElementArgs *args)
 		}
 	    }
 
+	    if (args->config.flagSelf & RECT_CONF_DRAW)
+		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    if (args->config.flagSelf & RECT_CONF_FILL)
 		PerStateInfo_Free(tree, &pstColor, &savedX.fill);
 	    if (args->config.flagSelf & RECT_CONF_OUTLINE)
@@ -1780,6 +1941,9 @@ static int ConfigProcRect(ElementArgs *args)
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & RECT_CONF_DRAW)
+		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
 
 	    if (args->config.flagSelf & RECT_CONF_FILL)
 		PSTRestore(tree, &pstColor, &elemX->fill, &savedX.fill);
@@ -1815,10 +1979,20 @@ static void DisplayProcRect(ElementArgs *args)
     ElementRect *masterX = (ElementRect *) elem->master;
     int state = args->state;
     int match, match2;
+    int draw;
     XColor *color, *color2;
     int open = 0;
     int outlineWidth = 0;
     int showFocus = 0;
+
+    draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
+	if (match2 > match)
+	    draw = draw2;
+    }
+    if (!draw)
+	return;
 
     if (elemX->outlineWidthObj != NULL)
 	outlineWidth = elemX->outlineWidth;
@@ -1935,11 +2109,21 @@ static int StateProcRect(ElementArgs *args)
     ElementRect *elemX = (ElementRect *) elem;
     ElementRect *masterX = (ElementRect *) elem->master;
     int match, match2;
+    int draw1, draw2;
     XColor *f1, *f2;
     XColor *o1, *o2;
     int s1, s2;
     int showFocus = 0;
     int mask = 0;
+
+    draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
+	if (match2 > match)
+	    draw1 = draw;
+    }
+    if (draw1 == -1)
+	draw1 = 1;
 
     if (elemX->showFocus != -1)
 	showFocus = elemX->showFocus;
@@ -1963,7 +2147,16 @@ static int StateProcRect(ElementArgs *args)
     s1 = showFocus &&
 	(args->states.state1 & STATE_FOCUS) &&
 	(args->states.state1 & STATE_ACTIVE);
- 
+
+    draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
+	if (match2 > match)
+	    draw2 = draw;
+    }
+    if (draw2 == -1)
+	draw2 = 1;
+
     f2 = PerStateColor_ForState(tree, &elemX->fill, args->states.state2, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	XColor *f = PerStateColor_ForState(tree, &masterX->fill, args->states.state2, &match2);
@@ -1982,7 +2175,7 @@ static int StateProcRect(ElementArgs *args)
 	(args->states.state2 & STATE_FOCUS) &&
 	(args->states.state2 & STATE_ACTIVE);
 
-    if ((f1 != f2) || (o1 != o2) || (s1 != s2))
+    if ((draw1 != draw2) || (f1 != f2) || (o1 != o2) || (s1 != s2))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -1993,6 +2186,7 @@ static void UndefProcRect(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementRect *elemX = (ElementRect *) args->elem;
 
+    PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     PerStateInfo_Undefine(tree, &pstColor, &elemX->fill, args->state);
     PerStateInfo_Undefine(tree, &pstColor, &elemX->outline, args->state);
 }
@@ -2062,6 +2256,7 @@ typedef struct ElementText ElementText;
 struct ElementText
 {
     Element header;
+    PerStateInfo draw;			/* -draw */
     Tcl_Obj *textObj;			/* -text */
     char *text;
     int textLen;
@@ -2108,6 +2303,7 @@ struct ElementText
 #ifdef TEXTVAR
 #define TEXT_CONF_TEXTVAR 0x0010
 #endif
+#define TEXT_CONF_DRAW 0x0020
 
 static CONST char *textDataTypeST[] = { "double", "integer", "long", "string",
 					"time", (char *) NULL };
@@ -2182,6 +2378,9 @@ static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-datatype", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, dataType),
      TK_OPTION_NULL_OK, (ClientData) &textDataTypeCO, TEXT_CONF_DATA},
+    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementText, draw.obj), -1,
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DRAW},
     {TK_OPTION_STRING, "-format", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, formatObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
@@ -2245,7 +2444,7 @@ static int WorldChangedProcText(ElementArgs *args)
 	mask |= CS_DISPLAY | CS_LAYOUT;
     }
 
-    if ((flagS | flagM) & TEXT_CONF_FILL)
+    if ((flagS | flagM) & (TEXT_CONF_DRAW | TEXT_CONF_FILL))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -2577,6 +2776,7 @@ static void DeleteProcText(ElementArgs *args)
     Element *elem = args->elem;
     ElementText *elemX = (ElementText *) elem;
 
+    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     if (elemX->gc != NULL)
 	PerStateGC_Free(tree, &elemX->gc);
     PerStateInfo_Free(tree, &pstColor, &elemX->fill);
@@ -2617,10 +2817,17 @@ static int ConfigProcText(ElementArgs *args)
 		continue;
 	    }
 
+	    if (args->config.flagSelf & TEXT_CONF_DRAW)
+		PSTSave(&elemX->draw, &savedX.draw);
 	    if (args->config.flagSelf & TEXT_CONF_FILL)
 		PSTSave(&elemX->fill, &savedX.fill);
 	    if (args->config.flagSelf & TEXT_CONF_FONT)
 		PSTSave(&elemX->font, &savedX.font);
+
+	    if (args->config.flagSelf & TEXT_CONF_DRAW) {
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
+		    continue;
+	    }
 
 	    if (args->config.flagSelf & TEXT_CONF_FILL) {
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
@@ -2665,6 +2872,8 @@ static int ConfigProcText(ElementArgs *args)
 	    }
 #endif
 
+	    if (args->config.flagSelf & TEXT_CONF_DRAW)
+		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    if (args->config.flagSelf & TEXT_CONF_FILL)
 		PerStateInfo_Free(tree, &pstColor, &savedX.fill);
 	    if (args->config.flagSelf & TEXT_CONF_FONT)
@@ -2675,6 +2884,9 @@ static int ConfigProcText(ElementArgs *args)
 	    errorResult = Tcl_GetObjResult(interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
+
+	    if (args->config.flagSelf & TEXT_CONF_DRAW)
+		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
 
 	    if (args->config.flagSelf & TEXT_CONF_FILL)
 		PSTRestore(tree, &pstColor, &elemX->fill, &savedX.fill);
@@ -2721,6 +2933,7 @@ static void DisplayProcText(ElementArgs *args)
     ElementText *masterX = (ElementText *) elem->master;
     int state = args->state;
     int match, match2;
+    int draw, draw2;
     XColor *color, *color2;
     char *text = elemX->text;
     int textLen = elemX->textLen;
@@ -2730,6 +2943,15 @@ static void DisplayProcText(ElementArgs *args)
     GC gc;
     int bytesThatFit, pixelsForText;
     char *ellipsis = "...";
+
+    draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
+	if (match2 > match)
+	    draw = draw2;
+    }
+    if (!draw)
+	return;
 
     if ((text == NULL) && (masterX != NULL)) {
 	text = masterX->text;
@@ -2956,9 +3178,19 @@ static int StateProcText(ElementArgs *args)
     ElementText *elemX = (ElementText *) elem;
     ElementText *masterX = (ElementText *) elem->master;
     int match, match2;
+    int draw1, draw2;
     XColor *f1, *f2;
     Tk_Font tkfont1, tkfont2;
     int mask = 0;
+
+    draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
+	if (match2 > match)
+	    draw1 = draw;
+    }
+    if (draw1 == -1)
+	draw1 = 1;
 
     f1 = PerStateColor_ForState(tree, &elemX->fill, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -2973,6 +3205,15 @@ static int StateProcText(ElementArgs *args)
 	if (match2 > match)
 	    tkfont1 = tkfont;
     }
+
+    draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
+    if ((match != MATCH_EXACT) && (masterX != NULL)) {
+	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
+	if (match2 > match)
+	    draw2 = draw;
+    }
+    if (draw2 == -1)
+	draw2 = 1;
 
     f2 = PerStateColor_ForState(tree, &elemX->fill, args->states.state2, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -2991,7 +3232,7 @@ static int StateProcText(ElementArgs *args)
     if (tkfont1 != tkfont2)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if (f1 != f2)
+    if ((draw1 != draw2) || (f1 != f2))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -3002,6 +3243,7 @@ static void UndefProcText(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     ElementText *elemX = (ElementText *) args->elem;
 
+    PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     PerStateInfo_Undefine(tree, &pstColor, &elemX->fill, args->state);
     PerStateInfo_Undefine(tree, &pstFont, &elemX->font, args->state);
 }
