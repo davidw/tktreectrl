@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.36 2005/05/27 20:05:13 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.37 2005/06/02 06:01:12 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2629,6 +2629,11 @@ the color to use for each of the bitmap's '0' valued pixels.
 Specifies as a per-state option
 the bitmap to display in the element.
 .TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
+.TP
 \fB\fB-foreground\fR\fR \fIcolor\fR
 Specifies as a per-state option
 the color to use for each of the bitmap's '1' valued pixels.
@@ -2639,6 +2644,11 @@ The following options are supported for border elements:
 \fB\fB-background\fR\fR \fIcolor\fR
 Specifies as a per-state option
 the color to use for the background of the border.
+.TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
 .TP
 \fB\fB-filled\fR\fR \fIboolean\fR
 Specifies whether the interior of the border should also be filled with
@@ -2663,6 +2673,11 @@ Specifies the width of the area of the border.
 An element of type \fBimage\fR can be used to display an image in an item.
 The following options are supported for image elements:
 .TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
+.TP
 \fB\fB-height\fR\fR \fIsize\fR
 Specifies the height of the image.
 .TP
@@ -2675,6 +2690,11 @@ Specifies the width of the image.
 .SH "RECTANGLE ELEMENT"
 An element of type \fBrect\fR can be used to display a rectangle in an item.
 The following options are supported for rectangle elements:
+.TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
 .TP
 \fB\fB-fill\fR\fR \fIfillColor\fR
 Specifies as a per-state option
@@ -2718,6 +2738,11 @@ Specifies the width of the rectangle.
 .SH "TEXT ELEMENT"
 An element of type \fBtext\fR can be used to display a text in an item.
 The following options are supported for text elements:
+.TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
 .TP
 \fB\fB-data\fR\fR \fIdata\fR
 Specifies raw data to be printed as text.
