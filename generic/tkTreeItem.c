@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.36 2005/05/24 23:44:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.37 2005/06/02 05:18:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -269,6 +269,10 @@ static int Column_ChangeState(TreeCtrl *tree, Item *item, Column *column,
 
 	if (iMask & CS_LAYOUT) {
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
+#if 1
+	    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	}
 	if (iMask & CS_DISPLAY)
@@ -304,8 +308,12 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 	    sMask = TreeStyle_ChangeState(tree, column->style,
 		    item->state | column->cstate, cstate);
 	    if (sMask) {
-		if (sMask & CS_LAYOUT)
+		if (sMask & CS_LAYOUT) {
 		    Tree_InvalidateColumnWidth(tree, columnIndex);
+#if 1
+		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+#endif
+		}
 		iMask |= sMask;
 	    }
 	}
@@ -389,6 +397,9 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
 
     if (iMask & CS_LAYOUT) {
 	TreeItem_InvalidateHeight(tree, item_);
+#if 1
+	Tree_FreeItemDInfo(tree, item_, NULL);
+#endif
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
     }
     if (iMask & CS_DISPLAY)
@@ -2144,7 +2155,7 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (eMask & CS_DISPLAY)
 		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
 		if (eMask & CS_LAYOUT) {
-		    column->neededWidth = column->neededHeight = -1;
+		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		    Tree_InvalidateColumnWidth(tree, columnIndex);
 		    TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
@@ -2232,6 +2243,10 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    Tree_InvalidateColumnWidth(tree, columnIndex);
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
 	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#if 1
+	    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+#endif
 	    break;
 	}
 
@@ -2287,6 +2302,10 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#if 1
+		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+#endif
 	    }
 	    break;
 	}
@@ -3907,7 +3926,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    iMask |= eMask;
 		}
 		if (cMask & CS_LAYOUT)
-		    column->neededWidth = column->neededHeight = -1;
+		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 	    }
 	    doneComplex:
 	    if (iMask & CS_DISPLAY)
@@ -4276,7 +4295,11 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    }
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
+#if 1
+	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#else
 	    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    for (i = 4; i < objc; i += 2) {
 		if (Item_CreateColumnFromObj(tree, item, objv[i], &column, &columnIndex) != TCL_OK)
@@ -4289,7 +4312,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    return TCL_ERROR;
 		}
 		TreeStyle_SetText(tree, (TreeItem) item, (TreeItemColumn) column, column->style, objv[i + 1]);
-		column->neededWidth = column->neededHeight = -1;
+		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 	    }
 	    break;
