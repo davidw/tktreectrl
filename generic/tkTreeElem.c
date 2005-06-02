@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.23 2005/06/02 05:22:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.24 2005/06/02 22:04:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3322,11 +3322,16 @@ struct ElementWindow
     TreeItemColumn column; 	/* Needed if window changes size */
     Tk_Window tkwin;		/* Window associated with item.  NULL means
 				 * window has been destroyed. */
+    int destroy;		/* Destroy window when element
+				 * is deleted */
 };
 
 #define EWIN_CONF_WINDOW 0x0001
 
 static Tk_OptionSpec windowOptionSpecs[] = {
+    {TK_OPTION_CUSTOM, "-destroy", (char *) NULL, (char *) NULL,
+     (char) NULL, -1, Tk_Offset(ElementWindow, destroy),
+     TK_OPTION_NULL_OK, (ClientData) &booleanCO, 0},
     {TK_OPTION_WINDOW, "-window", (char *) NULL, (char *) NULL,
      (char) NULL, -1, Tk_Offset(ElementWindow, tkwin),
      TK_OPTION_NULL_OK, (ClientData) NULL, EWIN_CONF_WINDOW},
@@ -3391,6 +3396,7 @@ static void DeleteProcWindow(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementWindow *elemX = (ElementWindow *) elem;
+    ElementWindow *masterX = (ElementWindow *) elem->master;
 
     if (elemX->tkwin != NULL) {
 	Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
@@ -3401,6 +3407,13 @@ static void DeleteProcWindow(ElementArgs *args)
 	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
 	}
 	Tk_UnmapWindow(elemX->tkwin);
+
+	if ((elemX->destroy == 1) ||
+		((masterX != NULL) && (masterX->destroy == 1))) {
+	    Tk_DestroyWindow(elemX->tkwin);
+	}
+
+	elemX->tkwin = NULL;
     }
 }
 
@@ -3530,6 +3543,7 @@ static int CreateProcWindow(ElementArgs *args)
     elemX->tree = tree;
     elemX->item = args->create.item;
     elemX->column = args->create.column;
+    elemX->destroy = -1;
 
     return TCL_OK;
 }
