@@ -31,7 +31,10 @@ bind TreeCtrlFileList <ButtonRelease-1> {
     break
 }
 
-namespace eval TreeCtrl {}
+namespace eval TreeCtrl {
+    variable Priv
+    set Priv(edit,delay) 500
+}
 
 proc ::TreeCtrl::FileListButton1 {T x y} {
     variable Priv
@@ -39,6 +42,12 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
     set id [$T identify $x $y]
     set marquee 0
     set Priv(buttonMode) ""
+    if {[winfo exists $T.entry] && [winfo ismapped $T.entry]} {
+	EntryClose $T 1
+    }
+    if {[winfo exists $T.text] && [winfo ismapped $T.text]} {
+	TextClose $T 1
+    }
     FileListEditCancel $T
     # Click outside any item
     if {$id eq ""} {
@@ -317,7 +326,7 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
 		if {$ok} {
 		    FileListEditCancel $T
 		    set Priv(editId,$T) \
-			[after 900 [list ::TreeCtrl::FileListEdit $T $I $C $S $E]]
+			[after $Priv(edit,delay) [list ::TreeCtrl::FileListEdit $T $I $C $S $E]]
 		}
 	    }
 	}
@@ -356,6 +365,9 @@ proc ::TreeCtrl::FileListEdit {T I C S E} {
     } else {
 	EntryExpanderOpen $T $I $C $E
     }
+
+    TryEvent $T Edit begin [list I $I C $C E $E]
+
     return
 }
 
@@ -365,6 +377,75 @@ proc ::TreeCtrl::FileListEditCancel {T} {
 	after cancel $Priv(editId,$T)
 	array unset Priv editId,$T
     }
+    return
+}
+
+proc ::TreeCtrl::SetDragImage {T listOfLists} {
+    variable Priv
+    foreach list $listOfLists {
+	set column [lindex $list 0]
+	set style [lindex $list 1]
+	set elements [lrange $list 2 end]
+	if {[$T column id $column] eq ""} {
+	    error "column \"$column\" doesn't exist"
+	}
+	if {[lsearch -exact [$T style names] $style] == -1} {
+	    error "style \"$style\" doesn't exist"
+	}
+	foreach element $elements {
+	    if {[lsearch -exact [$T element names] $element] == -1} {
+		error "element \"$element\" doesn't exist"
+	    }
+	}
+    }
+    set Priv(dragimage,$T) $listOfLists
+    return
+}
+
+proc ::TreeCtrl::SetEditable {T listOfLists} {
+    variable Priv
+    foreach list $listOfLists {
+	set column [lindex $list 0]
+	set style [lindex $list 1]
+	set elements [lrange $list 2 end]
+	if {[$T column id $column] eq ""} {
+	    error "column \"$column\" doesn't exist"
+	}
+	if {[lsearch -exact [$T style names] $style] == -1} {
+	    error "style \"$style\" doesn't exist"
+	}
+	foreach element $elements {
+	    if {[lsearch -exact [$T element names] $element] == -1} {
+		error "element \"$element\" doesn't exist"
+	    }
+	    if {[$T element type $element] ne "text"} {
+		error "element \"$element\" is not of type \"text\""
+	    }
+	}
+    }
+    set Priv(edit,$T) $listOfLists
+    return
+}
+
+proc ::TreeCtrl::SetSensitive {T listOfLists} {
+    variable Priv
+    foreach list $listOfLists {
+	set column [lindex $list 0]
+	set style [lindex $list 1]
+	set elements [lrange $list 2 end]
+	if {[$T column id $column] eq ""} {
+	    error "column \"$column\" doesn't exist"
+	}
+	if {[lsearch -exact [$T style names] $style] == -1} {
+	    error "style \"$style\" doesn't exist"
+	}
+	foreach element $elements {
+	    if {[lsearch -exact [$T element names] $element] == -1} {
+		error "element \"$element\" doesn't exist"
+	    }
+	}
+    }
+    set Priv(sensitive,$T) $listOfLists
     return
 }
 
@@ -550,6 +631,10 @@ proc ::TreeCtrl::EntryClose {T accept} {
     }
 
     $T notify bind $T.entry <Scroll> {}
+
+    TryEvent $T Edit end \
+	[list I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
+	    E $Priv(entry,$T,element)]
 
     return
 }
@@ -745,6 +830,10 @@ proc ::TreeCtrl::TextClose {T accept} {
     }
 
     $T notify bind $T.text <Scroll> {}
+
+    TryEvent $T Edit end \
+	[list I $Priv(text,$T,item) C $Priv(text,$T,column) \
+		E $Priv(text,$T,element)]
 
     return
 }
