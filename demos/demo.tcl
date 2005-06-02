@@ -616,6 +616,8 @@ proc MakeMainWindow {} {
     .f2.f1.t notify install <Drag-end>
     .f2.f1.t notify install <Drag-receive>
 
+    .f2.f1.t notify install <Edit-begin>
+    .f2.f1.t notify install <Edit-end>
     .f2.f1.t notify install <Edit-accept>
     ###
 
@@ -1115,9 +1117,9 @@ proc DemoClear {} {
     eval $T element delete [$T element names]
 
     # Delete -window windows
-	foreach child [winfo children $T] {
-	    if {[string equal $child $T.mTree] || [string equal $child $T.mHeader]} continue
-	    destroy $child
+    foreach child [winfo children $T] {
+	if {[string equal $child $T.mTree] || [string equal $child $T.mHeader]} continue
+	destroy $child
     }
 
     $T item configure root -button no
@@ -1132,8 +1134,12 @@ proc DemoClear {} {
 	-showrootlines yes -minitemheight 0 -borderwidth 6 \
 	-highlightthickness 3 -usetheme yes
 
-	# Enable drag-and-drop column reordering. This also requires the
-	# <ColumnDrag> event be installed.
+    # Undo "column configure all" in a demo
+    $T column configure tail -background \
+	[lindex [$T column configure tail -background] 3]
+
+    # Enable drag-and-drop column reordering. This also requires the
+    # <ColumnDrag> event be installed.
     $T column dragconfigure -enable yes
 
     # Restore default bindings to the demo list
