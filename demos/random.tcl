@@ -67,11 +67,11 @@ proc DemoRandom {} {
 	$T style elements s3 {e6}
 	$T style layout s3 e6 -padx 6 -expand ns
 
-	set ::TreeCtrl::Priv(sensitive,$T) {
+	TreeCtrl::SetSensitive $T {
 		{item s1 e5 e1 e3}
 		{item s2 e5 e2 e3}
 	}
-	set ::TreeCtrl::Priv(dragimage,$T) {
+	TreeCtrl::SetDragImage $T {
 		{item s1 e1 e3}
 		{item s2 e2 e3}
 	}
@@ -201,7 +201,9 @@ proc TreeCtrl::RandomButton1 {T x y} {
 				}
 
 				set Priv(drag,motion) 0
-				set Priv(drag,x) [$T canvasx $x]
+				set Priv(drag,click,x) $x
+				set Priv(drag,click,y) $y
+					set Priv(drag,x) [$T canvasx $x]
 				set Priv(drag,y) [$T canvasy $y]
 				set Priv(drop) ""
 
@@ -240,8 +242,11 @@ proc TreeCtrl::RandomMotion {T x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
 		"drag" {
-			# Detect initial mouse movement
 			if {!$Priv(drag,motion)} {
+				# Detect initial mouse movement
+				if {(abs($x - $Priv(drag,click,x)) <= 4) &&
+					(abs($y - $Priv(drag,click,y)) <= 4)} return
+
 				set Priv(selection) [$T selection get]
 				set Priv(drop) ""
 				$T dragimage clear
@@ -277,9 +282,6 @@ proc TreeCtrl::RandomMotion {T x y} {
 					if {[lsearch -exact $eList $E] == -1} continue
 					set ok 1
 					break
-				}
-				if {[lsearch -exact $Priv(sensitive,$T) $E] != -1} {
-					set ok 1
 				}
 			}
 			if {$ok} {
