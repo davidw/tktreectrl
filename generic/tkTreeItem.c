@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.38 2005/06/02 22:06:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.39 2005/06/03 02:35:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3871,6 +3871,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    int i, j, columnIndex;
 	    int objc1, objc2;
 	    Tcl_Obj **objv1, **objv2;
+	    TreeColumn treeColumn = tree->columns;
 	    Column *column;
 	    int eMask, cMask, iMask = 0;
 	    int result = TCL_OK;
@@ -3878,13 +3879,19 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (objc <= 4)
 		break;
 	    columnIndex = 0;
-	    for (i = 4; i < objc; i++, columnIndex++) {
+	    for (i = 4; i < objc; i++, columnIndex++,
+		    treeColumn = TreeColumn_Next(treeColumn)) {
+		if (treeColumn == NULL) {
+		    FormatResult(interp, "column #%d doesn't exist",
+			    columnIndex);
+		    result = TCL_ERROR;
+		    goto doneComplex;
+		}
 		column = Item_FindColumn(tree, item, columnIndex);
 		if (column == NULL) {
 		    FormatResult(interp, "item %s%d doesn't have column %s%d",
 			    tree->itemPrefix, item->id,
-			    tree->columnPrefix,
-			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+			    tree->columnPrefix, TreeColumn_GetID(treeColumn));
 		    result = TCL_ERROR;
 		    goto doneComplex;
 		}
@@ -3899,8 +3906,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (column->style == NULL) {
 		    FormatResult(interp, "item %s%d column %s%d has no style",
 			    tree->itemPrefix, item->id,
-			    tree->columnPrefix,
-			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+			    tree->columnPrefix, TreeColumn_GetID(treeColumn));
 		    result = TCL_ERROR;
 		    goto doneComplex;
 		}
@@ -3932,10 +3938,17 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    }
 	    doneComplex:
 	    if (iMask & CS_DISPLAY)
+#if 1
+		Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+#else
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 	    if (iMask & CS_LAYOUT) {
 		Tree_InvalidateColumnWidth(tree, -1);
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
+#if 1
+		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    }
 	    return result;
