@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.25 2005/06/03 02:38:36 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.26 2005/06/03 03:53:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -400,6 +400,30 @@ int TreeStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
     return TCL_OK;
 }
 
+/* This macro gets the value of a per-state option for an element, then
+ * looks for a better match from the master element if it exists */
+#define OPTION_FOR_STATE(xFUNC,xTYPE,xVAR,xFIELD,xSTATE) \
+    xVAR = xFUNC(tree, &elemX->xFIELD, xSTATE, &match); \
+    if ((match != MATCH_EXACT) && (masterX != NULL)) { \
+	xTYPE varM = xFUNC(tree, &masterX->xFIELD, xSTATE, &match2); \
+	if (match2 > match) \
+	    xVAR = varM; \
+    }
+#define BITMAP_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateBitmap_ForState,Pixmap,xVAR,xFIELD,xSTATE)
+#define BOOLEAN_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateBoolean_ForState,int,xVAR,xFIELD,xSTATE)
+#define BORDER_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateBorder_ForState,Tk_3DBorder,xVAR,xFIELD,xSTATE)
+#define COLOR_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateColor_ForState,XColor*,xVAR,xFIELD,xSTATE)
+#define FONT_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateFont_ForState,Tk_Font,xVAR,xFIELD,xSTATE)
+#define IMAGE_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateImage_ForState,Tk_Image,xVAR,xFIELD,xSTATE)
+#define RELIEF_FOR_STATE(xVAR,xFIELD,xSTATE) \
+    OPTION_FOR_STATE(PerStateRelief_ForState,int,xVAR,xFIELD,xSTATE)
+
 /*****/
 
 typedef struct ElementBitmap ElementBitmap;
@@ -515,6 +539,14 @@ static void DisplayProcBitmap(ElementArgs *args)
     XColor *fg, *bg;
     int imgW, imgH;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw, draw, state)
+    if (!draw)
+	return;
+    BITMAP_FOR_STATE(bitmap, bitmap, state)
+    COLOR_FOR_STATE(fg, fg, state)
+    COLOR_FOR_STATE(bg, bg, state)
+#else
     draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
@@ -547,6 +579,7 @@ static void DisplayProcBitmap(ElementArgs *args)
 	if (match2 > match)
 	    bg = bg2;
     }
+#endif
 
     if (bitmap != None) {
 	int bx = args->display.x /* + args->display.pad[LEFT] */;
@@ -582,6 +615,9 @@ static void LayoutProcBitmap(ElementArgs *args)
     int match, match2;
     Pixmap bitmap;
 
+#if 1
+    BITMAP_FOR_STATE(bitmap, bitmap, state)
+#else
     bitmap = PerStateBitmap_ForState(tree, &elemX->bitmap, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	Pixmap bitmap2 = PerStateBitmap_ForState(tree, &masterX->bitmap,
@@ -589,6 +625,7 @@ static void LayoutProcBitmap(ElementArgs *args)
 	if (match2 > match)
 	    bitmap = bitmap2;
     }
+#endif
 
     if (bitmap != None)
 	Tk_SizeOfBitmap(tree->display, bitmap,
@@ -610,6 +647,21 @@ static int StateProcBitmap(ElementArgs *args)
     XColor *bg1, *bg2;
     int mask = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    if (draw1 == -1)
+	draw1 = 1;
+    BITMAP_FOR_STATE(bitmap1, bitmap, args->states.state1)
+    COLOR_FOR_STATE(fg1, fg, args->states.state1)
+    COLOR_FOR_STATE(bg1, bg, args->states.state1)
+
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if (draw2 == -1)
+	draw2 = 1;
+    BITMAP_FOR_STATE(bitmap2, bitmap, args->states.state2)
+    COLOR_FOR_STATE(fg2, fg, args->states.state2)
+    COLOR_FOR_STATE(bg2, bg, args->states.state2)
+#else
     draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
@@ -681,6 +733,7 @@ static int StateProcBitmap(ElementArgs *args)
 	if (match2 > match)
 	    bg2 = bg;
     }
+#endif
 
     if ((draw1 != draw2) || (fg1 != fg2) || (bg1 != bg2) || (bitmap1 != bitmap2))
 	mask |= CS_DISPLAY;
@@ -930,6 +983,13 @@ static void DisplayProcBorder(ElementArgs *args)
     int relief, filled = FALSE;
     int thickness = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw, draw, state)
+    if (!draw)
+	return;
+    BORDER_FOR_STATE(border, border, state)
+    RELIEF_FOR_STATE(relief, relief, state)
+#else
     draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
@@ -953,6 +1013,7 @@ static void DisplayProcBorder(ElementArgs *args)
 	if (match2 > match)
 	    relief = relief2;
     }
+#endif
 
     if (elemX->thicknessObj)
 	thickness = elemX->thickness;
@@ -1019,6 +1080,19 @@ static int StateProcBorder(ElementArgs *args)
     int relief1, relief2;
     int mask = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    if (draw1 == -1)
+	draw1 = 1;
+    BORDER_FOR_STATE(border1, border, args->states.state1)
+    RELIEF_FOR_STATE(relief1, relief, args->states.state1)
+
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if (draw2 == -1)
+	draw2 = 1;
+    BORDER_FOR_STATE(border2, border, args->states.state2)
+    RELIEF_FOR_STATE(relief2, relief, args->states.state2)
+#else
     draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
@@ -1072,7 +1146,7 @@ static int StateProcBorder(ElementArgs *args)
 	if (match2 > match)
 	    relief2 = relief;
     }
-
+#endif
     if ((draw1 != draw2) || (border1 != border2) || (relief1 != relief2))
 	mask |= CS_DISPLAY;
 
@@ -1597,6 +1671,12 @@ static void DisplayProcImage(ElementArgs *args)
     int imgW, imgH;
     int dx = 0, dy = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw, draw, state)
+    if (!draw)
+	return;
+    IMAGE_FOR_STATE(image, image, state)
+#else
     draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
@@ -1613,6 +1693,7 @@ static void DisplayProcImage(ElementArgs *args)
 	if (match2 > match)
 	    image = imageM;
     }
+#endif
 
     if (image != NULL) {
 	Tk_SizeOfImage(image, &imgW, &imgH);
@@ -1641,6 +1722,9 @@ static void LayoutProcImage(ElementArgs *args)
     Tk_Image image;
     int width = 0, height = 0;
 
+#if 1
+    IMAGE_FOR_STATE(image, image, state)
+#else
     image = PerStateImage_ForState(tree, &elemX->image, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	Tk_Image image2 = PerStateImage_ForState(tree, &masterX->image,
@@ -1648,6 +1732,7 @@ static void LayoutProcImage(ElementArgs *args)
 	if (match2 > match)
 	    image = image2;
     }
+#endif
 
     if (image != NULL)
 	Tk_SizeOfImage(image, &width, &height);
@@ -1676,6 +1761,17 @@ static int StateProcImage(ElementArgs *args)
     Tk_Image image1, image2;
     int mask = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    if (draw1 == -1)
+	draw1 = 1;
+    IMAGE_FOR_STATE(image1, image, args->states.state1)
+
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if (draw2 == -1)
+	draw2 = 1;
+    IMAGE_FOR_STATE(image2, image, args->states.state2)
+#else
     draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
@@ -1710,6 +1806,7 @@ static int StateProcImage(ElementArgs *args)
 	if (match2 > match)
 	    image2 = image;
     }
+#endif
 
     if (image1 != image2) {
 	mask |= CS_DISPLAY;
@@ -1960,11 +2057,16 @@ static void DisplayProcRect(ElementArgs *args)
     int state = args->state;
     int match, match2;
     int draw;
-    XColor *color, *color2;
+    XColor *color;
     int open = 0;
     int outlineWidth = 0;
     int showFocus = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw, draw, state)
+    if (!draw)
+	return;
+#else
     draw = PerStateBoolean_ForState(tree, &elemX->draw, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw2 = PerStateBoolean_ForState(tree, &masterX->draw, state, &match2);
@@ -1973,6 +2075,7 @@ static void DisplayProcRect(ElementArgs *args)
     }
     if (!draw)
 	return;
+#endif
 
     if (elemX->outlineWidthObj != NULL)
 	outlineWidth = elemX->outlineWidth;
@@ -1989,12 +2092,16 @@ static void DisplayProcRect(ElementArgs *args)
     else if ((masterX != NULL) && (masterX->showFocus != -1))
 	showFocus = masterX->showFocus;
 
+#if 1
+    COLOR_FOR_STATE(color, fill, state)
+#else
     color = PerStateColor_ForState(tree, &elemX->fill, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
-	color2 = PerStateColor_ForState(tree, &masterX->fill, state, &match2);
+	XColor *color2 = PerStateColor_ForState(tree, &masterX->fill, state, &match2);
 	if (match2 > match)
 	    color = color2;
     }
+#endif
     if (color != NULL) {
 	GC gc = Tk_GCForColor(color, Tk_WindowId(tree->tkwin));
 	XFillRectangle(tree->display, args->display.drawable, gc,
@@ -2002,12 +2109,16 @@ static void DisplayProcRect(ElementArgs *args)
 		args->display.width, args->display.height);
     }
 
+#if 1
+    COLOR_FOR_STATE(color, outline, state)
+#else
     color = PerStateColor_ForState(tree, &elemX->outline, state, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	color2 = PerStateColor_ForState(tree, &masterX->outline, state, &match2);
 	if (match2 > match)
 	    color = color2;
     }
+#endif
     if ((color != NULL) && (outlineWidth > 0)) {
 	GC gc = Tk_GCForColor(color, Tk_WindowId(tree->tkwin));
 #if 0
@@ -2096,6 +2207,11 @@ static int StateProcRect(ElementArgs *args)
     int showFocus = 0;
     int mask = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    if (draw1 == -1)
+	draw1 = 1;
+#else
     draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
@@ -2104,12 +2220,16 @@ static int StateProcRect(ElementArgs *args)
     }
     if (draw1 == -1)
 	draw1 = 1;
-
+#endif
     if (elemX->showFocus != -1)
 	showFocus = elemX->showFocus;
     else if ((masterX != NULL) && (masterX->showFocus != -1))
 	showFocus = masterX->showFocus;
 
+#if 1
+    COLOR_FOR_STATE(f1, fill, args->states.state1)
+    COLOR_FOR_STATE(o1, outline, args->states.state1)
+#else
     f1 = PerStateColor_ForState(tree, &elemX->fill, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	XColor *f = PerStateColor_ForState(tree, &masterX->fill, args->states.state1, &match2);
@@ -2123,11 +2243,18 @@ static int StateProcRect(ElementArgs *args)
 	if (match2 > match)
 	    o1 = o;
     }
-
+#endif
     s1 = showFocus &&
 	(args->states.state1 & STATE_FOCUS) &&
 	(args->states.state1 & STATE_ACTIVE);
 
+#if 1
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if (draw2 == -1)
+	draw2 = 1;
+    COLOR_FOR_STATE(f2, fill, args->states.state2)
+    COLOR_FOR_STATE(o2, outline, args->states.state2)
+#else
     draw2 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state2, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state2, &match2);
@@ -2150,7 +2277,7 @@ static int StateProcRect(ElementArgs *args)
 	if (match2 > match)
 	    o2 = o;
     }
-
+#endif
     s2 = showFocus &&
 	(args->states.state2 & STATE_FOCUS) &&
 	(args->states.state2 & STATE_ACTIVE);
@@ -3125,6 +3252,19 @@ static int StateProcText(ElementArgs *args)
     Tk_Font tkfont1, tkfont2;
     int mask = 0;
 
+#if 1
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    if (draw1 == -1)
+	draw1 = 1;
+    COLOR_FOR_STATE(f1, fill, args->states.state1)
+    FONT_FOR_STATE(tkfont1, font, args->states.state1)
+
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if (draw2 == -1)
+	draw2 = 1;
+    COLOR_FOR_STATE(f2, fill, args->states.state2)
+    FONT_FOR_STATE(tkfont2, font, args->states.state2)
+#else
     draw1 = PerStateBoolean_ForState(tree, &elemX->draw, args->states.state1, &match);
     if ((match != MATCH_EXACT) && (masterX != NULL)) {
 	int draw = PerStateBoolean_ForState(tree, &masterX->draw, args->states.state1, &match2);
@@ -3170,7 +3310,7 @@ static int StateProcText(ElementArgs *args)
 	if (match2 > match)
 	    tkfont2 = tkfont;
     }
-
+#endif
     if (tkfont1 != tkfont2)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
