@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.29 2005/06/02 22:06:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.30 2005/06/03 02:36:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -254,8 +254,6 @@ static int ColumnOptionSet(
     int objEmpty;
     TreeColumn new, *internalPtr;
 
-    objEmpty = 0;
-
     if (internalOffset >= 0)
 	internalPtr = (TreeColumn *) (recordPtr + internalOffset);
     else
@@ -272,8 +270,8 @@ static int ColumnOptionSet(
     if (internalPtr != NULL) {
 	if ((*value) == NULL)
 	    new = NULL;
-	*((TreeColumn *) saveInternalPtr) = *((TreeColumn *) internalPtr);
-	*((TreeColumn *) internalPtr) = new;
+	*((TreeColumn *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
     }
 
     return TCL_OK;
