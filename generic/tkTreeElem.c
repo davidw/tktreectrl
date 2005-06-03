@@ -5,11 +5,150 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.24 2005/06/02 22:04:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.25 2005/06/03 02:38:36 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
+
+/* BEGIN custom "per-state" option */
+
+static int PerStateCOSet(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **value,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags)
+{
+    PerStateType *typePtr = (PerStateType *) clientData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    PerStateInfo *internalPtr;
+
+    if (internalOffset < 0)
+	panic("PerStateCOSet: forgot to set internalOffset >= 0");
+    internalPtr = (PerStateInfo *) (recordPtr + internalOffset);
+
+    PSTSave(internalPtr, (PerStateInfo *) saveInternalPtr);
+    ((PerStateInfo *) saveInternalPtr)->obj = internalPtr->obj;
+    internalPtr->obj = (*value);
+
+    if (PerStateInfo_FromObj(tree, TreeStateFromObj, typePtr, internalPtr) != TCL_OK) {
+	PSTRestore(tree, typePtr, internalPtr, (PerStateInfo *) saveInternalPtr);
+	internalPtr->obj = ((PerStateInfo *) saveInternalPtr)->obj;
+	return TCL_ERROR;
+    }
+
+    internalPtr->obj = ((PerStateInfo *) saveInternalPtr)->obj;
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *PerStateCOGet(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset)
+{
+    /* this should never get called, because we require an interal object
+     * representation */
+    return NULL;
+}
+
+static void PerStateCORestore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr)
+{
+    PerStateType *typePtr = (PerStateType *) clientData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+
+    PSTRestore(tree, typePtr, (PerStateInfo *) internalPtr, (PerStateInfo *) saveInternalPtr);
+}
+
+static void PerStateCOFree(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr)
+{
+    PerStateType *typePtr = (PerStateType *) clientData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+
+    PerStateInfo_Free(tree, typePtr, (PerStateInfo *) internalPtr);
+}
+
+static Tk_ObjCustomOption pstBitmapCO =
+{
+    "per-state bitmap",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstBitmap
+};
+
+static Tk_ObjCustomOption pstBooleanCO =
+{
+    "per-state boolean",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstBoolean
+};
+
+static Tk_ObjCustomOption pstBorderCO =
+{
+    "per-state border",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstBorder
+};
+
+static Tk_ObjCustomOption pstColorCO =
+{
+    "per-state color",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstColor
+};
+
+static Tk_ObjCustomOption pstFontCO =
+{
+    "per-state font",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstFont
+};
+
+static Tk_ObjCustomOption pstImageCO =
+{
+    "per-state image",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstImage
+};
+
+static Tk_ObjCustomOption pstReliefCO =
+{
+    "per-state relief",
+    PerStateCOSet,
+    PerStateCOGet,
+    PerStateCORestore,
+    PerStateCOFree,
+    (ClientData) &pstRelief
+};
 
 /* BEGIN custom "boolean" option */
 
@@ -29,8 +168,6 @@ static int BooleanSet(
     int objEmpty;
     int new, *internalPtr;
 
-    objEmpty = 0;
-
     if (internalOffset >= 0)
 	internalPtr = (int *) (recordPtr + internalOffset);
     else
@@ -47,8 +184,8 @@ static int BooleanSet(
     if (internalPtr != NULL) {
 	if ((*value) == NULL)
 	    new = -1;
-	*((int *) saveInternalPtr) = *((int *) internalPtr);
-	*((int *) internalPtr) = new;
+	*((int *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
     }
 
     return TCL_OK;
@@ -113,8 +250,6 @@ static int IntegerSet(
     int objEmpty;
     int new, *internalPtr;
 
-    objEmpty = 0;
-
     if (internalOffset >= 0)
 	internalPtr = (int *) (recordPtr + internalOffset);
     else
@@ -143,8 +278,8 @@ static int IntegerSet(
     if (internalPtr != NULL) {
 	if ((*value) == NULL)
 	    new = info->empty;
-	*((int *) saveInternalPtr) = *((int *) internalPtr);
-	*((int *) internalPtr) = new;
+	*((int *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
     }
 
     return TCL_OK;
@@ -201,8 +336,6 @@ static int StringTableSet(
     int objEmpty;
     int new, *internalPtr;
 
-    objEmpty = 0;
-
     if (internalOffset >= 0)
 	internalPtr = (int *) (recordPtr + internalOffset);
     else
@@ -220,8 +353,8 @@ static int StringTableSet(
     if (internalPtr != NULL) {
 	if ((*value) == NULL)
 	    new = -1;
-	*((int *) saveInternalPtr) = *((int *) internalPtr);
-	*((int *) internalPtr) = new;
+	*((int *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
     }
 
     return TCL_OK;
@@ -286,32 +419,28 @@ struct ElementBitmap
 #define BITMAP_CONF_DRAW 0x0008
 
 static Tk_OptionSpec bitmapOptionSpecs[] = {
-    {TK_OPTION_STRING, "-background", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBitmap, bg.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BG},
-    {TK_OPTION_STRING, "-bitmap", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBitmap, bitmap.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BITMAP},
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBitmap, draw.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_DRAW},
-    {TK_OPTION_STRING, "-foreground", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBitmap, fg.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_FG},
+    {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBitmap, bg.obj),
+     Tk_Offset(ElementBitmap, bg),
+     TK_OPTION_NULL_OK, (ClientData) &pstColorCO, BITMAP_CONF_BG},
+    {TK_OPTION_CUSTOM, "-bitmap", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBitmap, bitmap.obj),
+     Tk_Offset(ElementBitmap, bitmap),
+     TK_OPTION_NULL_OK, (ClientData) &pstBitmapCO, BITMAP_CONF_BITMAP},
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBitmap, draw.obj),
+     Tk_Offset(ElementBitmap, draw),
+     TK_OPTION_NULL_OK, (ClientData) &pstBooleanCO, BITMAP_CONF_DRAW},
+    {TK_OPTION_CUSTOM, "-foreground", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBitmap, fg.obj),
+     Tk_Offset(ElementBitmap, fg),
+     TK_OPTION_NULL_OK, (ClientData) &pstColorCO, BITMAP_CONF_FG},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
 static void DeleteProcBitmap(ElementArgs *args)
 {
-    TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
-    ElementBitmap *elemX = (ElementBitmap *) elem;
-
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
-    PerStateInfo_Free(tree, &pstBitmap, &elemX->bitmap);
-    PerStateInfo_Free(tree, &pstColor, &elemX->fg);
-    PerStateInfo_Free(tree, &pstColor, &elemX->bg);
 }
 
 static int WorldChangedProcBitmap(ElementArgs *args)
@@ -334,7 +463,6 @@ static int ConfigProcBitmap(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementBitmap *elemX = (ElementBitmap *) elem;
-    ElementBitmap savedX;
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -349,43 +477,8 @@ static int ConfigProcBitmap(ElementArgs *args)
 		continue;
 	    }
 
-	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
-	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
-		PSTSave(&elemX->bitmap, &savedX.bitmap);
-	    if (args->config.flagSelf & BITMAP_CONF_FG)
-		PSTSave(&elemX->fg, &savedX.fg);
-	    if (args->config.flagSelf & BITMAP_CONF_BG)
-		PSTSave(&elemX->bg, &savedX.bg);
+	    /* */
 
-	    if (args->config.flagSelf & BITMAP_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BITMAP_CONF_BITMAP) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap, &elemX->bitmap) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BITMAP_CONF_FG) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fg) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BITMAP_CONF_BG) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->bg) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
-	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
-		PerStateInfo_Free(tree, &pstBitmap, &savedX.bitmap);
-	    if (args->config.flagSelf & BITMAP_CONF_FG)
-		PerStateInfo_Free(tree, &pstColor, &savedX.fg);
-	    if (args->config.flagSelf & BITMAP_CONF_BG)
-		PerStateInfo_Free(tree, &pstColor, &savedX.bg);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -393,17 +486,7 @@ static int ConfigProcBitmap(ElementArgs *args)
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (args->config.flagSelf & BITMAP_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
-
-	    if (args->config.flagSelf & BITMAP_CONF_BITMAP)
-		PSTRestore(tree, &pstBitmap, &elemX->bitmap, &savedX.bitmap);
-
-	    if (args->config.flagSelf & BITMAP_CONF_FG)
-		PSTRestore(tree, &pstColor, &elemX->fg, &savedX.fg);
-
-	    if (args->config.flagSelf & BITMAP_CONF_BG)
-		PSTRestore(tree, &pstColor, &elemX->bg, &savedX.bg);
+	    /* */
 
 	    Tcl_SetObjResult(tree->interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
@@ -734,12 +817,14 @@ struct ElementBorder
 #define BORDER_CONF_DRAW 0x0020
 
 static Tk_OptionSpec borderOptionSpecs[] = {
-    {TK_OPTION_STRING, "-background", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBorder, border.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_BG},
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBorder, draw.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_DRAW},
+    {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBorder, border.obj),
+     Tk_Offset(ElementBorder, border),
+     TK_OPTION_NULL_OK, (ClientData) &pstBorderCO, BORDER_CONF_BG},
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBorder, draw.obj),
+     Tk_Offset(ElementBorder, draw),
+     TK_OPTION_NULL_OK, (ClientData) &pstBooleanCO, BORDER_CONF_DRAW},
     {TK_OPTION_CUSTOM, "-filled", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementBorder, filled),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, BORDER_CONF_FILLED},
@@ -747,9 +832,10 @@ static Tk_OptionSpec borderOptionSpecs[] = {
      (char *) NULL, Tk_Offset(ElementBorder, heightObj),
      Tk_Offset(ElementBorder, height),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_SIZE},
-    {TK_OPTION_STRING, "-relief", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementBorder, relief.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_RELIEF},
+    {TK_OPTION_CUSTOM, "-relief", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementBorder, relief.obj),
+     Tk_Offset(ElementBorder, relief),
+     TK_OPTION_NULL_OK, (ClientData) &pstReliefCO, BORDER_CONF_RELIEF},
     {TK_OPTION_PIXELS, "-thickness", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementBorder, thicknessObj),
      Tk_Offset(ElementBorder, thickness),
@@ -764,13 +850,6 @@ static Tk_OptionSpec borderOptionSpecs[] = {
 
 static void DeleteProcBorder(ElementArgs *args)
 {
-    TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
-    ElementBorder *elemX = (ElementBorder *) elem;
-
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
-    PerStateInfo_Free(tree, &pstBorder, &elemX->border);
-    PerStateInfo_Free(tree, &pstRelief, &elemX->relief);
 }
 
 static int WorldChangedProcBorder(ElementArgs *args)
@@ -795,7 +874,6 @@ static int ConfigProcBorder(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementBorder *elemX = (ElementBorder *) elem;
-    ElementBorder savedX;
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -810,34 +888,8 @@ static int ConfigProcBorder(ElementArgs *args)
 		continue;
 	    }
 
-	    if (args->config.flagSelf & BORDER_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
-	    if (args->config.flagSelf & BORDER_CONF_BG)
-		PSTSave(&elemX->border, &savedX.border);
-	    if (args->config.flagSelf & BORDER_CONF_RELIEF)
-		PSTSave(&elemX->relief, &savedX.relief);
+	    /* */
 
-	    if (args->config.flagSelf & BORDER_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BORDER_CONF_BG) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBorder, &elemX->border) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BORDER_CONF_RELIEF) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstRelief, &elemX->relief) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & BORDER_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
-	    if (args->config.flagSelf & BORDER_CONF_BG)
-		PerStateInfo_Free(tree, &pstBorder, &savedX.border);
-	    if (args->config.flagSelf & BORDER_CONF_RELIEF)
-		PerStateInfo_Free(tree, &pstRelief, &savedX.relief);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -845,14 +897,7 @@ static int ConfigProcBorder(ElementArgs *args)
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (args->config.flagSelf & BORDER_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
-
-	    if (args->config.flagSelf & BORDER_CONF_BG)
-		PSTRestore(tree, &pstBorder, &elemX->border, &savedX.border);
-
-	    if (args->config.flagSelf & BORDER_CONF_RELIEF)
-		PSTRestore(tree, &pstRelief, &elemX->relief, &savedX.relief);
+	    /* */
 
 	    Tcl_SetObjResult(tree->interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
@@ -1459,16 +1504,18 @@ struct ElementImage
 #define IMAGE_CONF_DRAW 0x0004
 
 static Tk_OptionSpec imageOptionSpecs[] = {
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementImage, draw.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DRAW},
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementImage, draw.obj),
+     Tk_Offset(ElementImage, draw),
+     TK_OPTION_NULL_OK, (ClientData) &pstBooleanCO, IMAGE_CONF_DRAW},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, heightObj),
      Tk_Offset(ElementImage, height),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_SIZE},
-    {TK_OPTION_STRING, "-image", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementImage, image.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_IMAGE},
+    {TK_OPTION_CUSTOM, "-image", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementImage, image.obj),
+     Tk_Offset(ElementImage, image),
+     TK_OPTION_NULL_OK, (ClientData) &pstImageCO, IMAGE_CONF_IMAGE},
     {TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, widthObj),
      Tk_Offset(ElementImage, width),
@@ -1479,12 +1526,6 @@ static Tk_OptionSpec imageOptionSpecs[] = {
 
 static void DeleteProcImage(ElementArgs *args)
 {
-    TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
-    ElementImage *elemX = (ElementImage *) elem;
-
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
-    PerStateInfo_Free(tree, &pstImage, &elemX->image);
 }
 
 static int WorldChangedProcImage(ElementArgs *args)
@@ -1504,7 +1545,6 @@ static int ConfigProcImage(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementImage *elemX = (ElementImage *) elem;
-    ElementImage savedX;
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -1519,25 +1559,8 @@ static int ConfigProcImage(ElementArgs *args)
 		continue;
 	    }
 
-	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
-	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
-		PSTSave(&elemX->image, &savedX.image);
+	    /* */
 
-	    if (args->config.flagSelf & IMAGE_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & IMAGE_CONF_IMAGE) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstImage, &elemX->image) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
-	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
-		PerStateInfo_Free(tree, &pstImage, &savedX.image);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -1545,11 +1568,7 @@ static int ConfigProcImage(ElementArgs *args)
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (args->config.flagSelf & IMAGE_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
-
-	    if (args->config.flagSelf & IMAGE_CONF_IMAGE)
-		PSTRestore(tree, &pstImage, &elemX->image, &savedX.image);
+	    /* */
 
 	    Tcl_SetObjResult(tree->interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
@@ -1797,12 +1816,14 @@ struct ElementRect
 #define RECT_CONF_DRAW 0x0040
 
 static Tk_OptionSpec rectOptionSpecs[] = {
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementRect, draw.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_DRAW},
-    {TK_OPTION_STRING, "-fill", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementRect, fill.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_FILL},
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementRect, draw.obj),
+     Tk_Offset(ElementRect, draw),
+     TK_OPTION_NULL_OK, (ClientData) &pstBooleanCO, RECT_CONF_DRAW},
+    {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementRect, fill.obj),
+     Tk_Offset(ElementRect, fill),
+     TK_OPTION_NULL_OK, (ClientData) &pstColorCO, RECT_CONF_FILL},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementRect, heightObj),
      Tk_Offset(ElementRect, height),
@@ -1810,9 +1831,10 @@ static Tk_OptionSpec rectOptionSpecs[] = {
     {TK_OPTION_STRING, "-open", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementRect, openString),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_OPEN},
-    {TK_OPTION_STRING, "-outline", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementRect, outline.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_OUTLINE},
+    {TK_OPTION_CUSTOM, "-outline", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementRect, outline.obj),
+     Tk_Offset(ElementRect, outline),
+     TK_OPTION_NULL_OK, (ClientData) &pstColorCO, RECT_CONF_OUTLINE},
     {TK_OPTION_PIXELS, "-outlinewidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementRect, outlineWidthObj),
      Tk_Offset(ElementRect, outlineWidth),
@@ -1830,12 +1852,6 @@ static Tk_OptionSpec rectOptionSpecs[] = {
 
 static void DeleteProcRect(ElementArgs *args)
 {
-    TreeCtrl *tree = args->tree;
-    ElementRect *elemX = (ElementRect *) args->elem;
-
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
-    PerStateInfo_Free(tree, &pstColor, &elemX->fill);
-    PerStateInfo_Free(tree, &pstColor, &elemX->outline);
 }
 
 static int WorldChangedProcRect(ElementArgs *args)
@@ -1875,29 +1891,8 @@ static int ConfigProcRect(ElementArgs *args)
 		continue;
 	    }
 
-	    if (args->config.flagSelf & RECT_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
-	    if (args->config.flagSelf & RECT_CONF_FILL)
-		PSTSave(&elemX->fill, &savedX.fill);
-	    if (args->config.flagSelf & RECT_CONF_OUTLINE)
-		PSTSave(&elemX->outline, &savedX.outline);
 	    if (args->config.flagSelf & RECT_CONF_OPEN)
 		savedX.open = elemX->open;
-
-	    if (args->config.flagSelf & RECT_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & RECT_CONF_FILL) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & RECT_CONF_OUTLINE) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->outline) != TCL_OK)
-		    continue;
-	    }
 
 	    if (args->config.flagSelf & RECT_CONF_OPEN) {
 		elemX->open = 0;
@@ -1929,27 +1924,12 @@ static int ConfigProcRect(ElementArgs *args)
 		}
 	    }
 
-	    if (args->config.flagSelf & RECT_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
-	    if (args->config.flagSelf & RECT_CONF_FILL)
-		PerStateInfo_Free(tree, &pstColor, &savedX.fill);
-	    if (args->config.flagSelf & RECT_CONF_OUTLINE)
-		PerStateInfo_Free(tree, &pstColor, &savedX.outline);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
-
-	    if (args->config.flagSelf & RECT_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
-
-	    if (args->config.flagSelf & RECT_CONF_FILL)
-		PSTRestore(tree, &pstColor, &elemX->fill, &savedX.fill);
-
-	    if (args->config.flagSelf & RECT_CONF_OUTLINE)
-		PSTRestore(tree, &pstColor, &elemX->outline, &savedX.outline);
 
 	    if (args->config.flagSelf & RECT_CONF_OPEN)
 		elemX->open = savedX.open;
@@ -2378,18 +2358,21 @@ static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-datatype", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, dataType),
      TK_OPTION_NULL_OK, (ClientData) &textDataTypeCO, TEXT_CONF_DATA},
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementText, draw.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DRAW},
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementText, draw.obj),
+     Tk_Offset(ElementText, draw),
+     TK_OPTION_NULL_OK, (ClientData) &pstBooleanCO, TEXT_CONF_DRAW},
     {TK_OPTION_STRING, "-format", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, formatObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
-    {TK_OPTION_STRING, "-fill", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementText, fill.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL,  TEXT_CONF_FILL},
-    {TK_OPTION_STRING, "-font", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementText, font.obj), -1,
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_FONT},
+    {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementText, fill.obj),
+     Tk_Offset(ElementText, fill),
+     TK_OPTION_NULL_OK, (ClientData) &pstColorCO,  TEXT_CONF_FILL},
+    {TK_OPTION_CUSTOM, "-font", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementText, font.obj),
+     Tk_Offset(ElementText, font),
+     TK_OPTION_NULL_OK, (ClientData) &pstFontCO, TEXT_CONF_FONT},
     {TK_OPTION_CUSTOM, "-justify", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, justify),
      TK_OPTION_NULL_OK, (ClientData) &textJustifyCO, TEXT_CONF_LAYOUT},
@@ -2776,11 +2759,8 @@ static void DeleteProcText(ElementArgs *args)
     Element *elem = args->elem;
     ElementText *elemX = (ElementText *) elem;
 
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     if (elemX->gc != NULL)
 	PerStateGC_Free(tree, &elemX->gc);
-    PerStateInfo_Free(tree, &pstColor, &elemX->fill);
-    PerStateInfo_Free(tree, &pstFont, &elemX->font);
     if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
 	ckfree(elemX->text);
 	elemX->text = NULL;
@@ -2798,7 +2778,6 @@ static int ConfigProcText(ElementArgs *args)
     Tcl_Interp *interp = tree->interp;
     Element *elem = args->elem;
     ElementText *elemX = (ElementText *) elem;
-    ElementText savedX;
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -2815,28 +2794,6 @@ static int ConfigProcText(ElementArgs *args)
 			&savedOptions, &args->config.flagSelf) != TCL_OK) {
 		args->config.flagSelf = 0;
 		continue;
-	    }
-
-	    if (args->config.flagSelf & TEXT_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
-	    if (args->config.flagSelf & TEXT_CONF_FILL)
-		PSTSave(&elemX->fill, &savedX.fill);
-	    if (args->config.flagSelf & TEXT_CONF_FONT)
-		PSTSave(&elemX->font, &savedX.font);
-
-	    if (args->config.flagSelf & TEXT_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & TEXT_CONF_FILL) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstColor, &elemX->fill) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & TEXT_CONF_FONT) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstFont, &elemX->font) != TCL_OK)
-		    continue;
 	    }
 
 #ifdef TEXTVAR
@@ -2872,27 +2829,12 @@ static int ConfigProcText(ElementArgs *args)
 	    }
 #endif
 
-	    if (args->config.flagSelf & TEXT_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
-	    if (args->config.flagSelf & TEXT_CONF_FILL)
-		PerStateInfo_Free(tree, &pstColor, &savedX.fill);
-	    if (args->config.flagSelf & TEXT_CONF_FONT)
-		PerStateInfo_Free(tree, &pstFont, &savedX.font);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
 	    errorResult = Tcl_GetObjResult(interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
-
-	    if (args->config.flagSelf & TEXT_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
-
-	    if (args->config.flagSelf & TEXT_CONF_FILL)
-		PSTRestore(tree, &pstColor, &elemX->fill, &savedX.fill);
-
-	    if (args->config.flagSelf & TEXT_CONF_FONT)
-		PSTRestore(tree, &pstFont, &elemX->font, &savedX.font);
 	}
     }
 
