@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.10 2005/05/13 20:40:14 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.11 2005/06/03 02:39:59 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -184,7 +184,7 @@ test item-13.1 {item complex: missing args} -body {
 
 test item-13.2 {item complex: only allowed if column style is defined} -body {
     .t item complex 8 {{e1 -text Hallo}}
-} -returnCodes error -result {item 8 doesn't have column 0}
+} -returnCodes error -result {column #0 doesn't exist}
 
 test item-13.3 {item complex: invalid list} -body {
 	.t column create
@@ -230,7 +230,7 @@ test item-14.6 {item element cget} -body {
 
 test item-14.7 {item element configure} -body {
     .t item element configure 8 0 eText
-} -result {{-data {} {} {} {}} {-datatype {} {} {} {}} {-format {} {} {} {}} {-fill {} {} {} {}} {-font {} {} {} {}} {-justify {} {} {} {}} {-lines {} {} {} {}} {-text {} {} {} {}} {-width {} {} {} {}} {-wrap {} {} {} {}}}
+} -result {{-data {} {} {} {}} {-datatype {} {} {} {}} *} -match glob
 
 test item-14.8 {item element configure/cget} -body {
     .t item element configure 8 0 eText -fill yellow
