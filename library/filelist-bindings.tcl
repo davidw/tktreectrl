@@ -622,6 +622,7 @@ proc ::TreeCtrl::EntryClose {T accept} {
     variable Priv
 
     place forget $T.entry
+    focus $T
     update
 
     if {$accept} {
@@ -821,6 +822,7 @@ proc ::TreeCtrl::TextClose {T accept} {
     variable Priv
 
     place forget $T.text
+    focus $T
     update
 
     if {$accept} {
