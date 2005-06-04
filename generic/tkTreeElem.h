@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.9 2005/05/10 22:19:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.10 2005/06/04 19:03:36 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -69,7 +69,7 @@ struct ElementType
 	void (*layoutProc)(ElementArgs *args);
 	int (*changeProc)(ElementArgs *args);
 	int (*stateProc)(ElementArgs *args);
-	void (*undefProc)(ElementArgs *args);
+	int (*undefProc)(ElementArgs *args);
 	int (*actualProc)(ElementArgs *args);
 	ElementType *next;
 };
@@ -121,6 +121,6 @@ struct TreeCtrlStubs
 	int (*PerStateInfo_FromObj)(TreeCtrl *tree, StateFromObjProc proc, PerStateType *typePtr, PerStateInfo *pInfo);
 	PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
 	Tcl_Obj *(*PerStateInfo_ObjForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
-	void (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state);
+	int (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state);
 };
 
