@@ -359,6 +359,19 @@ proc ::TreeCtrl::FileListEdit {T I C S E} {
 	} else {
 	    set pade [set padw $padx]
 	}
+	foreach E2 [$T style elements $S] {
+	    if {[lsearch -exact [$T style layout $S $E2 -union] $E] == -1} continue
+	    foreach option {-padx -ipadx} {
+		set pad [$T style layout $S $E2 $option]
+		if {[llength $pad] == 2} {
+		    incr padw [lindex $pad 0]
+		    incr pade [lindex $pad 1]
+		} else {
+		    incr padw $pad
+		    incr pade $pad
+		}
+	    }
+	}
 	TextExpanderOpen $T $I $C $E [expr {$x2 - $x1 - $padw - $pade}]
 
 	# Single-line edit
@@ -592,6 +605,9 @@ proc ::TreeCtrl::EntryExpanderOpen {T item column element} {
 	TreeCtrl::EntryClose %T 0
 	focus $TreeCtrl::Priv(entry,%T,focus)
     }
+    bind $T.entry <Destroy> {
+	[winfo parent %W] notify bind %W <Scroll> {}
+    }
 
     $T.entry configure -font $font -background [$T cget -background]
     $T.entry insert end $text
@@ -711,6 +727,9 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
 	TreeCtrl::TextClose %T 0
 	focus $TreeCtrl::Priv(text,%T,focus)
     }
+    bind $T.text <Destroy> {
+	[winfo parent %W] notify bind %W  <Scroll> {}
+    }
 
     $T.text tag configure TAG -justify [$T element cget $element -justify]
     $T.text configure -font $font
@@ -791,6 +810,9 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
 	TreeCtrl::TextClose %T 0
 	focus $TreeCtrl::Priv(text,%T,focus)
     }
+    bind $T.text <Destroy> {
+	[winfo parent %W] notify bind %W <Scroll> {}
+    }
 
     $T.text tag configure TAG -justify $justify
     $T.text configure -font $font -background [$T cget -background]
@@ -806,10 +828,10 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
 	"%d %d" width height
 
     set tbw [$T.text cget -borderwidth]
-    set tx [expr {$x1 - $tbw - 1}]
-    place $T.text -x $tx -y [expr {$y1 - $tbw - 1}] \
-	-width [expr {$width + ($tbw + 1) * 2}] \
-	-height [expr {$height + ($tbw + 1) * 2}] \
+    incr tbw
+    place $T.text -x [expr {$x1 - $tbw}] -y [expr {$y1 - $tbw}] \
+	-width [expr {$width + $tbw * 2}] \
+	-height [expr {$height + $tbw * 2}] \
 	-bordermode outside
 
     focus $T.text
@@ -855,10 +877,11 @@ proc ::TreeCtrl::TextExpanderKeypress {T} {
 	"%d %d" width height
 
     set tbw [$T.text cget -borderwidth]
+    incr tbw
     place configure $T.text \
-	-x [expr {$center - $width / 2 - $tbw - 1}] \
-	-width [expr {$width + ($tbw + 1) * 2}] \
-	-height [expr {$height + ($tbw + 1) * 2}]
+	-x [expr {$center - ($width + $tbw * 2) / 2}] \
+	-width [expr {$width + $tbw * 2}] \
+	-height [expr {$height + $tbw * 2}]
 
     $T.text tag add TAG 1.0 end
 
