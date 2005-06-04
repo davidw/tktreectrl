@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.39 2005/06/03 02:35:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.40 2005/06/04 19:06:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -410,7 +410,7 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
     return iMask;
 }
 
-void TreeItem_Undefine(TreeCtrl *tree, TreeItem item_, int state)
+void TreeItem_UndefineState(TreeCtrl *tree, TreeItem item_, int state)
 {
     Item *item = (Item *) item_;
     Column *column = item->columns;
