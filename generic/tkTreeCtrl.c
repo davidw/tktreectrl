@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.43 2005/06/02 04:49:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.44 2005/06/04 18:55:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1486,6 +1486,9 @@ static void TreeDestroy(char *memPtr)
     Tk_FreeConfigOptions((char *) tree, tree->debug.optionTable,
 	    tree->tkwin);
 
+    PerStateInfo_Free(tree, &pstBitmap, &tree->buttonBitmap);
+    PerStateInfo_Free(tree, &pstImage, &tree->buttonImage);
+
     Tk_FreeConfigOptions((char *) tree, tree->optionTable, tree->tkwin);
 
     Tcl_DeleteHashTable(&tree->selection);
@@ -1790,7 +1793,11 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
 		if (Tree_StateFromObj(tree, objv[i], NULL, &index,
 			SFO_NOT_STATIC | SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 		    return TCL_ERROR;
-		TreeStyle_UndefineState(tree, 1L << index);
+		Tree_UndefineState(tree, 1L << index);
+		PerStateInfo_Undefine(tree, &pstBitmap, &tree->buttonBitmap,
+			1L << index);
+		PerStateInfo_Undefine(tree, &pstImage, &tree->buttonImage,
+			1L << index);
 		ckfree(tree->stateNames[index]);
 		tree->stateNames[index] = NULL;
 	    }
@@ -2678,7 +2685,6 @@ int TextLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     Tk_Font tkfont;
     Tk_Window tkwin = Tk_MainWindow(interp);
     char *text;
-    int textLen;
     int flags = 0;
     Tk_Justify justify = TK_JUSTIFY_LEFT;
     Tk_TextLayout layout;
@@ -2694,7 +2700,7 @@ int TextLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     tkfont = Tk_AllocFontFromObj(interp, tkwin, objv[1]);
     if (tkfont == NULL)
 	return TCL_ERROR;
-    text = Tcl_GetStringFromObj(objv[2], &textLen);
+    text = Tcl_GetString(objv[2]);
 
     for (i = 3; i < objc; i += 2) {
 	static CONST char *optionNames[] = {
@@ -2762,7 +2768,7 @@ int TextLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	}
     }
 
-    layout = Tk_ComputeTextLayout(tkfont, text, textLen, width, justify, flags,
+    layout = Tk_ComputeTextLayout(tkfont, text, -1, width, justify, flags,
 	    &width, &height);
     FormatResult(interp, "%d %d", width, height);
     Tk_FreeTextLayout(layout);
