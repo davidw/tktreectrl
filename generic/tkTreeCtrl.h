@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.32 2005/06/02 04:51:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.33 2005/06/04 19:04:43 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -359,7 +359,7 @@ extern int TreeItem_GetState(TreeCtrl *tree, TreeItem item_);
 #define CS_LAYOUT 0x02
 extern int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff, int stateOn);
 
-extern void TreeItem_Undefine(TreeCtrl *tree, TreeItem item_, int state);
+extern void TreeItem_UndefineState(TreeCtrl *tree, TreeItem item_, int state);
 
 extern int TreeItem_GetButton(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_SetButton(TreeCtrl *tree, TreeItem item, int hasButton);
@@ -488,7 +488,7 @@ extern int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CO
 extern int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, int state2);
-extern void TreeStyle_UndefineState(TreeCtrl *tree, int state);
+extern void Tree_UndefineState(TreeCtrl *tree, int state);
 extern int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_);
 extern void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs);
 extern void TreeStyle_HideWindows(TreeCtrl *tree, TreeStyle style_);
@@ -705,7 +705,7 @@ extern PerStateData *PerStateInfo_ForState(TreeCtrl *tree,
     PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
 extern Tcl_Obj *PerStateInfo_ObjForState(TreeCtrl *tree, PerStateType *typePtr,
     PerStateInfo *pInfo, int state, int *match);
-extern void PerStateInfo_Undefine(TreeCtrl *tree, PerStateType *typePtr,
+extern int PerStateInfo_Undefine(TreeCtrl *tree, PerStateType *typePtr,
     PerStateInfo *pInfo, int state);
 
 struct PerStateGC
