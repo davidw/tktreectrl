@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.9 2005/05/13 20:00:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.10 2005/06/04 19:06:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -342,7 +342,7 @@ void TreeNotify_Selection(TreeCtrl *tree, TreeItem select[], TreeItem deselect[]
 		int *deselect;
 		int count;
 	} data;
-	int staticS[20], staticD[20];
+	int staticS[128], staticD[128];
 	int i;
 
 	data.tree = tree;
