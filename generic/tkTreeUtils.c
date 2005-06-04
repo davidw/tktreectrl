@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.25 2005/06/02 05:25:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.26 2005/06/04 19:08:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1594,7 +1594,12 @@ void PerStateInfo_Free(
 	(*typePtr->freeProc)(tree, pData);
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
+#ifdef ALLOC_HAX
+    AllocHax_CFree(tree->allocData, (char *) pInfo->data, typePtr->size,
+	pInfo->count, 5);
+#else
     wipefree((char *) pInfo->data, typePtr->size * pInfo->count);
+#endif
     pInfo->data = NULL;
     pInfo->count = 0;
 }
@@ -1626,10 +1631,20 @@ int PerStateInfo_FromObj(
 	return TCL_OK;
 
     if (objc == 1) {
+#ifdef ALLOC_HAX
+	pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
+	    typePtr->size, 1, 5);
+#else
 	pData = (PerStateData *) ckalloc(typePtr->size);
+#endif
 	pData->stateOff = pData->stateOn = 0; /* all states */
 	if ((*typePtr->fromObjProc)(tree, objv[0], pData) != TCL_OK) {
+#ifdef ALLOC_HAX
+	    AllocHax_CFree(tree->allocData, (char *) pData, typePtr->size,
+		1, 5);
+#else
 	    wipefree((char *) pData, typePtr->size);
+#endif
 	    return TCL_ERROR;
 	}
 	pInfo->data = pData;
@@ -1642,7 +1657,12 @@ int PerStateInfo_FromObj(
 	return TCL_ERROR;
     }
 
+#ifdef ALLOC_HAX
+    pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
+	typePtr->size, objc / 2, 5);
+#else
     pData = (PerStateData *) ckalloc(typePtr->size * (objc / 2));
+#endif
     pInfo->data = pData;
     for (i = 0; i < objc; i += 2) {
 	if ((*typePtr->fromObjProc)(tree, objv[i], pData) != TCL_OK) {
@@ -1739,7 +1759,7 @@ Tcl_Obj *PerStateInfo_ObjForState(
     return NULL;
 }
 
-void PerStateInfo_Undefine(
+int PerStateInfo_Undefine(
     TreeCtrl *tree,
     PerStateType *typePtr,
     PerStateInfo *pInfo,
@@ -1748,6 +1768,7 @@ void PerStateInfo_Undefine(
     PerStateData *pData = pInfo->data;
     int i, j, numStates, stateOff, stateOn;
     Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
+    int modified = 0;
 
 #ifdef DEBUG_PSI
     if ((pInfo->data != NULL) && (pInfo->type != typePtr))
@@ -1785,9 +1806,11 @@ void PerStateInfo_Undefine(
 	     * the string rep of the sublist {state1 ...}, but not
 	     * the parent list */
 	    Tcl_InvalidateStringRep(configObj);
+	    modified = 1;
 	}
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
+    return modified;
 }
 
 /*****/
