@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.33 2005/06/04 19:04:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.34 2005/06/06 03:25:54 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -438,10 +438,7 @@ struct StyleDrawArgs
 {
     TreeCtrl *tree;
     TreeStyle style;
-#define LAYOUTHAX
-#ifdef LAYOUTHAX
     int indent;
-#endif
     int x;
     int y;
     int width;
