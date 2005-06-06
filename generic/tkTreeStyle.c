@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.30 2005/06/06 03:25:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.31 2005/06/06 17:34:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -24,7 +24,7 @@ struct Style
 	ElementLink *elements;
 	int neededWidth;
 	int neededHeight;
-#ifdef NEEDEDHAX
+#ifdef NEEDEDHAX /* needed for debugging only */
 	int neededState;
 #endif
 	int minWidth;
@@ -142,7 +142,7 @@ static void Style_DoExpandH(struct Layout *layout, int flags, StyleDrawArgs *dra
 	/* Internal: can expand to max of ePadX[] or uPadX[] */
 	iW = eW + MAX(layout->ePadX[PAD_TOP_LEFT], layout->uPadX[PAD_TOP_LEFT]);
 	iE = width - MAX(layout->ePadX[PAD_BOTTOM_RIGHT],
-			 layout->uPadX[PAD_BOTTOM_RIGHT]);
+		layout->uPadX[PAD_BOTTOM_RIGHT]);
 	iLeft = layout->x + layout->ePadX[PAD_TOP_LEFT] - iW;
 	iRight = iE - (layout->x + layout->eWidth - layout->ePadX[PAD_BOTTOM_RIGHT]);
 	iMax = iLeft + iRight;
@@ -321,7 +321,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->eLink = eLink2;
 		layout->master = eLink1;
 
-		/* Width before squeezing */
+		/* Width before squeezing/expanding */
 		layout->useWidth = eLink2->neededWidth;
 
 		/* No -union padding yet */
@@ -356,7 +356,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 
 			uPadX = layout->uPadX;
 			uPadY = layout->uPadY;
-#if 1
+
 			if (masterStyle->vertical)
 			{
 				uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
@@ -375,12 +375,6 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 				uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 				uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 			}
-#else
-			uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
-			uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
-			uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
-			uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
-#endif
 		}
 	}
 
@@ -516,11 +510,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-#if 1 /* bug */
 		layout->x = x + abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
-#else
-		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
-#endif
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 
@@ -976,11 +966,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 			continue;
 
-#if 1 /* bug */
 		layout->y = y + abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
-#else
-		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
-#endif
 		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
 		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
@@ -1312,11 +1298,7 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if (eLink1->flags & ELF_DETACH)
 			continue;
 
-#if 1
 		layout->y = y + abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
-#else
-		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
-#endif
 		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
 		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
@@ -1358,8 +1340,8 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[],
 		panic("Style_DoLayout(file %s line %d): style.neededWidth == -1",
 			file, line);
 	if (style->minWidth + drawArgs->indent > drawArgs->width)
-		panic("Style_DoLayout: style.minWidth + drawArgs->indent %d > drawArgs.width %d",
-			style->minWidth + drawArgs->indent, drawArgs->width);
+		panic("Style_DoLayout(file %s line %d): style.minWidth + drawArgs->indent %d > drawArgs.width %d",
+			file, line, style->minWidth + drawArgs->indent, drawArgs->width);
 
 	Style_DoLayoutH(drawArgs, layouts);
 
@@ -1466,7 +1448,7 @@ static int Style_NeededSize(TreeCtrl *tree, Style *style, int state,
 
 			uPadX = layout->uPadX;
 			uPadY = layout->uPadY;
-#if 1
+
 			if (masterStyle->vertical)
 			{
 				uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
@@ -1485,12 +1467,6 @@ static int Style_NeededSize(TreeCtrl *tree, Style *style, int state,
 				uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 				uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 			}
-#else
-			uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
-			uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
-			uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
-			uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
-#endif
 		}
 	}
 
@@ -1587,13 +1563,8 @@ static int Style_NeededSize(TreeCtrl *tree, Style *style, int state,
 			continue;
 
 		layout->eLink = eLink2;
-#if 1 /* bug */
 		layout->x = x + abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
 		layout->y = y + abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
-#else
-		layout->x = MAX(x, abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT])));
-		layout->y = MAX(y, abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT])));
-#endif
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
@@ -1889,8 +1860,8 @@ void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
 	int i;
 	struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
 
-	if (drawArgs->width < style->minWidth)
-		drawArgs->width = style->minWidth;
+	if (drawArgs->width < style->minWidth + drawArgs->indent)
+		drawArgs->width = style->minWidth + drawArgs->indent;
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
@@ -2302,11 +2273,7 @@ static void Style_Changed(TreeCtrl *tree, Style *masterStyle)
 		if (layout)
 		{
 			TreeItem_InvalidateHeight(tree, item);
-#if 1
 			Tree_FreeItemDInfo(tree, item, NULL);
-#else
-			Tree_InvalidateItemDInfo(tree, item, NULL);
-#endif
 			updateDInfo = TRUE;
 		}
 		hPtr = Tcl_NextHashEntry(&search);
@@ -2460,11 +2427,7 @@ static void Style_ChangeElements(TreeCtrl *tree, Style *masterStyle, int count, 
 		if (layout)
 		{
 			TreeItem_InvalidateHeight(tree, item);
-#if 1
 			Tree_FreeItemDInfo(tree, item, NULL);
-#else
-			Tree_InvalidateItemDInfo(tree, item, NULL);
-#endif
 			updateDInfo = TRUE;
 		}
 		hPtr = Tcl_NextHashEntry(&search);
@@ -2537,9 +2500,7 @@ static void Style_ElemChanged(TreeCtrl *tree, Style *masterStyle,
 		if (iMask & CS_LAYOUT)
 		{
 			TreeItem_InvalidateHeight(tree, item);
-#if 1
 			Tree_FreeItemDInfo(tree, item, NULL);
-#endif
 			updateDInfo = TRUE;
 		}
 		if (iMask & CS_DISPLAY)
@@ -2888,9 +2849,7 @@ void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 		TreeItemColumn_InvalidateSize(tree, column);
 		TreeItem_InvalidateHeight(tree, item);
-#if 1
 		Tree_FreeItemDInfo(tree, item, NULL);
-#endif
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	}
 	if (mask & CS_DISPLAY)
@@ -2908,9 +2867,7 @@ void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
 		Tree_InvalidateColumnWidth(iter->tree, iter->columnIndex);
 		TreeItemColumn_InvalidateSize(iter->tree, iter->column);
 		TreeItem_InvalidateHeight(iter->tree, iter->item);
-#if 1
 		Tree_FreeItemDInfo(iter->tree, iter->item, NULL);
-#endif
 		Tree_DInfoChanged(iter->tree, DINFO_REDO_RANGES);
 	}
 	if (mask & CS_DISPLAY)
@@ -3355,7 +3312,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	Style *style;
 	Element *elem;
-	ElementLink *eLink;
+	ElementLink saved, *eLink;
 	int i, index;
 	static CONST char *optionNames[] = {
 		"-padx", "-pady", "-ipadx", "-ipady", "-expand", "-union", "-detach",
@@ -3584,18 +3541,20 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_OK;
 	}
 
+	saved = *eLink;
+
 	for (i = 5; i < objc; i += 2)
 	{
 		if (i + 2 > objc)
 		{
 			FormatResult(interp, "value for \"%s\" missing",
 				Tcl_GetString(objv[i]));
-			return TCL_ERROR;
+			goto badConfig;
 		}
 		if (Tcl_GetIndexFromObj(interp, objv[i], optionNames, "option",
 			0, &index) != TCL_OK)
 		{
-			return TCL_ERROR;
+			goto badConfig;
 		}
 		switch (index)
 		{
@@ -3605,7 +3564,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					tree->tkwin, objv[i + 1],
 					&eLink->ePadX[PAD_TOP_LEFT],
 					&eLink->ePadX[PAD_BOTTOM_RIGHT]) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				break;
 			}
 			case OPTION_PADY:
@@ -3614,7 +3573,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					tree->tkwin, objv[i + 1],
 					&eLink->ePadY[PAD_TOP_LEFT],
 					&eLink->ePadY[PAD_BOTTOM_RIGHT]) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				break;
 			}
 			case OPTION_iPADX:
@@ -3623,7 +3582,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					tree->tkwin, objv[i + 1],
 					&eLink->iPadX[PAD_TOP_LEFT],
 					&eLink->iPadX[PAD_BOTTOM_RIGHT]) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				break;
 			}
 			case OPTION_iPADY:
@@ -3632,14 +3591,14 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					tree->tkwin, objv[i + 1],
 					&eLink->iPadY[PAD_TOP_LEFT],
 					&eLink->iPadY[PAD_BOTTOM_RIGHT]) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				break;
 			}
 			case OPTION_DETACH:
 			{
 				int detach;
 				if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &detach) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				if (detach)
 					eLink->flags |= ELF_DETACH;
 				else
@@ -3667,7 +3626,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 								expand, "\": must be a string ",
 								"containing zero or more of n, e, s, and w",
 								(char *) NULL);
-							return TCL_ERROR;
+							goto badConfig;
 						}
 					}
 				}
@@ -3694,7 +3653,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 								expand, "\": must be a string ",
 								"containing zero or more of n, e, s, and w",
 								(char *) NULL);
-							return TCL_ERROR;
+							goto badConfig;
 						}
 					}
 				}
@@ -3704,7 +3663,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			{
 				int indent;
 				if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &indent) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				if (indent)
 					eLink->flags |= ELF_INDENT;
 				else
@@ -3730,7 +3689,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 								string, "\": must be a string ",
 								"containing zero or more of x and y",
 								(char *) NULL);
-							return TCL_ERROR;
+							goto badConfig;
 						}
 					}
 				}
@@ -3744,13 +3703,14 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 				if (Tcl_ListObjGetElements(interp, objv[i + 1],
 					&objc1, &objv1) != TCL_OK)
-					return TCL_ERROR;
+					goto badConfig;
 				if (objc1 == 0)
 				{
 					if (eLink->onion != NULL)
 					{
-						wipefree((char *) eLink->onion,
-							sizeof(int) * eLink->onionCount);
+						if (eLink->onion != saved.onion)
+							wipefree((char *) eLink->onion,
+								sizeof(int) * eLink->onionCount);
 						eLink->onionCount = 0;
 						eLink->onion = NULL;
 					}
@@ -3765,7 +3725,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					if (Element_FromObj(tree, objv1[j], &elem2) != TCL_OK)
 					{
 						ckfree((char *) onion);
-						return TCL_ERROR;
+						goto badConfig;
 					}
 
 					eLink2 = Style_FindElem(tree, style, elem2, &n);
@@ -3775,7 +3735,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						FormatResult(interp,
 							"style %s does not use element %s",
 							style->name, elem2->name);
-						return TCL_ERROR;
+						goto badConfig;
 					}
 					if (eLink == eLink2)
 					{
@@ -3783,7 +3743,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						FormatResult(interp,
 							"element %s can't form union with itself",
 							elem2->name);
-						return TCL_ERROR;
+						goto badConfig;
 					}
 					/* Silently ignore duplicates */
 					for (k = 0; k < count; k++)
@@ -3795,7 +3755,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 						continue;
 					onion[count++] = n;
 				}
-				if (eLink->onion != NULL)
+				if ((eLink->onion != NULL) && (eLink->onion != saved.onion))
 					wipefree((char *) eLink->onion,
 						sizeof(int) * eLink->onionCount);
 				if (count == objc1)
@@ -3824,7 +3784,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					FormatResult(interp, "bad screen distance \"%s\"",
 						Tcl_GetString(objv[i + 1]));
-					return TCL_ERROR;
+					goto badConfig;
 				}
 				eLink->minHeight = height;
 				break;
@@ -3842,7 +3802,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					FormatResult(interp, "bad screen distance \"%s\"",
 						Tcl_GetString(objv[i + 1]));
-					return TCL_ERROR;
+					goto badConfig;
 				}
 				eLink->fixedHeight = height;
 				break;
@@ -3860,7 +3820,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					FormatResult(interp, "bad screen distance \"%s\"",
 						Tcl_GetString(objv[i + 1]));
-					return TCL_ERROR;
+					goto badConfig;
 				}
 				eLink->minWidth = width;
 				break;
@@ -3878,7 +3838,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				{
 					FormatResult(interp, "bad screen distance \"%s\"",
 						Tcl_GetString(objv[i + 1]));
-					return TCL_ERROR;
+					goto badConfig;
 				}
 				eLink->fixedWidth = width;
 				break;
@@ -3886,8 +3846,16 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 #endif
 		}
 	}
+	if (saved.onion && (eLink->onion != saved.onion))
+		wipefree((char *) saved.onion, sizeof(int) * saved.onionCount);
 	Style_Changed(tree, style);
 	return TCL_OK;
+
+badConfig:
+	if (eLink->onion && (eLink->onion != saved.onion))
+		wipefree((char *) eLink->onion, sizeof(int) * eLink->onionCount);
+	*eLink = saved;
+	return TCL_ERROR;
 }
 
 int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
@@ -4188,8 +4156,8 @@ char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y)
 
 	Style_CheckNeededSize(tree, style, state);
 
-	if (drawArgs->width < style->minWidth)
-		drawArgs->width = style->minWidth;
+	if (drawArgs->width < style->minWidth + drawArgs->indent)
+		drawArgs->width = style->minWidth + drawArgs->indent;
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
@@ -4229,8 +4197,8 @@ void TreeStyle_Identify2(StyleDrawArgs *drawArgs,
 
 	Style_CheckNeededSize(tree, style, state);
 
-	if (drawArgs->width < style->minWidth)
-		drawArgs->width = style->minWidth;
+	if (drawArgs->width < style->minWidth + drawArgs->indent)
+		drawArgs->width = style->minWidth + drawArgs->indent;
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
@@ -4367,8 +4335,10 @@ int TreeStyle_Remap(TreeCtrl *tree, TreeStyle styleFrom_, TreeStyle styleTo_, in
 	{
 #ifdef ALLOC_HAX
 		if (styleFrom->numElements > 0)
-			AllocHax_CFree(tree->allocData, (char *) styleFrom->elements, sizeof(ElementLink), styleFrom->numElements, 5);
-		styleFrom->elements = (ElementLink *) AllocHax_CAlloc(tree->allocData, sizeof(ElementLink), styleTo->numElements, 5);
+			AllocHax_CFree(tree->allocData, (char *) styleFrom->elements,
+				sizeof(ElementLink), styleFrom->numElements, 5);
+		styleFrom->elements = (ElementLink *) AllocHax_CAlloc(tree->allocData,
+			sizeof(ElementLink), styleTo->numElements, 5);
 #else
 		if (styleFrom->numElements > 0)
 			wipefree((char *) styleFrom->elements, sizeof(ElementLink) *
@@ -4486,8 +4456,8 @@ int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc,
 		}
 	}
 
-	if (drawArgs->width < style->minWidth)
-		drawArgs->width = style->minWidth;
+	if (drawArgs->width < style->minWidth + drawArgs->indent)
+		drawArgs->width = style->minWidth + drawArgs->indent;
 	if (drawArgs->height < style->minHeight)
 		drawArgs->height = style->minHeight;
 
