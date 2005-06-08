@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.27 2005/05/24 23:40:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.28 2005/06/08 01:24:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1131,6 +1131,9 @@ Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h)
 {
     Range *range;
     RItem *rItem;
+
+    /* Update columnCountVis if needed */
+    (void) Tree_WidthOfColumns(tree);
 
     if (!TreeItem_ReallyVisible(tree, item) || (tree->columnCountVis < 1))
 	return -1;
