@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.41 2005/06/06 03:25:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.42 2005/06/08 01:17:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3493,6 +3493,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	"isancestor",
 	"isopen",
 	"order",
+	"range",
 	"rnc",
 	"sort",
 	"state",
@@ -3528,6 +3529,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	COMMAND_ISANCESTOR,
 	COMMAND_ISOPEN,
 	COMMAND_ORDER,
+	COMMAND_RANGE,
 	COMMAND_RNC,
 	COMMAND_SORT,
 	COMMAND_STATE,
@@ -3536,10 +3538,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	COMMAND_TOGGLE
     };
 #define AF_NOTANCESTOR	0x00010000 /* item can't be ancestor of other item */
-#define AF_PARENT		0x00020000 /* item must have a parent */
+#define AF_PARENT	0x00020000 /* item must have a parent */
 #define AF_NOT_EQUAL	0x00040000 /* second item can't be same as first */
-#define AF_SAMEROOT		0x00080000 /* both items must be descendants of a common ancestor */
-#define AF_NOT_ITEM		0x00100000 /* arg is not an Item */
+#define AF_SAMEROOT	0x00080000 /* both items must be descendants of a common ancestor */
+#define AF_NOT_ITEM	0x00100000 /* arg is not an Item */
     struct {
 	int minArgs;
 	int maxArgs;
@@ -3558,7 +3560,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{ 1, 1, 0, 0, "item" }, /* parent */
 	{ 1, 2, IFO_NOTROOT | AF_PARENT, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, "item ?newPrevSibling?" }, /* prevsibling */
 	{ 1, 1, IFO_NOTROOT, 0, "item" }, /* remove */
-		
+    
 	{ 1, 3, 0, AF_NOT_ITEM, "item ?column? ?element?" }, /* bbox */
 	{ 2, 2, 0, AF_NOT_ITEM, "item option" }, /* cget */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* collapse */
@@ -3573,6 +3575,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{ 2, 2, 0, 0, "item item2" }, /* isancestor */
 	{ 1, 1, 0, 0, "item" }, /* isopen */
 	{ 1, 2, 0, AF_NOT_ITEM, "item ?-visible?" }, /* order */
+	{ 2, 2, 0, AF_SAMEROOT, "first last" }, /* range */
 	{ 1, 1, 0, 0, "item" }, /* rnc */
 	{ 1, 100000, 0, AF_NOT_ITEM, "item ?option ...?" }, /* sort */
 	{ 2, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item ?arg ...?" }, /* state */
@@ -4194,6 +4197,36 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tree_UpdateItemIndex(tree);
 	    Tcl_SetObjResult(interp,
 		    Tcl_NewIntObj(visible ? item->indexVis : item->index));
+	    break;
+	}
+	/* T item range I I */
+	case COMMAND_RANGE:
+	{
+	    TreeItem itemFirst = (TreeItem) item;
+	    TreeItem itemLast = (TreeItem) item2;
+	    int indexFirst, indexLast;
+	    Tcl_Obj *listObj;
+
+	    if (itemFirst == itemLast) {
+		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, itemFirst));
+		break;
+	    }
+	    TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
+	    TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
+	    if (indexFirst > indexLast) {
+		TreeItem swap = itemFirst;
+		itemFirst = itemLast;
+		itemLast = swap;
+	    }
+	    listObj = Tcl_NewListObj(0, NULL);
+	    while (itemFirst != NULL) {
+		Tcl_ListObjAppendElement(interp, listObj,
+			TreeItem_ToObj(tree, itemFirst));
+		if (itemFirst == itemLast)
+		    break;
+		itemFirst = TreeItem_Next(tree, itemFirst);
+	    }
+	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
 	case COMMAND_PARENT:
