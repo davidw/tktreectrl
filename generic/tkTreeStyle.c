@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.31 2005/06/06 17:34:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.32 2005/06/08 01:23:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -111,6 +111,236 @@ struct Layout
 	int uPadY[2]; /* padding due to -union */
 };
 
+#if 1
+static void Style_DoExpandH(struct Layout *layout, int flags, StyleDrawArgs *drawArgs)
+{
+	int numExpand = 0, spaceRemaining;
+	int *ePadX, *iPadX, *uPadX;
+	int iE, uWidth;
+	int doIndent = !(flags & ELF_DETACH) || (flags & ELF_INDENT);
+	int width = drawArgs->width;
+
+	if (!(flags & ELF_EXPAND_WE))
+		return;
+
+	ePadX = layout->ePadX;
+	iPadX = layout->iPadX;
+	uPadX = layout->uPadX;
+
+	uWidth =
+		MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]) +
+		layout->iWidth +
+		MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
+
+	spaceRemaining = width - uWidth;
+	if (doIndent)
+		spaceRemaining -= drawArgs->indent;
+	if (spaceRemaining <= 0)
+		return;
+
+	if (flags & ELF_eEXPAND_W) numExpand++;
+	if (flags & ELF_eEXPAND_E) numExpand++;
+	if (flags & ELF_iEXPAND_W) numExpand++;
+	if (flags & ELF_iEXPAND_E) numExpand++;
+
+	while ((spaceRemaining > 0) && (numExpand > 0))
+	{
+		int each = (spaceRemaining >= numExpand) ? (spaceRemaining / numExpand) : 1;
+
+		numExpand = 0;
+
+		/* Internal: can expand to max of ePadX[] and uPadX[] */
+		iE = width - MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
+
+		if (flags & ELF_eEXPAND_W)
+		{
+			int add = each;
+			if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each > iE)
+				add = iE - (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				ePadX[PAD_TOP_LEFT] += add;
+				layout->eWidth += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] < iE)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_iEXPAND_W)
+		{
+			int add = each;
+			if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each > iE)
+				add = iE - (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				iPadX[PAD_TOP_LEFT] += add;
+				layout->iWidth += add;
+				layout->eWidth += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] < iE)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_iEXPAND_E)
+		{
+			int add = each;
+			if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each > iE)
+				add = iE - (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				iPadX[PAD_BOTTOM_RIGHT] += add;
+				layout->iWidth += add;
+				layout->eWidth += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] < iE)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_eEXPAND_E)
+		{
+			int add = each;
+			if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each > iE)
+				add = iE - (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				ePadX[PAD_BOTTOM_RIGHT] += add;
+				layout->eWidth += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+
+				/* Internal: can expand to max of ePadX[] and uPadX[] */
+				iE = width - MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
+
+				if (layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] < iE)
+					numExpand++;
+			}
+		}
+	}
+}
+
+static void Style_DoExpandV(struct Layout *layout, int flags, StyleDrawArgs *drawArgs)
+{
+	int numExpand = 0, spaceRemaining;
+	int *ePadY, *iPadY, *uPadY;
+	int iS, uHeight;
+	int height = drawArgs->height;
+
+	if (!(flags & ELF_EXPAND_NS))
+		return;
+
+	ePadY = layout->ePadY;
+	iPadY = layout->iPadY;
+	uPadY = layout->uPadY;
+
+	uHeight =
+		MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]) +
+		layout->iHeight +
+		MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
+
+	spaceRemaining = height - uHeight;
+	if (spaceRemaining <= 0)
+		return;
+
+	if (flags & ELF_eEXPAND_N) numExpand++;
+	if (flags & ELF_eEXPAND_S) numExpand++;
+	if (flags & ELF_iEXPAND_N) numExpand++;
+	if (flags & ELF_iEXPAND_S) numExpand++;
+
+	while ((spaceRemaining > 0) && (numExpand > 0))
+	{
+		int each = (spaceRemaining >= numExpand) ? (spaceRemaining / numExpand) : 1;
+
+		numExpand = 0;
+
+		/* Internal: can expand to max of ePadY[] and uPadY[] */
+		iS = height - MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
+
+		if (flags & ELF_eEXPAND_N)
+		{
+			int add = each;
+			if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each > iS)
+				add = iS - (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				ePadY[PAD_TOP_LEFT] += add;
+				layout->eHeight += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] < iS)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_iEXPAND_N)
+		{
+			int add = each;
+			if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each > iS)
+				add = iS - (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				iPadY[PAD_TOP_LEFT] += add;
+				layout->iHeight += add;
+				layout->eHeight += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] < iS)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_iEXPAND_S)
+		{
+			int add = each;
+			if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each > iS)
+				add = iS - (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				iPadY[PAD_BOTTOM_RIGHT] += add;
+				layout->iHeight += add;
+				layout->eHeight += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+				if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] < iS)
+					numExpand++;
+			}
+		}
+
+		if (flags & ELF_eEXPAND_S)
+		{
+			int add = each;
+			if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each > iS)
+				add = iS - (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + each);
+			if (add > 0)
+			{
+				ePadY[PAD_BOTTOM_RIGHT] += add;
+				layout->eHeight += add;
+				spaceRemaining -= add;
+				if (!spaceRemaining)
+					break;
+
+				/* Internal: can expand to max of ePadY[] and uPadY[] */
+				iS = height - MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
+
+				if (layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] < iS)
+					numExpand++;
+			}
+		}
+	}
+}
+#else
 static void Style_DoExpandH(struct Layout *layout, int flags, StyleDrawArgs *drawArgs)
 {
 	int extraWidth;
@@ -294,6 +524,7 @@ static void Style_DoExpandV(struct Layout *layout, int flags, int height)
 		}
 	}
 }
+#endif
 
 static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 {
@@ -1070,7 +1301,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 			if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
 				continue;
 
-			Style_DoExpandV(layout, eLinks1[i].flags, drawArgs->height);
+			Style_DoExpandV(layout, eLinks1[i].flags, drawArgs);
 		}
 	}
 
@@ -1093,7 +1324,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
 		layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
-		Style_DoExpandV(layout, eLink1->flags, drawArgs->height);
+		Style_DoExpandV(layout, eLink1->flags, drawArgs);
 	}
 
 	/* Now calculate layout of -union elements. */
@@ -1651,7 +1882,7 @@ static void Style_CheckNeededSize(TreeCtrl *tree, Style *style, int state)
 	}
 #ifdef NEEDEDHAX
 	if (style->neededState != state)
-		dbwin("Style_CheckNeededSize: neededState %d != state %d\n",
+		panic("Style_CheckNeededSize: neededState %d != state %d\n",
 			style->neededState, state);
 #endif
 }
@@ -3452,7 +3683,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			case OPTION_DETACH:
 			{
-				objPtr = Tcl_NewBooleanObj(eLink->flags & ELF_DETACH);
+				objPtr = Tcl_NewStringObj((eLink->flags & ELF_DETACH) ? "yes" : "no", -1);
 				break;
 			}
 			case OPTION_EXPAND:
@@ -3483,7 +3714,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			case OPTION_INDENT:
 			{
-				objPtr = Tcl_NewBooleanObj(eLink->flags & ELF_INDENT);
+				objPtr = Tcl_NewStringObj((eLink->flags & ELF_INDENT) ? "yes" : "no", -1);
 				break;
 			}
 			case OPTION_SQUEEZE:
