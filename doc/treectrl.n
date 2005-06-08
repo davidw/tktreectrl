@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.38 2005/06/02 22:11:45 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.39 2005/06/08 01:30:20 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -166,6 +166,8 @@ package require \fBtreectrl  2.0\fR
 \fIpathName\fR \fBitem parent\fR \fIitemDesc\fR\fR
 .sp
 \fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?\fR
+.sp
+\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR\fR
 .sp
 \fIpathName\fR \fBitem remove\fR \fIitemDesc\fR\fR
 .sp
@@ -1541,6 +1543,14 @@ If \fIprev\fR is specified, it must described an item
 that is not an ancestor of \fIsibling\fR.
 Then it will become the new previous sibling of \fIsibling\fR.
 .TP
+\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR\fR
+Returns a list containing the unique identifiers of all items
+in the range between \fIfirst\fR and \fIlast\fR, inclusive.
+The order between \fIfirst\fR and \fIlast\fR doesn't matter,
+and the result is always ordered by the increasing index of the items.
+The items specified by \fIfirst\fR and \fIlast\fR must share a common
+ancestor.
+.TP
 \fIpathName\fR \fBitem remove\fR \fIitemDesc\fR\fR
 Removes the item described by \fIitemDesc\fR
 from the children list of its father, so that it will become an orphan.
@@ -1944,11 +1954,7 @@ and can later become an orphan again
 by means of the \fBitem remove\fR widget command.
 .TP
 \fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR\fR
-\fIFirst\fR and \fIlast\fR must be an \fIitemDesc\fR.
-Returns a list containing the numerical ids of all items
-in the range between \fIfirst\fR and \fIlast\fR, inclusive.
-The order between \fIfirst\fR and \fIlast\fR doesn't matter,
-and the result is always ordered by the increasing index of the items.
+Deprecated. Use the \fBitem range\fR command instead.
 .TP
 \fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?\fR
 This command is used to manipulate the list of user defined states,
@@ -3075,7 +3081,11 @@ used by default. See the "Explorer" demos.
 \fB%l\fR (lowercase L) The list of dragged items.
 .RE
 .TP
+\fB<Edit-begin>\fR
+.TP
 \fB<Edit-accept>\fR
+.TP
+\fB<Edit-end>\fR
 The filelist-bindings.tcl code will display a text-editing window if the user
 clicks on a selected file/folder name. See the "Explorer" demos.
 .RS

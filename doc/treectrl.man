@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.22 2005/06/02 22:11:45 treectrl Exp $}
+  $Id: treectrl.man,v 1.23 2005/06/08 01:30:20 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1056,6 +1056,14 @@ If [arg prev] is specified, it must described an item
 that is not an ancestor of [arg sibling].
 Then it will become the new previous sibling of [arg sibling].
 
+[call [arg pathName] [cmd {item range}] [arg first] [arg last]]
+Returns a list containing the unique identifiers of all items
+in the range between [arg first] and [arg last], inclusive.
+The order between [arg first] and [arg last] doesn't matter,
+and the result is always ordered by the increasing index of the items.
+The items specified by [arg first] and [arg last] must share a common
+ancestor.
+
 [call [arg pathName] [cmd {item remove}] [arg itemDesc]]
 Removes the item described by [arg itemDesc]
 from the children list of its father, so that it will become an orphan.
@@ -1493,11 +1501,7 @@ and can later become an orphan again
 by means of the [cmd {item remove}] widget command.
 
 [call [arg pathName] [cmd range] [arg first] [arg last]]
-[arg First] and [arg last] must be an [arg itemDesc].
-Returns a list containing the numerical ids of all items
-in the range between [arg first] and [arg last], inclusive.
-The order between [arg first] and [arg last] doesn't matter,
-and the result is always ordered by the increasing index of the items.
+Deprecated. Use the [cmd {item range}] command instead.
 
 [call [arg pathName] [cmd state] [arg option] [opt [arg stateName]]]
 This command is used to manipulate the list of user defined states,
@@ -2664,7 +2668,9 @@ used by default. See the "Explorer" demos.
 [opt_def %l] (lowercase L) The list of dragged items.
 [list_end]
 
+[lst_item [const <Edit-begin>]]
 [lst_item [const <Edit-accept>]]
+[lst_item [const <Edit-end>]]
 The filelist-bindings.tcl code will display a text-editing window if the user
 clicks on a selected file/folder name. See the "Explorer" demos.
 [list_begin opt]
