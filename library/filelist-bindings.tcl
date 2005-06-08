@@ -605,9 +605,6 @@ proc ::TreeCtrl::EntryExpanderOpen {T item column element} {
 	TreeCtrl::EntryClose %T 0
 	focus $TreeCtrl::Priv(entry,%T,focus)
     }
-    bind $T.entry <Destroy> {
-	[winfo parent %W] notify bind %W <Scroll> {}
-    }
 
     $T.entry configure -font $font -background [$T cget -background]
     $T.entry insert end $text
@@ -727,9 +724,6 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
 	TreeCtrl::TextClose %T 0
 	focus $TreeCtrl::Priv(text,%T,focus)
     }
-    bind $T.text <Destroy> {
-	[winfo parent %W] notify bind %W  <Scroll> {}
-    }
 
     $T.text tag configure TAG -justify [$T element cget $element -justify]
     $T.text configure -font $font
@@ -809,9 +803,6 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     $T notify bind $T.text <Scroll> {
 	TreeCtrl::TextClose %T 0
 	focus $TreeCtrl::Priv(text,%T,focus)
-    }
-    bind $T.text <Destroy> {
-	[winfo parent %W] notify bind %W <Scroll> {}
     }
 
     $T.text tag configure TAG -justify $justify
