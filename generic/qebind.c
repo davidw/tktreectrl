@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.11 2005/05/01 01:20:47 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.12 2005/06/08 01:16:51 treectrl Exp $
  */
 
 /*
@@ -54,7 +54,15 @@ int debug_bindings = 0;
  */
 #define BIND_ACTIVE 1
 
+/*
+ * Allow new events to be added/removed by Tcl commands.
+ */
 #define ALLOW_INSTALL 1
+
+/*
+ * Delete scripts bound to a window when that window is destroyed.
+ */
+#define DELETE_WIN_BINDINGS 1
 
 typedef struct BindValue {
 	int type; /* Type of event, etc) */
@@ -129,6 +137,9 @@ typedef struct BindingTable {
 	Tcl_HashTable eventTableByName; /* Key: string, Value: EventInfo */
 	Tcl_HashTable eventTableByType; /* Key: int, Value: EventInfo */
 	Tcl_HashTable detailTableByType; /* Key: PatternTableKey, Value: Detail */
+#if DELETE_WIN_BINDINGS
+	Tcl_HashTable winTable; /* Key: Tk_Uid of window name, Value: WinTableValue */
+#endif
 	EventInfo *eventList; /* List of all EventInfos */
 	int nextEventId; /* Next unique EventInfo.type */
 } BindingTable;
@@ -464,6 +475,58 @@ static Detail *FindDetail(BindingTable *bindPtr, int eventType, int code)
 	return (Detail *) Tcl_GetHashValue(hPtr);
 }
 
+#if DELETE_WIN_BINDINGS
+typedef struct WinTableValue
+{
+	BindingTable *bindPtr;
+	ClientData object;
+	Tk_Window tkwin;
+	int count; /* Number of BindValues on object */
+} WinTableValue;
+static void TkWinEventProc(ClientData clientData, XEvent *eventPtr)
+{
+	WinTableValue *cd = (WinTableValue *) clientData;
+	BindingTable *bindPtr = cd->bindPtr;
+	ClientData object = cd->object;
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+	Tcl_DString dString;
+	BindValue **valueList;
+	int i, count = 0;
+
+	if (eventPtr->type != DestroyNotify)
+		return;
+
+	Tcl_DStringInit(&dString);
+
+	hPtr = Tcl_FirstHashEntry(&bindPtr->patternTable, &search);
+	while (hPtr != NULL)
+	{
+		BindValue *valuePtr = (BindValue *) Tcl_GetHashValue(hPtr);
+
+		while (valuePtr != NULL)
+		{
+			if (valuePtr->object == object)
+			{
+				Tcl_DStringAppend(&dString, (char *) &valuePtr, sizeof(valuePtr));
+				count++;
+				/* The object can only appear once in this chain of
+				 * BindValues */
+				break;
+			}
+			valuePtr = valuePtr->nextValue;
+		}
+		hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	valueList = (BindValue **) Tcl_DStringValue(&dString);
+	for (i = 0; i < count; i++)
+		DeleteBinding(bindPtr, valueList[i]);
+
+	Tcl_DStringFree(&dString);
+}
+#endif
+
 QE_BindingTable QE_CreateBindingTable(Tcl_Interp *interp)
 {
 	BindingTable *bindPtr;
@@ -478,6 +541,9 @@ QE_BindingTable QE_CreateBindingTable(Tcl_Interp *interp)
 	Tcl_InitHashTable(&bindPtr->eventTableByType, TCL_ONE_WORD_KEYS);
 	Tcl_InitHashTable(&bindPtr->detailTableByType,
 		sizeof(PatternTableKey) / sizeof(int));
+#if DELETE_WIN_BINDINGS
+	Tcl_InitHashTable(&bindPtr->winTable, TCL_ONE_WORD_KEYS);
+#endif
 	bindPtr->nextEventId = 1;
 	bindPtr->eventList = NULL;
 
@@ -543,6 +609,20 @@ void QE_DeleteBindingTable(QE_BindingTable bindingTable)
 	Tcl_DeleteHashTable(&bindPtr->eventTableByType);
 	Tcl_DeleteHashTable(&bindPtr->detailTableByType);
 
+#if DELETE_WIN_BINDINGS
+	hPtr = Tcl_FirstHashEntry(&bindPtr->winTable, &search);
+	while (hPtr != NULL)
+	{
+		WinTableValue *cd = (WinTableValue *) Tcl_GetHashValue(hPtr);
+
+		Tk_DeleteEventHandler(cd->tkwin, StructureNotifyMask,
+			TkWinEventProc, (ClientData) cd);
+		Tcl_Free((char *) cd);
+		hPtr = Tcl_NextHashEntry(&search);
+	}
+	Tcl_DeleteHashTable(&bindPtr->winTable);
+#endif
+
 	memset((char *) bindPtr, 0xAA, sizeof(BindingTable));
 	Tcl_Free((char *) bindPtr);
 }
@@ -563,6 +643,40 @@ int QE_CreateBinding(QE_BindingTable bindingTable, ClientData object,
 	{
 		Tcl_HashEntry *hPtr;
 		PatternTableKey key;
+#if DELETE_WIN_BINDINGS
+		char *winName = (char *) object;
+
+		if (winName[0] == '.')
+		{
+			Tk_Window tkwin = Tk_MainWindow(bindPtr->interp);
+			Tk_Window tkwin2;
+
+			tkwin2 = Tk_NameToWindow(bindPtr->interp, winName, tkwin);
+			if (tkwin2 != NULL)
+			{
+				WinTableValue *cd;
+
+				hPtr = Tcl_CreateHashEntry(&bindPtr->winTable, object, &isNew);
+				if (isNew)
+				{
+					cd = (WinTableValue *) Tcl_Alloc(sizeof(WinTableValue));
+					cd->bindPtr = bindPtr;
+					cd->object = object;
+					cd->tkwin = tkwin2;
+					cd->count = 0;
+					Tk_CreateEventHandler(tkwin2, StructureNotifyMask,
+						TkWinEventProc, (ClientData) cd);
+					Tcl_SetHashValue(hPtr, (ClientData) cd);
+				}
+				else
+				{
+					cd = (WinTableValue *) Tcl_GetHashValue(hPtr);
+				}
+				/* Number of BindValues for this window */
+				cd->count++;
+			}
+		}
+#endif
 
 		key.type = valuePtr->type;
 		key.detail = valuePtr->detail;
@@ -688,6 +802,29 @@ static int DeleteBinding(BindingTable *bindPtr, BindValue *valuePtr)
 			listPtr = listPtr->nextValue;
 		}
 	}
+
+#if DELETE_WIN_BINDINGS
+	{
+		char *winName = (char *) valuePtr->object;
+
+		if (winName[0] == '.')
+		{
+			WinTableValue *cd;
+
+			hPtr = Tcl_FindHashEntry(&bindPtr->winTable, winName);
+			if (hPtr == NULL) return TCL_ERROR; /* fatal error */
+			cd = (WinTableValue *) Tcl_GetHashValue(hPtr);
+			cd->count--;
+			if (cd->count == 0)
+			{
+				Tk_DeleteEventHandler(cd->tkwin, StructureNotifyMask,
+					TkWinEventProc, (ClientData) cd);
+				Tcl_Free((char *) cd);
+				Tcl_DeleteHashEntry(hPtr);
+			}
+		}
+	}
+#endif
 
 	Tcl_Free((char *) valuePtr->command);
 	memset((char *) valuePtr, 0xAA, sizeof(BindValue));
