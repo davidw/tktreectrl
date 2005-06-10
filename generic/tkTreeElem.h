@@ -5,8 +5,10 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.10 2005/06/04 19:03:36 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.11 2005/06/10 02:40:57 treectrl Exp $
  */
+
+#define STYLE_STICKY
 
 typedef struct ElementType ElementType;
 typedef struct Element Element;
@@ -34,7 +36,15 @@ struct ElementArgs
 		int y;
 		int width;
 		int height;
+		int squeeze;
 		int pad[4];
+#ifdef STYLE_STICKY
+#define STICKY_W 0x1000 /* These values must match ELF_STICKY_xxx */
+#define STICKY_N 0x2000
+#define STICKY_E 0x4000
+#define STICKY_S 0x8000
+		int sticky;
+#endif
 		Drawable drawable;
 	} display;
 	struct {
