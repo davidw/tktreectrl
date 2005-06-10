@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.31 2005/06/04 18:56:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.32 2005/06/10 02:19:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2772,8 +2772,7 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 {
     Column *column = (Column *) tree->columns;
     int width, visWidth, totalWidth = 0;
-    int numExpand = 0;
-    int numSqueeze = 0, squeezeWidth = 0;
+    int numExpand = 0, numSqueeze = 0;
 
     while (column != NULL) {
 	if (column->visible) {
@@ -2787,10 +2786,8 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
 		if (column->expand)
 		    numExpand++;
-		if (column->squeeze) {
+		if (column->squeeze)
 		    numSqueeze++;
-		    squeezeWidth += width - MAX(0, TreeColumn_MinWidth((TreeColumn) column));
-		}
 	    }
 	    column->useWidth = width;
 	    totalWidth += width;
@@ -2804,14 +2801,10 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 
     /* Squeeze columns */
     if ((visWidth < totalWidth) && (numSqueeze > 0)) {
-	int need, allow, each;
-	need = totalWidth - visWidth;
-	allow = MIN(squeezeWidth, need);
-	while (allow > 0) {
-	    if (allow >= numSqueeze)
-		each = allow / numSqueeze;
-	    else
-		each = 1;
+	int spaceRemaining = totalWidth - visWidth;
+	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
+	    int each = (spaceRemaining >= numSqueeze) ?
+		spaceRemaining / numSqueeze : 1;
 	    numSqueeze = 0;
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
@@ -2820,8 +2813,8 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 		    if (column->useWidth > min) {
 			int sub = MIN(each, column->useWidth - min);
 			column->useWidth -= sub;
-			allow -= sub;
-			if (!allow) break;
+			spaceRemaining -= sub;
+			if (!spaceRemaining) break;
 			if (column->useWidth > min)
 			    numSqueeze++;
 		    }
@@ -2833,13 +2826,10 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 
     /* Expand columns */
     if ((visWidth > totalWidth) && (numExpand > 0)) {
-	int allow, each;
-	allow = visWidth - totalWidth;
-	while ((allow > 0) && (numExpand > 0)) {
-	    if (allow >= numExpand)
-		each = allow / numExpand;
-	    else
-		each = 1;
+	int spaceRemaining = visWidth - totalWidth;
+	while ((spaceRemaining > 0) && (numExpand > 0)) {
+	    int each = (spaceRemaining >= numExpand) ?
+		spaceRemaining / numExpand : 1;
 	    numExpand = 0;
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
@@ -2848,8 +2838,8 @@ void Tree_LayoutColumns(TreeCtrl *tree)
 		    if ((max == -1) || (column->useWidth < max)) {
 			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
 			column->useWidth += add;
-			allow -= add;
-			if (!allow) break;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
 			if ((max == -1) || (column->useWidth < max))
 			    numExpand++;
 		    }
