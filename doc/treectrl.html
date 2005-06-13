@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.23 2005/06/13 23:30:42 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.24 2005/06/13 23:45:52 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.23 2005/06/13 23:30:42 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.24 2005/06/13 23:45:52 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -2309,6 +2309,15 @@ style has less space than it needs.
 <strong>y</strong> allows display area to decrease vertically.
 This option is typically used for <strong>text</strong> elements and will cause
 the text element to display an ellipsis (...) and/or wrap lines.
+
+<br><br>
+<dt><strong><strong>-sticky</strong></strong> <i class='arg'>flags</i><dd>
+This option controls how the actual display information (image, text, etc)
+of an element is positioned (or stretched) within its display area.
+<i class='arg'>Flags</i> is a
+string that contains zero or more of the characters <strong>n</strong>, <strong>s</strong>,
+<strong>w</strong> or <strong>e</strong>. Each letter refers to the top, bottom, left or right
+side of the display area that the display information should &quot;stick&quot; to.
 
 <br><br>
 <dt><strong><strong>-union</strong></strong> <i class='arg'>elementList</i><dd>

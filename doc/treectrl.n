@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.40 2005/06/13 23:30:42 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.41 2005/06/13 23:46:08 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0  "Tk Commands"
 .BS
@@ -2212,6 +2212,14 @@ style has less space than it needs.
 \fBy\fR allows display area to decrease vertically.
 This option is typically used for \fBtext\fR elements and will cause
 the text element to display an ellipsis (...) and/or wrap lines.
+.TP
+\fB\fB-sticky\fR\fR \fIflags\fR
+This option controls how the actual display information (image, text, etc)
+of an element is positioned (or stretched) within its display area.
+\fIFlags\fR is a
+string that contains zero or more of the characters \fBn\fR, \fBs\fR,
+\fBw\fR or \fBe\fR. Each letter refers to the top, bottom, left or right
+side of the display area that the display information should "stick" to.
 .TP
 \fB\fB-union\fR\fR \fIelementList\fR
 Specifies a list of other elements which this element will surround.
