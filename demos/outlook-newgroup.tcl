@@ -77,13 +77,13 @@ proc DemoOutlookNewsgroup {} {
 	set S [$T style create s2.we]
 	$T style elements $S {sel.we elemTxt}
 	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.we -detach yes -iexpand es
+	$T style layout $S sel.we -detach yes -iexpand xy
 
 	# Text
 	set S [$T style create s2.w]
 	$T style elements $S {sel.w elemTxt}
 	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.w -detach yes -iexpand es
+	$T style layout $S sel.w -detach yes -iexpand xy
 
 	# Set default item style
 	$T configure -defaultstyle [list "" "" "" s1 s2.we s2.we s2.w]
@@ -278,25 +278,25 @@ proc DemoOutlookNewsgroup_2 {} {
 	set S [$T style create unread.we]
 	$T style elements $S {sel.we text.unread}
 	$T style layout $S text.unread -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.we -detach yes -iexpand es
+	$T style layout $S sel.we -detach yes -iexpand xy
 
 	# Text
 	set S [$T style create read.we]
 	$T style elements $S {sel.we text.read}
 	$T style layout $S text.read -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.we -detach yes -iexpand es
+	$T style layout $S sel.we -detach yes -iexpand xy
 
 	# Text
 	set S [$T style create unread.w]
 	$T style elements $S {sel.w text.unread}
 	$T style layout $S text.unread -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.w -detach yes -iexpand es
+	$T style layout $S sel.w -detach yes -iexpand xy
 
 	# Text
 	set S [$T style create read.w]
 	$T style elements $S {sel.w text.read}
 	$T style layout $S text.read -padx 6 -squeeze x -expand ns
-	$T style layout $S sel.w -detach yes -iexpand es
+	$T style layout $S sel.w -detach yes -iexpand xy
 
 	#
 	# Create items and assign styles

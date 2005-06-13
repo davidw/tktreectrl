@@ -64,7 +64,7 @@ proc DemoMailWasher {} {
 
 	set S [$T style create styCheck]
 	$T style elements $S [list border imgCheck]
-	$T style layout $S border -detach yes -iexpand es
+	$T style layout $S border -detach yes -iexpand xy
 	$T style layout $S imgCheck -expand news
 
 	set pad 4
@@ -72,7 +72,7 @@ proc DemoMailWasher {} {
 	foreach name {Any None Yes Normal PossSpam ProbSpam Blacklist} {
 		set S [$T style create sty$name]
 		$T style elements $S [list border txt$name]
-		$T style layout $S border -detach yes -iexpand es
+		$T style layout $S border -detach yes -iexpand xy
 		$T style layout $S txt$name -padx $pad -squeeze x -expand ns
 	}
 
