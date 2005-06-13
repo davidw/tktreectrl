@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.11 2005/06/10 02:40:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.12 2005/06/13 21:42:20 treectrl Exp $
  */
 
 #define STYLE_STICKY
@@ -48,10 +48,17 @@ struct ElementArgs
 		Drawable drawable;
 	} display;
 	struct {
-		int squeeze;
+		int fixedWidth;
+		int fixedHeight;
+		int maxWidth;
+		int maxHeight;
 		int width;
 		int height;
-	} layout;
+	} needed;
+	struct {
+		int fixedWidth;
+		int height;
+	} height;
 	struct {
 		int flagTree;
 		int flagMaster;
@@ -76,7 +83,8 @@ struct ElementType
 	void (*deleteProc)(ElementArgs *args);
 	int (*configProc)(ElementArgs *args);
 	void (*displayProc)(ElementArgs *args);
-	void (*layoutProc)(ElementArgs *args);
+	void (*neededProc)(ElementArgs *args);
+	void (*heightProc)(ElementArgs *args);
 	int (*changeProc)(ElementArgs *args);
 	int (*stateProc)(ElementArgs *args);
 	int (*undefProc)(ElementArgs *args);
