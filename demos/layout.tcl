@@ -43,8 +43,8 @@ proc DemoLayout {} {
 	$T style layout $S e1 -padx {28 4} -pady 4
 	$T style layout $S e2 -expand es -padx {0 38}
 	$T style layout $S e3 -union [list e1 e2] -ipadx 4 -ipady 4 -pady 2
-	$T style layout $S e4 -detach yes -iexpand es
-	$T style layout $S e5 -detach yes -padx {2 0} -pady 2 -iexpand s
+	$T style layout $S e4 -detach yes -iexpand xy
+	$T style layout $S e5 -detach yes -padx {2 0} -pady 2 -iexpand y
 	$T style layout $S e6 -detach yes -expand ws -padx {0 2} -pady {2 0}
 	$T style layout $S e7 -detach yes -expand wn -padx {0 2} -pady {0 2}
 
@@ -65,9 +65,9 @@ proc DemoLayout {} {
 
 	set S [$T style create s2]
 	$T style elements $S {e4 e3 e1}
-	$T style layout $S e1 -padx 8 -pady 8 -iexpand e
+	$T style layout $S e1 -padx 8 -pady 8 -iexpand x
 	$T style layout $S e3 -union e1 -ipadx {20 4} -ipady {4 12}
-	$T style layout $S e4 -detach yes -iexpand es
+	$T style layout $S e4 -detach yes -iexpand xy
 
 	set I [$T item create -button yes]
 	$T item style set $I C0 $S
@@ -83,7 +83,7 @@ proc DemoLayout {} {
 	$T style elements $S {e4 e3 e1 e5 e6}
 	$T style layout $S e4 -union {e1 e6} -ipadx 8 -ipady {8 0}
 	$T style layout $S e3 -union {e1 e5} -ipadx 4 -ipady 4
-	$T style layout $S e5 -ipady {0 20}
+	$T style layout $S e5 -height 40
 
 	set I [$T item create -button yes]
 	$T item style set $I C0 $S
@@ -125,8 +125,8 @@ proc DemoLayout {} {
 
 			set S [$T style create s$styleNum -orient $orient]
 			$T style elements $S {e4 e8 e2 e5 e6}
-			$T style layout $S e4 -detach yes -iexpand es
-			$T style layout $S e8 -detach yes -expand n -iexpand e
+			$T style layout $S e4 -detach yes -iexpand xy
+			$T style layout $S e8 -detach yes -expand n -iexpand x
 			$T style layout $S e2 -expand $expand
 			$T style layout $S e5 -expand $expand
 			$T style layout $S e6 -expand $expand
