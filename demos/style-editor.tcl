@@ -1,0 +1,832 @@
+namespace eval StyleEditor {
+	variable Info
+	array unset Info
+}
+
+proc StyleEditor::Info {info args} {
+
+    variable Info
+
+    if {[llength $args]} {
+	set Info($info) [lindex $args 0]
+    }
+    return $Info($info)
+}
+
+proc StyleEditor::Init {Tdemo} {
+
+    set w .styleEditor
+    toplevel $w
+    wm title $w "TkTreeCtrl Style Editor"
+
+    Info Tdemo $Tdemo
+
+    panedwindow $w.pwH -orient horizontal -borderwidth 0
+
+    panedwindow $w.pwH.pwV -orient vertical -borderwidth 0
+
+    TreePlusScrollbarsInAFrame $w.pwH.pwV.styleList 0 1
+    set T $w.pwH.pwV.styleList.t
+    $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
+    $T column create -text "Styles" -expand yes -button no -tag C0
+    $T configure -treecolumn C0
+
+    $T notify bind $T <Selection> {
+	StyleEditor::SelectStyle
+    }
+
+    Info styleList $T
+
+    TreePlusScrollbarsInAFrame $w.pwH.pwV.elementList 0 1
+    set T $w.pwH.pwV.elementList.t
+    $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
+    $T column create -text "Elements" -expand yes -button no -tag C0
+    $T configure -treecolumn C0
+
+    $T notify bind $T <Selection> {
+	StyleEditor::SelectElement
+    }
+
+    Info elementList $T
+
+    $w.pwH.pwV add $w.pwH.pwV.styleList $w.pwH.pwV.elementList
+
+    set fRight [panedwindow $w.pwH.pwV2 -orient vertical]
+
+    #
+    # Property editor
+    #
+
+    TreePlusScrollbarsInAFrame $fRight.propertyList 0 1
+    set T $fRight.propertyList.t
+    $T configure -showbuttons no -showlines no -showroot no
+    $T column create -text "Property" -expand yes -button no -tag property \
+	-itembackground {linen ""}
+    $T column create -text "Value" -expand yes -button no -tag value \
+	-itembackground {linen ""}
+    $T configure -treecolumn property
+
+    $T notify bind $T <Selection> {
+	StyleEditor::SelectProperty %S %D
+    }
+
+    Info propertyList $T
+
+    #
+    # Style canvas
+    #
+
+    set canvas [canvas $fRight.canvas -background white \
+	-scrollregion {0 0 0 0} -borderwidth 0 -highlightthickness 0]
+
+    $Tdemo notify bind StyleEditor <Selection> {
+	StyleEditor::StyleToCanvas
+    }
+
+    Info canvas $canvas
+
+    $w.pwH.pwV2 add $fRight.propertyList $fRight.canvas
+
+    $w.pwH add $w.pwH.pwV $w.pwH.pwV2
+
+    grid rowconfigure $w 0 -weight 1
+    grid columnconfigure $w 0 -weight 1
+    grid $w.pwH -row 0 -column 0 -sticky news
+
+    Info selectedStyle ""
+    Info selectedElement ""
+
+    return
+}
+
+proc StyleEditor::SetListOfStyles {} {
+
+    set T [Info styleList]
+    set Tdemo [Info Tdemo]
+
+    # Create elements and styles the first time this is called
+    if {[llength [$T style names]] == 0} {
+	$T element create e1 text -fill [list $::SystemHighlightText {selected focus}]
+	$T element create e2 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
+	    -showfocus yes
+
+	$T style create s1
+	$T style elements s1 {e2 e1}
+	$T style layout s1 e2 -union [list e1] -ipadx 2 -ipady 2 -iexpand e
+
+	$T configure -defaultstyle s1
+    }
+
+    # Clear the list
+    $T item delete all
+
+    # One item for each style in the demo list
+    foreach style [lsort -dictionary [$Tdemo style names]] {
+	set I [$T item create]
+	$T item text $I C0 $style
+	$T item lastchild root $I
+
+	Info item2style,$I $style
+    }
+
+    return
+}
+
+proc StyleEditor::SelectStyle {} {
+
+    set T [Info styleList]
+    set Tdemo [Info Tdemo]
+
+    set selection [$T selection get]
+    if {![llength $selection]} {
+	[Info elementList] item delete all
+	Info selectedStyle ""
+	Info labelStyle "Style <none>"
+	return
+    }
+
+    set I [lindex $selection 0]
+    set style [Info item2style,$I]
+    Info selectedStyle $style
+    SetListOfElements $style
+
+    Info labelStyle "Style $style"
+    Info -orient [$Tdemo style cget $style -orient]
+
+    StyleToCanvas
+
+    return
+}
+
+proc StyleEditor::SetListOfElements {style} {
+
+    set T [Info elementList]
+    set Tdemo [Info Tdemo]
+
+    # Create elements and styles the first time this is called
+    if {[llength [$T style names]] == 0} {
+	$T element create e1 text -fill [list $::SystemHighlightText {selected focus}]
+	$T element create e2 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
+	    -showfocus yes
+
+	$T style create s1
+	$T style elements s1 {e2 e1}
+	$T style layout s1 e2 -union [list e1] -ipadx 2 -ipady 2 -iexpand e
+
+	$T configure -defaultstyle s1
+    }
+
+    # Clear the list
+    $T item delete all
+
+    # One item for each element in the style
+    foreach E [$Tdemo style elements $style] {
+	set I [$T item create]
+	$T item text $I C0 "$E ([$Tdemo element type $E])"
+	$T item lastchild root $I
+
+	Info item2element,$I $E
+    }
+
+    return
+}
+
+proc StyleEditor::SelectElement {} {
+
+    set T [Info elementList]
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+
+    set selection [$T selection get]
+    if {![llength $selection]} {
+	Info selectedElement ""
+	Info labelElement "Element <none>"
+	SetPropertyList
+	CanvasSelectElement
+	return
+    }
+
+    set I [lindex $selection 0]
+    set element [Info item2element,$I]
+    Info selectedElement $element
+
+    Info labelElement "Element $element"
+
+    SetPropertyList
+    CanvasSelectElement
+if 0 {
+    foreach option {-padx -pady -ipadx -ipady} {
+	set pad [$Tdemo style layout $style $element $option]
+	if {[llength $pad] == 2} {
+	    Info $option,1 [lindex $pad 0]
+	    Info $option,2 [lindex $pad 1]
+	} else {
+	    Info $option,1 $pad
+	    Info $option,2 $pad
+	}
+    }
+}
+    return
+}
+
+proc StyleEditor::SetPropertyList {} {
+
+    set T [Info propertyList]
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+
+    # Create elements and styles the first time this is called
+    if {[llength [$T style names]] == 0} {
+	$T element create e1 text
+	$T element create e2 rect -fill {gray75 selected} \
+	    -outline {black !selected} -outlinewidth 1 -open nw -showfocus no
+
+	$T element create eWindow window
+
+	set S [$T style create s1]
+	$T style elements $S {e2 e1}
+	$T style layout $S e1 -expand ns -padx {4 0}
+	$T style layout $S e2 -detach yes -indent no -iexpand xy
+
+	set S [$T style create sWindow]
+	$T style elements $S eWindow
+	$T style layout $S eWindow -expand ns
+
+	Info editor,pad [MakePadEditor $T]
+	Info editor,expand [MakeExpandEditor $T]
+	Info editor,iexpand [MakeIExpandEditor $T]
+	Info editor,squeeze [MakeSqueezeEditor $T]
+	Info editor,boolean [MakeBooleanEditor $T]
+	Info editor,pixels [MakePixelsEditor $T]
+
+	update idletasks
+	set height 0
+	foreach editor {pad expand iexpand squeeze boolean pixels} {
+	    if {[winfo reqheight [Info editor,$editor]] > $height} {
+		set height [winfo reqheight [Info editor,$editor]]
+	    }
+	}
+	$T configure -font [[Info editor,pad].v1 cget -font] \
+	    -minitemheight $height
+
+	$T configure -defaultstyle s1
+    }
+
+    $T item delete all
+
+    if {$element eq ""} return
+
+    foreach option {-padx -pady -ipadx -ipady} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    foreach option {-expand -iexpand} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    foreach option {-detach -indent} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    foreach option {-minwidth -width -maxwidth -minheight -height -maxheight} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    foreach option {-squeeze} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    foreach option {-sticky} {
+	set I [$T item create]
+	$T item text $I 0 $option
+
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+
+	$T item lastchild root $I
+    }
+
+    $T column configure 0 -width [expr {[$T column neededwidth 0] * 2}]
+
+    return
+}
+
+proc StyleEditor::SelectProperty {select deselect} {
+
+    set T [Info propertyList]
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+
+    if {[llength $deselect] && ($element ne "")} { 
+	set I [lindex $deselect 0]
+	set option [$T item text $I 0]
+	$T item style set $I 1 s1
+	$T item text $I 1 [$Tdemo style layout $style $element $option]
+    }
+
+    set selection [$T selection get]
+    if {![llength $selection]} {
+	Info selectedOption ""
+	return
+    }
+
+    set I [lindex $selection 0]
+    set option [$T item text $I 0]
+    Info selectedOption $option
+
+    $T item style set $I 1 sWindow
+    switch -- $option {
+	-padx -
+	-pady -
+	-ipadx -
+	-ipady {
+	    $T item element configure $I 1 eWindow -window [Info editor,pad]
+	    set pad [$Tdemo style layout $style $element $option]
+	    if {[llength $pad] == 2} {
+		Info -pad,1 [lindex $pad 0]
+		Info -pad,2 [lindex $pad 1]
+		Info -pad,equal 0
+	    } else {
+		Info -pad,1 $pad
+		Info -pad,2 $pad
+		Info -pad,equal 1
+	    }
+	    Info -pad,edit ""
+	}
+	-expand -
+	-sticky {
+	    $T item element configure $I 1 eWindow -window [Info editor,expand]
+	    set value [$Tdemo style layout $style $element $option]
+	    foreach flag {n s w e} {
+		Info -expand,$flag [expr {[string first $flag $value] != -1}]
+	    }
+	}
+	-iexpand {
+	    $T item element configure $I 1 eWindow -window [Info editor,iexpand]
+	    set value [$Tdemo style layout $style $element $option]
+	    foreach flag {x y n s w e} {
+		Info -iexpand,$flag [expr {[string first $flag $value] != -1}]
+	    }
+	}
+	-detach -
+	-indent {
+	    $T item element configure $I 1 eWindow -window [Info editor,boolean]
+	    Info -boolean [$Tdemo style layout $style $element $option]
+	}
+	-squeeze {
+	    $T item element configure $I 1 eWindow -window [Info editor,squeeze]
+	    set value [$Tdemo style layout $style $element $option]
+	    foreach flag {x y} {
+		Info -squeeze,$flag [expr {[string first $flag $value] != -1}]
+	    }
+	}
+	-minheight -
+	-height -
+	-maxheight -
+	-minwidth -
+	-width -
+	-maxwidth {
+	    $T item element configure $I 1 eWindow -window [Info editor,pixels]
+	    Info -pixels [$Tdemo style layout $style $element $option]
+	    if {[Info -pixels] eq ""} {
+		Info -pixels,empty 1
+		[Info editor,pixels].v1 conf -state disabled
+	    } else {
+		Info -pixels,empty 0
+		[Info editor,pixels].v1 conf -state normal
+	    }
+	}
+    }
+
+    return
+}
+
+proc StyleEditor::MakePadEditor {parent} {
+
+    set f [frame $parent.editPad -borderwidth 0]
+    spinbox $f.v1 -from 0 -to 100 -width 3 \
+	-command {StyleEditor::Sync_pad 1} \
+	-textvariable ::StyleEditor::Info(-pad,1)
+    spinbox $f.v2 -from 0 -to 100 -width 3 \
+	-command {StyleEditor::Sync_pad 2} \
+	-textvariable ::StyleEditor::Info(-pad,2)
+    checkbutton $f.cb -text "Equal" \
+	-command {StyleEditor::Sync_pad_equal} \
+	-variable ::StyleEditor::Info(-pad,equal)
+    pack $f.v1 -side left -padx {0 10} -pady 0
+    pack $f.v2 -side left -padx {0 10} -pady 0
+    pack $f.cb -side left -padx 0 -pady 0
+    
+    return $f
+}
+
+proc StyleEditor::MakeExpandEditor {parent} {
+
+    set f [frame $parent.editExpand -borderwidth 0]
+    foreach flag {w n e s} {
+	checkbutton $f.$flag -text $flag -width 1 \
+	    -variable ::StyleEditor::Info(-expand,$flag) \
+	    -command {StyleEditor::Sync_expand}
+	pack $f.$flag -side left -padx 10
+    }
+
+    return $f
+}
+
+proc StyleEditor::MakeIExpandEditor {parent} {
+
+    set f [frame $parent.editIExpand -borderwidth 0]
+    foreach flag {x y w n e s} {
+	checkbutton $f.$flag -text $flag -width 1 \
+	    -variable ::StyleEditor::Info(-iexpand,$flag) \
+	    -command {StyleEditor::Sync_iexpand}
+	pack $f.$flag -side left -padx 10
+    }
+
+    return $f
+}
+
+proc StyleEditor::MakePixelsEditor {parent} {
+
+    set f [frame $parent.editPixels -borderwidth 0]
+    spinbox $f.v1 -from 0 -to 10000 -width 10 \
+	-command {StyleEditor::Sync_pixels} \
+	-textvariable ::StyleEditor::Info(-pixels) \
+	-validate key -validatecommand {string is integer %P}
+    checkbutton $f.cb -text "Unspecified" \
+	-command {StyleEditor::Sync_pixels} \
+	-variable ::StyleEditor::Info(-pixels,empty)
+    pack $f.v1 -side left -padx 0 -pady 0
+    pack $f.cb -side left -padx 0 -pady 0
+
+    bind $f.v1 <KeyPress-Return> {
+	StyleEditor::Sync_pixels
+    }
+
+    return $f
+}
+
+proc StyleEditor::MakeSqueezeEditor {parent} {
+
+    set f [frame $parent.editSqueeze -borderwidth 0]
+    foreach flag {x y} {
+	checkbutton $f.$flag -text $flag -width 1 \
+	    -variable ::StyleEditor::Info(-squeeze,$flag) \
+	    -command {StyleEditor::Sync_squeeze}
+	pack $f.$flag -side left -padx 10
+    }
+
+    return $f
+}
+
+proc StyleEditor::MakeBooleanEditor {parent} {
+
+    set f [frame $parent.editBoolean -borderwidth 0]
+    foreach value {yes no} {
+	radiobutton $f.$value -text $value \
+	    -variable ::StyleEditor::Info(-boolean) \
+	    -value $value \
+	    -command {StyleEditor::Sync_boolean}
+	pack $f.$value -side left -padx 10
+    }
+
+    return $f
+}
+
+proc StyleEditor::Sync_orient {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    $Tdemo style configure $style -orient [Info -orient]
+    return
+}
+
+proc StyleEditor::Sync_pad {index} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    if {[Info -pad,equal]} {
+	if {$index == 1} {
+	    Info -pad,2 [Info -pad,1]
+	} else {
+	    Info -pad,1 [Info -pad,2]
+	}
+    }
+    $Tdemo style layout $style $element $option [list [Info -pad,1] [Info -pad,2]]
+    Info -pad,edit $index
+    StyleToCanvas
+    return
+}
+
+proc StyleEditor::Sync_pad_equal {} {
+    if {![Info -pad,equal]} return
+    if {[Info -pad,edit] eq ""} {
+	Info -pad,edit 1
+    }
+    if {[Info -pad,edit] == 1} {
+	Info -pad,2 [Info -pad,1]
+    } else {
+	Info -pad,1 [Info -pad,2]
+    }
+    Sync_pad [Info -pad,edit]
+    return
+}
+
+proc StyleEditor::Sync_expand {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    set value ""
+    foreach flag {n s w e} {
+	if {[Info -expand,$flag]} {
+	    append value $flag
+	}
+    }
+    $Tdemo style layout $style $element $option $value
+    StyleToCanvas
+    return
+}
+
+proc StyleEditor::Sync_iexpand {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    set value ""
+    foreach flag {x y n s w e} {
+	if {[Info -iexpand,$flag]} {
+	    append value $flag
+	}
+    }
+    $Tdemo style layout $style $element $option $value
+    StyleToCanvas
+    return
+}
+
+proc StyleEditor::Sync_squeeze {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    set value ""
+    foreach flag {x y} {
+	if {[Info -squeeze,$flag]} {
+	    append value $flag
+	}
+    }
+    $Tdemo style layout $style $element -squeeze $value
+    StyleToCanvas
+    return
+}
+
+proc StyleEditor::Sync_boolean {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    $Tdemo style layout $style $element $option [Info -boolean]
+    StyleToCanvas
+    return
+}
+
+proc StyleEditor::Sync_pixels {} {
+
+    set Tdemo [Info Tdemo]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+    set option [Info selectedOption]
+    set value [Info -pixels]
+    if {[Info -pixels,empty]} {
+	set value {}
+	[Info editor,pixels].v1 conf -state disabled
+    } else {
+	[Info editor,pixels].v1 conf -state normal
+    }
+    $Tdemo style layout $style $element $option $value
+    StyleToCanvas
+    return
+}
+
+
+proc StyleEditor::StyleToCanvas {} {
+
+    set Tdemo [Info Tdemo]
+    set canvas [Info canvas]
+    set style [Info selectedStyle]
+
+    $canvas delete all
+
+    if {$style eq ""} return
+
+    # Create a new treectrl to copy the states/style/elements into, so I don't
+    # have to worry about column width or item visibility in the demo list
+    set T [treectrl $canvas.t]
+    $T configure -itemheight 0 -minitemheight 0 -showbuttons no -showlines no \
+	-font [$Tdemo cget -font]
+    $T column create
+
+    # Copy states
+    foreach state [$Tdemo state names] {
+	$T state define $state
+    }
+
+    # Copy elements
+    foreach E [$Tdemo style elements $style] {
+	$T element create $E [$Tdemo element type $E]
+	foreach list [$Tdemo element configure $E] {
+	    foreach {name x y default current} $list {}
+	    $T element configure $E $name $current
+	}
+    }
+
+    # Copy style
+    $T style create $style -orient [$Tdemo style cget $style -orient]
+    $T style elements $style [$Tdemo style elements $style]
+    foreach E [$T style elements $style] {
+	eval $T style layout $style $E [$Tdemo style layout $style $E]
+    }
+
+    # Find a selected item using the style to copy element config info from
+    set match ""
+    foreach I [$Tdemo selection get] {
+	set C 0
+	foreach S [$Tdemo item style set $I] {
+	    if {$S eq $style} {
+		set match $I
+		break
+	    }
+	    incr C
+	}
+	if {$match ne ""} break
+    }
+    # No selected item uses the current style, look for an unselected item
+    if {$match eq ""} {
+	foreach I [$Tdemo range first last] {
+	    set C 0
+	    foreach S [$Tdemo item style set $I] {
+		if {$S eq $style} {
+		    set match $I
+		    break
+		}
+		incr C
+	    }
+	    if {$match ne ""} break
+	}
+    }
+    if {$match ne ""} {
+	set I $match
+	foreach E [$Tdemo item style elements $I $C] {
+	    foreach list [$Tdemo item element configure $I $C $E] {
+		foreach {name x y default current} $list {}
+		set masterDefault [$Tdemo element cget $E $name]
+		set sameAsMaster [string equal $masterDefault $current]
+		if {!$sameAsMaster && ![string length $current]} {
+		    set sameAsMaster 1
+		    set current $masterDefault
+		}
+		if {$sameAsMaster} {
+		} elseif {$name eq "-window"} {
+		    $T style layout $style $E -width [winfo reqwidth $current] \
+			-height [winfo reqheight $current]
+		} else {
+		    $T element configure $E $name $current
+		}
+	    }
+	}
+    }
+if 0 {
+    # Do this after creating styles so -defaultstyle works
+    foreach list [$Tdemo configure] {
+	if {[llength $list] == 2} continue
+	foreach {name x y default current} $list {}
+	
+	$T configure $name $current
+    }
+}
+    set I root
+    $T item style set $I 0 $style
+
+    set scale 2
+    
+    set dx 10
+    set dy 10
+
+    scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
+    $canvas create rectangle \
+	[expr {$dx + $x1 * $scale}] [expr {$dy + $y1 * $scale}] \
+	[expr {$dx + $x2 * $scale}] [expr {$dy + $y2 * $scale}] \
+	-outline gray90
+
+    foreach E [$T style elements $style] {
+	scan [$T item bbox $I 0 $E] "%d %d %d %d" x1 y1 x2 y2
+	$canvas create rectangle \
+	    [expr {$dx + $x1 * $scale}] [expr {$dy + $y1 * $scale}] \
+	    [expr {$dx + $x2 * $scale}] [expr {$dy + $y2 * $scale}] \
+	    -tags $E
+    }
+
+    scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
+    incr dy [expr {($y2 - $y1) * $scale + 20}]
+
+    # Now give the style 1.5 times its needed space to test expansion
+    scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
+    $T column configure 0 -width [expr {($x2 - $x1) * 1.5}]
+    $T configure -itemheight [expr {($y2 - $y1) * 1.5}]
+
+    scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
+puts "$x1 $y1 $x2 $y2"
+    $canvas create rectangle \
+	[expr {$dx + $x1 * $scale}] [expr {$dy + $y1 * $scale}] \
+	[expr {$dx + $x2 * $scale}] [expr {$dy + $y2 * $scale}] \
+	-outline gray90
+
+    foreach E [$T style elements $style] {
+	scan [$T item bbox $I 0 $E] "%d %d %d %d" x1 y1 x2 y2
+	$canvas create rectangle \
+	    [expr {$dx + $x1 * $scale}] [expr {$dy + $y1 * $scale}] \
+	    [expr {$dx + $x2 * $scale}] [expr {$dy + $y2 * $scale}] \
+	    -tags $E
+    }
+
+    destroy $canvas.t
+
+    CanvasSelectElement
+
+    return
+}
+
+proc StyleEditor::CanvasSelectElement {} {
+
+    set canvas [Info canvas]
+    set style [Info selectedStyle]
+    set element [Info selectedElement]
+
+    $canvas itemconfigure all -fill ""
+    if {$element ne ""} {
+	$canvas itemconfigure $element -fill gray75
+    }
+
+    return
+}
+
+if 0 {
+
+proc StyleEditor:: {} {
+    return
+}
+
+proc StyleEditor:: {} {
+    return
+}
+
+proc StyleEditor:: {} {
+    return
+}
+
+proc StyleEditor:: {} {
+    return
+}
+
+proc StyleEditor:: {} {
+    return
+}
+}
