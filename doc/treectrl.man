@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.23 2005/06/08 01:30:20 treectrl Exp $}
+  $Id: treectrl.man,v 1.24 2005/06/13 23:30:42 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1696,19 +1696,34 @@ The following options are supported:
 Specifies whether the element should be positioned by itself,
 i.e. independent from the other elements.
 
-[opt_def [option -expand] [arg style]]
-[opt_def [option -iexpand] [arg style]]
-It can happen that the element's space is larger than its requested dimensions.
-These options may be used to position (or stretch) the slave within its cell.
-[arg Style]  is a string that contains zero or more of the characters
-[const n], [const s], [const e] or [const w].
-Each letter refers to a side (north, south,
-east, or west) in which direction the element will grow in.
+[opt_def [option -expand] [arg flags]]
+This option allows the external padding around the element
+to increase when a style has more screen space than it needs.
+[arg Flags] is a string that contains zero or more of the characters
+[const n], [const s], [const w] or [const e].
+Each letter refers to the padding on the top, bottom,
+left, or right that should be allowed to increase.
+This option is typically used to justify an element.
+
+[opt_def [option -iexpand] [arg flags]]
+This option allows the internal padding of the element
+and the display area of the element to increase
+when a style has more screen space than it needs.
+[arg Flags]  is a string that contains zero or more of the characters
+[const x], [const y], [const n], [const s], [const w] or [const e].
+For [const n], [const s], [const w] and [const e], each letter refers to the
+padding on the top, bottom, left, or right that should be allowed to increase.
+For [const x] and [const y], each letter refers to the horizontal and
+vertical screen space the element can display itself in (i.e., the space
+between the padding). Note that if the
+[option -union] option is specified for this element, then the [const x] and
+[const y] flags have no effect, since the size of an element with
+[option -union] layout is determined by the elements it surrounds.
 
 [opt_def [option -indent] [arg boolean]]
 Specifies whether the element should be positioned to the right of the
 button/line area in the tree column. This option is ignored unless the
--detach option is true.
+[option -detach] option is true.
 
 [opt_def [option -ipadx] [arg amount]]
 [opt_def [option -ipady] [arg amount]]
@@ -1719,6 +1734,16 @@ or top and bottom (for [option -ipady]) side of the element.
 of two values to specify padding for the two sides separately,
 it defaults to 0.
 
+[opt_def [option -minheight] [arg pixels]]
+[opt_def [option -height] [arg pixels]]
+[opt_def [option -maxheight] [arg pixels]]
+Specifies the minimum, fixed, and maximum height of the element.
+
+[opt_def [option -minwidth] [arg pixels]]
+[opt_def [option -width] [arg pixels]]
+[opt_def [option -maxwidth] [arg pixels]]
+Specifies the minimum, fixed, and maximum width of the element.
+
 [opt_def [option -padx] [arg amount]]
 [opt_def [option -pady] [arg amount]]
 [arg Amount] specifies how much external padding to
@@ -1728,17 +1753,24 @@ or top and bottom (for [option -pady]) side of the element.
 of two values to specify padding for the two sides separately,
 it defaults to 0.
 
-[opt_def [option -squeeze] [arg style]]
-If an element's area is smaller than its requested dimensions, this
-option may be used to allow shrinking of the element.
-[arg Style] is a string that contains zero or more of the characters
+[opt_def [option -squeeze] [arg flags]]
+This option allows the display area of an element to decrease when a
+style has less space than it needs.
+[arg Flags] is a string that contains zero or more of the characters
 [const x] or [const y].
-[const x] shrinks the element horizontally,
-[const y] shrinks it vertically.
+[const x] allows display area to decrease horizontally,
+[const y] allows display area to decrease vertically.
+This option is typically used for [const text] elements and will cause
+the text element to display an ellipsis (...) and/or wrap lines.
 
 [opt_def [option -union] [arg elementList]]
-Specifies a list of other [arg element]s, which should be layed out
-inside the space of this element.
+Specifies a list of other elements which this element will surround.
+The size of an element with [option -union] layout is determined by the
+size and position of the elements in [arg elementList].
+The [option -ipadx] and [option -ipady] options in this case refer to the
+distance of the edges of the display area of this element from those elements
+it surrounds. This option is typically used to display a selection rectangle
+around a piece of text.
 
 [list_end]
 
@@ -2422,6 +2454,11 @@ Specifies whether the associated Tk window should be destroyed when the
 element is deleted. The element is deleted when the item containing the
 element is deleted, when the column containing the element is deleted,
 or when the style associated with the item's column is changed.
+
+[opt_def [option -draw] [arg boolean]]
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
 
 [opt_def [option -window] [arg pathName]]
 Specifies the window to associate with this element. The window specified by

@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.22 2005/06/08 01:30:20 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.23 2005/06/13 23:30:42 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.22 2005/06/08 01:30:20 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.23 2005/06/13 23:30:42 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -2236,20 +2236,36 @@ Specifies whether the element should be positioned by itself,
 i.e. independent from the other elements.
 
 <br><br>
-<dt><strong><strong>-expand</strong></strong> <i class='arg'>style</i><dd>
-<dt><strong><strong>-iexpand</strong></strong> <i class='arg'>style</i><dd>
-It can happen that the element's space is larger than its requested dimensions.
-These options may be used to position (or stretch) the slave within its cell.
-<i class='arg'>Style</i>  is a string that contains zero or more of the characters
-<strong>n</strong>, <strong>s</strong>, <strong>e</strong> or <strong>w</strong>.
-Each letter refers to a side (north, south,
-east, or west) in which direction the element will grow in.
+<dt><strong><strong>-expand</strong></strong> <i class='arg'>flags</i><dd>
+This option allows the external padding around the element
+to increase when a style has more screen space than it needs.
+<i class='arg'>Flags</i> is a string that contains zero or more of the characters
+<strong>n</strong>, <strong>s</strong>, <strong>w</strong> or <strong>e</strong>.
+Each letter refers to the padding on the top, bottom,
+left, or right that should be allowed to increase.
+This option is typically used to justify an element.
+
+<br><br>
+<dt><strong><strong>-iexpand</strong></strong> <i class='arg'>flags</i><dd>
+This option allows the internal padding of the element
+and the display area of the element to increase
+when a style has more screen space than it needs.
+<i class='arg'>Flags</i>  is a string that contains zero or more of the characters
+<strong>x</strong>, <strong>y</strong>, <strong>n</strong>, <strong>s</strong>, <strong>w</strong> or <strong>e</strong>.
+For <strong>n</strong>, <strong>s</strong>, <strong>w</strong> and <strong>e</strong>, each letter refers to the
+padding on the top, bottom, left, or right that should be allowed to increase.
+For <strong>x</strong> and <strong>y</strong>, each letter refers to the horizontal and
+vertical screen space the element can display itself in (i.e., the space
+between the padding). Note that if the
+<strong>-union</strong> option is specified for this element, then the <strong>x</strong> and
+<strong>y</strong> flags have no effect, since the size of an element with
+<strong>-union</strong> layout is determined by the elements it surrounds.
 
 <br><br>
 <dt><strong><strong>-indent</strong></strong> <i class='arg'>boolean</i><dd>
 Specifies whether the element should be positioned to the right of the
 button/line area in the tree column. This option is ignored unless the
--detach option is true.
+<strong>-detach</strong> option is true.
 
 <br><br>
 <dt><strong><strong>-ipadx</strong></strong> <i class='arg'>amount</i><dd>
@@ -2262,6 +2278,18 @@ of two values to specify padding for the two sides separately,
 it defaults to 0.
 
 <br><br>
+<dt><strong><strong>-minheight</strong></strong> <i class='arg'>pixels</i><dd>
+<dt><strong><strong>-height</strong></strong> <i class='arg'>pixels</i><dd>
+<dt><strong><strong>-maxheight</strong></strong> <i class='arg'>pixels</i><dd>
+Specifies the minimum, fixed, and maximum height of the element.
+
+<br><br>
+<dt><strong><strong>-minwidth</strong></strong> <i class='arg'>pixels</i><dd>
+<dt><strong><strong>-width</strong></strong> <i class='arg'>pixels</i><dd>
+<dt><strong><strong>-maxwidth</strong></strong> <i class='arg'>pixels</i><dd>
+Specifies the minimum, fixed, and maximum width of the element.
+
+<br><br>
 <dt><strong><strong>-padx</strong></strong> <i class='arg'>amount</i><dd>
 <dt><strong><strong>-pady</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much external padding to
@@ -2272,18 +2300,25 @@ of two values to specify padding for the two sides separately,
 it defaults to 0.
 
 <br><br>
-<dt><strong><strong>-squeeze</strong></strong> <i class='arg'>style</i><dd>
-If an element's area is smaller than its requested dimensions, this
-option may be used to allow shrinking of the element.
-<i class='arg'>Style</i> is a string that contains zero or more of the characters
+<dt><strong><strong>-squeeze</strong></strong> <i class='arg'>flags</i><dd>
+This option allows the display area of an element to decrease when a
+style has less space than it needs.
+<i class='arg'>Flags</i> is a string that contains zero or more of the characters
 <strong>x</strong> or <strong>y</strong>.
-<strong>x</strong> shrinks the element horizontally,
-<strong>y</strong> shrinks it vertically.
+<strong>x</strong> allows display area to decrease horizontally,
+<strong>y</strong> allows display area to decrease vertically.
+This option is typically used for <strong>text</strong> elements and will cause
+the text element to display an ellipsis (...) and/or wrap lines.
 
 <br><br>
 <dt><strong><strong>-union</strong></strong> <i class='arg'>elementList</i><dd>
-Specifies a list of other <i class='arg'>element</i>s, which should be layed out
-inside the space of this element.
+Specifies a list of other elements which this element will surround.
+The size of an element with <strong>-union</strong> layout is determined by the
+size and position of the elements in <i class='arg'>elementList</i>.
+The <strong>-ipadx</strong> and <strong>-ipady</strong> options in this case refer to the
+distance of the edges of the display area of this element from those elements
+it surrounds. This option is typically used to display a selection rectangle
+around a piece of text.
 
 </dl>
 
@@ -3068,6 +3103,12 @@ Specifies whether the associated Tk window should be destroyed when the
 element is deleted. The element is deleted when the item containing the
 element is deleted, when the column containing the element is deleted,
 or when the style associated with the item's column is changed.
+
+<br><br>
+<dt><strong><strong>-draw</strong></strong> <i class='arg'>boolean</i><dd>
+Specifies as a per-state option
+whether to draw the element. If the value is unspecified (the default),
+the element will be drawn.
 
 <br><br>
 <dt><strong><strong>-window</strong></strong> <i class='arg'>pathName</i><dd>
