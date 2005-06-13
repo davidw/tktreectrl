@@ -54,7 +54,7 @@ proc DemoIMovie {} {
 
 	set S [$T style create STYLE -orient vertical]
 	$T style elements $S {elemShadow elemRect elemTime elemImg elemName}
-	    $T style layout $S elemShadow -detach yes -padx {1 2} -pady {1 2} -iexpand es
+	$T style layout $S elemShadow -detach yes -padx {1 2} -pady {1 2} -iexpand xy
 	$T style layout $S elemTime -padx {2 0}
 	$T style layout $S elemImg -pady {0 1}
 	$T style layout $S elemName -expand we -ipady {0 2} -padx {0 3} -squeeze x
@@ -132,7 +132,9 @@ proc iMovieButton1 {T x y} {
 						}
 						$T.entry selection clear
 						scan [$T item bbox $I] "%d %d %d %d" x1 y1 x2 y2
-						place $T.entry -x [expr {$x1 + 1}] -width [expr {$x2 - $x1 - 5}]
+						set left [expr {$x1 + 6 - 1}]
+						set right [expr {$x2 - 3 - 6 + 1}]
+						place $T.entry -x $left -width [expr {$right - $left}]
 						$T.entry icursor [$T.entry index @[expr {$x - ($x1 + 1)}]]
 					}
 				}
