@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.28 2005/06/10 02:40:36 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.29 2005/06/13 21:59:42 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -534,23 +534,24 @@ static void DisplayProcBitmap(ElementArgs *args)
 #endif
 }
 
-static void LayoutProcBitmap(ElementArgs *args)
+static void NeededProcBitmap(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementBitmap *elemX = (ElementBitmap *) elem;
     ElementBitmap *masterX = (ElementBitmap *) elem->master;
     int state = args->state;
+    int width = 0, height = 0;
     int match, match2;
     Pixmap bitmap;
 
     BITMAP_FOR_STATE(bitmap, bitmap, state)
 
     if (bitmap != None)
-	Tk_SizeOfBitmap(tree->display, bitmap,
-		&args->layout.width, &args->layout.height);
-    else
-	args->layout.width = args->layout.height = 0;
+	Tk_SizeOfBitmap(tree->display, bitmap, &width, &height);
+
+    args->needed.width = width;
+    args->needed.height = height;
 }
 
 static int StateProcBitmap(ElementArgs *args)
@@ -683,7 +684,8 @@ ElementType elemTypeBitmap = {
     DeleteProcBitmap,
     ConfigProcBitmap,
     DisplayProcBitmap,
-    LayoutProcBitmap,
+    NeededProcBitmap,
+    NULL, /* heightProc */
     WorldChangedProcBitmap,
     StateProcBitmap,
     UndefProcBitmap,
@@ -932,28 +934,25 @@ static void DisplayProcBorder(ElementArgs *args)
 #endif
 }
 
-static void LayoutProcBorder(ElementArgs *args)
+static void NeededProcBorder(ElementArgs *args)
 {
     Element *elem = args->elem;
     ElementBorder *elemX = (ElementBorder *) elem;
     ElementBorder *masterX = (ElementBorder *) elem->master;
-    int width, height;
+    int width = 0, height = 0;
 
     if (elemX->widthObj != NULL)
 	width = elemX->width;
     else if ((masterX != NULL) && (masterX->widthObj != NULL))
 	width = masterX->width;
-    else
-	width = 0;
-    args->layout.width = width;
 
     if (elemX->heightObj != NULL)
 	height = elemX->height;
     else if ((masterX != NULL) && (masterX->heightObj != NULL))
 	height = masterX->height;
-    else
-	height = 0;
-    args->layout.height = height;
+
+    args->needed.width = width;
+    args->needed.height = height;
 }
 
 static int StateProcBorder(ElementArgs *args)
@@ -1055,7 +1054,8 @@ ElementType elemTypeBorder = {
     DeleteProcBorder,
     ConfigProcBorder,
     DisplayProcBorder,
-    LayoutProcBorder,
+    NeededProcBorder,
+    NULL, /* heightProc */
     WorldChangedProcBorder,
     StateProcBorder,
     UndefProcBorder,
@@ -1265,7 +1265,7 @@ static void DisplayProcCheckButton(ElementArgs *args)
     }
 }
 
-static void LayoutProcCheckButton(ElementArgs *args)
+static void NeededProcCheckButton(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -1384,7 +1384,8 @@ ElementType elemTypeCheckButton = {
     DeleteProcCheckButton,
     ConfigProcCheckButton,
     DisplayProcCheckButton,
-    LayoutProcCheckButton,
+    NeededProcCheckButton,
+    NULL, /* heightProc */
     WorldChangedProcCheckButton,
     StateProcCheckButton,
     UndefProcCheckButton,
@@ -1564,16 +1565,16 @@ static void DisplayProcImage(ElementArgs *args)
 #endif
 }
 
-static void LayoutProcImage(ElementArgs *args)
+static void NeededProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementImage *elemX = (ElementImage *) elem;
     ElementImage *masterX = (ElementImage *) elem->master;
     int state = args->state;
+    int width = 0, height = 0;
     int match, match2;
     Tk_Image image;
-    int width = 0, height = 0;
 
     IMAGE_FOR_STATE(image, image, state)
 
@@ -1584,13 +1585,14 @@ static void LayoutProcImage(ElementArgs *args)
 	width = elemX->width;
     else if ((masterX != NULL) && (masterX->widthObj != NULL))
 	width = masterX->width;
-    args->layout.width = width;
 
     if (elemX->heightObj != NULL)
 	height = elemX->height;
     else if ((masterX != NULL) && (masterX->heightObj != NULL))
 	height = masterX->height;
-    args->layout.height = height;
+
+    args->needed.width = width;
+    args->needed.height = height;
 }
 
 static int StateProcImage(ElementArgs *args)
@@ -1684,7 +1686,8 @@ ElementType elemTypeImage = {
     DeleteProcImage,
     ConfigProcImage,
     DisplayProcImage,
-    LayoutProcImage,
+    NeededProcImage,
+    NULL, /* heightProc */
     WorldChangedProcImage,
     StateProcImage,
     UndefProcImage,
@@ -1979,35 +1982,31 @@ static void DisplayProcRect(ElementArgs *args)
     }
 }
 
-static void LayoutProcRect(ElementArgs *args)
+static void NeededProcRect(ElementArgs *args)
 {
     Element *elem = args->elem;
     ElementRect *elemX = (ElementRect *) elem;
     ElementRect *masterX = (ElementRect *) elem->master;
-    int width, height, outlineWidth;
+    int width = 0, height = 0;
+    int outlineWidth = 0;
 
     if (elemX->outlineWidthObj != NULL)
 	outlineWidth = elemX->outlineWidth;
     else if ((masterX != NULL) && (masterX->outlineWidthObj != NULL))
 	outlineWidth = masterX->outlineWidth;
-    else
-	outlineWidth = 0;
 
     if (elemX->widthObj != NULL)
 	width = elemX->width;
     else if ((masterX != NULL) && (masterX->widthObj != NULL))
 	width = masterX->width;
-    else
-	width = 0;
-    args->layout.width = MAX(width, outlineWidth * 2);
 
     if (elemX->heightObj != NULL)
 	height = elemX->height;
     else if ((masterX != NULL) && (masterX->heightObj != NULL))
 	height = masterX->height;
-    else
-	height = 0;
-    args->layout.height = MAX(height, outlineWidth * 2);
+
+    args->needed.width = MAX(width, outlineWidth * 2);
+    args->needed.height = MAX(height, outlineWidth * 2);
 }
 
 static int StateProcRect(ElementArgs *args)
@@ -2118,7 +2117,8 @@ ElementType elemTypeRect = {
     DeleteProcRect,
     ConfigProcRect,
     DisplayProcRect,
-    LayoutProcRect,
+    NeededProcRect,
+    NULL, /* heightProc */
     WorldChangedProcRect,
     StateProcRect,
     UndefProcRect,
@@ -2147,8 +2147,8 @@ struct ElementText
     int dataType;			/* -datatype */
     Tcl_Obj *formatObj;			/* -format */
     int stringRepInvalid;
-    PerStateInfo font;
-    PerStateInfo fill;
+    PerStateInfo font;			/* -font */
+    PerStateInfo fill;			/* -fill */
     struct PerStateGC *gc;
 #define TK_JUSTIFY_NULL -1
     int justify;			/* -justify */
@@ -2162,6 +2162,8 @@ struct ElementText
     TextLayout layout;
     int layoutInvalid;
     int layoutWidth;
+    int neededWidth;
+    int totalWidth;
 #define TEXTVAR
 #ifdef TEXTVAR
     Tcl_Obj *varNameObj;		/* -textvariable */
@@ -2492,7 +2494,7 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 }
 
-static void TextUpdateLayout(ElementArgs *args)
+static void TextUpdateLayout(ElementArgs *args, int fixedWidth, int maxWidth)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2509,9 +2511,10 @@ static void TextUpdateLayout(ElementArgs *args)
     int width = 0;
     int flags = 0;
     int i, multiLine = FALSE;
+    int textWidth;
 
     if (elemX->layout != NULL) {
-	if (1 && tree->debug.enable && tree->debug.display)
+	if (tree->debug.enable && tree->debug.textLayout)
 	    dbwin("TextUpdateLayout %s: free %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
 	TextLayout_Free(elemX->layout);
 	elemX->layout = NULL;
@@ -2527,29 +2530,45 @@ static void TextUpdateLayout(ElementArgs *args)
     if ((text == NULL) || (textLen == 0))
 	return;
 
+    if (elemX->lines != -1)
+	lines = elemX->lines;
+    else if ((masterX != NULL) && (masterX->lines != -1))
+	lines = masterX->lines;
+    if (lines == 1)
+	return;
+
+    FONT_FOR_STATE(tkfont, font, state)
+    if (tkfont == NULL)
+	tkfont = tree->tkfont;
+
+    if (fixedWidth >= 0)
+	width = fixedWidth;
+    else if (maxWidth >= 0)
+	width = maxWidth;
+    if (elemX->widthObj != NULL) {
+	if (!width || (elemX->width < width))
+	    width = elemX->width;
+    } else if ((masterX != NULL) && (masterX->widthObj != NULL)) {
+	if (!width || (masterX->width < width))
+	    width = masterX->width;
+    }
+
     for (i = 0; i < textLen; i++) {
 	if ((text[i] == '\n') || (text[i] == '\r')) {
 	    multiLine = TRUE;
 	    break;
 	}
     }
-
-    if (elemX->lines != -1)
-	lines = elemX->lines;
-    else if ((masterX != NULL) && (masterX->lines != -1))
-	lines = masterX->lines;
-
-    if (args->layout.width != -1)
-	width = args->layout.width;
-    else if (elemX->widthObj != NULL)
-	width = elemX->width;
-    else if ((masterX != NULL) && (masterX->widthObj != NULL))
-	width = masterX->width;
-    if (0 && tree->debug.enable)
-	dbwin("lines %d multiLine %d width %d squeeze %d\n",
-		lines, multiLine, width, args->layout.squeeze);
-    if ((lines == 1) || (!multiLine && (width == 0)))
-	return;
+    if (tree->debug.enable && tree->debug.textLayout)
+	dbwin("TextUpdateLayout: lines %d multiLine %d width %d\n",
+		lines, multiLine, width);
+    if (!multiLine) {
+	if (width == 0)
+	    return;
+	textWidth = Tk_TextWidth(tkfont, text, textLen);
+	if (width >= textWidth)
+	    return;
+    }
 
     if (elemX->justify != TK_JUSTIFY_NULL)
 	justify = elemX->justify;
@@ -2561,17 +2580,13 @@ static void TextUpdateLayout(ElementArgs *args)
     else if ((masterX != NULL) && (masterX->wrap != TEXT_WRAP_NULL))
 	wrap = masterX->wrap;
 
-    FONT_FOR_STATE(tkfont, font, state)
-    if (tkfont == NULL)
-	tkfont = tree->tkfont;
-
     if (wrap == TEXT_WRAP_WORD)
 	flags |= TK_WHOLE_WORDS;
 
     elemX->layout = TextLayout_Compute(tkfont, text,
 	    Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
 
-    if (1 && tree->debug.enable && tree->debug.display)
+    if (tree->debug.enable && tree->debug.textLayout)
 	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
 }
 
@@ -2796,6 +2811,44 @@ static int CreateProcText(ElementArgs *args)
     return TCL_OK;
 }
 
+static void TextRedoLayoutIfNeeded(ElementArgs *args, int fixedWidth)
+{
+    ElementText *elemX = (ElementText *) args->elem;
+    int doLayout = 0;
+
+    /* See comment in NeededProc about totalWidth */
+    if (fixedWidth >= elemX->neededWidth)
+	fixedWidth = elemX->totalWidth;
+
+    /* Already layed out at this width */
+    if (fixedWidth == elemX->layoutWidth)
+	return;
+
+    /* May switch from layout -> no layout or vice versa */
+    if (elemX->layout == NULL)
+	doLayout = 1;
+
+    /* Width was constrained and we have more space now */
+    else if ((elemX->layoutWidth != -1) && (fixedWidth > elemX->layoutWidth))
+	doLayout = 1;
+
+    /* Width was unconstrained or we have less space now */
+    else {
+	int width;
+	TextLayout_Size(elemX->layout, &width, NULL);
+	/* Redo if we are narrower than the layout */
+	if (fixedWidth < width)
+	    doLayout = 1;
+    }
+    if (doLayout)
+	TextUpdateLayout(args, fixedWidth, -1);
+elemX->layoutInvalid = FALSE;
+    if (elemX->layout != NULL)
+	elemX->layoutWidth = fixedWidth;
+    else
+	elemX->layoutWidth = -1;
+}
+
 static void DisplayProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
@@ -2854,6 +2907,8 @@ static void DisplayProcText(ElementArgs *args)
 	gc = tree->textGC;
     }
 
+    TextRedoLayoutIfNeeded(args, args->display.width);
+
     if (elemX->layout != NULL)
 	layout = elemX->layout;
 
@@ -2863,7 +2918,7 @@ static void DisplayProcText(ElementArgs *args)
 	/* Hack -- The actual size of the text may be slightly smaller than
 	 * the available space when squeezed. If so we don't want to center
 	 * the text horizontally */
-	if (args->layout.squeeze)
+	if (elemX->neededWidth > width)
 	    width = args->display.width;
 	AdjustForSticky(args->display.sticky,
 	    args->display.width, args->display.height,
@@ -2891,7 +2946,7 @@ static void DisplayProcText(ElementArgs *args)
     /* Hack -- The actual size of the text may be slightly smaller than
     * the available space when squeezed. If so we don't want to center
     * the text horizontally */
-    if (args->layout.squeeze)
+    if (bytesThatFit != textLen)
 	width = args->display.width;
     AdjustForSticky(args->display.sticky,
 	args->display.width, args->display.height,
@@ -2932,7 +2987,7 @@ static void DisplayProcText(ElementArgs *args)
     }
 }
 
-static void LayoutProcText(ElementArgs *args)
+static void NeededProcText(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2944,8 +2999,7 @@ static void LayoutProcText(ElementArgs *args)
     int textLen = 0;
     Tk_Font tkfont;
     Tk_FontMetrics fm;
-    int width = 0;
-    TextLayout layout = NULL;
+    int width = 0, height = 0;
 
     if ((masterX != NULL) && masterX->stringRepInvalid) {
 	args->elem = (Element *) masterX;
@@ -2958,55 +3012,92 @@ static void LayoutProcText(ElementArgs *args)
 	elemX->stringRepInvalid = FALSE;
     }
 
-    if (elemX->layoutInvalid || (elemX->layoutWidth != args->layout.width)) {
-	TextUpdateLayout(args);
-	elemX->layoutInvalid = FALSE;
-	elemX->layoutWidth = args->layout.width;
+    TextUpdateLayout(args, args->needed.fixedWidth, args->needed.maxWidth);
+elemX->layoutInvalid = FALSE;
+    elemX->layoutWidth = -1;
+    elemX->neededWidth = -1;
+
+    if (elemX->layout != NULL) {
+	TextLayout_Size(elemX->layout, &width, &height);
+	if (args->needed.fixedWidth >= 0)
+	    elemX->layoutWidth = args->needed.fixedWidth;
+	else if (args->needed.maxWidth >= 0)
+	    elemX->layoutWidth = args->needed.maxWidth;
+	elemX->neededWidth = width;
+
+	/*
+	 * Hack -- If we call TextLayout_Compute() with the same width
+	 * returned by TextLayout_Size(), we may get a different layout.
+	 * I think this has to do with whitespace at the end of lines.
+	 * So if HeightProc or DisplayProc is given neededWidth, I do the
+	 * layout at totalWidth, not neededWidth.
+	 */
+	elemX->totalWidth = TextLayout_TotalWidth(elemX->layout);
+    } else {
+	if (elemX->text != NULL) {
+	    text = elemX->text;
+	    textLen = elemX->textLen;
+	} else if ((masterX != NULL) && (masterX->text != NULL)) {
+	    text = masterX->text;
+	    textLen = masterX->textLen;
+	}
+	if (text != NULL) {
+	    int maxWidth = -1;
+
+	    FONT_FOR_STATE(tkfont, font, state)
+	    if (tkfont == NULL)
+		tkfont = tree->tkfont;
+
+	    width = Tk_TextWidth(tkfont, text, textLen);
+	    if (elemX->widthObj != NULL)
+		maxWidth = elemX->width;
+	    else if ((masterX != NULL) && (masterX->widthObj != NULL))
+		maxWidth = masterX->width;
+	    if ((maxWidth >= 0) && (maxWidth < width))
+		width = maxWidth;
+
+	    Tk_GetFontMetrics(tkfont, &fm);
+	    height = fm.linespace;
+	}
     }
 
-    if (elemX->layout != NULL)
-	layout = elemX->layout;
+    args->needed.width = width;
+    args->needed.height = height;
+}
 
-    if (layout != NULL) {
-	TextLayout_Size(layout, &args->layout.width, &args->layout.height);
-	return;
+static void HeightProcText(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementText *elemX = (ElementText *) elem;
+    ElementText *masterX = (ElementText *) elem->master;
+    int state = args->state;
+    int match, match2;
+    int height = 0;
+    char *text = NULL;
+    Tk_Font tkfont;
+    Tk_FontMetrics fm;
+
+    TextRedoLayoutIfNeeded(args, args->height.fixedWidth);
+   
+    if (elemX->layout != NULL) {
+	TextLayout_Size(elemX->layout, NULL, &height);
+    } else {
+	if (elemX->text != NULL) {
+	    text = elemX->text;
+	} else if ((masterX != NULL) && (masterX->text != NULL)) {
+	    text = masterX->text;
+	}
+	if (text != NULL) {
+	    FONT_FOR_STATE(tkfont, font, state)
+	    if (tkfont == NULL)
+		tkfont = tree->tkfont;
+	    Tk_GetFontMetrics(tkfont, &fm);
+	    height = fm.linespace;
+	}
     }
 
-    if (elemX->text != NULL) {
-	text = elemX->text;
-	textLen = elemX->textLen;
-    } else if ((masterX != NULL) && (masterX->text != NULL)) {
-	text = masterX->text;
-	textLen = masterX->textLen;
-    }
-
-    if (text != NULL) {
-	FONT_FOR_STATE(tkfont, font, state)
-	if (tkfont == NULL)
-	    tkfont = tree->tkfont;
-
-#if 0
-	/* Weird bug with MS Sans Serif 8 bold */
-	Tk_MeasureChars(font, text, textLen, -1, 0, &width);
-	width2 = width;
-	while (Tk_MeasureChars(font, text, textLen, width2, 0, &width) != textLen)
-	    width2++;
-	args->layout.width = width2;
-#else
-	args->layout.width = Tk_TextWidth(tkfont, text, textLen);
-#endif
-	if (elemX->widthObj != NULL)
-	    width = elemX->width;
-	else if ((masterX != NULL) && (masterX->widthObj != NULL))
-	    width = masterX->width;
-	if ((width > 0) && (width < args->layout.width))
-	    args->layout.width = width;
-	Tk_GetFontMetrics(tkfont, &fm);
-	args->layout.height = fm.linespace;
-	return;
-    }
-
-    args->layout.width = args->layout.height = 0;
+    args->height.height = height;
 }
 
 int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, double *dv, char **sv)
@@ -3161,7 +3252,8 @@ ElementType elemTypeText = {
     DeleteProcText,
     ConfigProcText,
     DisplayProcText,
-    LayoutProcText,
+    NeededProcText,
+    HeightProcText,
     WorldChangedProcText,
     StateProcText,
     UndefProcText,
@@ -3503,7 +3595,7 @@ hideIt:
     }
 }
 
-static void LayoutProcWindow(ElementArgs *args)
+static void NeededProcWindow(ElementArgs *args)
 {
 /*    TreeCtrl *tree = args->tree;*/
     Element *elem = args->elem;
@@ -3512,21 +3604,19 @@ static void LayoutProcWindow(ElementArgs *args)
     int state = args->state;*/
     int width = 0, height = 0;
 
-    if (elemX->tkwin && width <= 0) {
+    if (elemX->tkwin) {
 	width = Tk_ReqWidth(elemX->tkwin);
 	if (width <= 0) {
 	    width = 1;
 	}
-    }
-    if (elemX->tkwin && height <= 0) {
 	height = Tk_ReqHeight(elemX->tkwin);
 	if (height <= 0) {
 	    height = 1;
 	}
     }
 
-    args->layout.width = width;
-    args->layout.height = height;
+    args->needed.width = width;
+    args->needed.height = height;
 }
 
 static int StateProcWindow(ElementArgs *args)
@@ -3576,7 +3666,8 @@ ElementType elemTypeWindow = {
     DeleteProcWindow,
     ConfigProcWindow,
     DisplayProcWindow,
-    LayoutProcWindow,
+    NeededProcWindow,
+    NULL, /* heightProc */
     WorldChangedProcWindow,
     StateProcWindow,
     UndefProcWindow,
