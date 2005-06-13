@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.6 2005/06/08 01:31:06 treectrl Exp $ -->
+<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.7 2005/06/13 23:35:36 treectrl Exp $ -->
   <meta content="text/html; charset=ISO-8859-1"
  http-equiv="content-type">
   <title>What's New in TkTreeCtrl</title>
@@ -353,14 +353,73 @@ above</td>
     </tr>
   </tbody>
 </table>
+<h2>Style Layout Options</h2>
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2"
+ cellspacing="2">
+  <tbody>
+    <tr>
+      <th style="background-color: rgb(255, 255, 204);">Usage Changed</th>
+      <th style="background-color: rgb(204, 255, 255);">How it changed</th>
+    </tr>
+    <tr>
+      <td>-iexpand</td>
+      <td>Two new flags "x' and "y" are allowed. Previously, only the
+-ipadx and -ipady padding could be expanded by this option. The new xy
+flags expand the display area of the element, not the padding. To
+update your code, you will probably want to change this:<br>
+      <div style="margin-left: 40px;">
+      <pre>$T style layout $S $E -iexpand we</pre>
+      </div>
+to this:<br>
+      <div style="margin-left: 40px;">
+      <pre>$T style layout $S $E -iexpand x<br></pre>
+      </div>
+Keep in mind that -union elements are not affected by -iexpand xy,
+since the size of a -union element is determined by the elements it
+surrounds.</td>
+    </tr>
+    <tr>
+      <th style="width: 50%; background-color: rgb(255, 255, 204);">New<br>
+      </th>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-height</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-maxheight</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-maxwidth</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-minheight</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-minwidth</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-sticky</td>
+      <td></td>
+    </tr>
+    <tr>
+      <td>-width</td>
+      <td></td>
+    </tr>
+  </tbody>
+</table>
 <h2>Element Changes</h2>
 <ul>
   <li>A new element type&nbsp;<span style="font-weight: bold;">window</span>
 was added.
 See the new demo "Firefox Privacy" and the ELEMENTS section in the help
 file.</li>
-  <li>All element types (except for the new <span
- style="font-weight: bold;">window</span> element type) have a new
+  <li>All element types have a new
 per-state boolean option called <span style="font-weight: bold;">-draw</span>.</li>
   <li>The <span style="font-weight: bold;">text</span> element type
 has a new option called <span style="font-weight: bold;">-textvariable</span>.
