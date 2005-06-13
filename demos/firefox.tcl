@@ -60,7 +60,7 @@ proc DemoFirefoxPrivacy {} {
 	$T element create eWindow window
 	$T element create eText1 text -font [list "[$T cget -font] bold"]
 	$T element create eText2 text
-	$T element create eRectTop rect -outline {black open} -fill {#FFFFCC open} -outlinewidth 1 -open s
+	$T element create eRectTop rect -outline black -fill #FFFFCC -draw {yes open no {}} -outlinewidth 1 -open s
 	$T element create eRectBottom rect -outline black -fill #FFFFCC -outlinewidth 1 -open n
 
 	# Destroy the window when the element is deleted. Could also bind to the
@@ -73,14 +73,15 @@ proc DemoFirefoxPrivacy {} {
 
 	set S [$T style create styCategory -orient horizontal]
 	$T style elements $S {eRectTop eText1 eWindow}
-	$T style layout $S eRectTop -detach yes -indent no -iexpand es
-	$T style layout $S eText1 -expand ns -iexpand e
+	$T style layout $S eRectTop -detach yes -indent no -iexpand xy
+	# note: using -iexpand x so clicking in the text works better
+	$T style layout $S eText1 -expand ns -iexpand x -sticky w
 	$T style layout $S eWindow -expand ns -padx 10 -pady 6
 
 	set S [$T style create styFrame -orient horizontal]
 	$T style elements $S {eRectBottom eWindow}
-	$T style layout $S eRectBottom -detach yes -indent no -iexpand es
-	$T style layout $S eWindow -iexpand e -squeeze x -padx {0 2} -pady {0 8}
+	$T style layout $S eRectBottom -detach yes -indent no -iexpand xy
+	$T style layout $S eWindow -iexpand x -squeeze x -padx {0 2} -pady {0 8}
 
 	set buttonCmd button
 	set checkbuttonCmd checkbutton
