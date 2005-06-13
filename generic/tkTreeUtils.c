@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.26 2005/06/04 19:08:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.27 2005/06/13 22:35:56 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -883,12 +883,27 @@ typedef struct LayoutInfo
 	int height;
 	int numChunks;	/* Number of chunks actually used in
 					 * * following array. */
+	int totalWidth;
+#define TEXTLAYOUT_ALLOCHAX
+#ifdef TEXTLAYOUT_ALLOCHAX
+	int maxChunks;
+	struct LayoutInfo *nextFree;
+#endif
 	LayoutChunk chunks[1];	/* Array of chunks.  The actual size will
 							 * * be maxChunks.  THIS FIELD MUST BE THE LAST
 							 * * IN THE STRUCTURE. */
 } LayoutInfo;
 
+#ifdef TEXTLAYOUT_ALLOCHAX
+TCL_DECLARE_MUTEX(textLayoutMutex)
+static LayoutInfo *freeLayoutInfo = NULL;
+#endif
+
+#ifdef TEXTLAYOUT_ALLOCHAX
+static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr,
+#else
 static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
+#endif
 	CONST char *start, int numBytes, int curX, int newX, int y)
 {
 	LayoutInfo *layoutPtr;
@@ -897,6 +912,16 @@ static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
 	size_t s;
 
 	layoutPtr = *layoutPtrPtr;
+#ifdef TEXTLAYOUT_ALLOCHAX
+	if (layoutPtr->numChunks == layoutPtr->maxChunks)
+	{
+		layoutPtr->maxChunks *= 2;
+		s = sizeof(LayoutInfo) + ((layoutPtr->maxChunks - 1) * sizeof(LayoutChunk));
+		layoutPtr = (LayoutInfo *) ckrealloc((char *) layoutPtr, s);
+
+		*layoutPtrPtr = layoutPtr;
+	}
+#else
 	maxChunks = *maxPtr;
 	if (layoutPtr->numChunks == maxChunks)
 	{
@@ -907,6 +932,7 @@ static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
 		*layoutPtrPtr = layoutPtr;
 		*maxPtr = maxChunks;
 	}
+#endif
 	numChars = Tcl_NumUtfChars(start, numBytes);
 	chunkPtr = &layoutPtr->chunks[layoutPtr->numChunks];
 	chunkPtr->start = start;
@@ -962,10 +988,27 @@ TextLayout TextLayout_Compute(
 	if (wrapLength == 0)
 		wrapLength = -1;
 
+#ifdef TEXTLAYOUT_ALLOCHAX
+	Tcl_MutexLock(&textLayoutMutex);
+	if (freeLayoutInfo != NULL)
+	{
+		layoutPtr = freeLayoutInfo;
+		freeLayoutInfo = layoutPtr->nextFree;
+	}
+	else
+	{
+		maxChunks = 1;
+		layoutPtr = (LayoutInfo *) ckalloc(sizeof(LayoutInfo) +
+			(maxChunks - 1) * sizeof(LayoutChunk));
+		layoutPtr->maxChunks = maxChunks;
+	}
+	Tcl_MutexUnlock(&textLayoutMutex);
+#else
 	maxChunks = 1;
 
 	layoutPtr = (LayoutInfo *) ckalloc(sizeof(LayoutInfo) + (maxChunks -
 			1) * sizeof(LayoutChunk));
+#endif
 	layoutPtr->tkfont = tkfont;
 	layoutPtr->string = string;
 	layoutPtr->numChunks = 0;
@@ -1009,7 +1052,11 @@ TextLayout TextLayout_Compute(
 			flags &= ~TK_AT_LEAST_ONE;
 			if (bytesThisChunk > 0)
 			{
+#ifdef TEXTLAYOUT_ALLOCHAX
+				chunkPtr = NewChunk(&layoutPtr, start,
+#else
 				chunkPtr = NewChunk(&layoutPtr, &maxChunks, start,
+#endif
 					bytesThisChunk, curX, newX, baseline);
 				start += bytesThisChunk;
 				curX = newX;
@@ -1023,7 +1070,11 @@ TextLayout TextLayout_Compute(
 			{
 				newX = curX + tabWidth;
 				newX -= newX % tabWidth;
+#ifdef TEXTLAYOUT_ALLOCHAX
+				NewChunk(&layoutPtr, start, 1, curX, newX,
+#else
 				NewChunk(&layoutPtr, &maxChunks, start, 1, curX, newX,
+#endif
 					baseline)->numDisplayChars = -1;
 				start++;
 				if ((start < end) && ((wrapLength <= 0) ||
@@ -1036,7 +1087,11 @@ TextLayout TextLayout_Compute(
 			}
 			else
 			{
+#ifdef TEXTLAYOUT_ALLOCHAX
+				NewChunk(&layoutPtr, start, 1, curX, curX,
+#else
 				NewChunk(&layoutPtr, &maxChunks, start, 1, curX, curX,
+#endif
 					baseline)->numDisplayChars = -1;
 				start++;
 				goto wrapLine;
@@ -1096,7 +1151,11 @@ wrapLine:
 		if (layoutPtr->chunks[layoutPtr->numChunks - 1].start[0] == '\n')
 		{
 			chunkPtr =
+#ifdef TEXTLAYOUT_ALLOCHAX
+				NewChunk(&layoutPtr, start, 0, curX, curX,
+#else
 				NewChunk(&layoutPtr, &maxChunks, start, 0, curX, curX,
+#endif
 				baseline);
 			chunkPtr->numDisplayChars = -1;
 			Tcl_DStringAppend(&lineBuffer, (char *) &curX, sizeof(curX));
@@ -1182,6 +1241,7 @@ finish:
 
 	layoutPtr->width = maxWidth;
 	layoutPtr->height = baseline - fm.ascent;
+layoutPtr->totalWidth = 0;
 	if (layoutPtr->numChunks == 0)
 	{
 		layoutPtr->height = height;
@@ -1220,11 +1280,13 @@ finish:
 			{
 				chunkPtr->x += extra;
 			}
+if (chunkPtr->x + chunkPtr->totalWidth > layoutPtr->totalWidth)
+	layoutPtr->totalWidth = chunkPtr->x + chunkPtr->totalWidth;
 			chunkPtr++;
 		}
-	}
-
+/* dbwin("totalWidth %d displayWidth %d\n", layoutPtr->totalWidth, maxWidth); */
 	Tcl_DStringFree(&lineBuffer);
+	}
 
 	/* We don't want single-line text layouts for text elements, but it happens for column titles */
 /*	if (layoutPtr->numLines == 1)
@@ -1237,7 +1299,14 @@ void TextLayout_Free(TextLayout textLayout)
 {
 	LayoutInfo *layoutPtr = (LayoutInfo *) textLayout;
 
+#ifdef TEXTLAYOUT_ALLOCHAX
+	Tcl_MutexLock(&textLayoutMutex);
+	layoutPtr->nextFree = freeLayoutInfo;
+	freeLayoutInfo = layoutPtr;
+	Tcl_MutexUnlock(&textLayoutMutex);
+#else
 	ckfree((char *) layoutPtr);
+#endif
 }
 
 void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr)
@@ -1248,6 +1317,13 @@ void TextLayout_Size(TextLayout textLayout, int *widthPtr, int *heightPtr)
 		(*widthPtr) = layoutPtr->width;
 	if (heightPtr != NULL)
 		(*heightPtr) = layoutPtr->height;
+}
+
+int TextLayout_TotalWidth(TextLayout textLayout)
+{
+	LayoutInfo *layoutPtr = (LayoutInfo *) textLayout;
+
+	return layoutPtr->totalWidth;
 }
 
 void TextLayout_Draw(
@@ -2303,7 +2379,6 @@ void PSTRestore(
 }
 
 #ifdef ALLOC_HAX
-#define ALLOC_BLOCK_SIZE 128
 
 typedef struct AllocElem AllocElem;
 typedef struct AllocList AllocList;
@@ -2323,6 +2398,7 @@ struct AllocList
 	AllocList *next;
 	AllocElem **blocks;
 	int blockCount;
+	int blockSize;
 };
 
 struct AllocData
@@ -2347,6 +2423,7 @@ char *AllocHax_Alloc(ClientData data, int size)
 		freeList->next = freeLists;
 		freeList->blocks = NULL;
 		freeList->blockCount = 0;
+		freeList->blockSize = 16;
 		freeLists = freeList;
 		((AllocData *) data)->freeLists = freeLists;
 	}
@@ -2359,12 +2436,12 @@ char *AllocHax_Alloc(ClientData data, int size)
 		AllocElem *block;
 		freeList->blockCount += 1;
 		freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks, sizeof(AllocElem *) * freeList->blockCount);
-		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) * ALLOC_BLOCK_SIZE);
+		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) * freeList->blockSize);
 		freeList->blocks[freeList->blockCount - 1] = block;
-/* dbwin("AllocHax_Alloc alloc %d of size %d\n", ALLOC_BLOCK_SIZE, size); */
+/* dbwin("AllocHax_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
 		freeList->head = block;
 		elem = freeList->head;
-		for (i = 1; i < ALLOC_BLOCK_SIZE - 1; i++) {
+		for (i = 1; i < freeList->blockSize - 1; i++) {
 			elem->free = 1;
 			elem->next = (AllocElem *) (((char *) freeList->head) + (sizeof(AllocElem) - 1 + size) * i);
 			elem = elem->next;
@@ -2373,6 +2450,8 @@ char *AllocHax_Alloc(ClientData data, int size)
 		elem->free = 1;
 		result = freeList->head;
 		freeList->head = result->next;
+		if (freeList->blockSize < 1024)
+			freeList->blockSize *= 2;
 	}
 
 	if (!result->free)
