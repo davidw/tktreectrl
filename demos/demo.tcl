@@ -171,6 +171,7 @@ proc MakeMenuBar {} {
     }
     $m2 add command -label "Event Browser" -command ToggleEventsWindow
     $m2 add command -label "Identify" -command ToggleIdentifyWindow
+    $m2 add command -label "Style Editor" -command ToggleStyleEditorWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
     $m2 add command -label Quit -command exit
     $m add cascade -label File -menu $m2
@@ -455,6 +456,20 @@ proc ToggleSourceWindow {} {
     return
 }
 
+proc ToggleStyleEditorWindow {} {
+    set w .styleEditor
+    if {![winfo exists $w]} {
+	source [Path style-editor.tcl]
+	StyleEditor::Init .f2.f1.t
+	StyleEditor::SetListOfStyles
+    } elseif {[winfo ismapped $w]} {
+	wm withdraw $w
+    } else {
+	wm deiconify $w
+    }
+    return
+}
+
 MakeSourceWindow
 MakeMenuBar
 
@@ -655,6 +670,9 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) debug configure -data $Popup(debug,data)}
     $m2 add checkbutton -label Display -variable Popup(debug,display) \
 	-command {$Popup(T) debug configure -display $Popup(debug,display)}
+    $m2 add checkbutton -label "Text Layout" -variable Popup(debug,textlayout) \
+	-command {$Popup(T) debug configure -textlayout $Popup(debug,textlayout)}
+    $m2 add separator
     $m2 add checkbutton -label Enable -variable Popup(debug,enable) \
 	-command {$Popup(T) debug configure -enable $Popup(debug,enable)}
     $m add cascade -label Debug -menu $m2
@@ -797,7 +815,7 @@ proc ShowPopup {T x y X Y} {
 	    $m add command -label "Item $item (recurse)" -command "$T item expand $item -recurse"
 	}
     }
-    foreach option {data display enable} {
+    foreach option {data display enable textlayout} {
 	set Popup(debug,$option) [$T debug cget -$option]
     }
     set Popup(bgimg) [$T cget -backgroundimage]
@@ -897,6 +915,7 @@ proc DemoSet {cmd file} {
     update
     DisplayStylesInList
     ShowSource $file
+    catch {StyleEditor::SetListOfStyles}
 }
 
 .f1.t notify bind .f1.t <Selection> {
@@ -933,7 +952,7 @@ proc DisplayStylesInList {} {
     $t item delete all
 
     # One item for each element in the demo list
-    foreach elem [lsort [$T element names]] {
+    foreach elem [lsort -dictionary [$T element names]] {
 	set item [$t item create -button yes]
 	$t item collapse $item
 	$t item style set $item C0 s1
@@ -956,7 +975,7 @@ proc DisplayStylesInList {} {
     }
 
     # One item for each style in the demo list
-    foreach style [lsort [$T style names]] {
+    foreach style [lsort -dictionary [$T style names]] {
 	set item [$t item create -button yes]
 	$t item collapse $item
 	$t item style set $item C0 s1
