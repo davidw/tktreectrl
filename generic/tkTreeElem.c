@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.29 2005/06/13 21:59:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.30 2005/06/14 00:21:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -261,7 +261,6 @@ int TreeStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
     return TCL_OK;
 }
 
-#ifdef STYLE_STICKY
 static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
     int expandX, int expandY,
     int *xPtr, int *yPtr, int *widthPtr, int *heightPtr)
@@ -296,7 +295,6 @@ static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
     	*yPtr += (sticky & STICKY_S) ? dy : dy / 2;
     }
 }
-#endif
 
 /* This macro gets the value of a per-state option for an element, then
  * looks for a better match from the master element if it exists */
@@ -500,7 +498,6 @@ static void DisplayProcBitmap(ElementArgs *args)
     COLOR_FOR_STATE(fg, fg, state)
     COLOR_FOR_STATE(bg, bg, state)
 
-#ifdef STYLE_STICKY
     Tk_SizeOfBitmap(tree->display, bitmap, &imgW, &imgH);
     width = imgW, height = imgH;
     AdjustForSticky(args->display.sticky,
@@ -510,28 +507,6 @@ static void DisplayProcBitmap(ElementArgs *args)
     Tree_DrawBitmap(tree, bitmap, args->display.drawable, fg, bg,
 	0, 0, (unsigned int) imgW, (unsigned int) imgH,
 	x, y);
-#else
-    int bx = args->display.x /* + args->display.pad[LEFT] */;
-    int by = args->display.y /* + args->display.pad[TOP] */;
-    int dx = 0, dy = 0;
-
-    Tk_SizeOfBitmap(tree->display, bitmap, &imgW, &imgH);
-    if (imgW < args->display.width)
-	dx = (args->display.width - imgW) / 2;
-    else if (imgW > args->display.width)
-	imgW = args->display.width;
-    if (imgH < args->display.height)
-	dy = (args->display.height - imgH) / 2;
-    else if (imgH > args->display.height)
-	imgH = args->display.height;
-
-    bx += dx;
-    by += dy;
-
-    Tree_DrawBitmap(tree, bitmap, args->display.drawable, fg, bg,
-	0, 0, (unsigned int) imgW, (unsigned int) imgH,
-	bx, by);
-#endif
 }
 
 static void NeededProcBitmap(ElementArgs *args)
@@ -894,7 +869,6 @@ static void DisplayProcBorder(ElementArgs *args)
     else if ((masterX != NULL) && (masterX->filled != -1))
 	filled = masterX->filled;
 
-#ifdef STYLE_STICKY
     if (elemX->widthObj != NULL)
 	width = elemX->width;
     else if ((masterX != NULL) && (masterX->widthObj != NULL))
@@ -917,21 +891,6 @@ static void DisplayProcBorder(ElementArgs *args)
 	Tk_Draw3DRectangle(tree->tkwin, args->display.drawable, border,
 		x, y, width, height, thickness, relief);
     }
-#else
-    if (filled) {
-	Tk_Fill3DRectangle(tree->tkwin, args->display.drawable, border,
-		args->display.x, 
-		args->display.y,
-		args->display.width, args->display.height,
-		thickness, relief);
-    } else if (thickness > 0) {
-	Tk_Draw3DRectangle(tree->tkwin, args->display.drawable, border,
-		args->display.x, 
-		args->display.y,
-		args->display.width, args->display.height,
-		thickness, relief);
-    }
-#endif
 }
 
 static void NeededProcBorder(ElementArgs *args)
@@ -1543,26 +1502,12 @@ static void DisplayProcImage(ElementArgs *args)
 	return;
 
     Tk_SizeOfImage(image, &imgW, &imgH);
-#ifdef STYLE_STICKY
     width = imgW, height = imgH;
     AdjustForSticky(args->display.sticky,
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
     Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable, x, y);
-#else
-    if (imgW < args->display.width)
-	dx = (args->display.width - imgW) / 2;
-    else if (imgW > args->display.width)
-	imgW = args->display.width;
-    if (imgH < args->display.height)
-	dy = (args->display.height - imgH) / 2;
-    else if (imgH > args->display.height)
-	imgH = args->display.height;
-    Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable,
-	    args->display.x /* + args->display.pad[LEFT] */ + dx,
-	    args->display.y /* + args->display.pad[TOP] */ + dy);
-#endif
 }
 
 static void NeededProcImage(ElementArgs *args)
@@ -1933,7 +1878,6 @@ static void DisplayProcRect(ElementArgs *args)
     else if ((masterX != NULL) && (masterX->showFocus != -1))
 	showFocus = masterX->showFocus;
 
-#ifdef STYLE_STICKY
     if (elemX->widthObj != NULL)
 	width = elemX->width;
     else if ((masterX != NULL) && (masterX->widthObj != NULL))
@@ -1948,7 +1892,6 @@ static void DisplayProcRect(ElementArgs *args)
 	args->display.width, args->display.height,
 	TRUE, TRUE,
 	&x, &y, &width, &height);
-#endif
 
     COLOR_FOR_STATE(color, fill, state)
     if (color != NULL) {
@@ -2913,7 +2856,6 @@ static void DisplayProcText(ElementArgs *args)
 	layout = elemX->layout;
 
     if (layout != NULL) {
-#ifdef STYLE_STICKY
 	TextLayout_Size(layout, &width, &height);
 	/* Hack -- The actual size of the text may be slightly smaller than
 	 * the available space when squeezed. If so we don't want to center
@@ -2926,13 +2868,6 @@ static void DisplayProcText(ElementArgs *args)
 	    &x, &y, &width, &height);
 	TextLayout_Draw(tree->display, args->display.drawable, gc,
 		layout, x, y, 0, -1);
-#else
-	TextLayout_Draw(tree->display, args->display.drawable, gc,
-		layout,
-		args->display.x /* + args->display.pad[LEFT] */,
-		args->display.y /* + args->display.pad[TOP] */,
-		0, -1);
-#endif
 	return;
     }
 
@@ -2941,7 +2876,6 @@ static void DisplayProcText(ElementArgs *args)
     pixelsForText = args->display.width /* - args->display.pad[LEFT] -
 					   args->display.pad[RIGHT] */;
     bytesThatFit = Ellipsis(tkfont, text, textLen, &pixelsForText, ellipsis, FALSE);
-#ifdef STYLE_STICKY
     width = pixelsForText, height = fm.linespace;
     /* Hack -- The actual size of the text may be slightly smaller than
     * the available space when squeezed. If so we don't want to center
@@ -2952,7 +2886,6 @@ static void DisplayProcText(ElementArgs *args)
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
-#endif
     if (bytesThatFit != textLen) {
 	char staticStr[256], *buf = staticStr;
 	int bufLen = abs(bytesThatFit);
@@ -2965,25 +2898,13 @@ static void DisplayProcText(ElementArgs *args)
 	    memcpy(buf + bufLen, ellipsis, ellipsisLen);
 	    bufLen += ellipsisLen;
 	}
-#ifdef STYLE_STICKY
 	Tk_DrawChars(tree->display, args->display.drawable, gc,
 		tkfont, buf, bufLen, x, y + fm.ascent);
-#else
-	Tk_DrawChars(tree->display, args->display.drawable, gc,
-		tkfont, buf, bufLen, args->display.x /* + args->display.pad[LEFT] */,
-		args->display.y /* + args->display.pad[TOP] */ + fm.ascent);
-#endif
 	if (buf != staticStr)
 	    ckfree(buf);
     } else {
-#ifdef STYLE_STICKY
 	Tk_DrawChars(tree->display, args->display.drawable, gc,
 		tkfont, text, textLen, x, y + fm.ascent);
-#else
-	Tk_DrawChars(tree->display, args->display.drawable, gc,
-		tkfont, text, textLen, args->display.x /* + args->display.pad[LEFT] */,
-		args->display.y /* + args->display.pad[TOP] */ + fm.ascent);
-#endif
     }
 }
 
@@ -3525,15 +3446,8 @@ static void DisplayProcWindow(ElementArgs *args)
     ElementWindow *elemX = (ElementWindow *) elem;
     ElementWindow *masterX = (ElementWindow *) elem->master;
     int state = args->state;
-#ifdef STYLE_STICKY
     int x = args->display.x, y = args->display.y;
     int width, height;
-#else
-    int x = args->display.x + (tree->drawableXOrigin - tree->xOrigin);
-    int y = args->display.y + (tree->drawableYOrigin - tree->yOrigin);
-    int width = args->display.width; /* - padding */
-    int height = args->display.height; /* - padding */
-#endif
     int match, match2;
     int draw;
 
@@ -3549,7 +3463,6 @@ static void DisplayProcWindow(ElementArgs *args)
     if (width == -1 && height == -1)
 	goto hideIt;
 
-#ifdef STYLE_STICKY
     width = Tk_ReqWidth(elemX->tkwin);
     height = Tk_ReqHeight(elemX->tkwin);
     AdjustForSticky(args->display.sticky,
@@ -3558,7 +3471,6 @@ static void DisplayProcWindow(ElementArgs *args)
 	&x, &y, &width, &height);
     x += tree->drawableXOrigin - tree->xOrigin;
     y += tree->drawableYOrigin - tree->yOrigin;
-#endif
 
     /*
      * If the window is completely out of the visible area of the treectrl
