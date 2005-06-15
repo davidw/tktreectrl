@@ -76,16 +76,37 @@ proc StyleEditor::Init {Tdemo} {
     # Style canvas
     #
 
-    set canvas [canvas $fRight.canvas -background white \
-	-scrollregion {0 0 0 0} -borderwidth 0 -highlightthickness 0]
+    set fCanvas [frame $fRight.fCanvas -borderwidth 0]
+    set canvas [canvas $fCanvas.canvas -background white \
+	-scrollregion {0 0 0 0} -borderwidth 0 -highlightthickness 0 \
+	-xscrollcommand [list $fCanvas.xscroll set] \
+	-yscrollcommand [list $fCanvas.yscroll set]]
+    scrollbar $fCanvas.xscroll -orient horizontal \
+	-command [list $canvas xview]
+    scrollbar $fCanvas.yscroll -orient vertical \
+	-command [list $canvas yview]
 
+    # Copy element config info from the selected item in the demo list
     $Tdemo notify bind StyleEditor <Selection> {
 	StyleEditor::StyleToCanvas
     }
 
     Info canvas $canvas
 
-    $w.pwH.pwV2 add $fRight.propertyList $fRight.canvas
+    # Create a new treectrl to copy the states/style/elements into, so I don't
+    # have to worry about column width or item visibility in the demo list
+    set T [treectrl $canvas.t]
+    $T configure -itemheight 0 -minitemheight 0 -showbuttons no -showlines no \
+	-font [$Tdemo cget -font]
+    $T column create
+
+    grid rowconfigure $fCanvas 0 -weight 1
+    grid columnconfigure $fCanvas 0 -weight 1
+    grid $canvas -row 0 -column 0 -sticky news
+    grid $fCanvas.xscroll -row 1 -column 0 -sticky we
+    grid $fCanvas.yscroll -row 0 -column 1 -sticky ns
+
+    $w.pwH.pwV2 add $fRight.propertyList $fCanvas
 
     $w.pwH add $w.pwH.pwV $w.pwH.pwV2
 
@@ -95,6 +116,8 @@ proc StyleEditor::Init {Tdemo} {
 
     Info selectedStyle ""
     Info selectedElement ""
+
+    wm geometry $w -0+0
 
     return
 }
@@ -141,7 +164,7 @@ proc StyleEditor::SelectStyle {} {
     if {![llength $selection]} {
 	[Info elementList] item delete all
 	Info selectedStyle ""
-	Info labelStyle "Style <none>"
+	StyleToCanvas
 	return
     }
 
@@ -150,10 +173,9 @@ proc StyleEditor::SelectStyle {} {
     Info selectedStyle $style
     SetListOfElements $style
 
-    Info labelStyle "Style $style"
     Info -orient [$Tdemo style cget $style -orient]
 
-    StyleToCanvas
+    StyleToCanvas 1
 
     return
 }
@@ -200,7 +222,6 @@ proc StyleEditor::SelectElement {} {
     set selection [$T selection get]
     if {![llength $selection]} {
 	Info selectedElement ""
-	Info labelElement "Element <none>"
 	SetPropertyList
 	CanvasSelectElement
 	return
@@ -210,22 +231,9 @@ proc StyleEditor::SelectElement {} {
     set element [Info item2element,$I]
     Info selectedElement $element
 
-    Info labelElement "Element $element"
-
     SetPropertyList
     CanvasSelectElement
-if 0 {
-    foreach option {-padx -pady -ipadx -ipady} {
-	set pad [$Tdemo style layout $style $element $option]
-	if {[llength $pad] == 2} {
-	    Info $option,1 [lindex $pad 0]
-	    Info $option,2 [lindex $pad 1]
-	} else {
-	    Info $option,1 $pad
-	    Info $option,2 $pad
-	}
-    }
-}
+
     return
 }
 
@@ -277,65 +285,15 @@ proc StyleEditor::SetPropertyList {} {
 
     if {$element eq ""} return
 
-    foreach option {-padx -pady -ipadx -ipady} {
-	set I [$T item create]
+    foreach {option value} [$Tdemo style layout $style $element] {
+ 	set I [$T item create]
 	$T item text $I 0 $option
 
 	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
+	$T item text $I 1 $value
 
 	$T item lastchild root $I
-    }
-
-    foreach option {-expand -iexpand} {
-	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
-
-	$T item lastchild root $I
-    }
-
-    foreach option {-detach -indent} {
-	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
-
-	$T item lastchild root $I
-    }
-
-    foreach option {-minwidth -width -maxwidth -minheight -height -maxheight} {
-	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
-
-	$T item lastchild root $I
-    }
-
-    foreach option {-squeeze} {
-	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
-
-	$T item lastchild root $I
-    }
-
-    foreach option {-sticky} {
-	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
-
-	$T item lastchild root $I
-    }
+   }
 
     $T column configure 0 -width [expr {[$T column neededwidth 0] * 2}]
 
@@ -448,7 +406,14 @@ proc StyleEditor::MakePadEditor {parent} {
     pack $f.v1 -side left -padx {0 10} -pady 0
     pack $f.v2 -side left -padx {0 10} -pady 0
     pack $f.cb -side left -padx 0 -pady 0
-    
+
+    bind $f.v1 <KeyPress-Return> {
+	StyleEditor::Sync_pad 1
+    }
+    bind $f.v2 <KeyPress-Return> {
+	StyleEditor::Sync_pad 2
+    }
+
     return $f
 }
 
@@ -646,8 +611,7 @@ proc StyleEditor::Sync_pixels {} {
     return
 }
 
-
-proc StyleEditor::StyleToCanvas {} {
+proc StyleEditor::StyleToCanvas {{scroll 0}} {
 
     set Tdemo [Info Tdemo]
     set canvas [Info canvas]
@@ -655,14 +619,19 @@ proc StyleEditor::StyleToCanvas {} {
 
     $canvas delete all
 
-    if {$style eq ""} return
+    if {$style eq ""} {
+	$canvas configure -scrollregion {0 0 0 0}
+	return
+    }
 
-    # Create a new treectrl to copy the states/style/elements into, so I don't
-    # have to worry about column width or item visibility in the demo list
-    set T [treectrl $canvas.t]
-    $T configure -itemheight 0 -minitemheight 0 -showbuttons no -showlines no \
-	-font [$Tdemo cget -font]
-    $T column create
+    set T $canvas.t
+
+    $T configure -itemheight 0
+    $T column configure 0 -width {}
+    eval $T state undefine [$T state names]
+    eval $T style delete [$T style names]
+    eval $T element delete [$T element names]
+
 
     # Copy states
     foreach state [$Tdemo state names] {
@@ -773,7 +742,7 @@ if 0 {
     $T configure -itemheight [expr {($y2 - $y1) * 1.5}]
 
     scan [$T item bbox $I 0] "%d %d %d %d" x1 y1 x2 y2
-puts "$x1 $y1 $x2 $y2"
+
     $canvas create rectangle \
 	[expr {$dx + $x1 * $scale}] [expr {$dy + $y1 * $scale}] \
 	[expr {$dx + $x2 * $scale}] [expr {$dy + $y2 * $scale}] \
@@ -787,7 +756,14 @@ puts "$x1 $y1 $x2 $y2"
 	    -tags $E
     }
 
-    destroy $canvas.t
+    scan [$canvas bbox all] "%d %d %d %d" x1 y1 x2 y2
+    incr x2 10
+    incr y2 10
+    $canvas configure -scrollregion [list 0 0 $x2 $y2]
+    if {$scroll} {
+	$canvas xview moveto 0.0
+	$canvas yview moveto 0.0
+    }
 
     CanvasSelectElement
 
@@ -808,25 +784,3 @@ proc StyleEditor::CanvasSelectElement {} {
     return
 }
 
-if 0 {
-
-proc StyleEditor:: {} {
-    return
-}
-
-proc StyleEditor:: {} {
-    return
-}
-
-proc StyleEditor:: {} {
-    return
-}
-
-proc StyleEditor:: {} {
-    return
-}
-
-proc StyleEditor:: {} {
-    return
-}
-}
