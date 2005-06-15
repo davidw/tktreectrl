@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.35 2005/06/14 00:21:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.36 2005/06/15 03:35:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -365,6 +365,10 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	int numExpandWE = 0;
 	int numSqueezeX = 0;
 	int i, j, eLinkCount = 0;
+#define EXPANDHAX
+#ifdef EXPANDHAX
+	int normalWidth = 0;
+#endif
 
 	eLinks1 = masterStyle->elements;
 	eLinks2 = style->elements;
@@ -386,11 +390,18 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		else
 			layout->useWidth = eLink2->neededWidth;
 
-		/* No -union padding yet */
-		layout->uPadX[PAD_TOP_LEFT]     = 0;
-		layout->uPadX[PAD_BOTTOM_RIGHT] = 0;
-		layout->uPadY[PAD_TOP_LEFT]     = 0;
-		layout->uPadY[PAD_BOTTOM_RIGHT] = 0;
+		for (j = 0; j < 2; j++)
+		{
+			/* Pad values before expansion */
+			layout->ePadX[j] = eLink1->ePadX[j];
+			layout->ePadY[j] = eLink1->ePadY[j];
+			layout->iPadX[j] = eLink1->iPadX[j];
+			layout->iPadY[j] = eLink1->iPadY[j];
+
+			/* No -union padding yet */
+			layout->uPadX[j] = 0;
+			layout->uPadY[j] = 0;
+		}
 
 		/* Count all non-union, non-detach squeezeable elements */
 		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
@@ -543,16 +554,17 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 
-		for (j = 0; j < 2; j++)
-		{
-			layout->ePadX[j] = eLink1->ePadX[j];
-			layout->ePadY[j] = eLink1->ePadY[j];
-			layout->iPadX[j] = eLink1->iPadX[j];
-			layout->iPadY[j] = eLink1->iPadY[j];
-		}
-
 		if (!masterStyle->vertical)
 			x = layout->x + layout->eWidth;
+#ifdef EXPANDHAX
+		if (!masterStyle->vertical)
+		{
+			normalWidth = layout->x + layout->ePadX[PAD_TOP_LEFT] +
+				layout->iWidth +
+				MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]) -
+				drawArgs->indent;
+		}
+#endif
 
 		/* Count number that want to expand */
 		if (eLink1->flags & (ELF_EXPAND_WE | ELF_iEXPAND_X))
@@ -562,12 +574,19 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	/* Left-to-right layout. Expand some elements horizontally if we have
 	 * more space available horizontally than is needed by the Style. */
 	if (!masterStyle->vertical &&
+#ifdef EXPANDHAX
+		(drawArgs->width > normalWidth + drawArgs->indent) &&
+#else
 		(drawArgs->width > style->neededWidth + drawArgs->indent) &&
+#endif
 		(numExpandWE > 0))
 	{
 		int numExpand = 0;
+#ifdef EXPANDHAX
+		int spaceRemaining = drawArgs->width - (normalWidth + drawArgs->indent);
+#else
 		int spaceRemaining = drawArgs->width - (style->neededWidth + drawArgs->indent);
-
+#endif
 		for (i = 0; i < eLinkCount; i++)
 		{
 			struct Layout *layout = &layouts[i];
@@ -699,14 +718,6 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 
-		for (j = 0; j < 2; j++)
-		{
-			layout->ePadX[j] = eLink1->ePadX[j];
-			layout->ePadY[j] = eLink1->ePadY[j];
-			layout->iPadX[j] = eLink1->iPadX[j];
-			layout->iPadY[j] = eLink1->iPadY[j];
-		}
-
 		layout->temp = 0;
 		Style_DoExpandH(layout, drawArgs->width);
 	}
@@ -739,14 +750,6 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->useWidth = (e - w);
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
-
-		for (j = 0; j < 2; j++)
-		{
-			layout->ePadX[j] = eLink1->ePadX[j];
-			layout->ePadY[j] = eLink1->ePadY[j];
-			layout->iPadX[j] = eLink1->iPadX[j];
-			layout->iPadY[j] = eLink1->iPadY[j];
-		}
 	}
 
 	/* Expand -union elements if needed: horizontal */
@@ -851,6 +854,9 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	int numExpandNS = 0;
 	int numSqueezeY = 0;
 	int i, j, eLinkCount = 0;
+#ifdef EXPANDHAX
+	int normalHeight = 0;
+#endif
 
 	eLinks1 = masterStyle->elements;
 	eLinks2 = style->elements;
@@ -973,6 +979,15 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if (masterStyle->vertical)
 			y = layout->y + layout->eHeight;
 
+#ifdef EXPANDHAX
+		if (masterStyle->vertical)
+		{
+			normalHeight = layout->y + layout->ePadY[PAD_TOP_LEFT] +
+				layout->iHeight +
+				MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
+		}
+#endif
+
 		/* Count number that want to expand */
 		if (eLink1->flags & (ELF_EXPAND_NS | ELF_iEXPAND_Y))
 			numExpandNS++;
@@ -981,11 +996,19 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	/* Top-to-bottom layout. Expand some elements vertically if we have
 	 * more space available vertically than is needed by the Style. */
 	if (masterStyle->vertical &&
+#ifdef EXPANDHAX
+		(drawArgs->height > normalHeight) &&
+#else
 		(drawArgs->height > style->neededHeight) &&
+#endif
 		(numExpandNS > 0))
 	{
 		int numExpand = 0;
+#ifdef EXPANDHAX
+		int spaceRemaining = drawArgs->height - normalHeight;
+#else
 		int spaceRemaining = drawArgs->height - style->neededHeight;
+#endif
 
 		for (i = 0; i < eLinkCount; i++)
 		{
@@ -3371,6 +3394,137 @@ void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_)
 	Tcl_SetObjResult(tree->interp, listObj);
 }
 
+enum {
+	OPTION_DETACH, OPTION_EXPAND, OPTION_HEIGHT, OPTION_iEXPAND,
+	OPTION_INDENT, OPTION_iPADX, OPTION_iPADY, OPTION_MAXHEIGHT,
+	OPTION_MAXWIDTH, OPTION_MINHEIGHT, OPTION_MINWIDTH, OPTION_PADX,
+	OPTION_PADY, OPTION_SQUEEZE, OPTION_STICKY, OPTION_UNION,
+	OPTION_WIDTH
+};
+
+static Tcl_Obj *LayoutOptionToObj(TreeCtrl *tree, Style *style, ElementLink *eLink, int option)
+{
+	Tcl_Interp *interp = tree->interp;
+
+	switch (option)
+	{
+		case OPTION_PADX:
+			return TreeCtrl_NewPadAmountObj(eLink->ePadX);
+		case OPTION_PADY:
+			return TreeCtrl_NewPadAmountObj(eLink->ePadY);
+		case OPTION_iPADX:
+			return TreeCtrl_NewPadAmountObj(eLink->iPadX);
+		case OPTION_iPADY:
+			return TreeCtrl_NewPadAmountObj(eLink->iPadY);
+		case OPTION_DETACH:
+			return Tcl_NewStringObj((eLink->flags & ELF_DETACH) ? "yes" : "no", -1);
+		case OPTION_EXPAND:
+		{
+			char flags[4];
+			int n = 0;
+
+			if (eLink->flags & ELF_eEXPAND_W) flags[n++] = 'w';
+			if (eLink->flags & ELF_eEXPAND_N) flags[n++] = 'n';
+			if (eLink->flags & ELF_eEXPAND_E) flags[n++] = 'e';
+			if (eLink->flags & ELF_eEXPAND_S) flags[n++] = 's';
+			if (n)
+				return Tcl_NewStringObj(flags, n);
+			break;
+		}
+		case OPTION_iEXPAND:
+		{
+			char flags[6];
+			int n = 0;
+
+			if (eLink->flags & ELF_iEXPAND_X) flags[n++] = 'x';
+			if (eLink->flags & ELF_iEXPAND_Y) flags[n++] = 'y';
+			if (eLink->flags & ELF_iEXPAND_W) flags[n++] = 'w';
+			if (eLink->flags & ELF_iEXPAND_N) flags[n++] = 'n';
+			if (eLink->flags & ELF_iEXPAND_E) flags[n++] = 'e';
+			if (eLink->flags & ELF_iEXPAND_S) flags[n++] = 's';
+			if (n)
+				return Tcl_NewStringObj(flags, n);
+			break;
+		}
+		case OPTION_INDENT:
+			return Tcl_NewStringObj((eLink->flags & ELF_INDENT) ? "yes" : "no", -1);
+		case OPTION_SQUEEZE:
+		{
+			char flags[2];
+			int n = 0;
+
+			if (eLink->flags & ELF_SQUEEZE_X) flags[n++] = 'x';
+			if (eLink->flags & ELF_SQUEEZE_Y) flags[n++] = 'y';
+			if (n)
+				return Tcl_NewStringObj(flags, n);
+			break;
+		}
+		case OPTION_UNION:
+		{
+			int i;
+			Tcl_Obj *objPtr;
+
+			if (eLink->onionCount == 0)
+				break;
+			objPtr = Tcl_NewListObj(0, NULL);
+			for (i = 0; i < eLink->onionCount; i++)
+				Tcl_ListObjAppendElement(interp, objPtr,
+					Element_ToObj(style->elements[eLink->onion[i]].elem));
+			return objPtr;
+		}
+		case OPTION_MAXHEIGHT:
+		{
+			if (eLink->maxHeight >= 0)
+				return Tcl_NewIntObj(eLink->maxHeight);
+			break;
+		}
+		case OPTION_MINHEIGHT:
+		{
+			if (eLink->minHeight >= 0)
+				return Tcl_NewIntObj(eLink->minHeight);
+			break;
+		}
+		case OPTION_HEIGHT:
+		{
+			if (eLink->fixedHeight >= 0)
+				return Tcl_NewIntObj(eLink->fixedHeight);
+			break;
+		}
+		case OPTION_MAXWIDTH:
+		{
+			if (eLink->maxWidth >= 0)
+				return Tcl_NewIntObj(eLink->maxWidth);
+			break;
+		}
+		case OPTION_MINWIDTH:
+		{
+			if (eLink->minWidth >= 0)
+				return Tcl_NewIntObj(eLink->minWidth);
+			break;
+		}
+		case OPTION_WIDTH:
+		{
+			if (eLink->fixedWidth >= 0)
+				return Tcl_NewIntObj(eLink->fixedWidth);
+			break;
+		}
+		case OPTION_STICKY:
+		{
+			char flags[4];
+			int n = 0;
+
+			if (eLink->flags & ELF_STICKY_W) flags[n++] = 'w';
+			if (eLink->flags & ELF_STICKY_N) flags[n++] = 'n';
+			if (eLink->flags & ELF_STICKY_E) flags[n++] = 'e';
+			if (eLink->flags & ELF_STICKY_S) flags[n++] = 's';
+			if (n)
+				return Tcl_NewStringObj(flags, n);
+			break;
+		}
+	}
+	return NULL;
+}
+
 static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
@@ -3380,23 +3534,12 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	ElementLink saved, *eLink;
 	int i, index;
 	static CONST char *optionNames[] = {
-		"-padx", "-pady", "-ipadx", "-ipady", "-expand", "-union", "-detach",
-		"-iexpand", "-squeeze",
-		"-indent",
-		"-maxheight", "-minheight", "-height",
-		"-maxwidth", "-minwidth", "-width",
-		"-sticky",
+		"-detach", "-expand", "-height", "-iexpand",
+		"-indent", "-ipadx", "-ipady", "-maxheight", "-maxwidth", "-minheight",
+		"-minwidth", "-padx", "-pady", "-squeeze", "-sticky", "-union",
+		"-width",
 		(char *) NULL
 	};
-	enum {
-		OPTION_PADX, OPTION_PADY, OPTION_iPADX, OPTION_iPADY, OPTION_EXPAND,
-		OPTION_UNION, OPTION_DETACH, OPTION_iEXPAND, OPTION_SQUEEZE
-		, OPTION_INDENT
-		, OPTION_MAXHEIGHT, OPTION_MINHEIGHT, OPTION_HEIGHT,
-		  OPTION_MAXWIDTH, OPTION_MINWIDTH, OPTION_WIDTH
-		, OPTION_STICKY
-	};
-
 	if (objc < 5)
 	{
 		Tcl_WrongNumArgs(interp, 3, objv, "name element ?option? ?value? ?option value ...?");
@@ -3420,82 +3563,17 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	/* T style layout S E */
 	if (objc == 5)
 	{
-		char flags[6];
-		int n;
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
-		Tcl_Obj *unionObj = Tcl_NewListObj(0, NULL);
+		Tcl_Obj *objPtr;
 
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-padx", -1));
-		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->ePadX));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-pady", -1));
-		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->ePadY));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipadx", -1));
-		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->iPadX));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-ipady", -1));
-		Tcl_ListObjAppendElement(interp, listObj, TreeCtrl_NewPadAmountObj(eLink->iPadY));
-
-		n = 0;
-		if (eLink->flags & ELF_eEXPAND_W) flags[n++] = 'w';
-		if (eLink->flags & ELF_eEXPAND_N) flags[n++] = 'n';
-		if (eLink->flags & ELF_eEXPAND_E) flags[n++] = 'e';
-		if (eLink->flags & ELF_eEXPAND_S) flags[n++] = 's';
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-expand", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj(flags, n));
-
-		n = 0;
-		if (eLink->flags & ELF_iEXPAND_X) flags[n++] = 'x';
-		if (eLink->flags & ELF_iEXPAND_Y) flags[n++] = 'y';
-		if (eLink->flags & ELF_iEXPAND_W) flags[n++] = 'w';
-		if (eLink->flags & ELF_iEXPAND_N) flags[n++] = 'n';
-		if (eLink->flags & ELF_iEXPAND_E) flags[n++] = 'e';
-		if (eLink->flags & ELF_iEXPAND_S) flags[n++] = 's';
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-iexpand", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj(flags, n));
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-detach", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj((eLink->flags & ELF_DETACH) ? "yes" : "no", -1));
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-indent", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj((eLink->flags & ELF_INDENT) ? "yes" : "no", -1));
-
-		n = 0;
-		if (eLink->flags & ELF_SQUEEZE_X) flags[n++] = 'x';
-		if (eLink->flags & ELF_SQUEEZE_Y) flags[n++] = 'y';
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-squeeze", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj(flags, n));
-
-		for (i = 0; i < eLink->onionCount; i++)
-			Tcl_ListObjAppendElement(interp, unionObj,
-				Element_ToObj(style->elements[eLink->onion[i]].elem));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-union", -1));
-		Tcl_ListObjAppendElement(interp, listObj, unionObj);
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-maxheight", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->maxHeight >= 0) ? Tcl_NewIntObj(eLink->maxHeight) : Tcl_NewObj());
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-minheight", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->minHeight >= 0) ? Tcl_NewIntObj(eLink->minHeight) : Tcl_NewObj());
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-height", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->fixedHeight >= 0) ? Tcl_NewIntObj(eLink->fixedHeight) : Tcl_NewObj());
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-maxwidth", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->maxWidth >= 0) ? Tcl_NewIntObj(eLink->maxWidth) : Tcl_NewObj());
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-minwidth", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->minWidth >= 0) ? Tcl_NewIntObj(eLink->minWidth) : Tcl_NewObj());
-
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-width", -1));
-		Tcl_ListObjAppendElement(interp, listObj, (eLink->fixedWidth >= 0) ? Tcl_NewIntObj(eLink->fixedWidth) : Tcl_NewObj());
-
-		n = 0;
-		if (eLink->flags & ELF_STICKY_W) flags[n++] = 'w';
-		if (eLink->flags & ELF_STICKY_N) flags[n++] = 'n';
-		if (eLink->flags & ELF_STICKY_E) flags[n++] = 'e';
-		if (eLink->flags & ELF_STICKY_S) flags[n++] = 's';
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj("-sticky", -1));
-		Tcl_ListObjAppendElement(interp, listObj, Tcl_NewStringObj(flags, n));
-
+		for (i = 0; optionNames[i] != NULL; i++)
+		{
+			Tcl_ListObjAppendElement(interp, listObj,
+				Tcl_NewStringObj(optionNames[i], -1));
+			objPtr = LayoutOptionToObj(tree, style, eLink, i);
+			Tcl_ListObjAppendElement(interp, listObj,
+				objPtr ? objPtr : Tcl_NewObj());
+		}
 		Tcl_SetObjResult(interp, listObj);
 		return TCL_OK;
 	}
@@ -3503,144 +3581,12 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	/* T style layout S E option */
 	if (objc == 6)
 	{
-		Tcl_Obj *objPtr = NULL;
+		Tcl_Obj *objPtr;
 
 		if (Tcl_GetIndexFromObj(interp, objv[5], optionNames, "option",
 			0, &index) != TCL_OK)
 			return TCL_ERROR;
-		switch (index)
-		{
-			case OPTION_PADX:
-			{
-				objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadX);
-				break;
-			}
-			case OPTION_PADY:
-			{
-				objPtr = TreeCtrl_NewPadAmountObj(eLink->ePadY);
-				break;
-			}
-			case OPTION_iPADX:
-			{
-				objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadX);
-				break;
-			}
-			case OPTION_iPADY:
-			{
-				objPtr = TreeCtrl_NewPadAmountObj(eLink->iPadY);
-				break;
-			}
-			case OPTION_DETACH:
-			{
-				objPtr = Tcl_NewStringObj((eLink->flags & ELF_DETACH) ? "yes" : "no", -1);
-				break;
-			}
-			case OPTION_EXPAND:
-			{
-				char flags[4];
-				int n = 0;
-
-				if (eLink->flags & ELF_eEXPAND_W) flags[n++] = 'w';
-				if (eLink->flags & ELF_eEXPAND_N) flags[n++] = 'n';
-				if (eLink->flags & ELF_eEXPAND_E) flags[n++] = 'e';
-				if (eLink->flags & ELF_eEXPAND_S) flags[n++] = 's';
-				if (n)
-					objPtr = Tcl_NewStringObj(flags, n);
-				break;
-			}
-			case OPTION_iEXPAND:
-			{
-				char flags[6];
-				int n = 0;
-
-				if (eLink->flags & ELF_iEXPAND_X) flags[n++] = 'x';
-				if (eLink->flags & ELF_iEXPAND_Y) flags[n++] = 'y';
-				if (eLink->flags & ELF_iEXPAND_W) flags[n++] = 'w';
-				if (eLink->flags & ELF_iEXPAND_N) flags[n++] = 'n';
-				if (eLink->flags & ELF_iEXPAND_E) flags[n++] = 'e';
-				if (eLink->flags & ELF_iEXPAND_S) flags[n++] = 's';
-				if (n)
-					objPtr = Tcl_NewStringObj(flags, n);
-				break;
-			}
-			case OPTION_INDENT:
-			{
-				objPtr = Tcl_NewStringObj((eLink->flags & ELF_INDENT) ? "yes" : "no", -1);
-				break;
-			}
-			case OPTION_SQUEEZE:
-			{
-				char flags[2];
-				int n = 0;
-
-				if (eLink->flags & ELF_SQUEEZE_X) flags[n++] = 'x';
-				if (eLink->flags & ELF_SQUEEZE_Y) flags[n++] = 'y';
-				if (n)
-					objPtr = Tcl_NewStringObj(flags, n);
-				break;
-			}
-			case OPTION_UNION:
-			{
-				int i;
-
-				if (eLink->onionCount == 0)
-					break;
-				objPtr = Tcl_NewListObj(0, NULL);
-				for (i = 0; i < eLink->onionCount; i++)
-					Tcl_ListObjAppendElement(interp, objPtr,
-						Element_ToObj(style->elements[eLink->onion[i]].elem));
-				break;
-			}
-			case OPTION_MAXHEIGHT:
-			{
-				if (eLink->maxHeight >= 0)
-					objPtr = Tcl_NewIntObj(eLink->maxHeight);
-				break;
-			}
-			case OPTION_MINHEIGHT:
-			{
-				if (eLink->minHeight >= 0)
-					objPtr = Tcl_NewIntObj(eLink->minHeight);
-				break;
-			}
-			case OPTION_HEIGHT:
-			{
-				if (eLink->fixedHeight >= 0)
-					objPtr = Tcl_NewIntObj(eLink->fixedHeight);
-				break;
-			}
-			case OPTION_MAXWIDTH:
-			{
-				if (eLink->maxWidth >= 0)
-					objPtr = Tcl_NewIntObj(eLink->maxWidth);
-				break;
-			}
-			case OPTION_MINWIDTH:
-			{
-				if (eLink->minWidth >= 0)
-					objPtr = Tcl_NewIntObj(eLink->minWidth);
-				break;
-			}
-			case OPTION_WIDTH:
-			{
-				if (eLink->fixedWidth >= 0)
-					objPtr = Tcl_NewIntObj(eLink->fixedWidth);
-				break;
-			}
-			case OPTION_STICKY:
-			{
-				char flags[4];
-				int n = 0;
-
-				if (eLink->flags & ELF_STICKY_W) flags[n++] = 'w';
-				if (eLink->flags & ELF_STICKY_N) flags[n++] = 'n';
-				if (eLink->flags & ELF_STICKY_E) flags[n++] = 'e';
-				if (eLink->flags & ELF_STICKY_S) flags[n++] = 's';
-				if (n)
-					objPtr = Tcl_NewStringObj(flags, n);
-				break;
-			}
-		}
+		objPtr = LayoutOptionToObj(tree, style, eLink, index);
 		if (objPtr != NULL)
 			Tcl_SetObjResult(interp, objPtr);
 		return TCL_OK;
