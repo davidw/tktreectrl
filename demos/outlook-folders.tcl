@@ -92,7 +92,7 @@ proc DemoOutlookFolders {} {
 			1 draft Drafts no 0
 			1 folder "Messages to Dad" no 0
 			1 folder "Messages to Sis" no 0
-			1 folder "Messages to Me" yes 0
+			1 folder "Messages to Me" yes 5
 				2 folder "2001" no 0
 				2 folder "2000" no 0
 				2 folder "1999" no 0
