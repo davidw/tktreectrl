@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.27 2005/06/13 22:35:56 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.28 2005/06/15 21:50:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -908,7 +908,11 @@ static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
 {
 	LayoutInfo *layoutPtr;
 	LayoutChunk *chunkPtr;
+#ifdef TEXTLAYOUT_ALLOCHAX
+	int numChars;
+#else
 	int maxChunks, numChars;
+#endif
 	size_t s;
 
 	layoutPtr = *layoutPtrPtr;
