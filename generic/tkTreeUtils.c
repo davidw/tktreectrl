@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.28 2005/06/15 21:50:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.29 2005/06/18 01:52:38 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -616,8 +616,9 @@ int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
 void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
 	GC gc, int src_x, int src_y, int width, int height, int dest_x, int dest_y)
 {
+#ifdef WIN32
     TkpClipMask *clipPtr = (TkpClipMask *) gc->clip_mask;
-
+#endif
 	XSetClipOrigin(tree->display, gc, dest_x, dest_y);
 #ifdef WIN32
 	/*
@@ -790,6 +791,7 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 		((i << blue_shift) & ximage->blue_mask);
 	}
     } else {
+	red_shift = green_shift = blue_shift = 0;
 	for (i = 0; i < ncolors; i++)
 	    xcolors[i].pixel = i;
     }
@@ -1746,24 +1748,37 @@ int PerStateInfo_FromObj(
     pInfo->data = pData;
     for (i = 0; i < objc; i += 2) {
 	if ((*typePtr->fromObjProc)(tree, objv[i], pData) != TCL_OK) {
-	    PerStateInfo_Free(tree, typePtr, pInfo);
-	    return TCL_ERROR;
+	    goto freeIt;
 	}
 	pInfo->count++;
 	if (Tcl_ListObjGetElements(tree->interp, objv[i + 1], &objc2, &objv2) != TCL_OK) {
-	    PerStateInfo_Free(tree, typePtr, pInfo);
-	    return TCL_ERROR;
+	    goto freeIt;
 	}
 	pData->stateOff = pData->stateOn = 0; /* all states */
 	for (j = 0; j < objc2; j++) {
 	    if (proc(tree, objv2[j], &pData->stateOff, &pData->stateOn) != TCL_OK) {
-		PerStateInfo_Free(tree, typePtr, pInfo);
-		return TCL_ERROR;
+		goto freeIt;
 	    }
 	}
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
     return TCL_OK;
+
+freeIt:
+    pData = pInfo->data;
+    for (i = 0; i < pInfo->count; i++) {
+	(*typePtr->freeProc)(tree, pData);
+	pData = (PerStateData *) (((char *) pData) + typePtr->size);
+    }
+#ifdef ALLOC_HAX
+    AllocHax_CFree(tree->allocData, (char *) pInfo->data, typePtr->size,
+	objc / 2, 5);
+#else
+    wipefree((char *) pInfo->data, typePtr->size * (objc / 2));
+#endif
+    pInfo->data = NULL;
+    pInfo->count = 0;
+    return TCL_ERROR;
 }
 
 PerStateData *PerStateInfo_ForState(
