@@ -1318,7 +1318,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
 
-PACKAGE_PATCHLEVEL=2.0
+PACKAGE_PATCHLEVEL=2.0.1
 
 cat >>confdefs.h <<_ACEOF
 #define PACKAGE_PATCHLEVEL "$PACKAGE_PATCHLEVEL"
