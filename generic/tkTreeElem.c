@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.30 2005/06/14 00:21:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.31 2005/06/20 23:31:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1219,8 +1219,8 @@ static void DisplayProcCheckButton(ElementArgs *args)
 	else if (imgH > args->display.height)
 	    imgH = args->display.height;
 	Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable,
-		args->display.x /* + args->display.pad[LEFT] */ + dx,
-		args->display.y /* + args->display.pad[TOP] */ + dy);
+		args->display.x + dx,
+		args->display.y + dy);
     }
 }
 
@@ -2873,8 +2873,7 @@ static void DisplayProcText(ElementArgs *args)
 
     Tk_GetFontMetrics(tkfont, &fm);
 
-    pixelsForText = args->display.width /* - args->display.pad[LEFT] -
-					   args->display.pad[RIGHT] */;
+    pixelsForText = args->display.width;
     bytesThatFit = Ellipsis(tkfont, text, textLen, &pixelsForText, ellipsis, FALSE);
     width = pixelsForText, height = fm.linespace;
     /* Hack -- The actual size of the text may be slightly smaller than
