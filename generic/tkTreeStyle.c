@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.36 2005/06/15 03:35:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.37 2005/06/20 23:31:07 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -365,10 +365,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	int numExpandWE = 0;
 	int numSqueezeX = 0;
 	int i, j, eLinkCount = 0;
-#define EXPANDHAX
-#ifdef EXPANDHAX
-	int normalWidth = 0;
-#endif
+	int rightEdge = 0;
 
 	eLinks1 = masterStyle->elements;
 	eLinks2 = style->elements;
@@ -539,6 +536,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	for (i = 0; i < eLinkCount; i++)
 	{
 		struct Layout *layout = &layouts[i];
+		int right;
 
 		eLink1 = &eLinks1[i];
 		eLink2 = &eLinks2[i];
@@ -554,17 +552,17 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 
-		if (!masterStyle->vertical)
-			x = layout->x + layout->eWidth;
-#ifdef EXPANDHAX
-		if (!masterStyle->vertical)
+		right = layout->x + layout->ePadX[PAD_TOP_LEFT] +
+			layout->iWidth +
+			MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
+
+		if (masterStyle->vertical)
+			rightEdge = MAX(rightEdge, right);
+		else
 		{
-			normalWidth = layout->x + layout->ePadX[PAD_TOP_LEFT] +
-				layout->iWidth +
-				MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]) -
-				drawArgs->indent;
+			rightEdge = right;
+			x = layout->x + layout->eWidth;
 		}
-#endif
 
 		/* Count number that want to expand */
 		if (eLink1->flags & (ELF_EXPAND_WE | ELF_iEXPAND_X))
@@ -574,19 +572,13 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	/* Left-to-right layout. Expand some elements horizontally if we have
 	 * more space available horizontally than is needed by the Style. */
 	if (!masterStyle->vertical &&
-#ifdef EXPANDHAX
-		(drawArgs->width > normalWidth + drawArgs->indent) &&
-#else
-		(drawArgs->width > style->neededWidth + drawArgs->indent) &&
-#endif
+		(drawArgs->width > rightEdge) &&
 		(numExpandWE > 0))
 	{
 		int numExpand = 0;
-#ifdef EXPANDHAX
-		int spaceRemaining = drawArgs->width - (normalWidth + drawArgs->indent);
-#else
-		int spaceRemaining = drawArgs->width - (style->neededWidth + drawArgs->indent);
-#endif
+		int spaceRemaining = drawArgs->width - rightEdge;
+
+		/* Each element has 5 areas that can optionally expand. */
 		for (i = 0; i < eLinkCount; i++)
 		{
 			struct Layout *layout = &layouts[i];
@@ -640,6 +632,8 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 							(eLinks1[j].onion == NULL))
 							layouts[j].x += spaceUsed;
 
+					rightEdge += spaceUsed;
+
 					spaceRemaining -= spaceUsed;
 					if (!spaceRemaining)
 						break;
@@ -658,6 +652,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		for (i = 0; i < eLinkCount; i++)
 		{
 			struct Layout *layout = &layouts[i];
+			int right;
 
 			eLink1 = &eLinks1[i];
 
@@ -666,14 +661,20 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 
 			layout->temp = 0;
 			Style_DoExpandH(layout, drawArgs->width);
+
+			right = layout->x + layout->ePadX[PAD_TOP_LEFT] +
+				layout->iWidth +
+				MAX(layout->ePadX[PAD_BOTTOM_RIGHT], layout->uPadX[PAD_BOTTOM_RIGHT]);
+			rightEdge = MAX(rightEdge, right);
 		}
 	}
 
 	/* Now handle column justification */
-	/* If any elements expand horizontally, then all the extra space
-	 * has already been consumed. */
-	if ((drawArgs->width > style->neededWidth + drawArgs->indent) && !numExpandWE)
+	/* All the non-union, non-detach elements are moved as a group */
+	if (drawArgs->width > rightEdge)
 	{
+		int dx = drawArgs->width - rightEdge;
+
 		for (i = 0; i < eLinkCount; i++)
 		{
 			struct Layout *layout = &layouts[i];
@@ -688,10 +689,10 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 				case TK_JUSTIFY_LEFT:
 					break;
 				case TK_JUSTIFY_RIGHT:
-					layout->x += drawArgs->width - (style->neededWidth + drawArgs->indent);
+					layout->x += dx;
 					break;
 				case TK_JUSTIFY_CENTER:
-					layout->x += (drawArgs->width - (style->neededWidth + drawArgs->indent)) / 2;
+					layout->x += dx / 2;
 					break;
 			}
 		}
@@ -714,7 +715,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 
 		layout->x = abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
 		if (eLink1->flags & ELF_INDENT)
-			layout->x = MAX(layout->x, drawArgs->indent);
+			layout->x += drawArgs->indent;
 		layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
 		layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 
@@ -764,7 +765,7 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if ((eLink1->onion == NULL) || !(eLink1->flags & ELF_EXPAND_WE))
 			continue;
 
-		if (drawArgs->width - layout->eWidth <= 0)
+		if (drawArgs->width - (layout->eWidth + drawArgs->indent) <= 0)
 			continue;
 
 		/* External and internal expansion: W */
@@ -840,6 +841,22 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		}
 	}
 
+	/* Add internal padding to display area for -union elements */
+	for (i = 0; i < eLinkCount; i++)
+	{
+		struct Layout *layout = &layouts[i];
+
+		eLink1 = &eLinks1[i];
+
+		if (eLink1->onion == NULL)
+			continue;
+
+		iPadX = layout->iPadX;
+
+		layout->useWidth += iPadX[PAD_TOP_LEFT] + iPadX[PAD_BOTTOM_RIGHT];
+		iPadX[PAD_TOP_LEFT] = iPadX[PAD_BOTTOM_RIGHT] = 0;
+	}
+
 	return eLinkCount;
 }
 
@@ -854,9 +871,7 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	int numExpandNS = 0;
 	int numSqueezeY = 0;
 	int i, j, eLinkCount = 0;
-#ifdef EXPANDHAX
-	int normalHeight = 0;
-#endif
+	int bottomEdge = 0;
 
 	eLinks1 = masterStyle->elements;
 	eLinks2 = style->elements;
@@ -979,14 +994,12 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		if (masterStyle->vertical)
 			y = layout->y + layout->eHeight;
 
-#ifdef EXPANDHAX
 		if (masterStyle->vertical)
 		{
-			normalHeight = layout->y + layout->ePadY[PAD_TOP_LEFT] +
+			bottomEdge = layout->y + layout->ePadY[PAD_TOP_LEFT] +
 				layout->iHeight +
 				MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
 		}
-#endif
 
 		/* Count number that want to expand */
 		if (eLink1->flags & (ELF_EXPAND_NS | ELF_iEXPAND_Y))
@@ -996,19 +1009,11 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	/* Top-to-bottom layout. Expand some elements vertically if we have
 	 * more space available vertically than is needed by the Style. */
 	if (masterStyle->vertical &&
-#ifdef EXPANDHAX
-		(drawArgs->height > normalHeight) &&
-#else
-		(drawArgs->height > style->neededHeight) &&
-#endif
+		(drawArgs->height > bottomEdge) &&
 		(numExpandNS > 0))
 	{
 		int numExpand = 0;
-#ifdef EXPANDHAX
-		int spaceRemaining = drawArgs->height - normalHeight;
-#else
-		int spaceRemaining = drawArgs->height - style->neededHeight;
-#endif
+		int spaceRemaining = drawArgs->height - bottomEdge;
 
 		for (i = 0; i < eLinkCount; i++)
 		{
@@ -1229,6 +1234,22 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 				layout->eHeight += extraHeight;
 			}
 		}
+	}
+
+	/* Add internal padding to display area for -union elements */
+	for (i = 0; i < eLinkCount; i++)
+	{
+		struct Layout *layout = &layouts[i];
+
+		eLink1 = &eLinks1[i];
+
+		if (eLink1->onion == NULL)
+			continue;
+
+		iPadY = layout->iPadY;
+
+		layout->useHeight += iPadY[PAD_TOP_LEFT] + iPadY[PAD_BOTTOM_RIGHT];
+		iPadY[PAD_TOP_LEFT] = iPadY[PAD_BOTTOM_RIGHT] = 0;
 	}
 
 	return eLinkCount;
@@ -1822,24 +1843,11 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 			args.elem = layout->eLink->elem;
 			args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 			args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
-			if (layout->master->onion == NULL)
-			{
-				args.display.x += layout->iPadX[PAD_TOP_LEFT];
-				args.display.y += layout->iPadY[PAD_TOP_LEFT];
-				args.display.width = layout->useWidth;
-				args.display.height = layout->useHeight;
-			}
-			else
-			{
-				args.display.width = layout->iWidth;
-				args.display.height = layout->iHeight;
-			}
-			args.display.squeeze = layout->useWidth < layout->eLink->neededWidth;
+			args.display.x += layout->iPadX[PAD_TOP_LEFT];
+			args.display.y += layout->iPadY[PAD_TOP_LEFT];
+			args.display.width = layout->useWidth;
+			args.display.height = layout->useHeight;
 			args.display.sticky = layout->master->flags & ELF_STICKY;
-			args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
-			args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
-			args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
-			args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
 			if (debugDraw)
 			{
 				XColor *color[3];
@@ -1893,17 +1901,13 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 
 			if (layout->master->onion == NULL)
 				continue;
-			if (layout->iWidth > 0 && layout->iHeight > 0)
+			if (layout->useWidth > 0 && layout->useHeight > 0)
 			{
 				args.elem = layout->eLink->elem;
 				args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 				args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
 				args.display.width = layout->iWidth;
 				args.display.height = layout->iHeight;
-				args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
-				args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
-				args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
-				args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
 				{
 					XColor *color[3];
 					GC gc[3];
@@ -1964,24 +1968,11 @@ void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
 			args.elem = layout->eLink->elem;
 			args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 			args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
-			if (layout->master->onion == NULL)
-			{
-				args.display.x += layout->iPadX[PAD_TOP_LEFT];
-				args.display.y += layout->iPadY[PAD_TOP_LEFT];
-				args.display.width = layout->useWidth;
-				args.display.height = layout->useHeight;
-			}
-			else
-			{
-				args.display.width = layout->iWidth;
-				args.display.height = layout->iHeight;
-			}
-			args.display.squeeze = layout->useWidth < layout->eLink->neededWidth;
+			args.display.x += layout->iPadX[PAD_TOP_LEFT];
+			args.display.y += layout->iPadY[PAD_TOP_LEFT];
+			args.display.width = layout->useWidth;
+			args.display.height = layout->useHeight;
 			args.display.sticky = layout->master->flags & ELF_STICKY;
-			args.display.pad[LEFT] = layout->iPadX[PAD_TOP_LEFT];
-			args.display.pad[TOP] = layout->iPadY[PAD_TOP_LEFT];
-			args.display.pad[RIGHT] = layout->iPadX[PAD_BOTTOM_RIGHT];
-			args.display.pad[BOTTOM] = layout->iPadY[PAD_BOTTOM_RIGHT];
 			(*args.elem->typePtr->displayProc)(&args);
 		}
 	}
