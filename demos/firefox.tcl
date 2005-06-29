@@ -16,7 +16,7 @@ proc DemoFirefoxPrivacy {} {
 	# Create columns
 	#
 
-	# Create 2 new images for the buttona arrow
+	# Create 2 new images for the button sort arrow
 	if {[lsearch -exact [image names] arrow-up] == -1} {
 
 		set color #ACA899 ; # WinXP arrow color
@@ -59,7 +59,6 @@ proc DemoFirefoxPrivacy {} {
 
 	$T element create eWindow window
 	$T element create eText1 text -font [list "[$T cget -font] bold"]
-	$T element create eText2 text
 	$T element create eRectTop rect -outline black -fill #FFFFCC -draw {yes open no {}} -outlinewidth 1 -open s
 	$T element create eRectBottom rect -outline black -fill #FFFFCC -outlinewidth 1 -open n
 
