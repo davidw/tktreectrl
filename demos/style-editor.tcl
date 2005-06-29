@@ -117,6 +117,7 @@ proc StyleEditor::Init {Tdemo} {
     Info selectedStyle ""
     Info selectedElement ""
 
+    wm protocol $w WM_DELETE_WINDOW "ToggleStyleEditorWindow"
     wm geometry $w -0+0
 
     return
