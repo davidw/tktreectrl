@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.28 2005/06/08 01:24:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.29 2005/06/29 21:12:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1621,11 +1621,14 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
+
+		/* All display info is marked as invalid */
 		if (dInfo->flags & DINFO_INVALIDATE)
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-		/* Range height may have changed due to an item resizing */
-		else if (dItem->width != range->totalWidth)
+		/* The range may have changed size */
+		else if ((dItem->width != range->totalWidth) ||
+			(dItem->height != rItem->size))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* Items may have alternating background colors. */
@@ -1719,12 +1722,14 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
+
+		/* All display info is marked as invalid */
 		if (dInfo->flags & DINFO_INVALIDATE)
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-		/* If another item changed size, it may affect the
-		 * height/width of this range */
-		else if (dItem->height != range->totalHeight)
+		/* The range may have changed size */
+		else if ((dItem->width != rItem->size) ||
+			(dItem->height != range->totalHeight))
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* Items may have alternating background colors. */
