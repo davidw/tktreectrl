@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-set VERSION 2.0
+set VERSION 2.0.1
 
 package require Tk 8.4
 
