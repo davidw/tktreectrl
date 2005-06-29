@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.42 2005/06/08 01:17:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.43 2005/06/29 21:06:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2132,11 +2132,18 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    objc - 7, (Tcl_Obj **) objv + 7, &eMask);
 	    if (eMask != 0) {
 		if (eMask & CS_DISPLAY)
+#if 1
+		    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+#else
 		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 		if (eMask & CS_LAYOUT) {
 		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		    Tree_InvalidateColumnWidth(tree, columnIndex);
 		    TreeItem_InvalidateHeight(tree, (TreeItem) item);
+#if 1
+		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+#endif
 		    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 		}
 	    }
@@ -3983,6 +3990,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    Item *itemFirst, *itemLast;
 	    int index1, index2;
 
+	    /* The root is never deleted */
+	    if (tree->itemCount == 1)
+		break;
+
 	    /* Exclude root from the range */
 	    if (item == item2)
 		item2 = NULL;
@@ -4038,12 +4049,57 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		while (itemLast->lastChild != NULL)
 		    itemLast = itemLast->lastChild;
 	    }
+
 	    /* Generate <Selection> event for selected items being deleted */
 	    if (tree->selectCount)
 		ItemDeleteDeselect(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
+
+	    /* Generate <ItemDelete> event for items being deleted */
 	    ItemDeleteNotify(tree, (TreeItem) itemFirst, (TreeItem) itemLast);
 
 	    if (item == (Item *) ITEM_ALL || item2 == (Item *) ITEM_ALL) {
+#if 1
+		Tcl_HashEntry *hPtr;
+		Tcl_HashSearch search;
+		Item *staticItems[256], **items = staticItems;
+		int i, count;
+
+		/* Create a list of all items that are a child of the root
+		 * item or that have no parent. */
+		count = tree->itemCount - 1;
+		if (count > sizeof(staticItems) / sizeof(Item *))
+		    items = (Item **) ckalloc(sizeof(Item *) * count);
+		count = 0;
+
+		/* The old method of repeatedly calling Tcl_FirstHashEntry()
+		 * was *terribly* slow when there were large numbers of
+		 * detached items. For example:
+		 
+		    for {set i 0} {$i < 100000} {incr i} {
+			.f2.f1.t item create
+		    }
+		    .f2.f1.t item delete all
+
+		* I think the performance hit happened because the hash table
+		* had a very large number of empty buckets.
+		*/
+
+		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+		while (hPtr != NULL) {
+		    item = (Item *) Tcl_GetHashValue(hPtr);
+		    if (!ISROOT(item) &&
+			((item->parent == NULL) || ISROOT(item->parent)))
+			items[count++] = item;
+		    hPtr = Tcl_NextHashEntry(&search);
+		}
+
+		/* Recursively delete each item */
+		for (i = 0; i < count; i++)
+		    TreeItem_Delete(tree, (TreeItem) items[i]);
+
+		if (items != staticItems)
+		    ckfree((char *) items);
+#else
 		/* Do it this way so any detached items are deleted */
 		while (1) {
 		    Tcl_HashEntry *hPtr;
@@ -4058,6 +4114,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    }
 		    TreeItem_Delete(tree, (TreeItem) item);
 		}
+#endif
 	    } else if ((item2 != NULL) && (item != item2)) {
 		TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
 		TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
