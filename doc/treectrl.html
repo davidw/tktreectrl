@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.25 2005/06/22 23:23:14 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.26 2005/06/29 21:13:50 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.25 2005/06/22 23:23:14 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.26 2005/06/29 21:13:50 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -101,7 +101,7 @@ package require <b>treectrl 2.0</b><br>
 <tr valign=top ><td ><a href="#80"><i class='arg'>pathName</i> <b class='cmd'>item sort</b> <i class='arg'>itemDesc</i> ?<i class='arg'>option ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#81"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#82"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#84"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#85"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#86"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a></td></tr>
@@ -1607,7 +1607,7 @@ Just like <b class='cmd'>item state set</b> but manipulates user-defined states 
 item column, not the item as a whole.
 
 <br><br>
-<dt><a name="83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName ...</i>?</a><dd>
+<dt><a name="83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a><dd>
 
 If no <i class='arg'>stateName</i> is specified, returns a list containing
 the names of all (predefined and user defined) states
