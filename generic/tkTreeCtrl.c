@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.45 2005/06/13 21:34:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.46 2005/06/29 21:09:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2005,12 +2005,23 @@ doneADD:
 		count = tree->selectCount;
 		STATIC_ALLOC(items, TreeItem, count + 1);
 		count = 0;
+#if 1
+		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
+		while (hPtr != NULL) {
+		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
+		    items[count++] = item;
+		    hPtr = Tcl_NextHashEntry(&search);
+		}
+		for (index = 0; index < count; index++)
+		    Tree_RemoveFromSelection(tree, items[index]);
+#else
 		while (tree->selectCount) {
 		    hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
 		    Tree_RemoveFromSelection(tree, item);
 		    items[count++] = item;
 		}
+#endif
 		goto doneCLEAR;
 	    }
 	    if (objc == 4) {
