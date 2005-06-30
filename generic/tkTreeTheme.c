@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.8 2005/05/22 22:19:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.9 2005/06/30 19:47:08 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -91,6 +91,8 @@ typedef struct
     XPThemeProcs *procs;
     int registered;
     int themeEnabled;
+    SIZE buttonOpen;
+    SIZE buttonClosed;
 } XPThemeData;
 
 static XPThemeProcs *procs = NULL;
@@ -463,6 +465,14 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     if (!themeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
+    /* Use cached values */
+    size = open ? themeData->buttonOpen : themeData->buttonClosed;
+    if (size.cx > 1) {
+	*widthPtr = size.cx;
+	*heightPtr = size.cy;
+	return TCL_OK;
+    }
+
     iPartId  = TVP_GLYPH;
     iStateId = open ? GLPS_OPENED : GLPS_CLOSED;
 
@@ -497,12 +507,19 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
 
+    /* With RandomN of 10000, I eventually get hr=E_HANDLE, invalid handle */
     if (hr != S_OK)
 	return TCL_ERROR;
 
     /* Gave me 0,0 for a non-default theme, even though glyph existed */
     if ((size.cx <= 1) && (size.cy <= 1))
 	return TCL_ERROR;
+
+    /* Cache the values */
+    if (open)
+	themeData->buttonOpen = size;
+    else
+	themeData->buttonClosed = size;
 
     *widthPtr = size.cx;
     *heightPtr = size.cy;
@@ -522,6 +539,7 @@ WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 	case WM_THEMECHANGED:
 	    Tcl_MutexLock(&themeMutex);
 	    themeData->themeEnabled = procs->IsThemeActive();
+	    themeData->buttonClosed.cx = themeData->buttonOpen.cx = -1;
 	    Tcl_MutexUnlock(&themeMutex);
 	    Tree_TheWorldHasChanged(interp);
 	    break;
@@ -599,6 +617,7 @@ int TreeTheme_Init(Tcl_Interp *interp)
 	themeData->procs = LoadXPThemeProcs(&themeData->hlibrary);
 	themeData->registered = FALSE;
 	themeData->themeEnabled = FALSE;
+	themeData->buttonClosed.cx = themeData->buttonOpen.cx = -1;
 
 	procs = themeData->procs;
 
