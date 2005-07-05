@@ -88,7 +88,9 @@ proc StyleEditor::Init {Tdemo} {
 
     # Copy element config info from the selected item in the demo list
     $Tdemo notify bind StyleEditor <Selection> {
-	StyleEditor::StyleToCanvas
+	if {[winfo ismapped .styleEditor]} {
+	    StyleEditor::StyleToCanvas
+	}
     }
 
     Info canvas $canvas
