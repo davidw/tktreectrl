@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.37 2005/06/20 23:31:07 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.38 2005/07/05 02:17:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1818,6 +1818,8 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 	struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
 	int debugDraw = FALSE;
 
+	Style_CheckNeededSize(tree, style, drawArgs->state);
+
 	if (drawArgs->width < style->minWidth + drawArgs->indent)
 		drawArgs->width = style->minWidth + drawArgs->indent;
 	if (drawArgs->height < style->minHeight)
@@ -1980,25 +1982,24 @@ void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
 	STATIC_FREE(layouts, struct Layout, style->numElements);
 }
 
-void TreeStyle_HideWindows(TreeCtrl *tree, TreeStyle style_)
+void TreeStyle_OnScreen(TreeCtrl *tree, TreeStyle style_, int onScreen)
 {
 	Style *style = (Style *) style_;
 	ElementArgs args;
 	int i;
 
 	args.tree = tree;
+	args.screen.visible = onScreen;
 
 	for (i = 0; i < style->numElements; i++)
 	{
 		ElementLink *eLink = &style->elements[i];
 
-		if (!ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeWindow))
+		if (eLink->elem->typePtr->onScreenProc == NULL)
 			continue;
 
 		args.elem = eLink->elem;
-		args.display.width = -1;
-		args.display.height = -1;
-		(*args.elem->typePtr->displayProc)(&args);
+		(*args.elem->typePtr->onScreenProc)(&args);
 	}
 }
 
