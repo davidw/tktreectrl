@@ -303,21 +303,18 @@ proc RecordEvents {T} {
 	$T item style set $I 0 s3
 	$T item lastchild root $I
     }
-    set collapse 0
+    set open 1
     if {[llength $events] > 50} {
-	set collapse 1
+	set open 0
     }
     foreach list $events {
-	RecordEvent $T $list $collapse
+	RecordEvent $T $list $open
     }
     $T see "last visible"
     return
 }
-proc RecordEvent {T list collapse} {
-    set I [$T item create]
-    if {$collapse} {
-	$T item collapse $I
-    }
+proc RecordEvent {T list open} {
+    set I [$T item create -open $open]
     array set map $list
     $T item text $I C0 $map(P)
     $T item lastchild root $I
@@ -325,8 +322,7 @@ proc RecordEvent {T list collapse} {
 	if {[string first $char "TWPed"] != -1} continue
 	set I2 [$T item create]
 	$T item style set $I2 C0 s2
-	$T item element configure $I2 C0 e1 -text $char
-	$T item element configure $I2 C0 e2 -text $value
+	$T item element configure $I2 C0 e1 -text $char + e2 -text $value
 	$T item lastchild $I $I2
 	$T item configure $I -button yes
     }
@@ -466,6 +462,7 @@ proc ToggleStyleEditorWindow {} {
 	wm withdraw $w
     } else {
 	wm deiconify $w
+	StyleEditor::SetListOfStyles
     }
     return
 }
@@ -915,7 +912,11 @@ proc DemoSet {cmd file} {
     update
     DisplayStylesInList
     ShowSource $file
-    catch {StyleEditor::SetListOfStyles}
+    catch {
+	if {[winfo ismapped .styleEditor]} {
+	    StyleEditor::SetListOfStyles
+	}
+    }
 }
 
 .f1.t notify bind .f1.t <Selection> {
@@ -953,8 +954,7 @@ proc DisplayStylesInList {} {
 
     # One item for each element in the demo list
     foreach elem [lsort -dictionary [$T element names]] {
-	set item [$t item create -button yes]
-	$t item collapse $item
+	set item [$t item create -button yes -open no]
 	$t item style set $item C0 s1
 	$t item text $item C0 "Element $elem ([$T element type $elem])"
 
@@ -964,10 +964,10 @@ proc DisplayStylesInList {} {
 	    set item2 [$t item create]
 	    if {[string equal $default $current]} {
 		$t item style set $item2 C0 s1
-		$t item complex $item2 [list [list e1 -text [list $name $current]]]
+		$t item element configure $item2 C0 e1 -text [list $name $current]
 	    } else {
 		$t item style set $item2 C0 s2
-		$t item complex $item2 [list [list e1 -text $name] [list e2 -text [list $current]]]
+		$t item element configure $item2 C0 e1 -text $name + e2 -text [list $current]
 	    }
 	    $t item lastchild $item $item2
 	}
@@ -976,15 +976,13 @@ proc DisplayStylesInList {} {
 
     # One item for each style in the demo list
     foreach style [lsort -dictionary [$T style names]] {
-	set item [$t item create -button yes]
-	$t item collapse $item
+	set item [$t item create -button yes -open no]
 	$t item style set $item C0 s1
 	$t item text $item C0 "Style $style"
 
 	# One item for each element in the style
 	foreach elem [$T style elements $style] {
-	    set item2 [$t item create -button yes]
-	    $t item collapse $item2
+	    set item2 [$t item create -button yes -open no]
 	    $t item style set $item2 C0 s1
 	    $t item text $item2 C0 "Element $elem ([$T element type $elem])"
 
@@ -1034,8 +1032,7 @@ proc DisplayStylesInItem {item} {
 
     # One item for each item-column
     foreach style [$T item style set $item] column [$T column list] {
-	set item2 [$t item create]
-	$t item collapse $item2
+	set item2 [$t item create -open no]
 	$t item style set $item2 C0 s1
 	if {$style ne ""} {
 	    $t item element configure $item2 C0 e1 \
@@ -1050,8 +1047,7 @@ proc DisplayStylesInItem {item} {
 	    set button 0
 	    foreach elem [$T item style elements $item $column] {
 		set button 1
-		set item3 [$t item create -button yes]
-		$t item collapse $item3
+		set item3 [$t item create -button yes -open no]
 		$t item style set $item3 C0 s1
 		$t item element configure $item3 C0 e1 \
 		    -text "Element $elem ([$T element type $elem])"
@@ -1069,10 +1065,10 @@ proc DisplayStylesInItem {item} {
 
 		    if {$sameAsMaster} {
 			$t item style set $item4 C0 s1
-			$t item complex $item4 [list [list e1 -text "$name [list $current]"]]
+			$t item element configure $item4 C0 e1 -text "$name [list $current]"
 		    } else {
 			$t item style set $item4 C0 s2
-			$t item complex $item4 [list [list e1 -text $name] [list e2 -text [list $current]]]
+			$t item element configure $item4 C0 e1 -text $name + e2 -text [list $current]
 		    }
 		    $t item lastchild $item3 $item4
 		}
