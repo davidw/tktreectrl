@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.31 2005/06/20 23:31:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.32 2005/07/05 02:14:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -665,6 +665,7 @@ ElementType elemTypeBitmap = {
     StateProcBitmap,
     UndefProcBitmap,
     ActualProcBitmap,
+    NULL /* onScreenProc */
 };
 
 /*****/
@@ -1018,7 +1019,8 @@ ElementType elemTypeBorder = {
     WorldChangedProcBorder,
     StateProcBorder,
     UndefProcBorder,
-    ActualProcBorder
+    ActualProcBorder,
+    NULL /* onScreenProc */
 };
 
 /*****/
@@ -1349,6 +1351,7 @@ ElementType elemTypeCheckButton = {
     StateProcCheckButton,
     UndefProcCheckButton,
     ActualProcCheckButton,
+    NULL /* onScreenProc */
 };
 
 #endif
@@ -1637,6 +1640,7 @@ ElementType elemTypeImage = {
     StateProcImage,
     UndefProcImage,
     ActualProcImage,
+    NULL /* onScreenProc */
 };
 
 /*****/
@@ -2065,7 +2069,8 @@ ElementType elemTypeRect = {
     WorldChangedProcRect,
     StateProcRect,
     UndefProcRect,
-    ActualProcRect
+    ActualProcRect,
+    NULL /* onScreenProc */
 };
 
 /*****/
@@ -3177,7 +3182,8 @@ ElementType elemTypeText = {
     WorldChangedProcText,
     StateProcText,
     UndefProcText,
-    ActualProcText
+    ActualProcText,
+    NULL /* onScreenProc */
 };
 
 /*****/
@@ -3457,11 +3463,6 @@ static void DisplayProcWindow(ElementArgs *args)
     if (elemX->tkwin == NULL)
 	return;
 
-    /* Hack -- item is no longer on screen */
-    /* See TreeStyle_HideWindows */
-    if (width == -1 && height == -1)
-	goto hideIt;
-
     width = Tk_ReqWidth(elemX->tkwin);
     height = Tk_ReqHeight(elemX->tkwin);
     AdjustForSticky(args->display.sticky,
@@ -3558,7 +3559,7 @@ static int UndefProcWindow(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
-    ElementBitmap *elemX = (ElementBitmap *) elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
 
     return PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
 }
@@ -3566,6 +3567,21 @@ static int UndefProcWindow(ElementArgs *args)
 static int ActualProcWindow(ElementArgs *args)
 {
     return TCL_OK;
+}
+
+static void OnScreenProcWindow(ElementArgs *args)
+{
+    TreeCtrl *tree = args->tree;
+    Element *elem = args->elem;
+    ElementWindow *elemX = (ElementWindow *) elem;
+
+    if (!args->screen.visible) {
+	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
+	    Tk_UnmapWindow(elemX->tkwin); 
+	} else {
+	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	}
+    }
 }
 
 ElementType elemTypeWindow = {
@@ -3583,6 +3599,7 @@ ElementType elemTypeWindow = {
     StateProcWindow,
     UndefProcWindow,
     ActualProcWindow,
+    OnScreenProcWindow
 };
 
 /*****/
