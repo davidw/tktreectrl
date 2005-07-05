@@ -81,13 +81,13 @@ proc DemoExplorerDetails {} {
 	# Create elements
 	#
 
-	$T element create e1 image -image {small-folderSel {selected} small-folder {}}
-	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \
+	$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
+	$T element create txtName text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
 	$T element create txtType text -lines 1
 	$T element create txtSize text -datatype integer -format "%dKB" -lines 1
 	$T element create txtDate text -datatype time -format "%d/%m/%y %I:%M %p" -lines 1
-	$T element create e4 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -showfocus yes
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -showfocus yes
 
 	#
 	# Create styles using the elements
@@ -95,10 +95,10 @@ proc DemoExplorerDetails {} {
 
 	# column 0: image + text
 	set S [$T style create styName -orient horizontal]
-	$T style elements $S {e4 e1 e2}
-	$T style layout $S e1 -padx {2 0} -expand ns
-	$T style layout $S e2 -squeeze x -expand ns
-	$T style layout $S e4 -union [list e2] -ipadx 2 -iexpand ns
+	$T style elements $S {elemRectSel elemImg txtName}
+	$T style layout $S elemImg -padx {2 0} -expand ns
+	$T style layout $S txtName -squeeze x -expand ns
+	$T style layout $S elemRectSel -union [list txtName] -ipadx 2 -iexpand ns
 
 	# column 1: text
 	set S [$T style create stySize]
@@ -118,32 +118,30 @@ proc DemoExplorerDetails {} {
 	# List of lists: {column style element ...} specifying text elements
 	# the user can edit
 	TreeCtrl::SetEditable $T {
-		{name styName e2}
+		{name styName txtName}
 	}
 
 	# List of lists: {column style element ...} specifying elements
 	# the user can click on or select with the selection rectangle
 	TreeCtrl::SetSensitive $T {
-		{name styName e1 e2}
+		{name styName elemImg txtName}
 	}
 
 	# List of lists: {column style element ...} specifying elements
 	# added to the drag image when dragging selected items
 	TreeCtrl::SetDragImage $T {
-		{name styName e1 e2}
+		{name styName elemImg txtName}
 	}
 
 	# During editing, hide the text and selection-rectangle elements.
 	$T notify bind $T <Edit-begin> {
-		%T item element configure %I %C e2 -draw no
-		%T item element configure %I %C e4 -draw no
+		%T item element configure %I %C txtName -draw no + elemRectSel -draw no
 	}
 	$T notify bind $T <Edit-accept> {
 		%T item element configure %I %C %E -text %t
 	}
 	$T notify bind $T <Edit-end> {
-		%T item element configure %I %C e2 -draw yes
-		%T item element configure %I %C e4 -draw yes
+		%T item element configure %I %C txtName -draw yes + elemRectSel -draw yes
 	}
 
 	#
@@ -153,11 +151,10 @@ proc DemoExplorerDetails {} {
 	set scriptDir {
 		set item [$T item create]
 		$T item style set $item name styName type styType modified styDate
-		$T item complex $item \
-			[list [list e2 -text [file tail $file]]] \
-			[list] \
-			[list [list txtType -text "Folder"]] \
-			[list [list txtDate -data [file mtime $file]]]
+		$T item element configure $item \
+			name txtName -text [file tail $file] , \
+			type txtType -text "Folder" , \
+			modified txtDate -data [file mtime $file]
 		$T item lastchild root $item
 	}
 
@@ -175,11 +172,11 @@ proc DemoExplorerDetails {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item complex $item \
-			[list [list e1 -image [list ${img}Sel {selected} $img {}]] [list e2 -text [file tail $file]]] \
-			[list [list txtSize -data [expr {[file size $file] / 1024 + 1}]]] \
-			[list [list txtType -text $type]] \
-			[list [list txtDate -data [file mtime $file]]]
+		$T item element configure $item \
+			name elemImg -image [list ${img}Sel {selected} $img {}] + txtName -text [file tail $file] , \
+			size txtSize -data [expr {[file size $file] / 1024 + 1}] , \
+			type txtType -text $type , \
+			modified txtDate -data [file mtime $file]
 		$T item lastchild root $item
 	}
 
@@ -349,8 +346,9 @@ proc DemoExplorerLargeIcons {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item complex $item \
-			[list [list elemImg -image [list ${img}Sel {selected} $img {}]] [list elemTxt -text [file tail $file]]]
+		$T item element configure $item C0 \
+			elemImg -image [list ${img}Sel {selected} $img {}] + \
+			elemTxt -text [file tail $file]
 		$T item lastchild root $item
 	}
 
@@ -446,15 +444,13 @@ proc DemoExplorerList {} {
 
 	# During editing, hide the text and selection-rectangle elements.
 	$T notify bind $T <Edit-begin> {
-		%T item element configure %I %C elemSel -draw no
-		%T item element configure %I %C elemTxt -draw no
+		%T item element configure %I %C elemSel -draw no + elemTxt -draw no
 	}
 	$T notify bind $T <Edit-accept> {
 		%T item element configure %I %C %E -text %t
 	}
 	$T notify bind $T <Edit-end> {
-		%T item element configure %I %C elemSel -draw yes
-		%T item element configure %I %C elemTxt -draw yes
+		%T item element configure %I %C elemSel -draw yes + elemTxt -draw yes
 	}
 
 	#
@@ -482,10 +478,9 @@ proc DemoExplorerList {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item complex $item \
-			[list \
-				[list elemImg -image [list ${img}Sel {selected} $img {}]] \
-				[list elemTxt -text [file tail $file]]]
+		$T item element configure $item C0 \
+			elemImg -image [list ${img}Sel {selected} $img {}] + \
+			elemTxt -text [file tail $file]
 		$T item lastchild root $item
 	}
 

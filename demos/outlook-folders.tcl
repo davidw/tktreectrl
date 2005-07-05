@@ -30,14 +30,14 @@ proc DemoOutlookFolders {} {
 	# Create elements
 	#
 
-	$T element create e1 image
-	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}] \
+	$T element create elemImgAny image
+	$T element create elemTxtRead text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
-	$T element create e3 text -fill [list $::SystemHighlightText {selected focus}] \
+	$T element create elemTxtUnread text -fill [list $::SystemHighlightText {selected focus}] \
 		-font [list "[$T cget -font] bold"] -lines 1
-	$T element create e4 text -fill blue
-	$T element create e5 image -image outlook-folder
-	$T element create e6 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
+	$T element create elemTxtCount text -fill blue
+	$T element create elemImgFolder image -image outlook-folder
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
 		-showfocus yes
 
 	#
@@ -45,41 +45,43 @@ proc DemoOutlookFolders {} {
 	#
 
 	# image + text
-	set S [$T style create s1]
-	$T style elements $S {e6 e1 e2}
-	$T style layout $S e1 -expand ns
-	$T style layout $S e2 -padx {4 0} -expand ns -squeeze x
-	$T style layout $S e6 -union [list e2] -iexpand ns -ipadx 2
+	set S [$T style create styAnyRead]
+	$T style elements $S {elemRectSel elemImgAny elemTxtRead}
+	$T style layout $S elemImgAny -expand ns
+	$T style layout $S elemTxtRead -padx {4 0} -expand ns -squeeze x
+	$T style layout $S elemRectSel -union [list elemTxtRead] -iexpand ns -ipadx 2
 
 	# image + text + text
-	set S [$T style create s2]
-	$T style elements $S {e6 e1 e3 e4}
-	$T style layout $S e1 -expand ns
-	$T style layout $S e3 -padx 4 -expand ns -squeeze x
-	$T style layout $S e4 -expand ns
-	$T style layout $S e6 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styAnyUnread]
+	$T style elements $S {elemRectSel elemImgAny elemTxtUnread elemTxtCount}
+	$T style layout $S elemImgAny -expand ns
+	$T style layout $S elemTxtUnread -padx 4 -expand ns -squeeze x
+	$T style layout $S elemTxtCount -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtUnread] -iexpand ns -ipadx 2
 
 	# folder + text
-	set S [$T style create s3]
-	$T style elements $S {e6 e5 e2}
-	$T style layout $S e5 -expand ns
-	$T style layout $S e2 -padx {4 0} -expand ns -squeeze x
-	$T style layout $S e6 -union [list e2] -iexpand ns -ipadx 2
+	set S [$T style create styFolderRead]
+	$T style elements $S {elemRectSel elemImgFolder elemTxtRead}
+	$T style layout $S elemImgFolder -expand ns
+	$T style layout $S elemTxtRead -padx {4 0} -expand ns -squeeze x
+	$T style layout $S elemRectSel -union [list elemTxtRead] -iexpand ns -ipadx 2
 
 	# folder + text + text
-	set S [$T style create s4]
-	$T style elements $S {e6 e5 e3 e4}
-	$T style layout $S e5 -expand ns
-	$T style layout $S e3 -padx 4 -expand ns -squeeze x
-	$T style layout $S e4 -expand ns
-	$T style layout $S e6 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styFolderUnread]
+	$T style elements $S {elemRectSel elemImgFolder elemTxtUnread elemTxtCount}
+	$T style layout $S elemImgFolder -expand ns
+	$T style layout $S elemTxtUnread -padx 4 -expand ns -squeeze x
+	$T style layout $S elemTxtCount -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtUnread] -iexpand ns -ipadx 2
 
 	#
 	# Create items and assign styles
 	#
 
-	$T item style set root C0 s1
-	$T item complex root [list [list e1 -image outlook-main] [list e2 -text "Outlook Express"]]
+	$T item style set root C0 styAnyRead
+	$T item element configure root C0 \
+		elemImgAny -image outlook-main + \
+		elemTxtRead -text "Outlook Express"
 
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
@@ -102,19 +104,26 @@ proc DemoOutlookFolders {} {
 		set item [$T item create -button $button]
 		if {[string equal $img folder]} {
 			if {$unread} {
-				$T item style set $item C0 s4
-				$T item complex $item [list [list e3 -text $text] [list e4 -text "($unread)"]]
+				$T item style set $item C0 styFolderUnread
+				$T item element configure $item C0 \
+					elemTxtUnread -text $text + \
+					elemTxtCount -text "($unread)"
 			} else {
-				$T item style set $item C0 s3
-				$T item complex $item [list [list e2 -text $text]]
+				$T item style set $item C0 styFolderRead
+				$T item element configure $item C0 elemTxtRead -text $text
 			}
 		} else {
 			if {$unread} {
-				$T item style set $item C0 s2
-				$T item complex $item [list [list e1 -image outlook-$img] [list e3 -text $text] [list e4 -text "($unread)"]]
+				$T item style set $item C0 styAnyUnread
+				$T item element configure $item C0 \
+					elemImgAny -image outlook-$img + \
+					elemTxtUnread -text $text + \
+					elemTxtCount -text "($unread)"
 			} else {
-				$T item style set $item C0 s1
-				$T item complex $item [list [list e1 -image outlook-$img] [list e2 -text $text]]
+				$T item style set $item C0 styAnyRead
+				$T item element configure $item C0 \
+					elemImgAny -image outlook-$img + \
+					elemTxtRead -text $text
 			}
 		}
 		$T item lastchild [lindex $parentList $depth] $item
