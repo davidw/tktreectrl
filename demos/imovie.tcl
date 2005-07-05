@@ -80,9 +80,10 @@ proc DemoIMovie {} {
 		} {
 			set I [$T item create]
 #			$T item style set $I C0 $S
-			$T item element configure $I C0 elemTime -text $time
-			$T item element configure $I C0 elemImg -image $image
-			$T item element configure $I C0 elemName -text $name
+			$T item element configure $I C0 \
+				elemTime -text $time + \
+				elemImg -image $image + \
+				elemName -text $name
 			$T item lastchild root $I
 		}
 	}

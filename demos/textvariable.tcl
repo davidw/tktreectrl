@@ -52,14 +52,15 @@ proc DemoTextvariable {} {
 	$T item lastchild root $I
 
 	foreach i {0 1} color {gray75 "light blue"} {
-	set I [$T item create]
-	$T item style set $I C0 s2
-	$T item element configure $I C0 eRect -fill [list $color]
-	$T item element configure $I C0 eText2 -textvariable tvar$I
-	set e [entry $T.e$I -width 48 -textvariable tvar$I]
-	$T item element configure $I C0 eWindow -window $e
-	$T item lastchild root $I
-	set ::tvar$I "This is item $I"
+		set I [$T item create]
+		$T item style set $I C0 s2
+		set e [entry $T.e$I -width 48 -textvariable tvar$I]
+		$T item element configure $I C0 \
+			eRect -fill [list $color] + \
+			eText2 -textvariable tvar$I + \
+			eWindow -window $e
+		$T item lastchild root $I
+		set ::tvar$I "This is item $I"
 	}
 
 	return
