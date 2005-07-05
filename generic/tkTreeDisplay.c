@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.29 2005/06/29 21:12:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.30 2005/07/05 02:24:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -166,16 +166,30 @@ Range_Redo(TreeCtrl *tree)
 	if (tree->columnCountVis > 1)
 	    fixedWidth = Tree_WidthOfColumns(tree);
 
-	/* Single item column, fixed width for all ranges */
+	/* Single item column, fixed width for all items */
 	else if (TreeColumn_FixedWidth(tree->columnVis) != -1)
 	    fixedWidth = TreeColumn_FixedWidth(tree->columns);
+
+	/* Single item column, fixed width for all items */
+	else if (tree->itemWidth > 0)
+	    fixedWidth = tree->itemWidth;
+
+	/* Single item column, every item is as wide as widest */
+	else if (tree->itemWidthEqual ||
+		/* This option is deprecated */
+		TreeColumn_WidthHack(tree->columnVis))
+	    fixedWidth = TreeColumn_UseWidth(tree->columnVis);
 
 	else {
 	    /* Single item column, possible minimum width */
 	    minWidth = TreeColumn_MinWidth(tree->columns);
 
 	    /* Single item column, each item is a multiple of this width */
-	    stepWidth = TreeColumn_StepWidth(tree->columnVis);
+	    if (tree->itemWidMult > 0)
+		stepWidth = tree->itemWidMult;
+	    else
+		/* This option is deprecated */
+		stepWidth = TreeColumn_StepWidth(tree->columnVis);
 	}
     }
 
@@ -289,7 +303,7 @@ Range_TotalWidth(TreeCtrl *tree, Range *range)
     TreeItem item;
     TreeItemColumn itemColumn;
     RItem *rItem;
-    int columnWidth, fixedWidth = -1, minWidth = -1, stepWidth = -1;
+    int columnWidth, fixedWidth = -1, minWidth = -1, stepWidth = -1, equal;
     int itemWidth;
 
     if (range->totalWidth >= 0)
@@ -309,23 +323,35 @@ Range_TotalWidth(TreeCtrl *tree, Range *range)
 	if (dInfo->rangeFirst == dInfo->rangeLast)
 	    return range->totalWidth = TreeColumn_UseWidth(tree->columnVis);
 
-	/* Possible minimum column width */
-	minWidth = TreeColumn_MinWidth(tree->columnVis);
+	/* Single item column, fixed width for all ranges */
+	if (tree->itemWidth > 0)
+	    return range->totalWidth = tree->itemWidth;
 
 	/* Single item column, each item is a multiple of this width */
-	stepWidth = TreeColumn_StepWidth(tree->columnVis);
+	if (tree->itemWidMult > 0)
+	    stepWidth = tree->itemWidMult;
+	else
+	    /* This option is deprecated */
+	    stepWidth = TreeColumn_StepWidth(tree->columnVis);
 
-	/* Single item column, want all ranges same width */
-	if (TreeColumn_WidthHack(tree->columnVis)) {
+	/* Single item column, want all items same width */
+	if (tree->itemWidthEqual)
+	    equal = 1;
+	else
+	    /* This option is deprecated */
+	    equal = TreeColumn_WidthHack(tree->columnVis);
+
+	if (equal) {
 	    range->totalWidth = TreeColumn_UseWidth(tree->columnVis);
 	    if ((stepWidth != -1) && (range->totalWidth % stepWidth))
 		range->totalWidth += stepWidth - range->totalWidth % stepWidth;
 	    return range->totalWidth;
 	}
 
+	/* Possible minimum column width */
+	minWidth = TreeColumn_MinWidth(tree->columnVis);
+
 	range->totalWidth = MAX(0, minWidth);
-	if ((stepWidth != -1) && (range->totalWidth % stepWidth))
-	    range->totalWidth += stepWidth - range->totalWidth % stepWidth;
 
 	/* Max needed width of items in this range */
 	rItem = range->first;
@@ -338,8 +364,6 @@ Range_TotalWidth(TreeCtrl *tree, Range *range)
 			itemColumn);
 		if (tree->columnTreeVis)
 		    columnWidth += TreeItem_Indent(tree, item);
-		if ((stepWidth != -1) && (columnWidth % stepWidth))
-		    columnWidth += stepWidth - columnWidth % stepWidth;
 		if (columnWidth > range->totalWidth)
 		    range->totalWidth = columnWidth;
 	    }
@@ -347,16 +371,34 @@ Range_TotalWidth(TreeCtrl *tree, Range *range)
 		break;
 	    rItem++;
 	}
+	if ((stepWidth != -1) && (range->totalWidth % stepWidth))
+	    range->totalWidth += stepWidth - range->totalWidth % stepWidth;
 	return range->totalWidth;
     }
     else {
-	/* More than one item column, so all items/ranges have the same width */
+	/* More than one item column, so all items have the same width */
 	if (tree->columnCountVis > 1)
 	    fixedWidth = Tree_WidthOfColumns(tree);
 
-	/* Single item column, fixed width for all items/ranges */
+	/* Single item column, fixed width for all items */
 	else if (TreeColumn_FixedWidth(tree->columnVis) != -1)
 	    fixedWidth = TreeColumn_FixedWidth(tree->columnVis);
+
+	/* Single item column, fixed width for all items */
+	else if (tree->itemWidth > 0)
+	    fixedWidth = tree->itemWidth;
+
+	/* Single item column, want all items same width */
+	else if (tree->itemWidthEqual) {
+	    fixedWidth = TreeColumn_UseWidth(tree->columnVis);
+
+	    /* Single item column, each item is a multiple of this width */
+	    if (tree->itemWidMult > 0)
+		stepWidth = tree->itemWidMult;
+	    else
+		/* This option is deprecated */
+		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+	}
 
 	else {
 	    /* Single item column, possible minimum width */
@@ -1622,8 +1664,12 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
 
+		/* This item is already marked for total redraw */
+		if (dItem->flags & DITEM_ALL_DIRTY)
+		    ; /* nothing */
+
 		/* All display info is marked as invalid */
-		if (dInfo->flags & DINFO_INVALIDATE)
+		else if (dInfo->flags & DINFO_INVALIDATE)
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* The range may have changed size */
@@ -1723,8 +1769,12 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
 
+		/* This item is already marked for total redraw */
+		if (dItem->flags & DITEM_ALL_DIRTY)
+		    ; /* nothing */
+
 		/* All display info is marked as invalid */
-		if (dInfo->flags & DINFO_INVALIDATE)
+		else if (dInfo->flags & DINFO_INVALIDATE)
 		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* The range may have changed size */
@@ -2908,6 +2958,113 @@ Tree_Display(ClientData clientData)
 	dInfo->wsRgn = wsRgnNew;
     }
 
+    /*
+     * When an item goes from visible to hidden, "window" elements in the
+     * item must be hidden. An item may become hidden because of scrolling,
+     * or because an ancestor was collapsed, or because the -visible option
+     * of the item changed.
+     */
+    {
+	Tcl_HashEntry *hPtr, *h2Ptr;
+	Tcl_HashSearch search;
+	Tcl_HashTable table, tableV, tableH;
+	int id, isNew;
+	int numV = 0, numH = 0;
+	int abort = 0;
+
+	Tcl_InitHashTable(&table, TCL_ONE_WORD_KEYS);
+	Tcl_InitHashTable(&tableV, TCL_ONE_WORD_KEYS);
+	Tcl_InitHashTable(&tableH, TCL_ONE_WORD_KEYS);
+
+	/* This is needed for updating window positions */
+	tree->drawableXOrigin = tree->xOrigin;
+	tree->drawableYOrigin = tree->yOrigin;
+
+	for (dItem = dInfo->dItem;
+	    dItem != NULL;
+	    dItem = dItem->next) {
+
+	    id = TreeItem_GetID(tree, dItem->item);
+
+	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
+	    if (hPtr == NULL) {
+		/* This item is now visible, wasn't before */
+		hPtr = Tcl_CreateHashEntry(&tableV, (char *) id, &isNew);
+		TreeItem_OnScreen(tree, dItem->item, TRUE);
+		numV++;
+	    } else {
+		/*
+		 * This item was visible and still is. Handle scrolling.
+		 */
+		TreeItem_UpdateWindowPositions(tree, dItem->item,
+		    dItem->x, dItem->y, dItem->width, dItem->height);
+	    }
+	    hPtr = Tcl_CreateHashEntry(&table, (char *) id, &isNew);
+	}
+
+	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
+	    h2Ptr = Tcl_FindHashEntry(&table, (char *) id);
+	    if (h2Ptr == NULL) {
+		/* This item was visible but isn't now */
+		h2Ptr = Tcl_CreateHashEntry(&tableH, (char *) id, &isNew);
+		numH++;
+		h2Ptr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
+		if (h2Ptr != NULL) {
+		    TreeItem item = (TreeItem) Tcl_GetHashValue(h2Ptr);
+		    TreeItem_OnScreen(tree, item, FALSE);
+		}
+	    }
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/* Remove newly-hidden items from itemVisHash */
+	hPtr = Tcl_FirstHashEntry(&tableH, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&tableH, hPtr);
+	    h2Ptr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
+	    Tcl_DeleteHashEntry(h2Ptr);
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/* Add newly-visible items to itemVisHash */
+	hPtr = Tcl_FirstHashEntry(&tableV, &search);
+	while (hPtr != NULL) {
+	    id = (int) Tcl_GetHashKey(&tableV, hPtr);
+	    h2Ptr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) id, &isNew);
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/*
+	 * Generate an <ItemVisibility> event here. This can be used to set
+	 * an item's styles when the item is about to be displayed, and to
+	 * clear an item's styles when the item is no longer displayed.
+	 */
+	if (numV || numH) {
+	    /*
+	     * All sorts of nasty stuff could happen now, such as the
+	     * treectrl being destroyed, or the interpreter being deleted.
+	     * We prevent items being deleted.
+	     */
+	    Tcl_Preserve((ClientData) tree);
+	    tree->displayInProgress = 1;
+	    TreeNotify_ItemVisibility(tree, &tableV, &tableH);
+	    tree->displayInProgress = 0;
+	    if (tree->deleted)
+		abort = 1;
+	    Tcl_Release((ClientData) tree);
+	}
+
+	Tcl_DeleteHashTable(&table);
+	Tcl_DeleteHashTable(&tableV);
+	Tcl_DeleteHashTable(&tableH);
+
+	/* The window was deleted */
+	if (abort)
+	    return;
+    }
+
     /* See if there are any dirty items */
     count = 0;
     for (dItem = dInfo->dItem;
@@ -3052,91 +3209,6 @@ Tree_Display(ClientData clientData)
 		Tk_Height(tkwin) - tree->highlightWidth * 2, tree->borderWidth,
 		tree->relief);
 	dInfo->flags &= ~DINFO_DRAW_BORDER;
-    }
-
-    /*
-     * When an item goes from visible to hidden, "window" elements in the
-     * item must be hidden. An item may become hidden because of scrolling,
-     * or because an ancestor was collapsed, or because the -visible option
-     * of the item changed.
-     */
-    {
-	Tcl_HashEntry *hPtr, *h2Ptr;
-	Tcl_HashSearch search;
-	Tcl_HashTable table, tableV, tableH;
-	int id, isNew;
-
-	Tcl_InitHashTable(&table, TCL_ONE_WORD_KEYS);
-	Tcl_InitHashTable(&tableV, TCL_ONE_WORD_KEYS);
-	Tcl_InitHashTable(&tableH, TCL_ONE_WORD_KEYS);
-
-	tree->drawableXOrigin = tree->xOrigin;
-	tree->drawableYOrigin = tree->yOrigin;
-
-	for (dItem = dInfo->dItem;
-	    dItem != NULL;
-	    dItem = dItem->next) {
-
-	    id = TreeItem_GetID(tree, dItem->item);
-
-	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
-	    if (hPtr == NULL) {
-		/* This item is now visible, wasn't before */
-		hPtr = Tcl_CreateHashEntry(&tableV, (char *) id, &isNew);
-	    } else {
-		/*
-		 * This item was visible and still is. Handle scrolling.
-		 */
-		TreeItem_UpdateWindowPositions(tree, dItem->item,
-		    dItem->x, dItem->y, dItem->width, dItem->height);
-	    }
-	    hPtr = Tcl_CreateHashEntry(&table, (char *) id, &isNew);
-	}
-
-	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
-	    h2Ptr = Tcl_FindHashEntry(&table, (char *) id);
-	    if (h2Ptr == NULL) {
-		/* This item was visible but isn't now */
-		h2Ptr = Tcl_CreateHashEntry(&tableH, (char *) id, &isNew);
-		/* Item could have been deleted */
-		h2Ptr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
-		if (h2Ptr != NULL) {
-		    TreeItem item = (TreeItem) Tcl_GetHashValue(h2Ptr);
-		    TreeItem_HideWindows(tree, item);
-		}
-	    }
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/* Remove newly-hidden items from itemVisHash */
-	hPtr = Tcl_FirstHashEntry(&tableH, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&tableH, hPtr);
-	    h2Ptr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
-	    Tcl_DeleteHashEntry(h2Ptr);
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/* Add newly-visible items to itemVisHash */
-	hPtr = Tcl_FirstHashEntry(&tableV, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&tableV, hPtr);
-	    h2Ptr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) id, &isNew);
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/*
-	 * Could generate an event here:
-	 * <ItemVisibility>
-	 * %v - newly-visible items
-	 * %h - no-longer visible items
-	 */
-
-	Tcl_DeleteHashTable(&table);
-	Tcl_DeleteHashTable(&tableV);
-	Tcl_DeleteHashTable(&tableH);
     }
 }
 
@@ -3573,6 +3645,8 @@ Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
     TreeItem item = item1;
     int changed = 0;
 
+    if (tree->displayInProgress) return;
+
     while (item != NULL) {
 	dItem = (DItem *) TreeItem_GetDInfo(tree, item);
 	if (dItem != NULL) {
@@ -3612,6 +3686,18 @@ Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
 	/*dInfo->flags |= DINFO_OUT_OF_DATE; */
 	Tree_EventuallyRedraw(tree);
     }
+}
+
+void
+TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item)
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    Tcl_HashEntry *hPtr;
+
+    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash,
+	    (char *) TreeItem_GetID(tree, item));
+    if (hPtr != NULL)
+	Tcl_DeleteHashEntry(hPtr);
 }
 
 void
