@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.14 2005/06/20 23:31:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.15 2005/07/05 02:13:04 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -65,6 +65,9 @@ struct ElementArgs
 	struct {
 		Tcl_Obj *obj;
 	} actual;
+	struct {
+		int visible;
+	} screen;
 };
 
 struct ElementType
@@ -83,6 +86,7 @@ struct ElementType
 	int (*stateProc)(ElementArgs *args);
 	int (*undefProc)(ElementArgs *args);
 	int (*actualProc)(ElementArgs *args);
+	void (*onScreenProc)(ElementArgs *args);
 	ElementType *next;
 };
 
