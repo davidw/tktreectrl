@@ -32,24 +32,24 @@ proc DemoInternetOptions {} {
 	$T state define radio
 	$T state define on
 
-	$T element create e1 image -image {
+	$T element create elemImg image -image {
 		internet-check-on {check on}
 		internet-check-off {check}
 		internet-radio-on {radio on}
 		internet-radio-off {radio}
 	}
-	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}]
-	$T element create e3 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}]
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 
 	#
 	# Create styles using the elements
 	#
 
-	set S [$T style create s1]
-	$T style elements $S {e3 e1 e2}
-	$T style layout $S e1 -padx {0 4} -expand ns
-	$T style layout $S e2 -expand ns
-	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
+	set S [$T style create STYLE]
+	$T style elements $S {elemRectSel elemImg elemTxt}
+	$T style layout $S elemImg -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	#
 	# Create items and assign styles
@@ -71,8 +71,8 @@ proc DemoInternetOptions {} {
 			1 off "Check for server certificate revocation (requires restart)" "o6" ""
 	} {
 		set item [$T item create]
-		$T item style set $item C0 s1
-		$T item element configure $item C0 e2 -text $text
+		$T item style set $item C0 STYLE
+		$T item element configure $item C0 elemTxt -text $text
 		set ::Option(option,$item) $option
 		set ::Option(group,$item) $group
 		if {($setting eq "on") || ($setting eq "off")} {
@@ -90,7 +90,7 @@ proc DemoInternetOptions {} {
 				$T item state set $item radio
 			}
 		} else {
-			$T item element configure $item C0 e1 -image internet-$setting
+			$T item element configure $item C0 elemImg -image internet-$setting
 		}
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
@@ -176,19 +176,19 @@ proc DemoInternetOptions_2 {} {
 	# Create elements
 	#
 
-	$T element create e1 image
-	$T element create e2 text -fill [list $::SystemHighlightText {selected focus}]
-	$T element create e3 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+	$T element create elemImg image
+	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}]
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 
 	#
 	# Create styles using the elements
 	#
 
-	set S [$T style create s1]
-	$T style elements $S {e3 e1 e2}
-	$T style layout $S e1 -padx {0 4} -expand ns
-	$T style layout $S e2 -expand ns
-	$T style layout $S e3 -union [list e2] -iexpand ns -ipadx 2
+	set S [$T style create STYLE]
+	$T style elements $S {elemRectSel elemImg elemTxt}
+	$T style layout $S elemImg -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	#
 	# Create items and assign styles
@@ -210,24 +210,24 @@ proc DemoInternetOptions_2 {} {
 			1 off "Check for server certificate revocation (requires restart)" "o6" ""
 	} {
 		set item [$T item create]
-		$T item style set $item 0 s1
-		$T item element configure $item 0 e2 -text $text
+		$T item style set $item 0 STYLE
+		$T item element configure $item 0 elemTxt -text $text
 		set ::Option(option,$item) $option
 		set ::Option(group,$item) $group
 		if {$setting eq "on" || $setting eq "off"} {
 			set ::Option(setting,$item) $setting
 			if {$group eq ""} {
 				set img internet-check-$setting
-				$T item element configure $item 0 e1 -image $img
+				$T item element configure $item 0 elemImg -image $img
 			} else {
 				if {$setting eq "on"} {
 					set ::Option(current,$group) $item
 				}
 				set img internet-radio-$setting
-				$T item element configure $item 0 e1 -image $img
+				$T item element configure $item 0 elemImg -image $img
 			}
 		} else {
-			$T item element configure $item 0 e1 -image internet-$setting
+			$T item element configure $item 0 elemImg -image internet-$setting
 		}
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
@@ -268,14 +268,14 @@ proc TreeCtrl::OptionButton1_2 {T x y} {
 			} else {
 				set setting on
 			}
-			$T item element configure $item 0 e1 -image internet-check-$setting
+			$T item element configure $item 0 elemImg -image internet-check-$setting
 			set ::Option(setting,$item) $setting
 		# a radiobutton
 		} else {
 			set current $::Option(current,$group)
 			if {$current eq $item} return
-			$T item element configure $current 0 e1 -image internet-radio-off
-			$T item element configure $item 0 e1 -image internet-radio-on
+			$T item element configure $current 0 elemImg -image internet-radio-off
+			$T item element configure $item 0 elemImg -image internet-radio-on
 			set ::Option(setting,$item) on
 			set ::Option(current,$group) $item
 		}

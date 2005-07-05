@@ -34,29 +34,29 @@ proc DemoHelpContents {} {
 	# Define a new item state
 	$T state define mouseover
 
-	$T element create e1 image -image help-page
-	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
-	$T element create e3 text -fill [list $::SystemHighlightText {selected focus} blue {mouseover}] \
+	$T element create elemImgPage image -image help-page
+	$T element create elemImgBook image -image {help-book-open {open} help-book-closed {}}
+	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus} blue {mouseover}] \
 		-font [list "[$T cget -font] underline" {mouseover}]
-	$T element create e4 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 
 	#
 	# Create styles using the elements
 	#
 
 	# book
-	set S [$T style create s1]
-	$T style elements $S {e4 e1 e3}
-	$T style layout $S e1 -padx {0 4} -expand ns
-	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styBook]
+	$T style elements $S {elemRectSel elemImgBook elemTxt}
+	$T style layout $S elemImgBook -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	# page
-	set S [$T style create s2]
-	$T style elements $S {e4 e2 e3}
-	$T style layout $S e2 -padx {0 4} -expand ns
-	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styPage]
+	$T style elements $S {elemRectSel elemImgPage elemTxt}
+	$T style layout $S elemImgPage -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	#
 	# Create items and assign styles
@@ -65,27 +65,26 @@ proc DemoHelpContents {} {
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
 	foreach {depth style text} {
-		0 s1 "Welcome to Help"
-		0 s2 "Introducing Windows 98"
-			1 s2 "How to Use Help"
-				2 s1 "Find a topic"
-				2 s1 "Get more out of help"
-			1 s2 "Register Your Software"
-				2 s1 "Registering Windows 98 online"
-			1 s2 "What's New in Windows 98"
-				2 s1 "Innovative, easy-to-use features"
-				2 s1 "Improved reliability"
-				2 s1 "A faster operating system"
-				2 s1 "True Web integration"
-				2 s1 "More entertaining and fun"
-			1 s2 "If You're New to Windows 98"
-				2 s2 "Tips for Macintosh Users"
-					3 s1 "Why does the mouse have two buttons?"
+		0 styPage "Welcome to Help"
+		0 styBook "Introducing Windows 98"
+			1 styBook "How to Use Help"
+				2 styPage "Find a topic"
+				2 styPage "Get more out of help"
+			1 styBook "Register Your Software"
+				2 styPage "Registering Windows 98 online"
+			1 styBook "What's New in Windows 98"
+				2 styPage "Innovative, easy-to-use features"
+				2 styPage "Improved reliability"
+				2 styPage "A faster operating system"
+				2 styPage "True Web integration"
+				2 styPage "More entertaining and fun"
+			1 styBook "If You're New to Windows 98"
+				2 styBook "Tips for Macintosh Users"
+					3 styPage "Why does the mouse have two buttons?"
 	} {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item C0 $style
-		$T item element configure $item C0 e3 -text $text
-		$T item collapse $item
+		$T item element configure $item C0 elemTxt -text $text
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
 		set parentList [lreplace $parentList $depth $depth $item]
@@ -158,11 +157,11 @@ proc DemoHelpContents_2 {} {
 	# Create elements
 	#
 
-	$T element create e1 image -image help-page
-	$T element create e2 image -image {help-book-open {open} help-book-closed {}}
-	$T element create e3 text -fill [list $::SystemHighlightText {selected focus}]
-	$T element create e4 rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
-	$T element create e5 text -fill [list $::SystemHighlightText {selected focus} blue {}] \
+	$T element create elemImgPage image -image help-page
+	$T element create elemImgBook image -image {help-book-open {open} help-book-closed {}}
+	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}]
+	$T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
+	$T element create elemTxtOver text -fill [list $::SystemHighlightText {selected focus} blue {}] \
 		-font "[$T cget -font] underline"
 
 	#
@@ -170,32 +169,32 @@ proc DemoHelpContents_2 {} {
 	#
 
 	# book
-	set S [$T style create s1]
-	$T style elements $S {e4 e1 e3}
-	$T style layout $S e1 -padx {0 4} -expand ns
-	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styBook]
+	$T style elements $S {elemRectSel elemImgBook elemTxt}
+	$T style layout $S elemImgBook -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	# page
-	set S [$T style create s2]
-	$T style elements $S {e4 e2 e3}
-	$T style layout $S e2 -padx {0 4} -expand ns
-	$T style layout $S e3 -expand ns
-	$T style layout $S e4 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styPage]
+	$T style elements $S {elemRectSel elemImgPage elemTxt}
+	$T style layout $S elemImgPage -padx {0 4} -expand ns
+	$T style layout $S elemTxt -expand ns
+	$T style layout $S elemRectSel -union [list elemTxt] -iexpand ns -ipadx 2
 
 	# book (focus)
-	set S [$T style create s1.f]
-	$T style elements $S {e4 e1 e5}
-	$T style layout $S e1 -padx {0 4} -expand ns
-	$T style layout $S e5 -expand ns
-	$T style layout $S e4 -union [list e5] -iexpand ns -ipadx {1 2}
+	set S [$T style create styBook.f]
+	$T style elements $S {elemRectSel elemImgBook elemTxtOver}
+	$T style layout $S elemImgBook -padx {0 4} -expand ns
+	$T style layout $S elemTxtOver -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtOver] -iexpand ns -ipadx {1 2}
 
 	# page (focus)
-	set S [$T style create s2.f]
-	$T style elements $S {e4 e2 e5}
-	$T style layout $S e2 -padx {0 4} -expand ns
-	$T style layout $S e5 -expand ns
-	$T style layout $S e4 -union [list e5] -iexpand ns -ipadx {1 2}
+	set S [$T style create styPage.f]
+	$T style elements $S {elemRectSel elemImgPage elemTxtOver}
+	$T style layout $S elemImgPage -padx {0 4} -expand ns
+	$T style layout $S elemTxtOver -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtOver] -iexpand ns -ipadx {1 2}
 
 	#
 	# Create items and assign styles
@@ -204,27 +203,26 @@ proc DemoHelpContents_2 {} {
 	set parentList [list root {} {} {} {} {} {}]
 	set parent root
 	foreach {depth style text} {
-		0 s1 "Welcome to Help"
-		0 s2 "Introducing Windows 98"
-			1 s2 "How to Use Help"
-				2 s1 "Find a topic"
-				2 s1 "Get more out of help"
-			1 s2 "Register Your Software"
-				2 s1 "Registering Windows 98 online"
-			1 s2 "What's New in Windows 98"
-				2 s1 "Innovative, easy-to-use features"
-				2 s1 "Improved reliability"
-				2 s1 "A faster operating system"
-				2 s1 "True Web integration"
-				2 s1 "More entertaining and fun"
-			1 s2 "If You're New to Windows 98"
-				2 s2 "Tips for Macintosh Users"
-					3 s1 "Why does the mouse have two buttons?"
+		0 styPage "Welcome to Help"
+		0 styBook "Introducing Windows 98"
+			1 styBook "How to Use Help"
+				2 styPage "Find a topic"
+				2 styPage "Get more out of help"
+			1 styBook "Register Your Software"
+				2 styPage "Registering Windows 98 online"
+			1 styBook "What's New in Windows 98"
+				2 styPage "Innovative, easy-to-use features"
+				2 styPage "Improved reliability"
+				2 styPage "A faster operating system"
+				2 styPage "True Web integration"
+				2 styPage "More entertaining and fun"
+			1 styBook "If You're New to Windows 98"
+				2 styBook "Tips for Macintosh Users"
+					3 styPage "Why does the mouse have two buttons?"
 	} {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item 0 $style
-		$T item element configure $item 0 e3 -text $text
-		$T item collapse $item
+		$T item element configure $item 0 elemTxt -text $text
 		$T item lastchild [lindex $parentList $depth] $item
 		incr depth
 		set parentList [lreplace $parentList $depth $depth $item]
@@ -340,10 +338,10 @@ proc TreeCtrl::HelpMotion_2 {w x y} {
 				if {$Priv(help,prev) ne ""} {
 					set style [$w item style set $Priv(help,prev) 0]
 					set style [string trim $style .f]
-					$w item style map $Priv(help,prev) 0 $style {e5 e3}
+					$w item style map $Priv(help,prev) 0 $style {elemTxtOver elemTxt}
 				}
 				set style [$w item style set $item 0]
-				$w item style map $item 0 $style.f {e3 e5}
+				$w item style map $item 0 $style.f {elemTxt elemTxtOver}
 				set Priv(help,prev) $item
 			}
 			return
@@ -352,7 +350,7 @@ proc TreeCtrl::HelpMotion_2 {w x y} {
 	if {$Priv(help,prev) ne ""} {
 		set style [$w item style set $Priv(help,prev) 0]
 		set style [string trim $style .f]
-		$w item style map $Priv(help,prev) 0 $style {e5 e3}
+		$w item style map $Priv(help,prev) 0 $style {elemTxtOver elemTxt}
 		set Priv(help,prev) ""
 	}
 	return
