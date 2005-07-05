@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.10 2005/06/04 19:06:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.11 2005/07/05 02:15:23 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -28,6 +28,7 @@ static int EVENT_SCROLL,
 	DETAIL_SCROLL_X,
 	DETAIL_SCROLL_Y;
 static int EVENT_ITEM_DELETE;
+static int EVENT_ITEM_VISIBILITY;
 
 static void ExpandItem(TreeCtrl *tree, int id, Tcl_DString *result)
 {
@@ -125,6 +126,47 @@ static void Percents_Expand(QE_ExpandArgs *args)
 	}
 }
 
+static void Percents_ItemVisibility(QE_ExpandArgs *args)
+{
+	struct {
+		TreeCtrl *tree;
+		Tcl_HashTable *v;
+		Tcl_HashTable *h;
+	} *data = args->clientData;
+	TreeCtrl *tree = data->tree;
+	Tcl_HashTable *table;
+	Tcl_HashSearch search;
+	Tcl_HashEntry *hPtr;
+
+	switch (args->which)
+	{
+		case 'v':
+		case 'h':
+			table = (args->which == 'v') ? data->v : data->h;
+			Tcl_DStringStartSublist(args->result);
+			hPtr = Tcl_FirstHashEntry(table, &search);
+			while (hPtr != NULL)
+			{
+				int id = (int) Tcl_GetHashKey(table, hPtr);
+				if (tree->itemPrefixLen) {
+					char buf[10 + TCL_INTEGER_SPACE];
+					(void) sprintf(buf, "%s%d", tree->itemPrefix, id);
+					Tcl_DStringAppendElement(args->result, buf);
+				} else {
+					char string[TCL_INTEGER_SPACE];
+					TclFormatInt(string, id);
+					Tcl_DStringAppendElement(args->result, string);
+				}
+				hPtr = Tcl_NextHashEntry(&search);
+			}
+			Tcl_DStringEndSublist(args->result);
+			break;
+
+		default:
+			Percents_Any(args, Percents_ItemVisibility, "vh");
+			break;
+	}
+}
 static void Percents_Selection(QE_ExpandArgs *args)
 {
 	struct {
@@ -486,6 +528,26 @@ void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count)
 	(void) QE_BindEvent(tree->bindingTable, &event);
 }
 
+void TreeNotify_ItemVisibility(TreeCtrl *tree, Tcl_HashTable *v, Tcl_HashTable *h)
+{
+	QE_Event event;
+	struct {
+		TreeCtrl *tree; /* Must be first*/
+		Tcl_HashTable *v;
+		Tcl_HashTable *h;
+	} data;
+
+	data.tree = tree;
+	data.v = v;
+	data.h = h;
+
+	event.type = EVENT_ITEM_VISIBILITY;
+	event.detail = 0;
+	event.clientData = (ClientData) &data;
+
+	(void) QE_BindEvent(tree->bindingTable, &event);
+}
+
 int TreeNotify_Init(TreeCtrl *tree)
 {
 	tree->bindingTable = QE_CreateBindingTable(tree->interp);
@@ -507,6 +569,8 @@ int TreeNotify_Init(TreeCtrl *tree)
 	DETAIL_SCROLL_Y = QE_InstallDetail(tree->bindingTable, "y", EVENT_SCROLL, NULL);
 
 	EVENT_ITEM_DELETE = QE_InstallEvent(tree->bindingTable, "ItemDelete", Percents_ItemDeleted);
+
+	EVENT_ITEM_VISIBILITY = QE_InstallEvent(tree->bindingTable, "ItemVisibility", Percents_ItemVisibility);
 
 	return TCL_OK;
 }
