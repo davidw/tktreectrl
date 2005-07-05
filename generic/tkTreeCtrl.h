@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.35 2005/06/13 21:34:10 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.36 2005/07/05 02:09:39 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -166,6 +166,11 @@ struct TreeCtrl
     int itemHeight;		/* -itemheight */
     Tcl_Obj *minItemHeightObj;	/* -minitemheight: Minimum height for all items */
     int minItemHeight;		/* -minitemheight */
+    Tcl_Obj *itemWidthObj;	/* -itemwidth */
+    int itemWidth;		/* -itemwidth */
+    int itemWidthEqual;		/* -itemwidthequal */
+    Tcl_Obj *itemWidMultObj;	/* -itemwidthmultiple */
+    int itemWidMult;		/* -itemwidthmultiple */
     Tcl_Obj *widthObj;		/* -width */
     int width;			/* -width */
     Tcl_Obj *heightObj;		/* -height */
@@ -213,6 +218,7 @@ struct TreeCtrl
     int gotFocus;		/* flag */
     int deleted;		/* flag */
     int updateIndex;		/* flag */
+    int displayInProgress;	/* flag: displaying the tree */
     int isActive;		/* flag: mac & win "active" toplevel */
     int inset;			/* borderWidth + highlightWidth */
     int xOrigin;		/* offset from content x=0 to window x=0 */
@@ -301,7 +307,7 @@ struct TreeCtrl
 };
 
 #define TREE_CONF_FONT 0x0001
-#define TREE_CONF_ITEMHEIGHT 0x0002
+#define TREE_CONF_ITEMSIZE 0x0002
 #define TREE_CONF_INDENT 0x0004
 #define TREE_CONF_WRAP 0x0008
 #define TREE_CONF_BUTIMG 0x0010
@@ -415,7 +421,7 @@ extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
     int x, int y, int width, int height);
-extern void TreeItem_HideWindows(TreeCtrl *tree, TreeItem item_);
+extern void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen);
 
 extern TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item);
 extern TreeItemColumn TreeItemColumn_GetNext(TreeCtrl *tree, TreeItemColumn column);
@@ -489,7 +495,7 @@ extern int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, i
 extern void Tree_UndefineState(TreeCtrl *tree, int state);
 extern int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_);
 extern void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs);
-extern void TreeStyle_HideWindows(TreeCtrl *tree, TreeStyle style_);
+extern void TreeStyle_OnScreen(TreeCtrl *tree, TreeStyle style_, int onScreen);
 
 extern int ButtonMaxWidth(TreeCtrl *tree);
 extern int ButtonHeight(TreeCtrl *tree, int state);
@@ -502,6 +508,7 @@ extern int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tc
 extern void TreeNotify_ActiveItem(TreeCtrl *tree, TreeItem itemOld, TreeItem itemNew);
 extern void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical);
 extern void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count);
+extern void TreeNotify_ItemVisibility(TreeCtrl *tree, Tcl_HashTable *v, Tcl_HashTable *h);
 
 /* tkTreeColumn.c */
 extern void Tree_InitColumns(TreeCtrl *tree);
@@ -589,6 +596,7 @@ extern void Tree_SetOriginY(TreeCtrl *tree, int yOrigin);
 extern void Tree_RelayoutWindow(TreeCtrl *tree);
 extern void Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
 extern void Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
+extern void TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item);
 extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region);

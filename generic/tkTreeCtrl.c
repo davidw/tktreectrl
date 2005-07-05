@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.46 2005/06/29 21:09:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.47 2005/07/05 02:10:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -137,7 +137,7 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-itemheight", "itemHeight", "ItemHeight",
      "0", Tk_Offset(TreeCtrl, itemHeightObj),
      Tk_Offset(TreeCtrl, itemHeight),
-     0, (ClientData) NULL, TREE_CONF_ITEMHEIGHT | TREE_CONF_RELAYOUT},
+     0, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},
 #if 0
     {TK_OPTION_CUSTOM, "-itempadx", (char *) NULL, (char *) NULL,
      "0",
@@ -152,6 +152,15 @@ static Tk_OptionSpec optionSpecs[] = {
 #endif
     {TK_OPTION_STRING, "-itemprefix", "itemPrefix", "ItemPrefix",
      "", -1, Tk_Offset(TreeCtrl, itemPrefix), 0, (ClientData) NULL, 0},
+    {TK_OPTION_PIXELS, "-itemwidth", "itemWidth", "ItemWidth",
+     "", Tk_Offset(TreeCtrl, itemWidthObj), Tk_Offset(TreeCtrl, itemWidth),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},
+    {TK_OPTION_BOOLEAN, "-itemwidthequal", "itemWidthEqual", "ItemWidthEqual",
+     "0", -1, Tk_Offset(TreeCtrl, itemWidthEqual),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},
+    {TK_OPTION_PIXELS, "-itemwidthmultiple", "itemWidthMultiple", "ItemWidthMultiple",
+     "", Tk_Offset(TreeCtrl, itemWidMultObj), Tk_Offset(TreeCtrl, itemWidMult),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},
     {TK_OPTION_COLOR, "-linecolor", "lineColor", "LineColor",
      "#808080", -1, Tk_Offset(TreeCtrl, lineColor),
      0, (ClientData) NULL, TREE_CONF_LINE | TREE_CONF_REDISPLAY},
@@ -165,7 +174,7 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-minitemheight", "minItemHeight", "MinItemHeight",
      "0", Tk_Offset(TreeCtrl, minItemHeightObj),
      Tk_Offset(TreeCtrl, minItemHeight),
-     0, (ClientData) NULL, TREE_CONF_ITEMHEIGHT | TREE_CONF_RELAYOUT},
+     0, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},
     {TK_OPTION_STRING_TABLE, "-orient", "orient", "Orient",
      "vertical", -1, Tk_Offset(TreeCtrl, vertical),
      0, (ClientData) orientStringTable, TREE_CONF_RELAYOUT},
@@ -1084,6 +1093,10 @@ static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
 		    mask |= TREE_CONF_DEFSTYLE;
 		if (tree->wrapObj != NULL)
 		    mask |= TREE_CONF_WRAP;
+		if (!ObjectIsEmpty(tree->itemWidthObj))
+		    mask |= TREE_CONF_ITEMSIZE;
+		if (!ObjectIsEmpty(tree->itemWidMultObj))
+		    mask |= TREE_CONF_ITEMSIZE;
 	    }
 
 	    /*
@@ -1258,6 +1271,7 @@ badWrap:
 		tree->wrapMode = saved.wrapMode;
 		tree->wrapArg = saved.wrapArg;
 	    }
+
 	    Tcl_SetObjResult(interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
 	    return TCL_ERROR;
