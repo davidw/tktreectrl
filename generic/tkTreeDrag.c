@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.11 2005/06/06 03:25:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.12 2005/07/07 02:54:09 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -223,9 +223,9 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		{
 			XRectangle staticRects[STATIC_SIZE], *rects = staticRects;
 			TreeItem item;
-			TreeItemColumn itemColumn;
+			TreeItemColumn itemColumn = NULL;
 			TreeColumn treeColumn;
-			int i, count, columnIndex;
+			int i, count, columnIndex = -1;
 			int indent, width, totalWidth;
 			int x, y, w, h;
 			DragElem *elem;
@@ -249,14 +249,20 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					return TCL_ERROR;
 				if (objc > 5)
 				{
+					if ((itemColumn == NULL) ||
+						(TreeItemColumn_GetStyle(tree, itemColumn) == NULL)) {
+						FormatResult(interp,
+							"item %s%d column %s%d has no style",
+							tree->itemPrefix, TreeItem_GetID(tree, item),
+							tree->columnPrefix,
+							TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+						return TCL_ERROR;
+					}
 					drawArgs.tree = tree;
 					drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-					if (drawArgs.style != NULL)
-					{
-						if (TreeStyle_ValidateElements(&drawArgs,
-							objc - 5, objv + 5) != TCL_OK)
-							return TCL_ERROR;
-					}
+					if (TreeStyle_ValidateElements(&drawArgs,
+						objc - 5, objv + 5) != TCL_OK)
+						return TCL_ERROR;
 				}
 			}
 
@@ -275,17 +281,10 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc > 4)
 			{
-				if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn, &columnIndex) != TCL_OK)
-				{
-					result = TCL_ERROR;
-					goto doneAdd;
-				}
 				treeColumn = Tree_FindColumn(tree, columnIndex);
 				if (!TreeColumn_Visible(treeColumn))
 					goto doneAdd;
 				drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-				if (drawArgs.style == NULL)
-					goto doneAdd;
 				totalWidth = 0;
 				treeColumn = tree->columns;
 				for (i = 0; i < columnIndex; i++)
