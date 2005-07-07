@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.9 2005/06/30 19:47:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.10 2005/07/07 03:17:14 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -342,10 +342,35 @@ dbwin("margins %d %d %d %d\n", bounds[0], bounds[1], bounds[2], bounds[3]);
 int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
     int x, int y, int width, int height)
 {
-    /* Doesn't seem that Microsoft actually implemented this */
-    return TCL_ERROR;
+#if 1
+    XColor *color;
+    GC gc;
+    int i;
 
-#if 0
+    if (!themeData->themeEnabled || !procs)
+	return TCL_ERROR;
+
+    color = Tk_GetColor(tree->interp, tree->tkwin, "#ACA899");
+    gc = Tk_GCForColor(color, drawable);
+
+    if (up) {
+	for (i = 0; i < height; i++) {
+	    XDrawLine(tree->display, drawable, gc,
+		x + width / 2 - i, y + i,
+		x + width / 2 + i + 1, y + i);
+	}
+    } else {
+	for (i = 0; i < height; i++) {
+	    XDrawLine(tree->display, drawable, gc,
+		x + width / 2 - i, y + (height - 1) - i,
+		x + width / 2 + i + 1, y + (height - 1) - i);
+	}
+    }
+
+    Tk_FreeColor(color);
+    return TCL_OK;
+#else
+    /* Doesn't seem that Microsoft actually implemented this */
     Window win = Tk_WindowId(tree->tkwin);
     HWND hwnd = Tk_GetHWND(win);
     HTHEME hTheme;
@@ -523,6 +548,16 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
 
     *widthPtr = size.cx;
     *heightPtr = size.cy;
+    return TCL_OK;
+}
+
+int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr)
+{
+    if (!themeData->themeEnabled || !procs)
+	return TCL_ERROR;
+
+    *widthPtr = 9;
+    *heightPtr = 5;
     return TCL_OK;
 }
 
@@ -797,6 +832,11 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *wi
     return TCL_OK;
 }
 
+int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr)
+{
+    return TCL_ERROR;
+}
+
 int TreeTheme_Init(Tcl_Interp *interp)
 {
     return TCL_OK;
@@ -825,6 +865,11 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int
 }
 
 int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr)
+{
+    return TCL_ERROR;
+}
+
+int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr)
 {
     return TCL_ERROR;
 }
