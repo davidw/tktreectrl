@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.32 2005/07/05 02:14:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.33 2005/07/07 02:57:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -289,10 +289,10 @@ static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
 	    sticky &= ~(STICKY_N | STICKY_S);
     }
     if (!(sticky & STICKY_W)) {
-    	*xPtr += (sticky & STICKY_E) ? dx : dx / 2;
+	*xPtr += (sticky & STICKY_E) ? dx : dx / 2;
     }
     if (!(sticky & STICKY_N)) {
-    	*yPtr += (sticky & STICKY_S) ? dy : dy / 2;
+	*yPtr += (sticky & STICKY_S) ? dy : dy / 2;
     }
 }
 
@@ -504,6 +504,10 @@ static void DisplayProcBitmap(ElementArgs *args)
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
+    if (imgW > args->display.width)
+	imgW = args->display.width;
+    if (imgH > args->display.height)
+	imgH = args->display.height;
     Tree_DrawBitmap(tree, bitmap, args->display.drawable, fg, bg,
 	0, 0, (unsigned int) imgW, (unsigned int) imgH,
 	x, y);
@@ -1510,6 +1514,10 @@ static void DisplayProcImage(ElementArgs *args)
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
+    if (imgW > args->display.width)
+	imgW = args->display.width;
+    if (imgH > args->display.height)
+	imgH = args->display.height;
     Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable, x, y);
 }
 
@@ -2442,7 +2450,7 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 }
 
-static void TextUpdateLayout(ElementArgs *args, int fixedWidth, int maxWidth)
+static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int maxWidth)
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2461,9 +2469,13 @@ static void TextUpdateLayout(ElementArgs *args, int fixedWidth, int maxWidth)
     int i, multiLine = FALSE;
     int textWidth;
 
+    if (tree->debug.enable && tree->debug.textLayout)
+	dbwin("TextUpdateLayout: %s %p (%s) %s\n",
+	    Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master", func);
+
     if (elemX->layout != NULL) {
 	if (tree->debug.enable && tree->debug.textLayout)
-	    dbwin("TextUpdateLayout %s: free %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
+	    dbwin("    FREE\n");
 	TextLayout_Free(elemX->layout);
 	elemX->layout = NULL;
     }
@@ -2508,12 +2520,13 @@ static void TextUpdateLayout(ElementArgs *args, int fixedWidth, int maxWidth)
 	}
     }
     if (tree->debug.enable && tree->debug.textLayout)
-	dbwin("TextUpdateLayout: lines %d multiLine %d width %d\n",
+	dbwin("    lines %d multiLine %d width %d\n",
 		lines, multiLine, width);
     if (!multiLine) {
 	if (width == 0)
 	    return;
 	textWidth = Tk_TextWidth(tkfont, text, textLen);
+if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", textWidth);
 	if (width >= textWidth)
 	    return;
     }
@@ -2535,7 +2548,7 @@ static void TextUpdateLayout(ElementArgs *args, int fixedWidth, int maxWidth)
 	    Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
 
     if (tree->debug.enable && tree->debug.textLayout)
-	dbwin("TextUpdateLayout %s: alloc %p (%s)\n", Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master");
+	dbwin("    ALLOC\n");
 }
 
 #ifdef TEXTVAR
@@ -2759,18 +2772,20 @@ static int CreateProcText(ElementArgs *args)
     return TCL_OK;
 }
 
-static void TextRedoLayoutIfNeeded(ElementArgs *args, int fixedWidth)
+static void TextRedoLayoutIfNeeded(char *func, ElementArgs *args, int fixedWidth)
 {
     ElementText *elemX = (ElementText *) args->elem;
     int doLayout = 0;
 
-    /* See comment in NeededProc about totalWidth */
-    if (fixedWidth >= elemX->neededWidth)
-	fixedWidth = elemX->totalWidth;
+    if (elemX->layout != NULL) {
+	/* See comment in NeededProc about totalWidth */
+	if ((elemX->neededWidth != -1) && fixedWidth >= elemX->neededWidth)
+	    fixedWidth = elemX->totalWidth;
 
-    /* Already layed out at this width */
-    if (fixedWidth == elemX->layoutWidth)
-	return;
+	/* Already layed out at this width */
+	if (fixedWidth == elemX->layoutWidth)
+	    return;
+    }
 
     /* May switch from layout -> no layout or vice versa */
     if (elemX->layout == NULL)
@@ -2789,7 +2804,7 @@ static void TextRedoLayoutIfNeeded(ElementArgs *args, int fixedWidth)
 	    doLayout = 1;
     }
     if (doLayout)
-	TextUpdateLayout(args, fixedWidth, -1);
+	TextUpdateLayout(func, args, fixedWidth, -1);
 elemX->layoutInvalid = FALSE;
     if (elemX->layout != NULL)
 	elemX->layoutWidth = fixedWidth;
@@ -2817,6 +2832,7 @@ static void DisplayProcText(ElementArgs *args)
     GC gc;
     int bytesThatFit, pixelsForText;
     char *ellipsis = "...";
+    TkRegion clipRgn = NULL;
 
     BOOLEAN_FOR_STATE(draw, draw, state)
     if (!draw)
@@ -2855,7 +2871,7 @@ static void DisplayProcText(ElementArgs *args)
 	gc = tree->textGC;
     }
 
-    TextRedoLayoutIfNeeded(args, args->display.width);
+    TextRedoLayoutIfNeeded("DisplayProcText", args, args->display.width);
 
     if (elemX->layout != NULL)
 	layout = elemX->layout;
@@ -2865,14 +2881,29 @@ static void DisplayProcText(ElementArgs *args)
 	/* Hack -- The actual size of the text may be slightly smaller than
 	 * the available space when squeezed. If so we don't want to center
 	 * the text horizontally */
-	if (elemX->neededWidth > width)
+	if ((elemX->neededWidth == -1) || (elemX->neededWidth > width))
 	    width = args->display.width;
 	AdjustForSticky(args->display.sticky,
 	    args->display.width, args->display.height,
 	    FALSE, FALSE,
 	    &x, &y, &width, &height);
+	/* Use clipping if text is taller than display height */
+	if (height > args->display.height) {
+	    XRectangle rect;
+	    clipRgn = TkCreateRegion();
+	    rect.x = x;
+	    rect.y = y;
+	    rect.width = args->display.width;
+	    rect.height = args->display.height;
+	    TkUnionRectWithRegion(&rect, clipRgn, clipRgn);
+	    TkSetRegion(tree->display, gc, clipRgn);
+	}
 	TextLayout_Draw(tree->display, args->display.drawable, gc,
 		layout, x, y, 0, -1);
+	if (clipRgn != NULL) {
+	    UnsetClipMask(tree, args->display.drawable, gc);
+	    TkDestroyRegion(clipRgn);
+	}
 	return;
     }
 
@@ -2890,6 +2921,17 @@ static void DisplayProcText(ElementArgs *args)
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
+    /* Use clipping if text is taller than display height */
+    if (height > args->display.height) {
+	XRectangle rect;
+	clipRgn = TkCreateRegion();
+	rect.x = x;
+	rect.y = y;
+	rect.width = args->display.width;
+	rect.height = args->display.height;
+	TkUnionRectWithRegion(&rect, clipRgn, clipRgn);
+	TkSetRegion(tree->display, gc, clipRgn);
+    }
     if (bytesThatFit != textLen) {
 	char staticStr[256], *buf = staticStr;
 	int bufLen = abs(bytesThatFit);
@@ -2909,6 +2951,10 @@ static void DisplayProcText(ElementArgs *args)
     } else {
 	Tk_DrawChars(tree->display, args->display.drawable, gc,
 		tkfont, text, textLen, x, y + fm.ascent);
+    }
+    if (clipRgn != NULL) {
+	UnsetClipMask(tree, args->display.drawable, gc);
+	TkDestroyRegion(clipRgn);
     }
 }
 
@@ -2937,7 +2983,7 @@ static void NeededProcText(ElementArgs *args)
 	elemX->stringRepInvalid = FALSE;
     }
 
-    TextUpdateLayout(args, args->needed.fixedWidth, args->needed.maxWidth);
+    TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth, args->needed.maxWidth);
 elemX->layoutInvalid = FALSE;
     elemX->layoutWidth = -1;
     elemX->neededWidth = -1;
@@ -3003,7 +3049,7 @@ static void HeightProcText(ElementArgs *args)
     Tk_Font tkfont;
     Tk_FontMetrics fm;
 
-    TextRedoLayoutIfNeeded(args, args->height.fixedWidth);
+    TextRedoLayoutIfNeeded("HeightProcText", args, args->height.fixedWidth);
    
     if (elemX->layout != NULL) {
 	TextLayout_Size(elemX->layout, NULL, &height);
