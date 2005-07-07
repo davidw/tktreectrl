@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.32 2005/06/10 02:19:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.33 2005/07/07 02:50:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1205,7 +1205,10 @@ static void Column_GetArrowSize(Column *column, int *widthPtr, int *heightPtr)
 	    Tk_SizeOfBitmap(tree->display, bitmap, &arrowWidth, &arrowHeight);
 	}
     }
-    /* FIXME: theme size */
+    if ((arrowWidth == -1) && tree->useTheme &&
+	TreeTheme_GetArrowSize(tree, Tk_WindowId(tree->tkwin),
+	column->arrow == ARROW_UP, &arrowWidth, &arrowHeight) == TCL_OK) {
+    }
     if (arrowWidth == -1) {
 	Tk_Font tkfont = column->tkfont ? column->tkfont : tree->tkfont;
 	Tk_FontMetrics fm;
@@ -2416,9 +2419,9 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
 
     if (tree->useTheme) {
 	if (TreeTheme_DrawHeaderArrow(tree, drawable,
-	    column->arrow == ARROW_UP, x + layout.arrowLeft,
-	    y + (height - (layout.arrowHeight + arrowPadY)) / 2, layout.arrowWidth,
-	    layout.arrowHeight) == TCL_OK)
+	    column->arrow == ARROW_UP, x + layout.arrowLeft + sunken,
+	    y + (height - (layout.arrowHeight + arrowPadY)) / 2 + sunken,
+	    layout.arrowWidth, layout.arrowHeight) == TCL_OK)
 	    return;
     }
 
