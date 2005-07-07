@@ -68,7 +68,7 @@ proc DemoExplorerDetails {} {
 	#
 
 	$T column create -text Name -tag name -width 200 \
-		-arrow up -arrowpadx 6
+		-arrow up -itembackground #F7F7F7
 	$T column create -text Size -tag size -justify right -width 60 \
 		-arrowside left -arrowgravity right
 	$T column create -text Type -tag type -width 120
@@ -208,10 +208,10 @@ proc ExplorerHeaderInvoke {T C} {
 			set order -increasing
 			set arrow up
 		}
-		$T column configure $SortColumn -arrow none
+		$T column configure $SortColumn -arrow none -itembackground {}
 		set SortColumn $C
 	}
-	$T column configure $C -arrow $arrow
+	$T column configure $C -arrow $arrow -itembackground #F7F7F7
 	set dirCount $::TreeCtrl::Priv(DirCnt,$T)
 	set lastDir [expr {$dirCount - 1}]
 	switch [$T column cget $C -tag] {
