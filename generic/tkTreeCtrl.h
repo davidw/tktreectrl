@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.36 2005/07/05 02:09:39 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.37 2005/07/07 02:46:39 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -35,6 +35,7 @@
 
 #define SELECTION_VISIBLE
 #define ALLOC_HAX
+#define COLUMN_SPAN
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -412,7 +413,7 @@ extern TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_NextVisible(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_Prev(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item);
-extern char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y);
+extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf);
 extern void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	int x1, int y1, int x2, int y2, Tcl_Obj *listObj);
 extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
@@ -637,6 +638,7 @@ extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arro
 extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, int x, int y, int width, int height);
 extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
 extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
+extern int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr);
 
 /* tkTreeUtils.c */
 extern void wipefree(char *memPtr, int size);
@@ -675,6 +677,7 @@ extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion r
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
 	int width, int height, int dx, int dy, TkRegion damageRgn);
+extern void UnsetClipMask(TreeCtrl *tree, Drawable drawable, GC gc);
 extern void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha);
 
 #define PAD_TOP_LEFT     0
