@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.44 2005/07/05 02:30:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.45 2005/07/07 03:14:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -15,6 +15,9 @@ typedef struct Item Item;
 
 struct Column {
     int cstate;
+#ifdef COLUMN_SPAN
+    int span;
+#endif
     int neededWidth;
     int neededHeight;
     TreeStyle style;
@@ -68,6 +71,9 @@ static Column *Column_Alloc(TreeCtrl *tree)
     Column *column = (Column *) ckalloc(sizeof(Column));
 #endif
     memset(column, '\0', sizeof(Column));
+#ifdef COLUMN_SPAN
+    column->span = 1;
+#endif
     return column;
 }
 
@@ -1519,7 +1525,7 @@ static Column *Item_FindColumn(TreeCtrl *tree, Item *self, int columnIndex)
 }
 
 static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
-	Column **column, int *indexPtr)
+	Column **columnPtr, int *indexPtr)
 {
     TreeColumn treeColumn;
     int columnIndex;
@@ -1527,13 +1533,7 @@ static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
     if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
-    (*column) = Item_FindColumn(tree, item, columnIndex);
-    if ((*column) == NULL) {
-	FormatResult(tree->interp,
-		"item %s%d doesn't have column %s%d",
-		tree->itemPrefix, item->id, tree->columnPrefix, columnIndex);
-	return TCL_ERROR;
-    }
+    (*columnPtr) = Item_FindColumn(tree, item, columnIndex);
     if (indexPtr != NULL)
 	(*indexPtr) = columnIndex;
     return TCL_OK;
@@ -1549,7 +1549,7 @@ int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItem
     return Item_FindColumnFromObj(tree, (Item *) item, obj, (Column **) columnPtr, indexPtr);
 }
 
-static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Column **column, int *indexPtr)
+static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Column **column, int *indexPtr, int *isNew)
 {
     TreeColumn treeColumn;
     int columnIndex;
@@ -1557,7 +1557,7 @@ static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Co
     if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
-    (*column) = Item_CreateColumn(tree, item, columnIndex, NULL);
+    (*column) = Item_CreateColumn(tree, item, columnIndex, isNew);
     if (indexPtr != NULL)
 	(*indexPtr) = columnIndex;
     return TCL_OK;
@@ -1598,6 +1598,121 @@ static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
     }
 }
 
+#ifdef COLUMN_SPAN
+
+typedef struct SpanInfo {
+    TreeColumn treeColumn;
+    TreeItemColumn itemColumn;
+    int itemColumnIndex;
+    int width;
+} SpanInfo;
+
+void TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_, SpanInfo spans[])
+{
+    Item *self = (Item *) item_;
+    TreeColumn treeColumn = tree->columns;
+    Column *column = self->columns;
+    int columnIndex = 0, itemColumnIndex = 0, span = 1;
+
+    while (treeColumn != NULL) {
+	if (--span == 0) {
+	    if (TreeColumn_Visible(treeColumn))
+		span = column ? column->span : 1;
+	    else
+		span = 1;
+	    itemColumnIndex = columnIndex;
+	}
+	spans[columnIndex].treeColumn = treeColumn;
+	spans[columnIndex].itemColumn = (TreeItemColumn) column;
+	spans[columnIndex].itemColumnIndex = itemColumnIndex;
+	spans[columnIndex].width = TreeColumn_UseWidth(treeColumn);
+	++columnIndex;
+	treeColumn = TreeColumn_Next(treeColumn);
+	if (column != NULL)
+	    column = column->next;
+    }
+}
+
+void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
+	int width, int height, Drawable drawable, int minX, int maxX, int index)
+{
+    Item *self = (Item *) item_;
+    int indent, columnWidth, totalWidth;
+    Column *column;
+    StyleDrawArgs drawArgs;
+    TreeColumn treeColumn;
+    int i, columnIndex;
+    SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+
+    STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+    TreeItem_GetSpans(tree, item_, spans);
+
+    drawArgs.tree = tree;
+    drawArgs.drawable = drawable;
+
+    totalWidth = 0;
+    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+	treeColumn = spans[columnIndex].treeColumn;
+
+	/* A preceding item column is displayed here */
+	if (spans[columnIndex].itemColumnIndex != columnIndex)
+	    continue;
+
+	/* If this is the single visible column, use the provided width which
+	 * may be different than the column's width */
+	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis))
+	    columnWidth = width;
+
+	/* More than one column is visible, or this is not the visible
+	 * column. Add up the widths of all columns this column spans */
+	else {
+	    columnWidth = 0;
+	    for (i = columnIndex; i < tree->columnCount; i++) {
+		if (spans[i].itemColumnIndex != columnIndex)
+		    break;
+		columnWidth += spans[i].width;
+	    }
+	}
+	if (columnWidth <= 0)
+	    continue;
+	if ((x + totalWidth < maxX) && (x + totalWidth + columnWidth > minX)) {
+	    column = (Column *) spans[columnIndex].itemColumn;
+	    ItemDrawBackground(tree, treeColumn, self, column, drawable,
+		    x + totalWidth, y,
+		    columnWidth, height,
+		    index);
+	    if ((column != NULL) && (column->style != NULL)) {
+		if (treeColumn == tree->columnTree)
+		    indent = TreeItem_Indent(tree, item_);
+		else
+		    indent = 0;
+		drawArgs.state = self->state | column->cstate;
+		drawArgs.style = column->style;
+		drawArgs.indent = indent;
+		drawArgs.x = x + totalWidth;
+		drawArgs.y = y;
+		drawArgs.width = columnWidth;
+		drawArgs.height = height;
+		drawArgs.justify = TreeColumn_Justify(treeColumn);
+		TreeStyle_Draw(&drawArgs);
+	    }
+	    if (treeColumn == tree->columnTree) {
+		if (tree->showLines)
+		    TreeItem_DrawLines(tree, item_, x, y, width, height,
+			    drawable);
+		if (tree->showButtons)
+		    TreeItem_DrawButton(tree, item_, x, y, width, height,
+			    drawable);
+	    }
+	}
+	totalWidth += columnWidth;
+    }
+
+    STATIC_FREE(spans, SpanInfo, tree->columnCount);
+}
+
+#else /* COLUMN_SPAN */
+
 void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 	int width, int height, Drawable drawable, int minX, int maxX, int index)
 {
@@ -1623,15 +1738,6 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 	if (columnWidth > 0) {
 	    if (treeColumn == tree->columnTree) {
 		indent = TreeItem_Indent(tree, item_);
-#if 0
-		/* This means the tree lines/buttons don't share the item background color */
-		if ((x + totalWidth < maxX) &&
-			(x + totalWidth + indent > minX)) {
-		    GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
-		    XFillRectangle(tree->display, drawable, gc,
-			    x + totalWidth, y, indent, height);
-		}
-#endif
 	    } else
 		indent = 0;
 	    if ((x /* + indent */ + totalWidth < maxX) &&
@@ -1667,6 +1773,8 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 	    column = column->next;
     }
 }
+
+#endif /* not COLUMN_SPAN */
 
 void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width, int height, Drawable drawable)
 {
@@ -2235,6 +2343,15 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 }
 #endif
 
+static void NoStyleMsg(TreeCtrl *tree, Item *item, int columnIndex)
+{
+    FormatResult(tree->interp,
+	    "item %s%d column %s%d has no style",
+	    tree->itemPrefix, item->id,
+	    tree->columnPrefix,
+	    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+}
+
 static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
@@ -2256,11 +2373,8 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     if (Item_FindColumnFromObj(tree, item, objv[5], &column, &columnIndex) != TCL_OK)
 	return TCL_ERROR;
 
-    if (column->style == NULL) {
-	FormatResult(interp,
-		"item %s%d column %s%d has no style",
-		tree->itemPrefix, item->id,
-		tree->columnPrefix, TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+    if ((column == NULL) || (column->style == NULL)) {
+	NoStyleMsg(tree, item, columnIndex);
 	return TCL_ERROR;
     }
 
@@ -2306,12 +2420,14 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		/* Look for a + or , */
 		for (index = indexElem + 1; index < objc; index++) {
-		    int length;
-		    char *s = Tcl_GetStringFromObj(objv[index], &length);
+		    if ((index - indexElem) % 3 == 0) {
+			int length;
+			char *s = Tcl_GetStringFromObj(objv[index], &length);
 
-		    if ((length == 1) && ((s[0] == '+') || (s[0] == ','))) {
-			breakChar = s[0];
-			break;
+			if ((length == 1) && ((s[0] == '+') || (s[0] == ','))) {
+			    breakChar = s[0];
+			    break;
+			}
 		    }
 		    numArgs++;
 		}
@@ -2356,6 +2472,11 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    else if (breakChar == ',') {
 			if (Item_FindColumnFromObj(tree, item, objv[index + 1],
 				&column, &columnIndex) != TCL_OK) {
+			    result = TCL_ERROR;
+			    break;
+			}
+			if ((column == NULL) || (column->style == NULL)) {
+			    NoStyleMsg(tree, item, columnIndex);
 			    result = TCL_ERROR;
 			    break;
 			}
@@ -2437,12 +2558,8 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (Item_FindColumnFromObj(tree, item, objv[5], &column, &columnIndex) != TCL_OK) {
 		return TCL_ERROR;
 	    }
-	    if (column->style == NULL) {
-		FormatResult(interp,
-			"item %s%d column %s%d has no style",
-			tree->itemPrefix, item->id,
-			tree->columnPrefix,
-			TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+	    if ((column == NULL) || (column->style == NULL)) {
+		NoStyleMsg(tree, item, columnIndex);
 		return TCL_ERROR;
 	    }
 	    TreeStyle_ListElements(tree, column->style);
@@ -2462,7 +2579,8 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 4, objv, "item column style map");
 		return TCL_ERROR;
 	    }
-	    if (Item_CreateColumnFromObj(tree, item, objv[5], &column, &columnIndex) != TCL_OK)
+	    if (Item_CreateColumnFromObj(tree, item, objv[5], &column,
+		    &columnIndex, NULL) != TCL_OK)
 		return TCL_ERROR;
 	    if (TreeStyle_FromObj(tree, objv[6], &style) != TCL_OK)
 		return TCL_ERROR;
@@ -2480,10 +2598,8 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    Tree_InvalidateColumnWidth(tree, columnIndex);
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
 	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#if 1
 	    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-#endif
 	    break;
 	}
 
@@ -2499,16 +2615,19 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    }
 	    if (objc == 5) {
+		TreeColumn treeColumn = tree->columns;
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
 		column = item->columns;
-		while (column != NULL) {
-		    if (column->style != NULL)
+		while (treeColumn != NULL) {
+		    if ((column != NULL) && (column->style != NULL))
 			Tcl_ListObjAppendElement(interp, listObj,
 				TreeStyle_ToObj(column->style));
 		    else
 			Tcl_ListObjAppendElement(interp, listObj,
 				Tcl_NewObj());
-		    column = column->next;
+		    treeColumn = TreeColumn_Next(treeColumn);
+		    if (column != NULL)
+			column = column->next;
 		}
 		Tcl_SetObjResult(interp, listObj);
 		break;
@@ -2516,12 +2635,13 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (objc == 6) {
 		if (Item_FindColumnFromObj(tree, item, objv[5], &column, NULL) != TCL_OK)
 		    return TCL_ERROR;
-		if (column->style != NULL)
+		if ((column != NULL) && (column->style != NULL))
 		    Tcl_SetObjResult(interp, TreeStyle_ToObj(column->style));
 		break;
 	    }
 	    for (i = 5; i < objc; i += 2) {
-		if (Item_CreateColumnFromObj(tree, item, objv[i], &column, &columnIndex) != TCL_OK)
+		if (Item_CreateColumnFromObj(tree, item, objv[i], &column,
+			&columnIndex, NULL) != TCL_OK)
 		    return TCL_ERROR;
 		if (i + 1 == objc) {
 		    FormatResult(interp, "missing style for column \"%s\"",
@@ -2546,10 +2666,8 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#if 1
 		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-#endif
 	    }
 	    break;
 	}
@@ -3220,19 +3338,8 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		continue;
 
 	    column = Item_FindColumn(tree, walk, sortData.columns[i].column);
-	    if (column == NULL) {
-		FormatResult(interp, "item %s%d doesn't have column %s%d",
-			tree->itemPrefix, walk->id,
-			tree->columnPrefix,
-			TreeColumn_GetID(Tree_FindColumn(tree, sortData.columns[i].column)));
-		result = TCL_ERROR;
-		goto done;
-	    }
-	    if (column->style == NULL) {
-		FormatResult(interp, "item %s%d column %s%d has no style",
-			tree->itemPrefix, walk->id,
-			tree->columnPrefix,
-			TreeColumn_GetID(Tree_FindColumn(tree, sortData.columns[i].column)));
+	    if ((column == NULL) || (column->style == NULL)) {
+		NoStyleMsg(tree, walk, sortData.columns[i].column);
 		result = TCL_ERROR;
 		goto done;
 	    }
@@ -3424,8 +3531,10 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    if (Item_FindColumnFromObj(tree, item, objv[5], &column,
 			&columnIndex) != TCL_OK)
-		return TCL_ERROR; 
+		return TCL_ERROR;
 	    if (objc == 6) {
+		if ((column == NULL) || !column->cstate)
+		    break;
 		listObj = Tcl_NewListObj(0, NULL);
 		for (i = 0; i < 32; i++) {
 		    if (tree->stateNames[i] == NULL)
@@ -3448,6 +3557,9 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
 			    SFO_NOT_STATIC) != TCL_OK)
 		    return TCL_ERROR;
+	    }
+	    if (column == NULL) {
+		column = Item_CreateColumn(tree, item, columnIndex, NULL);
 	    }
 	    stateOn = states[STATE_OP_ON];
 	    stateOff = states[STATE_OP_OFF];
@@ -3761,6 +3873,9 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	"range",
 	"rnc",
 	"sort",
+#ifdef COLUMN_SPAN
+	"span",
+#endif
 	"state",
 	"style",
 	"text",
@@ -3797,6 +3912,9 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	COMMAND_RANGE,
 	COMMAND_RNC,
 	COMMAND_SORT,
+#ifdef COLUMN_SPAN
+	COMMAND_SPAN,
+#endif
 	COMMAND_STATE,
 	COMMAND_STYLE,
 	COMMAND_TEXT,
@@ -3843,9 +3961,12 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{ 2, 2, 0, AF_SAMEROOT, "first last" }, /* range */
 	{ 1, 1, 0, 0, "item" }, /* rnc */
 	{ 1, 100000, 0, AF_NOT_ITEM, "item ?option ...?" }, /* sort */
+#ifdef COLUMN_SPAN
+	{ 1, 100000, 0, AF_NOT_ITEM, "item ?column? ?span? ?column span ...?" }, /* span */
+#endif
 	{ 2, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item ?arg ...?" }, /* state */
 	{ 2, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item ?arg ...?" }, /* style */
-	{ 2, 100000, 0, AF_NOT_ITEM, "item column ?text? ?column text ...?" }, /* text */
+	{ 1, 100000, 0, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?" }, /* text */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* toggle */
     };
     int index;
@@ -3937,7 +4058,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    int x, y, w, h;
 	    int i, columnIndex, indent, totalWidth;
 	    TreeColumn treeColumn;
-	    TreeItemColumn itemColumn;
+	    Column *itemColumn;
 	    StyleDrawArgs drawArgs;
 	    TreeItem item_ = (TreeItem) item;
 	    XRectangle rect;
@@ -3945,7 +4066,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
 		break;
 	    if (objc > 4) {
-		if (TreeItem_ColumnFromObj(tree, item_, objv[4],
+		if (Item_FindColumnFromObj(tree, item, objv[4],
 			    &itemColumn, &columnIndex) != TCL_OK)
 		    return TCL_ERROR;
 		totalWidth = 0;
@@ -3966,14 +4087,11 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			    y + h - tree->yOrigin);
 		    break;
 		}
-		drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-		if (drawArgs.style == NULL) {
-		    FormatResult(interp,
-			    "item %s%d column %s%d has no style",
-			    tree->itemPrefix, TreeItem_GetID(tree, item_),
-			    tree->columnPrefix, TreeColumn_GetID(treeColumn));
+		if ((itemColumn == NULL) || (itemColumn->style == NULL)) {
+		    NoStyleMsg(tree, item, columnIndex);
 		    return TCL_ERROR;
 		}
+		drawArgs.style = itemColumn->style;
 		drawArgs.tree = tree;
 		drawArgs.drawable = None;
 		drawArgs.state = TreeItem_GetState(tree, item_);
@@ -4177,17 +4295,11 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    }
 	    doneComplex:
 	    if (iMask & CS_DISPLAY)
-#if 1
 		Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
-#else
-		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#endif
 	    if (iMask & CS_LAYOUT) {
 		Tree_InvalidateColumnWidth(tree, -1);
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
-#if 1
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#endif
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    }
 	    return result;
@@ -4587,6 +4699,58 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{
 	    return ItemSortCmd(clientData, interp, objc, objv);
 	}
+#ifdef COLUMN_SPAN
+	/* T item span I ?C? ?span? ?C span ...? */
+	case COMMAND_SPAN:
+	{
+	    TreeColumn treeColumn = tree->columns;
+	    Column *column = item->columns;
+	    Tcl_Obj *listObj;
+	    int i, columnIndex, span;
+
+	    if (objc == 4) {
+		listObj = Tcl_NewListObj(0, NULL);
+		while (treeColumn != NULL) {
+		    Tcl_ListObjAppendElement(interp, listObj,
+			    Tcl_NewIntObj(column ? column->span : 1));
+		    treeColumn = TreeColumn_Next(treeColumn);
+		    if (column != NULL)
+			column = column->next;
+		}
+		Tcl_SetObjResult(interp, listObj);
+		break;
+	    }
+	    if (objc == 5) {
+		if (Item_FindColumnFromObj(tree, item, objv[4], &column, NULL) != TCL_OK) {
+		    return TCL_ERROR;
+		}
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(column ? column->span : 1));
+		break;
+	    }
+	    if ((objc - 4) & 1) {
+		FormatResult(interp, "wrong # args: should be \"column span column span...\"");
+		return TCL_ERROR;
+	    }
+	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
+	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+	    for (i = 4; i < objc; i += 2) {
+		if (Item_CreateColumnFromObj(tree, item, objv[i], &column,
+			&columnIndex, NULL) != TCL_OK)
+		    return TCL_ERROR;
+		if (Tcl_GetIntFromObj(interp, objv[i + 1], &span) != TCL_OK)
+		    return TCL_ERROR;
+		if (span <= 0) {
+		    FormatResult(interp, "bad span \"%d\": must be > 0", span);
+		    return TCL_ERROR;
+		}
+		column->span = span;
+		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+		Tree_InvalidateColumnWidth(tree, columnIndex);
+	    }
+	    break;
+	}
+#endif
 	case COMMAND_STATE:
 	{
 	    return ItemStateCmd(clientData, interp, objc, objv);
@@ -4595,18 +4759,36 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{
 	    return ItemStyleCmd(clientData, interp, objc, objv);
 	}
-	/* T item text I C ?text? ?C text ...? */
+	/* T item text I ?C? ?text? ?C text ...? */
 	case COMMAND_TEXT:
 	{
-	    Column *column;
+	    TreeColumn treeColumn = tree->columns;
+	    Column *column = item->columns;
 	    Tcl_Obj *textObj;
 	    int i, columnIndex;
 
+	    if (objc == 4) {
+		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
+		while (treeColumn != NULL) {
+		    if ((column != NULL) && (column->style != NULL))
+			textObj = TreeStyle_GetText(tree, column->style);
+		    else
+			textObj = NULL;
+		    if (textObj == NULL)
+			textObj = Tcl_NewObj();
+		    Tcl_ListObjAppendElement(interp, listObj, textObj);
+		    treeColumn = TreeColumn_Next(treeColumn);
+		    if (column != NULL)
+			column = column->next;
+		}
+		Tcl_SetObjResult(interp, listObj);
+		break;
+	    }
 	    if (objc == 5) {
 		if (Item_FindColumnFromObj(tree, item, objv[4], &column, NULL) != TCL_OK) {
 		    return TCL_ERROR;
 		}
-		if (column->style != NULL) {
+		if ((column != NULL) && (column->style != NULL)) {
 		    textObj = TreeStyle_GetText(tree, column->style);
 		    if (textObj != NULL)
 			Tcl_SetObjResult(interp, textObj);
@@ -4618,20 +4800,14 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	    }
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
-#if 1
 	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#else
-	    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
-#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    for (i = 4; i < objc; i += 2) {
-		if (Item_CreateColumnFromObj(tree, item, objv[i], &column, &columnIndex) != TCL_OK)
+		if (Item_FindColumnFromObj(tree, item, objv[i], &column,
+			&columnIndex) != TCL_OK)
 		    return TCL_ERROR;
-		if (column->style == NULL) {
-		    FormatResult(interp, "item %s%d column %s%d has no style",
-			    tree->itemPrefix, item->id,
-			    tree->columnPrefix,
-			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
+		if ((column == NULL) || (column->style == NULL)) {
+		    NoStyleMsg(tree, item, columnIndex);
 		    return TCL_ERROR;
 		}
 		TreeStyle_SetText(tree, (TreeItem) item, (TreeItemColumn) column, column->style, objv[i + 1]);
@@ -4807,6 +4983,144 @@ int TreeItem_Debug(TreeCtrl *tree, TreeItem item_)
     return TCL_OK;
 }
 
+#ifdef COLUMN_SPAN
+
+void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf)
+{
+    Item *self = (Item *) item_;
+    int left, top, width, height;
+    int indent, columnWidth, totalWidth;
+    Column *column;
+    StyleDrawArgs drawArgs;
+    TreeColumn treeColumn;
+    int i, columnIndex;
+    SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+    char *elem;
+
+    if (Tree_ItemBbox(tree, item_, &left, &top, &width, &height) < 0)
+	return;
+
+    STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+    TreeItem_GetSpans(tree, item_, spans);
+
+    drawArgs.tree = tree;
+    drawArgs.drawable = None;
+
+    totalWidth = 0;
+    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+	treeColumn = spans[columnIndex].treeColumn;
+	if (spans[columnIndex].itemColumnIndex != columnIndex)
+	    continue;
+	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis))
+	    columnWidth = width;
+	else {
+	    columnWidth = 0;
+	    for (i = columnIndex; i < tree->columnCount; i++) {
+		if (spans[i].itemColumnIndex != columnIndex)
+		    break;
+		columnWidth += spans[i].width;
+	    }
+	}
+	if (columnWidth <= 0)
+	    continue;
+	if (treeColumn == tree->columnTree)
+	    indent = TreeItem_Indent(tree, item_);
+	else
+	    indent = 0;
+	if ((x >= totalWidth + indent) && (x < totalWidth + columnWidth)) {
+	    sprintf(buf + strlen(buf), " column %s%d",
+		    tree->columnPrefix, TreeColumn_GetID(treeColumn));
+	    column = (Column *) spans[columnIndex].itemColumn;
+	    if ((column != NULL) && (column->style != NULL)) {
+		drawArgs.state = self->state | column->cstate;
+		drawArgs.style = column->style;
+		drawArgs.indent = indent;
+		drawArgs.x = totalWidth;
+		drawArgs.y = 0;
+		drawArgs.width = columnWidth;
+		drawArgs.height = height;
+		drawArgs.justify = TreeColumn_Justify(treeColumn);
+		elem = TreeStyle_Identify(&drawArgs, x, y);
+		if (elem != NULL)
+		    sprintf(buf + strlen(buf), " elem %s", elem);
+		break;
+	    }
+	    break;
+	}
+	totalWidth += columnWidth;
+    }
+
+    STATIC_FREE(spans, SpanInfo, tree->columnCount);
+}
+
+void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
+	int x1, int y1, int x2, int y2, Tcl_Obj *listObj)
+{
+    Item *self = (Item *) item_;
+    int indent, columnWidth, totalWidth;
+    int x, y, w, h;
+    Column *column;
+    StyleDrawArgs drawArgs;
+    TreeColumn treeColumn;
+    int i, columnIndex;
+    SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+
+    if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
+	return;
+
+    STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+    TreeItem_GetSpans(tree, item_, spans);
+
+    drawArgs.tree = tree;
+    drawArgs.drawable = None;
+
+    totalWidth = 0;
+    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+	treeColumn = spans[columnIndex].treeColumn;
+	if (spans[columnIndex].itemColumnIndex != columnIndex)
+	    continue;
+	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis))
+	    columnWidth = w;
+	else {
+	    columnWidth = 0;
+	    for (i = columnIndex; i < tree->columnCount; i++) {
+		if (spans[i].itemColumnIndex != columnIndex)
+		    break;
+		columnWidth += spans[i].width;
+	    }
+	}
+	if (columnWidth <= 0)
+	    continue;
+	if (treeColumn == tree->columnTree)
+	    indent = TreeItem_Indent(tree, item_);
+	else
+	    indent = 0;
+	if ((x2 >= x + totalWidth + indent) && (x1 < x + totalWidth + columnWidth)) {
+	    Tcl_Obj *subListObj = Tcl_NewListObj(0, NULL);
+	    Tcl_ListObjAppendElement(tree->interp, subListObj,
+		    TreeColumn_ToObj(tree, treeColumn));
+	    column = (Column *) spans[columnIndex].itemColumn;
+	    if ((column != NULL) && (column->style != NULL)) {
+		drawArgs.state = self->state | column->cstate;
+		drawArgs.style = column->style;
+		drawArgs.indent = indent;
+		drawArgs.x = x + totalWidth;
+		drawArgs.y = y;
+		drawArgs.width = columnWidth;
+		drawArgs.height = h;
+		drawArgs.justify = TreeColumn_Justify(treeColumn);
+		TreeStyle_Identify2(&drawArgs, x1, y1, x2, y2, subListObj);
+	    }
+	    Tcl_ListObjAppendElement(tree->interp, listObj, subListObj);
+	}
+	totalWidth += columnWidth;
+    }
+
+    STATIC_FREE(spans, SpanInfo, tree->columnCount);
+}
+
+#else /* COLUMN_SPAN */
+
 char *TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y)
 {
     Item *self = (Item *) item_;
@@ -4917,6 +5231,8 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	    column = column->next;
     }
 }
+
+#endif /* not COLUMN_SPAN */
 
 int TreeItem_Init(TreeCtrl *tree)
 {
