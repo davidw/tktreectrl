@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.47 2005/07/05 02:10:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.48 2005/07/07 02:47:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -745,6 +745,11 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			sprintf(buf + strlen(buf), " line %s%d", tree->itemPrefix,
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
+#if 1
+	    } else {
+		TreeItem_Identify(tree, item, x, y, buf);
+	    }
+#else
 	    } else if (tree->columnCountVis == 1) {
 		char *elem;
 
@@ -777,6 +782,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    itemColumn = TreeItemColumn_GetNext(tree, itemColumn);
 		}
 	    }
+#endif
 	    Tcl_SetResult(interp, buf, TCL_VOLATILE);
 	    break;
 	}
