@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.12 2005/06/08 01:16:51 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.13 2005/07/10 22:15:50 treectrl Exp $
  */
 
 /*
@@ -488,42 +488,11 @@ static void TkWinEventProc(ClientData clientData, XEvent *eventPtr)
 	WinTableValue *cd = (WinTableValue *) clientData;
 	BindingTable *bindPtr = cd->bindPtr;
 	ClientData object = cd->object;
-	Tcl_HashEntry *hPtr;
-	Tcl_HashSearch search;
-	Tcl_DString dString;
-	BindValue **valueList;
-	int i, count = 0;
 
 	if (eventPtr->type != DestroyNotify)
 		return;
 
-	Tcl_DStringInit(&dString);
-
-	hPtr = Tcl_FirstHashEntry(&bindPtr->patternTable, &search);
-	while (hPtr != NULL)
-	{
-		BindValue *valuePtr = (BindValue *) Tcl_GetHashValue(hPtr);
-
-		while (valuePtr != NULL)
-		{
-			if (valuePtr->object == object)
-			{
-				Tcl_DStringAppend(&dString, (char *) &valuePtr, sizeof(valuePtr));
-				count++;
-				/* The object can only appear once in this chain of
-				 * BindValues */
-				break;
-			}
-			valuePtr = valuePtr->nextValue;
-		}
-		hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	valueList = (BindValue **) Tcl_DStringValue(&dString);
-	for (i = 0; i < count; i++)
-		DeleteBinding(bindPtr, valueList[i]);
-
-	Tcl_DStringFree(&dString);
+	QE_DeleteBinding((QE_BindingTable) bindPtr, object, NULL);
 }
 #endif
 
@@ -725,7 +694,44 @@ int QE_DeleteBinding(QE_BindingTable bindingTable, ClientData object,
 	char *eventString)
 {
 	BindingTable *bindPtr = (BindingTable *) bindingTable;
-	BindValue *valuePtr;
+	BindValue *valuePtr, **valueList;
+
+	/* Delete all bindings on this object */
+	if (eventString == NULL)
+	{
+		Tcl_HashEntry *hPtr;
+		Tcl_HashSearch search;
+		Tcl_DString dString;
+		int i, count = 0;
+
+		Tcl_DStringInit(&dString);
+
+		hPtr = Tcl_FirstHashEntry(&bindPtr->patternTable, &search);
+		while (hPtr != NULL)
+		{
+			valuePtr = (BindValue *) Tcl_GetHashValue(hPtr);
+			while (valuePtr != NULL)
+			{
+				if (valuePtr->object == object)
+				{
+					Tcl_DStringAppend(&dString, (char *) &valuePtr,
+						sizeof(valuePtr));
+					count++;
+					break;
+				}
+				valuePtr = valuePtr->nextValue;
+			}
+			hPtr = Tcl_NextHashEntry(&search);
+		}
+
+		valueList = (BindValue **) Tcl_DStringValue(&dString);
+		for (i = 0; i < count; i++)
+			DeleteBinding(bindPtr, valueList[i]);
+
+		Tcl_DStringFree(&dString);
+
+		return TCL_OK;
+	}
 
 	if (FindSequence(bindPtr, object, eventString, 0, NULL, &valuePtr) != TCL_OK)
 		return TCL_ERROR;
@@ -937,6 +943,7 @@ int QE_GetAllBindings(QE_BindingTable bindingTable, ClientData object)
 				Tcl_DStringSetLength(&dString, 0);
 				GetPatternString(bindPtr, valuePtr, &dString);
 				Tcl_AppendElement(bindPtr->interp, Tcl_DStringValue(&dString));
+				break;
 			}
 			valuePtr = valuePtr->nextValue;
 		}
@@ -1590,6 +1597,49 @@ int QE_BindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	}
 
 	return TCL_OK;
+}
+
+int QE_UnbindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[])
+{
+	int objC = objc - objOffset;
+	Tcl_Obj *CONST *objV = objv + objOffset;
+	BindingTable *bindPtr = (BindingTable *) bindingTable;
+	Tk_Window tkwin = Tk_MainWindow(bindPtr->interp);
+	ClientData object;
+	char *string, *sequence;
+
+	if ((objC < 2) || (objC > 3))
+	{
+		Tcl_WrongNumArgs(bindPtr->interp, objOffset + 1, objv,
+			"object ?pattern?");
+		return TCL_ERROR;
+	}
+
+	string = Tcl_GetString(objV[1]);
+
+	if (string[0] == '.')
+	{
+		Tk_Window tkwin2;
+		tkwin2 = Tk_NameToWindow(bindPtr->interp, string, tkwin);
+		if (tkwin2 == NULL)
+		{
+			return TCL_ERROR;
+		}
+		object = (ClientData) Tk_GetUid(Tk_PathName(tkwin2));
+	}
+	else
+	{
+		object = (ClientData) Tk_GetUid(string);
+	}
+
+	if (objC == 2)
+	{
+		return QE_DeleteBinding(bindingTable, object, NULL);
+	}
+
+	sequence = Tcl_GetString(objV[2]);
+	return QE_DeleteBinding(bindingTable, object, sequence);
 }
 
 /*
