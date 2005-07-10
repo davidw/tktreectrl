@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.33 2005/07/07 02:57:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.34 2005/07/10 22:20:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -245,6 +245,44 @@ static void StringTableRestore(
 }
 
 /* END custom "stringtable" option */
+
+int BooleanCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName)
+{
+	int i;
+
+	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+		if (!strcmp(optionTable[i].optionName, optionName)) {
+			optionTable[i].clientData = (ClientData) &booleanCO;
+			return TCL_OK;
+		}
+	}
+	return TCL_ERROR;
+}
+
+int StringTableCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName, CONST char **tablePtr)
+{
+	StringTableClientData *cd;
+	Tk_ObjCustomOption *co;
+	int i;
+
+	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+		if (!strcmp(optionTable[i].optionName, optionName)) {
+			cd = (StringTableClientData *) ckalloc(sizeof(StringTableClientData));
+			cd->tablePtr = tablePtr;
+			cd->msg = optionName + 1;
+			co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+			co->name = (char *) optionName + 1;
+			co->setProc = StringTableSet;
+			co->getProc = StringTableGet;
+			co->restoreProc = StringTableRestore;
+			co->freeProc = NULL;
+			co->clientData = (ClientData) cd;
+			optionTable[i].clientData = (ClientData) co;
+			return TCL_OK;
+		}
+	}
+	return TCL_ERROR;
+}
 
 /*****/
 
@@ -3621,7 +3659,7 @@ static void OnScreenProcWindow(ElementArgs *args)
     Element *elem = args->elem;
     ElementWindow *elemX = (ElementWindow *) elem;
 
-    if (!args->screen.visible) {
+    if (!args->screen.visible && (elemX->tkwin != NULL)) {
 	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
 	    Tk_UnmapWindow(elemX->tkwin); 
 	} else {
@@ -3749,7 +3787,14 @@ TreeCtrlStubs stubs = {
     PerStateInfo_FromObj,
     PerStateInfo_ForState,
     PerStateInfo_ObjForState,
-    PerStateInfo_Undefine
+    PerStateInfo_Undefine,
+    &pstBoolean,
+    PerStateBoolean_ForState,
+    PSTSave,
+    PSTRestore,
+    TreeStateFromObj,
+    BooleanCO_Init,
+    StringTableCO_Init
 };
 
 static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
