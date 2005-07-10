@@ -61,9 +61,9 @@ proc StyleEditor::Init {Tdemo} {
     set T $fRight.propertyList.t
     $T configure -showbuttons no -showlines no -showroot no
     $T column create -text "Property" -expand yes -button no -tag property \
-	-itembackground {linen ""}
+	-itembackground {#E8E8E8 ""}
     $T column create -text "Value" -expand yes -button no -tag value \
-	-itembackground {linen ""}
+	-itembackground {#E8E8E8 ""}
     $T configure -treecolumn property
 
     $T notify bind $T <Selection> {
@@ -249,20 +249,31 @@ proc StyleEditor::SetPropertyList {} {
 
     # Create elements and styles the first time this is called
     if {[llength [$T style names]] == 0} {
-	$T element create e1 text
-	$T element create e2 rect -fill {gray75 selected} \
-	    -outline {black !selected} -outlinewidth 1 -open nw -showfocus no
+	$T state define header
+
+	$T element create e1 text \
+	    -fill [list $::SystemHighlightText selected white header] \
+	    -font [list "[$T cget -font] bold" header]
+	$T element create e2 rect \
+	    -fill [list #ACA899 header $::SystemHighlight selected] \
+	    -outline black -outlinewidth 1 -open nw -showfocus no
 
 	$T element create eWindow window
 
 	set S [$T style create s1]
 	$T style elements $S {e2 e1}
-	$T style layout $S e1 -expand ns -padx {4 0}
 	$T style layout $S e2 -detach yes -indent no -iexpand xy
+	$T style layout $S e1 -expand ns -padx {4 0}
 
 	set S [$T style create sWindow]
-	$T style elements $S eWindow
-	$T style layout $S eWindow -expand ns
+	$T style elements $S {e2 eWindow}
+	$T style layout $S e2 -detach yes -indent no -iexpand xy
+	$T style layout $S eWindow -expand ns -padx {0 1} -pady {0 1}
+
+	set S [$T style create sHeader]
+	$T style elements $S {e2 e1}
+	$T style layout $S e2 -detach yes -iexpand xy
+	$T style layout $S e1 -expand ns -padx {4 0}
 
 	Info editor,pad [MakePadEditor $T]
 	Info editor,expand [MakeExpandEditor $T]
@@ -273,9 +284,11 @@ proc StyleEditor::SetPropertyList {} {
 
 	update idletasks
 	set height 0
-	foreach editor {pad expand iexpand squeeze boolean pixels} {
-	    if {[winfo reqheight [Info editor,$editor]] > $height} {
-		set height [winfo reqheight [Info editor,$editor]]
+	foreach editor {pad expand iexpand squeeze boolean pixels} {	
+	    set heightWin [winfo reqheight [Info editor,$editor]]
+	    incr heightWin
+	    if {$heightWin > $height} {
+		set height $heightWin
 	    }
 	}
 	$T configure -font [[Info editor,pad].v1 cget -font] \
@@ -288,17 +301,46 @@ proc StyleEditor::SetPropertyList {} {
 
     if {$element eq ""} return
 
-    foreach {option value} [$Tdemo style layout $style $element] {
+    foreach {header option} {
+	"Detach" ""
+	"" -detach
+	"" -indent
+	"Union" ""
+	"" -union
+	"Expand and Squeeze" ""
+	"" -expand
+	"" -iexpand
+	"" -squeeze
+	"Sticky" ""
+	"" -sticky
+	"Padding" ""
+	"" -ipadx
+	"" -ipady
+	"" -padx
+	"" -pady
+	"Height" ""
+	"" -minheight
+	"" -height
+	"" -maxheight
+	"Width" ""
+	"" -minwidth
+	"" -width
+	"" -maxwidth
+    } {
  	set I [$T item create]
-	$T item text $I 0 $option
-
-	$T item style set $I 1 s1
-	$T item text $I 1 $value
-
+	if {$header ne ""} {
+	    $T item style set $I 0 sHeader
+	    $T item span $I 0 2
+	    $T item element configure $I 0 e1 -text $header -fill White
+	    $T item state set $I header
+	} else {
+	    $T item style set $I 1 s1
+	    $T item text $I 0 $option 1 [$Tdemo style layout $style $element $option]
+	}
 	$T item lastchild root $I
    }
 
-    $T column configure 0 -width [expr {[$T column neededwidth 0] * 2}]
+    $T column configure 0 -width [expr {[$T column neededwidth 0] * 1.0}]
 
     return
 }
@@ -313,8 +355,10 @@ proc StyleEditor::SelectProperty {select deselect} {
     if {[llength $deselect] && ($element ne "")} { 
 	set I [lindex $deselect 0]
 	set option [$T item text $I 0]
-	$T item style set $I 1 s1
-	$T item text $I 1 [$Tdemo style layout $style $element $option]
+	if {[string index $option 0] eq "-"} {
+	    $T item style set $I 1 s1
+	    $T item text $I 1 [$Tdemo style layout $style $element $option]
+	}
     }
 
     set selection [$T selection get]
@@ -325,6 +369,10 @@ proc StyleEditor::SelectProperty {select deselect} {
 
     set I [lindex $selection 0]
     set option [$T item text $I 0]
+    if {[string index $option 0] ne "-"} {
+	Info selectedOption ""
+	return
+    }
     Info selectedOption $option
 
     $T item style set $I 1 sWindow
