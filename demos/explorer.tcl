@@ -1,5 +1,12 @@
 set Dir [file dirname [file dirname [info script]]]
 
+set shellicon 0
+catch {
+	lappend auto_path $treectrl_library
+	package require shellicon $VERSION
+	set shellicon 1
+}
+
 proc DemoExplorerAux {scriptDir scriptFile} {
 
 	set T .f2.f1.t
@@ -81,7 +88,11 @@ proc DemoExplorerDetails {} {
 	# Create elements
 	#
 
-	$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
+	if {$::shellicon} {
+		$T element create elemImg shellicon -size small
+	} else {
+		$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
+	}
 	$T element create txtName text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
 	$T element create txtType text -lines 1
@@ -149,17 +160,21 @@ proc DemoExplorerDetails {} {
 	#
 
 	set scriptDir {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item name styName type styType modified styDate
 		$T item element configure $item \
 			name txtName -text [file tail $file] , \
 			type txtType -text "Folder" , \
 			modified txtDate -data [file mtime $file]
+		if {$::shellicon} {
+			$T item element configure $item \
+				name elemImg -path $file
+		}
 		$T item lastchild root $item
 	}
 
 	set scriptFile {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item name styName size stySize type styType modified styDate
 		switch [file extension $file] {
 			.dll { set img small-dll }
@@ -172,11 +187,19 @@ proc DemoExplorerDetails {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item element configure $item \
-			name elemImg -image [list ${img}Sel {selected} $img {}] + txtName -text [file tail $file] , \
-			size txtSize -data [expr {[file size $file] / 1024 + 1}] , \
-			type txtType -text $type , \
-			modified txtDate -data [file mtime $file]
+		if {$::shellicon} {
+			$T item element configure $item \
+				name elemImg -path $file + txtName -text [file tail $file] , \
+				size txtSize -data [expr {[file size $file] / 1024 + 1}] , \
+				type txtType -text $type , \
+				modified txtDate -data [file mtime $file]
+		} else {
+			$T item element configure $item \
+				name elemImg -image [list ${img}Sel {selected} $img {}] + txtName -text [file tail $file] , \
+				size txtSize -data [expr {[file size $file] / 1024 + 1}] , \
+				type txtType -text $type , \
+				modified txtDate -data [file mtime $file]
+		}
 		$T item lastchild root $item
 	}
 
@@ -273,7 +296,11 @@ proc DemoExplorerLargeIcons {} {
 	# Create elements
 	#
 
-	$T element create elemImg image -image {big-folderSel {selected} big-folder {}}
+	if {$::shellicon} {
+		$T element create elemImg shellicon -size large
+	} else {
+		$T element create elemImg image -image {big-folderSel {selected} big-folder {}}
+	}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
 		-justify center -lines 1 -width 71 -wrap word
 	$T element create elemSel rect -fill [list $::SystemHighlight {selected focus} gray {selected}] -showfocus yes
@@ -326,14 +353,18 @@ proc DemoExplorerLargeIcons {} {
 	#
 
 	set scriptDir {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item C0 STYLE
 		$T item text $item C0 [file tail $file]
+		if {$::shellicon} {
+			$T item element configure $item C0 \
+				elemImg -path $file
+		}
 		$T item lastchild root $item
 	}
 
 	set scriptFile {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item C0 STYLE
 		switch [file extension $file] {
 			.dll { set img big-dll }
@@ -346,9 +377,15 @@ proc DemoExplorerLargeIcons {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item element configure $item C0 \
-			elemImg -image [list ${img}Sel {selected} $img {}] + \
-			elemTxt -text [file tail $file]
+		if {$::shellicon} {
+			$T item element configure $item C0 \
+				elemImg -path $file + \
+				elemTxt -text [file tail $file]
+		} else {
+			$T item element configure $item C0 \
+				elemImg -image [list ${img}Sel {selected} $img {}] + \
+				elemTxt -text [file tail $file]
+		}
 		$T item lastchild root $item
 	}
 
@@ -408,7 +445,11 @@ proc DemoExplorerList {} {
 	# Create elements
 	#
 
-	$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
+	if {$::shellicon} {
+		$T element create elemImg shellicon -size small
+	} else {
+		$T element create elemImg image -image {small-folderSel {selected} small-folder {}}
+	}
 	$T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
 		-lines 1
 	$T element create elemSel rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -showfocus yes
@@ -458,14 +499,18 @@ proc DemoExplorerList {} {
 	#
 
 	set scriptDir {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item C0 STYLE
 		$T item text $item C0 [file tail $file]
+		if {$::shellicon} {
+			$T item element configure $item C0 \
+				elemImg -path $file
+		}
 		$T item lastchild root $item
 	}
 
 	set scriptFile {
-		set item [$T item create]
+		set item [$T item create -open no]
 		$T item style set $item C0 STYLE
 		switch [file extension $file] {
 			.dll { set img small-dll }
@@ -478,9 +523,15 @@ proc DemoExplorerList {} {
 			set type "[string range $type 1 end] "
 		}
 		append type "File"
-		$T item element configure $item C0 \
-			elemImg -image [list ${img}Sel {selected} $img {}] + \
-			elemTxt -text [file tail $file]
+		if {$::shellicon} {
+			$T item element configure $item C0 \
+				elemImg -path $file + \
+				elemTxt -text [file tail $file]
+		} else {
+			$T item element configure $item C0 \
+				elemImg -image [list ${img}Sel {selected} $img {}] + \
+				elemTxt -text [file tail $file]
+		}
 		$T item lastchild root $item
 	}
 
