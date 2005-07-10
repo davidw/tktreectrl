@@ -27,53 +27,53 @@ proc DemoRandom {} {
 	# Create columns
 	#
 
-	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tag item
-	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag parent
-	$T column create -text Depth -justify center -itembackground {linen {}} -tag depth
+	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tag colItem
+	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag colParent
+	$T column create -text Depth -justify center -itembackground {linen {}} -tag colDepth
 
-	$T configure -treecolumn item
+	$T configure -treecolumn colItem
 
 	#
 	# Create elements
 	#
 
-	$T element create e1 image -image {folder-open {open} folder-closed {}}
-	$T element create e2 image -image small-file
-	$T element create e3 text \
+	$T element create elemImgFolder image -image {folder-open {open} folder-closed {}}
+	$T element create elemImgFile image -image small-file
+	$T element create elemTxtName text \
 		-fill [list $::SystemHighlightText {selected focus}]
-	$T element create e4 text -fill blue
-	$T element create e6 text
-	$T element create e5 rect -showfocus yes \
+	$T element create elemTxtCount text -fill blue
+	$T element create elemTxtAny text
+	$T element create elemRectSel rect -showfocus yes \
 		-fill [list $::SystemHighlight {selected focus} gray {selected !focus}]
 
 	#
 	# Create styles using the elements
 	#
 
-	$T style create s1
-	$T style elements s1 {e5 e1 e3 e4}
-	$T style layout s1 e1 -padx {0 4} -expand ns
-	$T style layout s1 e3 -padx {0 4} -expand ns
-	$T style layout s1 e4 -padx {0 6} -expand ns
-	$T style layout s1 e5 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styFolder]
+	$T style elements $S {elemRectSel elemImgFolder elemTxtName elemTxtCount}
+	$T style layout $S elemImgFolder -padx {0 4} -expand ns
+	$T style layout $S elemTxtName -padx {0 4} -expand ns
+	$T style layout $S elemTxtCount -padx {0 6} -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtName] -iexpand ns -ipadx 2
 
-	$T style create s2
-	$T style elements s2 {e5 e2 e3}
-	$T style layout s2 e2 -padx {0 4} -expand ns
-	$T style layout s2 e3 -padx {0 4} -expand ns
-	$T style layout s2 e5 -union [list e3] -iexpand ns -ipadx 2
+	set S [$T style create styFile]
+	$T style elements $S {elemRectSel elemImgFile elemTxtName}
+	$T style layout $S elemImgFile -padx {0 4} -expand ns
+	$T style layout $S elemTxtName -padx {0 4} -expand ns
+	$T style layout $S elemRectSel -union [list elemTxtName] -iexpand ns -ipadx 2
 
-	$T style create s3
-	$T style elements s3 {e6}
-	$T style layout s3 e6 -padx 6 -expand ns
+	set S [$T style create styAny]
+	$T style elements $S {elemTxtAny}
+	$T style layout $S elemTxtAny -padx 6 -expand ns
 
 	TreeCtrl::SetSensitive $T {
-		{item s1 e5 e1 e3}
-		{item s2 e5 e2 e3}
+		{colItem styFolder elemRectSel elemImgFolder elemTxtName}
+		{colItem styFile elemRectSel elemImgFile elemTxtName}
 	}
 	TreeCtrl::SetDragImage $T {
-		{item s1 e1 e3}
-		{item s2 e2 e3}
+		{colItem styFolder elemImgFolder elemTxtName}
+		{colItem styFile elemImgFile elemTxtName}
 	}
 
 	#
@@ -81,13 +81,16 @@ proc DemoRandom {} {
 	#
 
 	set clicks [clock clicks]
-	set items [$T item id root]
-	for {set i 1} {$i < $::RandomN} {incr i} {
-		set itemi [$T item create]
-		while 1 {
-			set j [expr {int(rand() * $i)}]
-			set itemj [lindex $items $j]
-			if {[$T depth $itemj] < $::RandomDepth} break
+	set items [$T item create -count [expr {$::RandomN - 1}]]
+	set added root
+	foreach itemi $items {
+		set j [expr {int(rand() * [llength $added])}]
+		set itemj [lindex $added $j]
+		if {[$T depth $itemj] < $::RandomDepth - 1} {
+			lappend added $itemi
+		}
+		if {![$T item cget $itemj -button]} {
+			$T item configure $itemj -button yes
 		}
 		if {rand() * 2 > 1} {
 			$T item collapse $itemi
@@ -97,26 +100,25 @@ proc DemoRandom {} {
 		} else {
 			$T item firstchild $itemj $itemi
 		}
-		lappend items $itemi
 	}
 	puts "created $::RandomN-1 items in [expr [clock clicks] - $clicks] clicks"
+
 	set clicks [clock clicks]
-	for {set i 0} {$i < $::RandomN} {incr i} {
-		set itemi [lindex $items $i]
-		set numChildren [$T item numchildren $itemi]
-		if {$numChildren}  {
-			$T item configure $itemi -button yes
-			$T item style set $itemi item s1 parent s3 depth s3
-			$T item complex $itemi \
-				[list [list e3 -text "Item $i"] [list e4 -text "($numChildren)"]] \
-				[list [list e6 -text "[$T item parent $itemi]"]] \
-				[list [list e6 -text "[$T depth $itemi]"]]
+	lappend items [$T item id root]
+	foreach item $items {
+		set numChildren [$T item numchildren $item]
+		if {$numChildren} {
+			$T item style set $item colItem styFolder colParent styAny colDepth styAny
+			$T item element configure $item \
+				colItem elemTxtName -text "Item $item" + elemTxtCount -text "($numChildren)" , \
+				colParent elemTxtAny -text "[$T item parent $item]" , \
+				colDepth elemTxtAny -text "[$T depth $item]"
 		} else {
-			$T item style set $itemi item s2 parent s3 depth s3
-			$T item complex $itemi \
-				[list [list e3 -text "Item $i"]] \
-				[list [list e6 -text "[$T item parent $itemi]"]] \
-				[list [list e6 -text "[$T depth $itemi]"]]
+			$T item style set $item colItem styFile colParent styAny colDepth styAny
+			$T item element configure $item \
+				colItem elemTxtName -text "Item $item" , \
+				colParent elemTxtAny -text "[$T item parent $item]" , \
+				colDepth elemTxtAny -text "[$T depth $item]"
 		}
 	}
 	puts "configured $::RandomN items in [expr [clock clicks] - $clicks] clicks"
@@ -224,6 +226,7 @@ proc TreeCtrl::RandomButton1 {T x y} {
 	}
 	return
 }
+
 proc TreeCtrl::RandomMotion1 {T x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
@@ -238,6 +241,7 @@ proc TreeCtrl::RandomMotion1 {T x y} {
 	}
 	return
 }
+
 proc TreeCtrl::RandomMotion {T x y} {
 	variable Priv
 	switch $Priv(buttonMode) {
@@ -333,6 +337,7 @@ proc TreeCtrl::RandomMotion {T x y} {
 	}
 	return
 }
+
 proc TreeCtrl::RandomRelease1 {T x y} {
 	variable Priv
     if {![info exists Priv(buttonMode)]} return
@@ -382,10 +387,10 @@ proc RandomDrop {T target source pos} {
 		$T item $pos $target $item
 
 		# Update text: parent
-		$T item element configure $item parent e6 -text $parent
+		$T item element configure $item colParent elemTxtAny -text $parent
 
 		# Update text: depth
-		$T item element configure $item depth e6 -text [$T depth $item]
+		$T item element configure $item colDepth elemTxtAny -text [$T depth $item]
 
 		# Recursively update text: depth
 		set itemList [$T item firstchild $item]
@@ -394,7 +399,7 @@ proc RandomDrop {T target source pos} {
 			set item [lindex $itemList end]
 			set itemList [lrange $itemList 0 end-1]
 
-			$T item element configure $item depth e6 -text [$T depth $item]
+			$T item element configure $item colDepth elemTxtAny -text [$T depth $item]
 
 			set item2 [$T item nextsibling $item]
 			if {$item2 ne ""} {
@@ -414,19 +419,19 @@ proc RandomDrop {T target source pos} {
 		set numChildren [$T item numchildren $item]
 		if {$numChildren == 0} {
 			$T item configure $item -button no
-			$T item style map $item item s2 {e3 e3}
+			$T item style map $item colItem styFile {elemTxtName elemTxtName}
 		} else {
-			$T item element configure $item item e4 -text "($numChildren)"
+			$T item element configure $item colItem elemTxtCount -text "($numChildren)"
 		}
 	}
 
 	# Update the target that gained some children
-	if {[$T item style set $parent item] ne "s1"} {
+	if {[$T item style set $parent colItem] ne "styFolder"} {
 		$T item configure $parent -button yes
-		$T item style map $parent item s1 {e3 e3}
+		$T item style map $parent colItem styFolder {elemTxtName elemTxtName}
 	}
 	set numChildren [$T item numchildren $parent]
-	$T item element configure $parent item e4 -text "($numChildren)"
+	$T item element configure $parent colItem elemTxtCount -text "($numChildren)"
 	return
 }
 
