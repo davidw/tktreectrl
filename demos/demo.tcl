@@ -124,9 +124,22 @@ option add *TreeCtrl.useTheme 1
 #option add *TreeCtrl.itemPrefix item
 #option add *TreeCtrl.ColumnPrefix col
 
+# Resizing columns can be done in realtime or by displaying a proxy line
+switch -- $::thisPlatform {
+    macosx {
+	option add *TreeCtrl.columnResizeMode realtime
+    }
+    windows {
+	if {$::tcl_platform(os) eq "Windows NT"} {
+	    option add *TreeCtrl.columnResizeMode realtime
+	}
+    }
+}
+
 
 # Demo sources
 foreach file {
+    biglist
     bitmaps
     explorer
     firefox
@@ -576,18 +589,6 @@ proc MakeMainWindow {} {
     # Give it a big border to debug drawing
     .f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
 
-    # Resizing columns can be done in realtime or by displaying a proxy line
-    switch -- $::thisPlatform {
-	macosx {
-	    .f2.f1.t configure -columnresizemode realtime
-	}
-	windows {
-	    if {$::tcl_platform(os) eq "Windows NT"} {
-		.f2.f1.t configure -columnresizemode realtime
-	    }
-	}
-    }
-
     grid columnconfigure .f2 0 -weight 1
     grid rowconfigure .f2 0 -weight 1
     grid configure .f2.f1 -row 0 -column 0 -sticky news -pady 0
@@ -719,6 +720,9 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) configure -showrootbutton $Popup(showrootbutton)}
     $m add cascade -label Show -menu $m2
 
+    set m2 [menu $m.mSpan -tearoff no]
+    $m add cascade -label Span -menu $m2
+
     $m add checkbutton -label "Use Theme" -variable Popup(usetheme) \
 	-command {$Popup(T) configure -usetheme $Popup(usetheme)}
 
@@ -835,6 +839,21 @@ proc ShowPopup {T x y X Y} {
 	$m add checkbutton -label "Column $C \"[$T column cget $C -text]\" \[[$T column cget $C -image]\]" -variable Popup(visible,$C) \
 	    -command "$T column configure $C -visible \$Popup(visible,$C)"
     }
+
+    set m $menu.mSpan
+    $m delete 0 end
+    if {[llength $id] >= 4 && [lindex $id 2] eq "column"} {
+	set item [lindex $id 1]
+	set column [lindex $id 3]
+	for {set i 1} {$i <= [$T column count] - [$T column order $column]} {incr i} {
+	    $m add radiobutton -label $i -command "$T item span $item $column $i" \
+		-variable Popup(span) -value $i
+	}
+	set Popup(span) [$T item span $item $column]
+    } else {
+	$m add command -label "no item column" -state disabled
+    }
+
     set Popup(usetheme) [$T cget -usetheme]
     tk_popup $menu $X $Y
     return
@@ -883,6 +902,7 @@ proc InitDemoList {} {
 	"iMovie" DemoIMovie imovie.tcl \
 	"Firefox Privacy" DemoFirefoxPrivacy firefox.tcl \
 	"Textvariable" DemoTextvariable textvariable.tcl \
+	"Big List" DemoBigList biglist.tcl \
 	] {
 	set item [$t item create]
 	$t item lastchild root $item
@@ -1110,9 +1130,7 @@ proc DemoClear {} {
 
     # Clear all bindings on the demo list added by the previous demo.
     # This is why DontDelete is used for the <Selection> binding.
-    foreach pattern [$T notify bind $T] {
-	$T notify bind $T $pattern {}
-    }
+    $T notify unbind $T
 
     # Clear all run-time states
     foreach state [$T state names] {
