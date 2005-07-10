@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: qebind.h,v 1.4 2005/05/01 01:20:47 treectrl Exp $
+ * RCS: @(#) $Id: qebind.h,v 1.5 2005/07/10 22:12:32 treectrl Exp $
  */
 
 #ifndef INCLUDED_QEBIND_H
@@ -64,6 +64,8 @@ extern int QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc
 extern int QE_GenerateCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[]);
 extern int QE_InstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
+	Tcl_Obj *CONST objv[]);
+extern int QE_UnbindCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[]);
 extern int QE_UninstallCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 	Tcl_Obj *CONST objv[]);
