@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.11 2005/07/05 02:15:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.12 2005/07/10 22:23:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -268,12 +268,12 @@ int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	static CONST char *commandName[] = { "bind", "configure", "detailnames",
-		"eventnames", "generate", "install", "linkage", "uninstall",
+		"eventnames", "generate", "install", "linkage", "unbind", "uninstall",
 		(char *) NULL };
 	enum {
 		COMMAND_BIND, COMMAND_CONFIGURE, COMMAND_DETAILNAMES,
 		COMMAND_EVENTNAMES, COMMAND_GENERATE, COMMAND_INSTALL,
-		COMMAND_LINKAGE, COMMAND_UNINSTALL
+		COMMAND_LINKAGE, COMMAND_UNBIND, COMMAND_UNINSTALL
 	};
 	int index;
 
@@ -339,6 +339,11 @@ int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		case COMMAND_LINKAGE:
 		{
 			return QE_LinkageCmd(tree->bindingTable, 2, objc, objv);
+		}
+
+		case COMMAND_UNBIND:
+		{
+			return QE_UnbindCmd(tree->bindingTable, 2, objc, objv);
 		}
 
 		case COMMAND_UNINSTALL:
