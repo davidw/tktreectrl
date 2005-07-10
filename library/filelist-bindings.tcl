@@ -326,7 +326,7 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
 		if {$ok} {
 		    FileListEditCancel $T
 		    set Priv(editId,$T) \
-			[after $Priv(edit,delay) [list ::TreeCtrl::FileListEdit $T $I $C $S $E]]
+			[after $Priv(edit,delay) [list ::TreeCtrl::FileListEdit $T $I $C $E]]
 		}
 	    }
 	}
@@ -338,9 +338,10 @@ proc ::TreeCtrl::FileListRelease1 {T x y} {
     return
 }
 
-proc ::TreeCtrl::FileListEdit {T I C S E} {
+proc ::TreeCtrl::FileListEdit {T I C E} {
     variable Priv
     array unset Priv editId,$T
+
     set lines [$T item element cget $I $C $E -lines]
     if {$lines eq ""} {
 	set lines [$T element cget $E -lines]
@@ -352,6 +353,7 @@ proc ::TreeCtrl::FileListEdit {T I C S E} {
     # Multi-line edit
     if {$lines ne "1"} {
 	scan [$T item bbox $I $C] "%d %d %d %d" x1 y1 x2 y2
+	set S [$T item style set $I $C]
 	set padx [$T style layout $S $E -padx]
 	if {[llength $padx] == 2} {
 	    set padw [lindex $padx 0]
@@ -374,7 +376,7 @@ proc ::TreeCtrl::FileListEdit {T I C S E} {
 	}
 	TextExpanderOpen $T $I $C $E [expr {$x2 - $x1 - $padw - $pade}]
 
-	# Single-line edit
+    # Single-line edit
     } else {
 	EntryExpanderOpen $T $I $C $E
     }
@@ -765,6 +767,9 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     set text [$T item element cget $item $column $element -text]
 
     set justify [$T element cget $element -justify]
+    if {$justify eq ""} {
+	set justify left
+    }
 
     # Create the Text widget if needed
     if {[winfo exists $T.text]} {
