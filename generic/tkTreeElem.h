@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.15 2005/07/05 02:13:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.16 2005/07/10 22:17:47 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -138,5 +138,12 @@ struct TreeCtrlStubs
 	PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
 	Tcl_Obj *(*PerStateInfo_ObjForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
 	int (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state);
+	PerStateType *pstBoolean;
+	int (*PerStateBoolean_ForState)(TreeCtrl *tree, PerStateInfo *pInfo, int state, int *match);
+	void (*PSTSave)(PerStateInfo *pInfo, PerStateInfo *pSave);
+	void (*PSTRestore)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, PerStateInfo *pSave);
+	int (*TreeStateFromObj)(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn);
+	int (*BooleanCO_Init)(Tk_OptionSpec *optionTable, CONST char *optionName);
+	int (*StringTableCO_Init)(Tk_OptionSpec *optionTable, CONST char *optionName, CONST char **tablePtr);
 };
 
