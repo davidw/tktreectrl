@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.45 2005/07/07 03:14:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.46 2005/07/10 22:22:50 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -48,12 +48,16 @@ struct Item {
 #define ISROOT(i) ((i)->depth == -1)
 
 #define ITEM_CONF_BUTTON		0x0001
-#define ITEM_CONF_VISIBLE		0x0002
+#define ITEM_CONF_SIZE			0x0002
+#define ITEM_CONF_VISIBLE		0x0004
 
 static Tk_OptionSpec itemOptionSpecs[] = {
     {TK_OPTION_BOOLEAN, "-button", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(Item, hasButton),
      0, (ClientData) NULL, ITEM_CONF_BUTTON},
+    {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Item, fixedHeight),
+     TK_OPTION_NULL_OK, (ClientData) NULL, ITEM_CONF_SIZE},
     {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(Item, isVisible),
      0, (ClientData) NULL, ITEM_CONF_VISIBLE},
@@ -2181,12 +2185,14 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *optionNames[] = { "-button", "-count", "-nextsibling",
-	"-noresult", "-open", "-parent", "-prevsibling", "-visible",
+    static CONST char *optionNames[] = { "-button", "-count", "-height",
+	"-nextsibling", "-noresult", "-open", "-parent", "-prevsibling",
+	"-visible",
 	(char *) NULL };
-    enum { OPT_BUTTON, OPT_COUNT, OPT_NEXTSIBLING, OPT_NORESULT, OPT_OPEN,
-	OPT_PARENT, OPT_PREVSIBLING, OPT_VISIBLE };
+    enum { OPT_BUTTON, OPT_COUNT, OPT_HEIGHT, OPT_NEXTSIBLING, OPT_NORESULT,
+	OPT_OPEN, OPT_PARENT, OPT_PREVSIBLING, OPT_VISIBLE };
     int index, i, count = 1, button = 0, noResult = 0, open = 1, visible = 1;
+    int height = 0;
     Item *item, *parent = NULL, *prevSibling = NULL, *nextSibling = NULL;
     Item *head = NULL, *tail = NULL;
     Tcl_Obj *listObj = NULL;
@@ -2214,6 +2220,15 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		if (count < 0) {
 		    FormatResult(interp, "bad count \"%d\": must be > 0",
 			    count);
+		}
+		break;
+	    case OPT_HEIGHT:
+		if (Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
+			&height) != TCL_OK)
+		    return TCL_ERROR;
+		if (height < 0) {
+		    FormatResult(interp, "bad screen distance \"%s\": must be > 0",
+			    Tcl_GetString(objv[i + 1]));
 		}
 		break;
 	    case OPT_NEXTSIBLING:
@@ -2270,6 +2285,7 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	item->isVisible = visible;
 	if (!open)
 	    item->state &= ~STATE_OPEN;
+	item->fixedHeight = height;
 
 	/* Apply default styles */
 	if (tree->defaultStyle.numStyles) {
@@ -2420,7 +2436,7 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		/* Look for a + or , */
 		for (index = indexElem + 1; index < objc; index++) {
-		    if ((index - indexElem) % 3 == 0) {
+		    if (numArgs % 2 == 0) {
 			int length;
 			char *s = Tcl_GetStringFromObj(objv[index], &length);
 
@@ -2432,9 +2448,9 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    numArgs++;
 		}
 
-		/* Require at least one option-value pair for any elements
-		 * after the first */
-		if (indexElem > 6 && numArgs < 2) {
+		/* Require at least one option-value pair if more than one
+		 * element is specified */
+		if (breakChar && numArgs < 2) {
 		    FormatResult(interp,
 			"missing option-value pair after element \"%s\"",
 			Tcl_GetString(objv[indexElem]));
@@ -2445,6 +2461,8 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
 			(TreeItemColumn) column, column->style, objv[indexElem],
 			numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
+		if (result != TCL_OK)
+		    break;
 
 		cMask |= eMask;
 		if (cMask & CS_LAYOUT) {
