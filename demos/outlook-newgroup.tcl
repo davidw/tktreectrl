@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.13 2005/07/11 01:59:07 treectrl Exp $
+
 #
 # Demo: Outlook Express newsgroup messages
 #

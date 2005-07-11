@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: imovie.tcl,v 1.10 2005/07/11 01:59:07 treectrl Exp $
+
 #
 # Demo: iMovie
 #

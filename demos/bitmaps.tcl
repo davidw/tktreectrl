@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: bitmaps.tcl,v 1.7 2005/07/11 01:59:07 treectrl Exp $
+
 #
 # Demo: Bitmaps
 #

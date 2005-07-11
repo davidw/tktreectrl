@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: textvariable.tcl,v 1.3 2005/07/11 01:59:07 treectrl Exp $
+
 proc DemoTextvariable {} {
 
 	set T .f2.f1.t

@@ -1,7 +1,11 @@
+# RCS: @(#) $Id: help.tcl,v 1.16 2005/07/11 01:59:07 treectrl Exp $
+
 #
 # Demo: Help contents
 #
 proc DemoHelpContents {} {
+
+	global HelpContents
 
 	set T .f2.f1.t
 
@@ -94,12 +98,12 @@ proc DemoHelpContents {} {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
 			TreeCtrl::DoubleButton1 %W %x %y
 		} else {
-			TreeCtrl::HelpButton1 %W %x %y
+			HelpButton1 %W %x %y
 		}
 		break
 	}
 	bind DemoHelpContents <ButtonPress-1> {
-		TreeCtrl::HelpButton1 %W %x %y
+		HelpButton1 %W %x %y
 		break
 	}
 	bind DemoHelpContents <Button1-Motion> {
@@ -109,10 +113,10 @@ proc DemoHelpContents {} {
 		# noop
 	}
 	bind DemoHelpContents <Motion> {
-		TreeCtrl::HelpMotion %W %x %y
+		HelpMotion %W %x %y
 	}
 	bind DemoHelpContents <Leave> {
-		TreeCtrl::HelpMotion %W %x %y
+		HelpMotion %W %x %y
 	}
 	bind DemoHelpContents <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
@@ -121,7 +125,7 @@ proc DemoHelpContents {} {
 		break
 	}
 
-	set ::TreeCtrl::Priv(help,prev) ""
+	set HelpContents(prev) ""
 	bindtags $T [list $T DemoHelpContents TreeCtrl [winfo toplevel $T] all]
 
 	return
@@ -130,6 +134,8 @@ proc DemoHelpContents {} {
 # This is an alternate implementation that does not define a new item state
 # to change the appearance of the item under the cursor.
 proc DemoHelpContents_2 {} {
+
+	global HelpContents
 
 	set T .f2.f1.t
 
@@ -232,12 +238,12 @@ proc DemoHelpContents_2 {} {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
 			TreeCtrl::DoubleButton1 %W %x %y
 		} else {
-			TreeCtrl::HelpButton1 %W %x %y
+			HelpButton1 %W %x %y
 		}
 		break
 	}
 	bind DemoHelpContents <ButtonPress-1> {
-		TreeCtrl::HelpButton1 %W %x %y
+		HelpButton1 %W %x %y
 		break
 	}
 	bind DemoHelpContents <Button1-Motion> {
@@ -247,10 +253,10 @@ proc DemoHelpContents_2 {} {
 		# noop
 	}
 	bind DemoHelpContents <Motion> {
-		TreeCtrl::HelpMotion_2 %W %x %y
+		HelpMotion_2 %W %x %y
 	}
 	bind DemoHelpContents <Leave> {
-		TreeCtrl::HelpMotion_2 %W %x %y
+		HelpMotion_2 %W %x %y
 	}
 	bind DemoHelpContents <KeyPress-Return> {
 		if {[llength [%W selection get]] == 1} {
@@ -259,19 +265,19 @@ proc DemoHelpContents_2 {} {
 		break
 	}
 
-	set ::TreeCtrl::Priv(help,prev) ""
+	set HelpContents(prev) ""
 	bindtags $T [list $T DemoHelpContents TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
 
-proc TreeCtrl::HelpButton1 {w x y} {
-	variable Priv
+proc HelpButton1 {w x y} {
+	variable TreeCtrl::Priv
 	focus $w
 	set id [$w identify $x $y]
 	set Priv(buttonMode) ""
 	if {[lindex $id 0] eq "header"} {
-		ButtonPress1 $w $x $y
+		TreeCtrl::ButtonPress1 $w $x $y
 	} elseif {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
 		# didn't click an element
@@ -299,59 +305,61 @@ proc TreeCtrl::HelpButton1 {w x y} {
 	return
 }
 
-proc TreeCtrl::HelpMotion {w x y} {
-	variable Priv
+proc HelpMotion {w x y} {
+	variable TreeCtrl::Priv
+	global HelpContents
 	set id [$w identify $x $y]
 	if {$id eq ""} {
 	} elseif {[lindex $id 0] eq "header"} {
 	} elseif {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
 		if {[llength $id] == 6} {
-			if {$item ne $Priv(help,prev)} {
-				if {$Priv(help,prev) ne ""} {
-					$w item state set $Priv(help,prev) !mouseover
+			if {$item ne $HelpContents(prev)} {
+				if {$HelpContents(prev) ne ""} {
+					$w item state set $HelpContents(prev) !mouseover
 				}
 				$w item state set $item mouseover
 				$w configure -cursor hand2
-				set Priv(help,prev) $item
+				set HelpContents(prev) $item
 			}
 			return
 		}
 	}
-	if {$Priv(help,prev) ne ""} {
-		$w item state set $Priv(help,prev) !mouseover
+	if {$HelpContents(prev) ne ""} {
+		$w item state set $HelpContents(prev) !mouseover
 		$w configure -cursor ""
-		set Priv(help,prev) ""
+		set HelpContents(prev) ""
 	}
 	return
 }
 
 # Alternate implementation that does not rely on run-time states
-proc TreeCtrl::HelpMotion_2 {w x y} {
-	variable Priv
+proc HelpMotion_2 {w x y} {
+	variable TreeCtrl::Priv
+	global HelpContents
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "header"} {
 	} elseif {$id ne ""} {
 		set item [lindex $id 1]
 		if {[llength $id] == 6} {
-			if {$item ne $Priv(help,prev)} {
-				if {$Priv(help,prev) ne ""} {
-					set style [$w item style set $Priv(help,prev) 0]
+			if {$item ne $HelpContents(prev)} {
+				if {$HelpContents(prev) ne ""} {
+					set style [$w item style set $HelpContents(prev) 0]
 					set style [string trim $style .f]
-					$w item style map $Priv(help,prev) 0 $style {elemTxtOver elemTxt}
+					$w item style map $HelpContents(prev) 0 $style {elemTxtOver elemTxt}
 				}
 				set style [$w item style set $item 0]
 				$w item style map $item 0 $style.f {elemTxt elemTxtOver}
-				set Priv(help,prev) $item
+				set HelpContents(prev) $item
 			}
 			return
 		}
 	}
-	if {$Priv(help,prev) ne ""} {
-		set style [$w item style set $Priv(help,prev) 0]
+	if {$HelpContents(prev) ne ""} {
+		set style [$w item style set $HelpContents(prev) 0]
 		set style [string trim $style .f]
-		$w item style map $Priv(help,prev) 0 $style {elemTxtOver elemTxt}
-		set Priv(help,prev) ""
+		$w item style map $HelpContents(prev) 0 $style {elemTxtOver elemTxt}
+		set HelpContents(prev) ""
 	}
 	return
 }

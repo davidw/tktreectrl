@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: style-editor.tcl,v 1.6 2005/07/11 01:59:07 treectrl Exp $
+
 namespace eval StyleEditor {
 	variable Info
 	array unset Info

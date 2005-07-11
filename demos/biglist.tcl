@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: biglist.tcl,v 1.2 2005/07/11 01:59:07 treectrl Exp $
+
 proc DemoBigList {} {
 
 	global BigList
@@ -272,9 +274,10 @@ puts "reuse window $w"
 		}
 
 		button $w.b3 -text "Anal Probe Wizard..." -command [list tk_messageBox \
-			-parent . -message "After abducting and probing these people for\
-			50 years,\nthe only thing we've learned for certain is that\none in\
-			ten just doesn't seem to mind." -title "Anal Probe 2.0"]
+			-parent . -message \
+			"After abducting and probing these people over the last\n\
+			50 years, the only thing we've learned for certain is that\n\
+			one in ten just doesn't seem to mind." -title "Anal Probe 2.0"]
 
 		grid $w.label1 -row 0 -column 0 -sticky w -padx {0 8}
 		grid $w.entry1 -row 0 -column 1 -sticky w -pady 4

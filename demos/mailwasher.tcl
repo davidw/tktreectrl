@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: mailwasher.tcl,v 1.12 2005/07/11 01:59:07 treectrl Exp $
+
 #
 # Demo: MailWasher
 #

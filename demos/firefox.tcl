@@ -1,4 +1,8 @@
+# RCS: @(#) $Id: firefox.tcl,v 1.9 2005/07/11 01:59:07 treectrl Exp $
+
 proc DemoFirefoxPrivacy {} {
+
+	global FirefoxPrivacy
 
 	set T .f2.f1.t
 
@@ -295,12 +299,12 @@ proc DemoFirefoxPrivacy {} {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
 			TreeCtrl::DoubleButton1 %W %x %y
 		} else {
-			TreeCtrl::DemoFirefoxPrivacyButton1 %W %x %y
+			DemoFirefoxPrivacyButton1 %W %x %y
 		}
 		break
 	}
 	bind DemoFirefoxPrivacy <ButtonPress-1> {
-		TreeCtrl::DemoFirefoxPrivacyButton1 %W %x %y
+		DemoFirefoxPrivacyButton1 %W %x %y
 		break
 	}
 	bind DemoFirefoxPrivacy <Button1-Motion> {
@@ -310,30 +314,30 @@ proc DemoFirefoxPrivacy {} {
 		# noop
 	}
 	bind DemoFirefoxPrivacy <Motion> {
-		TreeCtrl::DemoFirefoxPrivacyMotion %W %x %y
+		DemoFirefoxPrivacyMotion %W %x %y
 	}
 	bind DemoFirefoxPrivacy <Leave> {
-		TreeCtrl::DemoFirefoxPrivacyMotion %W %x %y
+		DemoFirefoxPrivacyMotion %W %x %y
 	}
 
-	set ::TreeCtrl::Priv(demo,prev) ""
+	set FirefoxPrivacy(prev) ""
 	bindtags $T [list $T DemoFirefoxPrivacy TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
 
-proc TreeCtrl::DemoFirefoxPrivacyButton1 {w x y} {
-	variable Priv
+proc DemoFirefoxPrivacyButton1 {w x y} {
+	variable TreeCtrl::Priv
 	focus $w
 	set id [$w identify $x $y]
 	set Priv(buttonMode) ""
 	if {[lindex $id 0] eq "header"} {
-		ButtonPress1 $w $x $y
+		TreeCtrl::ButtonPress1 $w $x $y
 	} elseif {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
 		# click a button
 		if {[llength $id] != 6} {
-			ButtonPress1 $w $x $y
+			TreeCtrl::ButtonPress1 $w $x $y
 			return
 		}
 		if {[lindex $id 5] eq "eText1"} {
@@ -344,22 +348,23 @@ proc TreeCtrl::DemoFirefoxPrivacyButton1 {w x y} {
 	return
 }
 
-proc TreeCtrl::DemoFirefoxPrivacyMotion {w x y} {
-	variable Priv
+proc DemoFirefoxPrivacyMotion {w x y} {
+	variable TreeCtrl::Priv
+	global FirefoxPrivacy
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
 		if {[llength $id] == 6 && [lindex $id 5] eq "eText1"} {
-			if {$item ne $Priv(demo,prev)} {
+			if {$item ne $FirefoxPrivacy(prev)} {
 				$w configure -cursor hand2
-				set Priv(demo,prev) $item
+				set FirefoxPrivacy(prev) $item
 			}
 			return
 		}
 	}
-	if {$Priv(demo,prev) ne ""} {
+	if {$FirefoxPrivacy(prev) ne ""} {
 		$w configure -cursor ""
-		set Priv(demo,prev) ""
+		set FirefoxPrivacy(prev) ""
 	}
 	return
 }

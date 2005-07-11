@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: random.tcl,v 1.17 2005/07/11 01:59:07 treectrl Exp $
+
 set RandomN 500
 set RandomDepth 5
 
@@ -129,25 +131,25 @@ proc DemoRandom {} {
 	}
 	bind DemoRandom <Control-ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) toggle
-		TreeCtrl::RandomButton1 %W %x %y
+		RandomButton1 %W %x %y
 		break
 	}
 	bind DemoRandom <Shift-ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) add
-		TreeCtrl::RandomButton1 %W %x %y
+		RandomButton1 %W %x %y
 		break
 	}
 	bind DemoRandom <ButtonPress-1> {
 		set TreeCtrl::Priv(selectMode) set
-		TreeCtrl::RandomButton1 %W %x %y
+		RandomButton1 %W %x %y
 		break
 	}
 	bind DemoRandom <Button1-Motion> {
-		TreeCtrl::RandomMotion1 %W %x %y
+		RandomMotion1 %W %x %y
 		break
 	}
 	bind DemoRandom <ButtonRelease-1> {
-		TreeCtrl::RandomRelease1 %W %x %y
+		RandomRelease1 %W %x %y
 		break
 	}
 
@@ -156,8 +158,8 @@ proc DemoRandom {} {
 	return
 }
 
-proc TreeCtrl::RandomButton1 {T x y} {
-	variable Priv
+proc RandomButton1 {T x y} {
+	variable TreeCtrl::Priv
 	focus $T
 	set id [$T identify $x $y]
 	set Priv(buttonMode) ""
@@ -168,7 +170,7 @@ proc TreeCtrl::RandomButton1 {T x y} {
 
 	# Click in header
 	} elseif {[lindex $id 0] eq "header"} {
-		ButtonPress1 $T $x $y
+		TreeCtrl::ButtonPress1 $T $x $y
 
 	# Click in item
 	} else {
@@ -210,11 +212,11 @@ proc TreeCtrl::RandomButton1 {T x y} {
 				set Priv(drop) ""
 
 				if {$Priv(selectMode) eq "add"} {
-					BeginExtend $T $item
+					TreeCtrl::BeginExtend $T $item
 				} elseif {$Priv(selectMode) eq "toggle"} {
-					BeginToggle $T $item
+					TreeCtrl::BeginToggle $T $item
 				} elseif {![$T selection includes $item]} {
-					BeginSelect $T $item
+					TreeCtrl::BeginSelect $T $item
 				}
 				$T activate $item
 
@@ -227,23 +229,23 @@ proc TreeCtrl::RandomButton1 {T x y} {
 	return
 }
 
-proc TreeCtrl::RandomMotion1 {T x y} {
-	variable Priv
+proc RandomMotion1 {T x y} {
+	variable TreeCtrl::Priv
 	switch $Priv(buttonMode) {
 		"drag" {
 			set Priv(autoscan,command,$T) {RandomMotion %T %x %y}
-			AutoScanCheck $T $x $y
+			TreeCtrl::AutoScanCheck $T $x $y
 			RandomMotion $T $x $y
 		}
 		default {
-			Motion1 $T $x $y
+			TreeCtrl::Motion1 $T $x $y
 		}
 	}
 	return
 }
 
-proc TreeCtrl::RandomMotion {T x y} {
-	variable Priv
+proc RandomMotion {T x y} {
+	variable TreeCtrl::Priv
 	switch $Priv(buttonMode) {
 		"drag" {
 			if {!$Priv(drag,motion)} {
@@ -332,18 +334,18 @@ proc TreeCtrl::RandomMotion {T x y} {
 			$T dragimage configure -visible yes
 		}
 		default {
-			Motion1 $T $x $y
+			TreeCtrl::Motion1 $T $x $y
 		}
 	}
 	return
 }
 
-proc TreeCtrl::RandomRelease1 {T x y} {
-	variable Priv
+proc RandomRelease1 {T x y} {
+	variable TreeCtrl::Priv
     if {![info exists Priv(buttonMode)]} return
 	switch $Priv(buttonMode) {
 		"drag" {
-			AutoScanCancel $T
+			TreeCtrl::AutoScanCancel $T
 			$T dragimage configure -visible no
 			$T selection modify {} $Priv(drop)
 			$T configure -cursor ""
@@ -353,7 +355,7 @@ proc TreeCtrl::RandomRelease1 {T x y} {
 			unset Priv(buttonMode)
 		}
 		default {
-			Release1 $T $x $y
+			TreeCtrl::Release1 $T $x $y
 		}
 	}
 	return
