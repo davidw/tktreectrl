@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.27 2005/06/29 21:13:50 treectrl Exp $}
+  $Id: treectrl.man,v 1.28 2005/07/11 01:53:56 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -26,12 +26,13 @@ At the time this command is invoked, there must not
 exist a window named [arg pathName], but [arg pathName]'s parent must exist.
 
 [para]
-A treectrl is a widget which displays items one per line.
-Every item has a set of states, which are boolean properties.
-The item may be spread about one or more columns.
+A treectrl is a widget which displays items in a one- or two-dimensional arrangement.
+Items have a parent-child relationship with other items.
+Items have a set of states, which are boolean properties.
+Items may be spread about one or more columns.
 For each column of an item there is a style associated,
 which determines how to display the item's column
-respecting the item's current state set.
+taking into account the item's current state set.
 One column can be defined to display the data in a hierarchical structure.
 
 [para]
@@ -822,7 +823,7 @@ returned.
 [call [arg pathName] [cmd {item cget}] [arg itemDesc] [arg option]]
 Returns the current value of the configuration option for the item specified by
 [arg itemDesc] whose name is [arg option]. [arg Option] may have any of the
-values accepted by the [cmd "item create"] command when the item was created.
+values accepted by the [cmd "item configure"] command.
 
 [call [arg pathName] [cmd {item children}] [arg itemDesc]]
 Returns a list containing the numerical indexes of all children
@@ -856,14 +857,16 @@ or [const !=].
 The return value of this command is 1 if the comparison evaluated to true,
 0 otherwise.
 
-[call [arg pathName] [cmd {item complex}] [arg itemDesc] [arg list] [arg ...]]
-Modifies the elements of the item described by [arg itemDesc].
-For every column of the treectrl there may be specified one [arg list],
-which in turn is an odd elemented list with at least three elements:
-the name of an element followed by [arg option]-[arg value] pairs.
+[call [arg pathName] [cmd {item complex}] [arg itemDesc] [opt [arg list...]]]
+This horrible command is now deprecated. Use [cmd {item element configure}]
+instead. For every column of the treectrl there may be specified one [arg list].
+Each [arg list] should look like this:
+[example_begin]
+{ {element option value...} {element option value...} ...}
+[example_end]
 Every [arg option] must be known by the element's type
 (see [sectref ELEMENTS] below).
-The corresponding [arg value] will overwrite the value of the element for this
+Each [arg option] will be set to [arg value] for the element in this
 one column in this item.
 
 [call [arg pathName] [cmd {item configure}] [arg itemDesc] [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
@@ -873,10 +876,19 @@ information on the format of this list). If [arg option] is specified with no
 value, then the command returns a list describing the one named option (this
 list will be identical to the corresponding sublist of the value returned if
 no [arg option] is specified). If one or more [arg option]-[arg value] pairs
-are specified, then the command modifies the given widget option(s) to have the
-given value(s); in this case the command returns an empty string. The options
-and values are the same as those permissible in the [cmd "item create"] command
-when the item was created.
+are specified, then the command modifies the given item option(s) to have the
+given value(s); in this case the command returns an empty string.
+[nl]
+The following options are supported by this command (see [cmd {item create}] for
+the meaning of each option):
+
+[list_begin opt]
+
+[opt_def [option -button] [arg boolean]]
+[opt_def [option -height] [arg height]]
+[opt_def [option -visible] [arg boolean]]
+
+[list_end]
 
 [call [arg pathName] [cmd {item count}]]
 Returns a decimal string giving the number of
@@ -885,15 +897,13 @@ deleted by the [cmd "item delete"] widget command, plus 1 for the ever-present
 root item.
 
 [call [arg pathName] [cmd {item create}] [opt [arg {option value ...}]]]
-Creates a new item and returns its unique identifier.
-The new item has the states [const open] and [const enabled] set by default.
+Creates some new items and optionally returns a list of unique identifiers for
+those items.
+The new items have the states [const open] and [const enabled] set by default.
 If the treectrl widget currently has the focus,
-the state [const focus] is also set. Each [arg option]-[arg value] pair sets one
-of the configuration options for the item. These same [arg option]-[arg value]
-pairs may be used in the [cmd "item configure"] command to change the item's
-configuration.
+the state [const focus] is also set.
 [nl]
-The following options are supported by items:
+The following options are supported by this command:
 
 [list_begin opt]
 
@@ -902,8 +912,36 @@ The following options are supported by items:
 indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
-a) the column specified by the widget option [option -treecolumn] is visible;
-and b) the widget option [option -showbuttons] is true
+a) the column specified by the treectrl option [option -treecolumn] is visible;
+and b) the treectrl option [option -showbuttons] is true
+
+[opt_def [option -count] [arg numItems]]
+Specifies the number of items to create. Must be >= 0. Defaults to 1.
+
+[opt_def [option -height] [arg height]]
+Specifies a fixed height in any of the forms acceptable to [fun Tk_GetPixels].
+Must be >= 0. If [arg height] is zero then the item's height is unspecified.
+Defaults to 0.
+
+[opt_def [option -nextsibling] [arg itemDesc]]
+Specifies the item before which the new items will be inserted. The new items
+will have the same parent as [arg itemDesc].
+
+[opt_def [option -open] [arg boolean]]
+Specifies whether the items should be open or closed. Default is true.
+
+[opt_def [option -parent] [arg itemDesc]]
+Specifies the item which the new items will be the children of. The new items
+will be appended to the list of children of [arg itemDesc].
+
+[opt_def [option -prevsibling] [arg itemDesc]]
+Specifies the item after which the new items will be inserted. The new items
+will have the same parent as [arg itemDesc].
+
+[opt_def [option -returnid] [arg boolean]]
+Specifies whether or not to return a list of item identifiers for the newly
+created items. Specifying false is useful when creating a large number of items in the
+console or to improve performance. Default is true.
 
 [opt_def [option -visible] [arg boolean]]
 [arg Boolean] must have one of the forms accepted by [fun Tk_GetBoolean]. It
@@ -980,6 +1018,19 @@ If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) in the
 [arg element] inside [arg column] of the item described by [arg itemDesc];
 in this case the command returns an empty string.
+[nl]
+It is possible to configure multiple elements in more than one column with
+a single call. To configure another element in the same column, append a
+'[const +]' argument followed by the element name followed by one or more
+option-value pairs. To configure elements in another column, append a '[const ,]'
+argument followed by the column. For example:
+[example_begin]
+.t item element configure $I \
+	$C1 $E1 -text "hello" + $E2 -text "world" , \
+	$C2 $E3 -fill Blue , \
+	$C3 $E1 -text "apples and oranges"
+[example_end]
+
 [list_end]
 
 [call [arg pathName] [cmd {item expand}] [arg itemDesc] [opt [option -recurse]]]
@@ -1135,6 +1186,14 @@ Convert to integers and use integer comparison.
 Convert to floating-point values and use floating comparison.
 [list_end]
 
+[call [arg pathName] [cmd {item span}] [arg itemDesc] [opt [arg column]] \
+     [opt [arg numColumns]] [opt [arg {column numColumns ...}]]]
+This command sets or retrieves the number of columns that a style covers.
+If no [arg column] is specified, the return value is a list of spans, one per column.
+If no [arg numColumns] is specified, the return value is the span for [arg column].
+If one or more [arg column]-[arg numColumns] pairs is specified, the
+span for each [arg column] is set to [arg numColumns].
+
 [call [arg pathName] [cmd {item state}] [arg command] [arg itemDesc] \
      [opt [arg {arg ...}]]]
 This command is used to manipulate the states of an item.
@@ -1201,25 +1260,33 @@ an element in the style specified by [arg style]. Both [arg elementOld] and
 
 [call [arg pathName] [cmd {item style set}] [arg itemDesc] [opt [arg column]] \
      [opt [arg style]] [opt [arg {column style ...}]]]
-If no [arg column] is specified, returns a list containing the names of the
+This command sets or retrieves the style assigned to a column.
+
+If no [arg column] is specified, this command returns a list containing the names of the
 styles set for all columns of the item described by [arg itemDesc].
-If no [arg style] argument is specified,
+
+If no [arg style] is specified, this command
 returns the name of the style set for the item described by
 [arg itemDesc] in [arg column].
-If there are one or more [arg style] arguments specified,
-it must be [arg column]-[arg style] pairs;
-then the style(s) of item in [arg column] will be set to [arg style].
+
+If one or more [arg column]-[arg style] pairs is specified,
+then the style in each [arg column] is set to [arg style].
 [list_end]
 
-[call [arg pathName] [cmd {item text}] [arg itemDesc] [arg column] \
+[call [arg pathName] [cmd {item text}] [arg itemDesc] [opt [arg column]] \
      [opt [arg text]] [opt [arg {column text ...}]]]
-If no [arg text] argument is specified,
-returns the text of the first text element in [arg column] for the item
-described by [arg itemDesc].
-If there are one or more [arg text] arguments specified,
-it must be [arg column]-[arg text] pairs;
-then the text(s) of item in [arg column] will be set to [arg text]. Note that
-this command is provided as a convenience. Use the
+This command sets or retrieves the value of the -text option of the first
+text element in a column.
+
+If no [arg column] is specified, this command returns a list of strings,
+one per column.
+
+If no [arg text] is specified, this command returns the string for [arg column].
+
+If one or more [arg column]-[arg text] pairs is specified,
+then the string in each [arg column] is set to [arg text].
+
+Note that this command is provided as a convenience. Use the
 [cmd "item element configure"] command if you want to set the text of a
 specific text element.
 
@@ -1353,8 +1420,8 @@ for which there exist bindings for [arg object].
 [nl]
 The [arg object] argument determines which window(s) the binding applies to.
 If [arg object] begins with a dot, as in .a.b.c, then it must be the path name
-for a window; otherwise it may be an arbitrary string. Unlike the regular
-[cmd bind] command, bindings on window names are not automatically removed if
+for a window; otherwise it may be an arbitrary string. Like the regular
+[cmd bind] command, bindings on window names are automatically removed if
 that window is destroyed.
 
 [call [arg pathName] [cmd {notify configure}] [arg object] \
@@ -1453,12 +1520,12 @@ or an error if the event is not dynamic.
 
 [call [arg pathName] [cmd {notify install detail}] [arg eventName] \
      [arg detail] [opt [arg percentsCommand]]]
-This command is for backward compatibility only.
+Deprecated.
 Use [cmd {notify install}] with a [arg pattern] of <[arg eventName]-[arg detail]> instead.
 
 [call [arg pathName] [cmd {notify install event}] [arg eventName] \
      [opt [arg percentsCommand]]]
-This command is for backward compatibility only.
+Deprecated.
 Use [cmd {notify install}] with a [arg pattern] of <[arg eventName]> instead.
 
 [call [arg pathName] [cmd {notify linkage}] [arg pattern]]
@@ -1468,22 +1535,28 @@ by means of the [cmd {notify install}] widget command ([const dynamic])
 or by the treectrl widget itself ([const static]).
 
 [call [arg pathName] [cmd {notify linkage}] [arg eventName] [opt [arg detail]]]
-This form of this command is for backward compatibility only.
+Deprecated.
 Use [cmd {notify linkage}] with a [arg pattern] of <[arg eventName]> or
 <[arg eventName]-[arg detail]> instead.
+
+[call [arg pathName] [cmd {notify unbind}] [arg object] [opt [arg pattern]]]
+If no [arg pattern] is specified, all bindings on [arg object] are removed.
+If [arg pattern] is specified, then the current binding for [arg pattern]
+is destroyed, leaving [arg pattern] unbound.
 
 [call [arg pathName] [cmd {notify uninstall}] [arg pattern]]
 If the event or detail specified by [arg pattern] is static
 (i.e. created by the treectrl widget itself), an error is generated.
-Otherwise the dynamic event or detail is removed.
+Otherwise the dynamic event or detail is removed. If an event name is specified
+without a detail, all details for that event are also removed.
 
 [call [arg pathName] [cmd {notify uninstall detail}] \
      [arg eventName] [arg detail]]
-This command is for backward compatibility only.
+Deprecated.
 Use [cmd {notify uninstall}] with a [arg pattern] of <[arg eventName]-[arg detail]> instead.
 
 [call [arg pathName] [cmd {notify uninstall event}] [arg eventName]]
-This command is for backward compatibility only.
+Deprecated.
 Use [cmd {notify uninstall}] with a [arg pattern] of <[arg eventName]> instead.
 [list_end]
 

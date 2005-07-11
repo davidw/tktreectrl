@@ -1,14 +1,14 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.26 2005/06/29 21:13:50 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.27 2005/07/11 01:53:56 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.26 2005/06/29 21:13:50 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.27 2005/07/11 01:53:56 treectrl Exp $ treectrl.n
    -->
 
 <body>
-<h1> treectrl(n) 2.0  &quot;Tk Commands&quot;</h1>
+<h1> treectrl(n) 2.0 treectrl &quot;Tk Commands&quot;</h1>
 <h2><a name="name">NAME</a></h2>
 <p>
 <p> treectrl - Create and manipulate hierarchical multicolumn widgets
@@ -16,6 +16,31 @@
 
 
 
+<h2><a name="table_of_contents">TABLE OF CONTENTS</a></h2>
+<p>&nbsp;&nbsp;&nbsp;&nbsp;<a href="#table_of_contents">TABLE OF CONTENTS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#synopsis">SYNOPSIS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#description">DESCRIPTION</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#standard_options">STANDARD OPTIONS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#widget_specific_options">WIDGET SPECIFIC OPTIONS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#widget_command">WIDGET COMMAND</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#columns">COLUMNS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#column_description">COLUMN DESCRIPTION</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#states">STATES</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#per-state_options">PER-STATE OPTIONS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#elements">ELEMENTS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#bitmap_element">BITMAP ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#border_element">BORDER ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#image_element">IMAGE ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#rectangle_element">RECTANGLE ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#text_element">TEXT ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#window_element">WINDOW ELEMENT</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#item_description">ITEM DESCRIPTION</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#events_and_script_substitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#dynamic_events">DYNAMIC EVENTS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#default_bindings">DEFAULT BINDINGS</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#examples">EXAMPLES</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#see_also">SEE ALSO</a><br>
+&nbsp;&nbsp;&nbsp;&nbsp;<a href="#keywords">KEYWORDS</a><br>
 <h2><a name="synopsis">SYNOPSIS</a></h2>
 <p>
 package require <b>treectrl 2.0</b><br>
@@ -74,7 +99,7 @@ package require <b>treectrl 2.0</b><br>
 <tr valign=top ><td ><a href="#53"><i class='arg'>pathName</i> <b class='cmd'>item children</b> <i class='arg'>itemDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#54"><i class='arg'>pathName</i> <b class='cmd'>item collapse</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a></td></tr>
 <tr valign=top ><td ><a href="#55"><i class='arg'>pathName</i> <b class='cmd'>item compare</b> <i class='arg'>itemDesc1</i> <i class='arg'>op</i> <i class='arg'>itemDesc2</i></a></td></tr>
-<tr valign=top ><td ><a href="#56"><i class='arg'>pathName</i> <b class='cmd'>item complex</b> <i class='arg'>itemDesc</i> <i class='arg'>list</i> <i class='arg'>...</i></a></td></tr>
+<tr valign=top ><td ><a href="#56"><i class='arg'>pathName</i> <b class='cmd'>item complex</b> <i class='arg'>itemDesc</i> ?<i class='arg'>list...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#57"><i class='arg'>pathName</i> <b class='cmd'>item configure</b> <i class='arg'>itemDesc</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#58"><i class='arg'>pathName</i> <b class='cmd'>item count</b></a></td></tr>
 <tr valign=top ><td ><a href="#59"><i class='arg'>pathName</i> <b class='cmd'>item create</b> ?<i class='arg'>option value ...</i>?</a></td></tr>
@@ -99,72 +124,74 @@ package require <b>treectrl 2.0</b><br>
 <tr valign=top ><td ><a href="#78"><i class='arg'>pathName</i> <b class='cmd'>item remove</b> <i class='arg'>itemDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#79"><i class='arg'>pathName</i> <b class='cmd'>item rnc</b> <i class='arg'>itemDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#80"><i class='arg'>pathName</i> <b class='cmd'>item sort</b> <i class='arg'>itemDesc</i> ?<i class='arg'>option ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#81"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#82"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#84"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#85"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#86"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a></td></tr>
-<tr valign=top ><td ><a href="#87"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a></td></tr>
-<tr valign=top ><td ><a href="#88"><i class='arg'>pathName</i> <b class='cmd'>item style set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>style</i>? ?<i class='arg'>column style ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#89"><i class='arg'>pathName</i> <b class='cmd'>item text</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>text</i>? ?<i class='arg'>column text ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#90"><i class='arg'>pathName</i> <b class='cmd'>item toggle</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a></td></tr>
-<tr valign=top ><td ><a href="#91"><i class='arg'>pathName</i> <b class='cmd'>marquee</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#92"><i class='arg'>pathName</i> <b class='cmd'>marquee anchor</b> ?<i class='arg'>x y</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#93"><i class='arg'>pathName</i> <b class='cmd'>marquee cget</b> <i class='arg'>option</i></a></td></tr>
-<tr valign=top ><td ><a href="#94"><i class='arg'>pathName</i> <b class='cmd'>marquee configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#95"><i class='arg'>pathName</i> <b class='cmd'>marquee coords</b> ?<i class='arg'>x1 y1 x2 y2</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#96"><i class='arg'>pathName</i> <b class='cmd'>marquee corner</b> ?<i class='arg'>x y</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#97"><i class='arg'>pathName</i> <b class='cmd'>marquee identify</b></a></td></tr>
-<tr valign=top ><td ><a href="#98"><i class='arg'>pathName</i> <b class='cmd'>notify</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#99"><i class='arg'>pathName</i> <b class='cmd'>notify bind</b> ?<i class='arg'>object</i>? ?<i class='arg'>pattern</i>? ?+??<i class='arg'>script</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#100"><i class='arg'>pathName</i> <b class='cmd'>notify configure</b> <i class='arg'>object</i> <i class='arg'>pattern</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#101"><i class='arg'>pathName</i> <b class='cmd'>notify detailnames</b> <i class='arg'>eventName</i></a></td></tr>
-<tr valign=top ><td ><a href="#102"><i class='arg'>pathName</i> <b class='cmd'>notify eventnames</b></a></td></tr>
-<tr valign=top ><td ><a href="#103"><i class='arg'>pathName</i> <b class='cmd'>notify generate</b> <i class='arg'>pattern</i> ?<i class='arg'>charMap</i>? ?<i class='arg'>percentsCommand</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#104"><i class='arg'>pathName</i> <b class='cmd'>notify install</b> <i class='arg'>pattern</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#105"><i class='arg'>pathName</i> <b class='cmd'>notify install detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#106"><i class='arg'>pathName</i> <b class='cmd'>notify install event</b> <i class='arg'>eventName</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#107"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>pattern</i></a></td></tr>
-<tr valign=top ><td ><a href="#108"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>eventName</i> ?<i class='arg'>detail</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#109"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall</b> <i class='arg'>pattern</i></a></td></tr>
-<tr valign=top ><td ><a href="#110"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i></a></td></tr>
-<tr valign=top ><td ><a href="#111"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall event</b> <i class='arg'>eventName</i></a></td></tr>
-<tr valign=top ><td ><a href="#112"><i class='arg'>pathName</i> <b class='cmd'>numcolumns</b></a></td></tr>
-<tr valign=top ><td ><a href="#113"><i class='arg'>pathName</i> <b class='cmd'>numitems</b></a></td></tr>
-<tr valign=top ><td ><a href="#114"><i class='arg'>pathName</i> <b class='cmd'>orphans</b></a></td></tr>
-<tr valign=top ><td ><a href="#115"><i class='arg'>pathName</i> <b class='cmd'>range</b> <i class='arg'>first</i> <i class='arg'>last</i></a></td></tr>
-<tr valign=top ><td ><a href="#116"><i class='arg'>pathName</i> <b class='cmd'>state</b> <i class='arg'>option</i> ?<i class='arg'>stateName</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#117"><i class='arg'>pathName</i> <b class='cmd'>state define</b> <i class='arg'>stateName</i></a></td></tr>
-<tr valign=top ><td ><a href="#118"><i class='arg'>pathName</i> <b class='cmd'>state linkage</b> <i class='arg'>stateName</i></a></td></tr>
-<tr valign=top ><td ><a href="#119"><i class='arg'>pathName</i> <b class='cmd'>state names</b></a></td></tr>
-<tr valign=top ><td ><a href="#120"><i class='arg'>pathName</i> <b class='cmd'>state undefine</b> ?<i class='arg'>stateName ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#121"><i class='arg'>pathName</i> <b class='cmd'>see</b> <i class='arg'>itemDesc</i></a></td></tr>
-<tr valign=top ><td ><a href="#122"><i class='arg'>pathName</i> <b class='cmd'>selection</b> <i class='arg'>option</i> <i class='arg'>arg</i></a></td></tr>
-<tr valign=top ><td ><a href="#123"><i class='arg'>pathName</i> <b class='cmd'>selection add</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#124"><i class='arg'>pathName</i> <b class='cmd'>selection anchor</b> ?<i class='arg'>itemDesc</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#125"><i class='arg'>pathName</i> <b class='cmd'>selection clear</b> ?<i class='arg'>first</i>? ?<i class='arg'>last</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#126"><i class='arg'>pathName</i> <b class='cmd'>selection count</b></a></td></tr>
-<tr valign=top ><td ><a href="#127"><i class='arg'>pathName</i> <b class='cmd'>selection get</b></a></td></tr>
-<tr valign=top ><td ><a href="#128"><i class='arg'>pathName</i> <b class='cmd'>selection includes</b> <i class='arg'>itemDesc</i></a></td></tr>
-<tr valign=top ><td ><a href="#129"><i class='arg'>pathName</i> <b class='cmd'>selection modify</b> <i class='arg'>select</i> <i class='arg'>deselect</i></a></td></tr>
-<tr valign=top ><td ><a href="#130"><i class='arg'>pathName</i> <b class='cmd'>style</b> <i class='arg'>option</i> ?<i class='arg'>element</i>? ?<i class='arg'>arg arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#131"><i class='arg'>pathName</i> <b class='cmd'>style cget</b> <i class='arg'>style</i> <i class='arg'>option</i></a></td></tr>
-<tr valign=top ><td ><a href="#132"><i class='arg'>pathName</i> <b class='cmd'>style configure</b> <i class='arg'>style</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#133"><i class='arg'>pathName</i> <b class='cmd'>style create</b> <i class='arg'>style</i> ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#134"><i class='arg'>pathName</i> <b class='cmd'>style delete</b> ?<i class='arg'>style ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#135"><i class='arg'>pathName</i> <b class='cmd'>style elements</b> <i class='arg'>style</i> ?<i class='arg'>elementList</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#136"><i class='arg'>pathName</i> <b class='cmd'>style layout</b> <i class='arg'>style</i> <i class='arg'>element</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#137"><i class='arg'>pathName</i> <b class='cmd'>style names</b></a></td></tr>
-<tr valign=top ><td ><a href="#138"><i class='arg'>pathName</i> <b class='cmd'>toggle</b> ?<strong>-recurse</strong>? ?<i class='arg'>itemDesc ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#139"><i class='arg'>pathName</i> <b class='cmd'>xview</b> ?<i class='arg'>args</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#140"><i class='arg'>pathName</i> <b class='cmd'>xview</b></a></td></tr>
-<tr valign=top ><td ><a href="#141"><i class='arg'>pathName</i> <b class='cmd'>xview moveto</b> <i class='arg'>fraction</i></a></td></tr>
-<tr valign=top ><td ><a href="#142"><i class='arg'>pathName</i> <b class='cmd'>xview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a></td></tr>
-<tr valign=top ><td ><a href="#143"><i class='arg'>pathName</i> <b class='cmd'>yview</b> ?<i class='arg'>args</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#144"><i class='arg'>pathName</i> <b class='cmd'>yview</b></a></td></tr>
-<tr valign=top ><td ><a href="#145"><i class='arg'>pathName</i> <b class='cmd'>yview moveto</b> <i class='arg'>fraction</i></a></td></tr>
-<tr valign=top ><td ><a href="#146"><i class='arg'>pathName</i> <b class='cmd'>yview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a></td></tr>
+<tr valign=top ><td ><a href="#81"><i class='arg'>pathName</i> <b class='cmd'>item span</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>numColumns</i>? ?<i class='arg'>column numColumns ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#82"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#83"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#84"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#85"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#86"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#87"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a></td></tr>
+<tr valign=top ><td ><a href="#88"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a></td></tr>
+<tr valign=top ><td ><a href="#89"><i class='arg'>pathName</i> <b class='cmd'>item style set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>style</i>? ?<i class='arg'>column style ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#90"><i class='arg'>pathName</i> <b class='cmd'>item text</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>text</i>? ?<i class='arg'>column text ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#91"><i class='arg'>pathName</i> <b class='cmd'>item toggle</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a></td></tr>
+<tr valign=top ><td ><a href="#92"><i class='arg'>pathName</i> <b class='cmd'>marquee</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#93"><i class='arg'>pathName</i> <b class='cmd'>marquee anchor</b> ?<i class='arg'>x y</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#94"><i class='arg'>pathName</i> <b class='cmd'>marquee cget</b> <i class='arg'>option</i></a></td></tr>
+<tr valign=top ><td ><a href="#95"><i class='arg'>pathName</i> <b class='cmd'>marquee configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#96"><i class='arg'>pathName</i> <b class='cmd'>marquee coords</b> ?<i class='arg'>x1 y1 x2 y2</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#97"><i class='arg'>pathName</i> <b class='cmd'>marquee corner</b> ?<i class='arg'>x y</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#98"><i class='arg'>pathName</i> <b class='cmd'>marquee identify</b></a></td></tr>
+<tr valign=top ><td ><a href="#99"><i class='arg'>pathName</i> <b class='cmd'>notify</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#100"><i class='arg'>pathName</i> <b class='cmd'>notify bind</b> ?<i class='arg'>object</i>? ?<i class='arg'>pattern</i>? ?+??<i class='arg'>script</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#101"><i class='arg'>pathName</i> <b class='cmd'>notify configure</b> <i class='arg'>object</i> <i class='arg'>pattern</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#102"><i class='arg'>pathName</i> <b class='cmd'>notify detailnames</b> <i class='arg'>eventName</i></a></td></tr>
+<tr valign=top ><td ><a href="#103"><i class='arg'>pathName</i> <b class='cmd'>notify eventnames</b></a></td></tr>
+<tr valign=top ><td ><a href="#104"><i class='arg'>pathName</i> <b class='cmd'>notify generate</b> <i class='arg'>pattern</i> ?<i class='arg'>charMap</i>? ?<i class='arg'>percentsCommand</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#105"><i class='arg'>pathName</i> <b class='cmd'>notify install</b> <i class='arg'>pattern</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#106"><i class='arg'>pathName</i> <b class='cmd'>notify install detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#107"><i class='arg'>pathName</i> <b class='cmd'>notify install event</b> <i class='arg'>eventName</i> ?<i class='arg'>percentsCommand</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#108"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>pattern</i></a></td></tr>
+<tr valign=top ><td ><a href="#109"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>eventName</i> ?<i class='arg'>detail</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#110"><i class='arg'>pathName</i> <b class='cmd'>notify unbind</b> <i class='arg'>object</i> ?<i class='arg'>pattern</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#111"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall</b> <i class='arg'>pattern</i></a></td></tr>
+<tr valign=top ><td ><a href="#112"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i></a></td></tr>
+<tr valign=top ><td ><a href="#113"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall event</b> <i class='arg'>eventName</i></a></td></tr>
+<tr valign=top ><td ><a href="#114"><i class='arg'>pathName</i> <b class='cmd'>numcolumns</b></a></td></tr>
+<tr valign=top ><td ><a href="#115"><i class='arg'>pathName</i> <b class='cmd'>numitems</b></a></td></tr>
+<tr valign=top ><td ><a href="#116"><i class='arg'>pathName</i> <b class='cmd'>orphans</b></a></td></tr>
+<tr valign=top ><td ><a href="#117"><i class='arg'>pathName</i> <b class='cmd'>range</b> <i class='arg'>first</i> <i class='arg'>last</i></a></td></tr>
+<tr valign=top ><td ><a href="#118"><i class='arg'>pathName</i> <b class='cmd'>state</b> <i class='arg'>option</i> ?<i class='arg'>stateName</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#119"><i class='arg'>pathName</i> <b class='cmd'>state define</b> <i class='arg'>stateName</i></a></td></tr>
+<tr valign=top ><td ><a href="#120"><i class='arg'>pathName</i> <b class='cmd'>state linkage</b> <i class='arg'>stateName</i></a></td></tr>
+<tr valign=top ><td ><a href="#121"><i class='arg'>pathName</i> <b class='cmd'>state names</b></a></td></tr>
+<tr valign=top ><td ><a href="#122"><i class='arg'>pathName</i> <b class='cmd'>state undefine</b> ?<i class='arg'>stateName ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#123"><i class='arg'>pathName</i> <b class='cmd'>see</b> <i class='arg'>itemDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#124"><i class='arg'>pathName</i> <b class='cmd'>selection</b> <i class='arg'>option</i> <i class='arg'>arg</i></a></td></tr>
+<tr valign=top ><td ><a href="#125"><i class='arg'>pathName</i> <b class='cmd'>selection add</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#126"><i class='arg'>pathName</i> <b class='cmd'>selection anchor</b> ?<i class='arg'>itemDesc</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#127"><i class='arg'>pathName</i> <b class='cmd'>selection clear</b> ?<i class='arg'>first</i>? ?<i class='arg'>last</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#128"><i class='arg'>pathName</i> <b class='cmd'>selection count</b></a></td></tr>
+<tr valign=top ><td ><a href="#129"><i class='arg'>pathName</i> <b class='cmd'>selection get</b></a></td></tr>
+<tr valign=top ><td ><a href="#130"><i class='arg'>pathName</i> <b class='cmd'>selection includes</b> <i class='arg'>itemDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#131"><i class='arg'>pathName</i> <b class='cmd'>selection modify</b> <i class='arg'>select</i> <i class='arg'>deselect</i></a></td></tr>
+<tr valign=top ><td ><a href="#132"><i class='arg'>pathName</i> <b class='cmd'>style</b> <i class='arg'>option</i> ?<i class='arg'>element</i>? ?<i class='arg'>arg arg ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#133"><i class='arg'>pathName</i> <b class='cmd'>style cget</b> <i class='arg'>style</i> <i class='arg'>option</i></a></td></tr>
+<tr valign=top ><td ><a href="#134"><i class='arg'>pathName</i> <b class='cmd'>style configure</b> <i class='arg'>style</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#135"><i class='arg'>pathName</i> <b class='cmd'>style create</b> <i class='arg'>style</i> ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#136"><i class='arg'>pathName</i> <b class='cmd'>style delete</b> ?<i class='arg'>style ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#137"><i class='arg'>pathName</i> <b class='cmd'>style elements</b> <i class='arg'>style</i> ?<i class='arg'>elementList</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#138"><i class='arg'>pathName</i> <b class='cmd'>style layout</b> <i class='arg'>style</i> <i class='arg'>element</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#139"><i class='arg'>pathName</i> <b class='cmd'>style names</b></a></td></tr>
+<tr valign=top ><td ><a href="#140"><i class='arg'>pathName</i> <b class='cmd'>toggle</b> ?<strong>-recurse</strong>? ?<i class='arg'>itemDesc ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#141"><i class='arg'>pathName</i> <b class='cmd'>xview</b> ?<i class='arg'>args</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#142"><i class='arg'>pathName</i> <b class='cmd'>xview</b></a></td></tr>
+<tr valign=top ><td ><a href="#143"><i class='arg'>pathName</i> <b class='cmd'>xview moveto</b> <i class='arg'>fraction</i></a></td></tr>
+<tr valign=top ><td ><a href="#144"><i class='arg'>pathName</i> <b class='cmd'>xview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a></td></tr>
+<tr valign=top ><td ><a href="#145"><i class='arg'>pathName</i> <b class='cmd'>yview</b> ?<i class='arg'>args</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#146"><i class='arg'>pathName</i> <b class='cmd'>yview</b></a></td></tr>
+<tr valign=top ><td ><a href="#147"><i class='arg'>pathName</i> <b class='cmd'>yview moveto</b> <i class='arg'>fraction</i></a></td></tr>
+<tr valign=top ><td ><a href="#148"><i class='arg'>pathName</i> <b class='cmd'>yview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a></td></tr>
 </table></td></tr></table>
 <h2><a name="description">DESCRIPTION</a></h2>
 <p>
@@ -185,12 +212,13 @@ At the time this command is invoked, there must not
 exist a window named <i class='arg'>pathName</i>, but <i class='arg'>pathName</i>'s parent must exist.
 
 <p>
-A treectrl is a widget which displays items one per line.
-Every item has a set of states, which are boolean properties.
-The item may be spread about one or more columns.
+A treectrl is a widget which displays items in a one- or two-dimensional arrangement.
+Items have a parent-child relationship with other items.
+Items have a set of states, which are boolean properties.
+Items may be spread about one or more columns.
 For each column of an item there is a style associated,
 which determines how to display the item's column
-respecting the item's current state set.
+taking into account the item's current state set.
 One column can be defined to display the data in a hierarchical structure.
 
 <p>
@@ -211,7 +239,7 @@ If the treectrl widget is used only
 to display data in a multicolumn listbox,
 the specification of an orientation will give useful results.
 
-<h2><a name="standardoptions">STANDARD OPTIONS</a></h2>
+<h2><a name="standard_options">STANDARD OPTIONS</a></h2>
 <p>
 <dl>
 <dt><strong><strong>-background</strong></strong><dd>
@@ -230,7 +258,7 @@ the specification of an orientation will give useful results.
 </dl>
 See the <b class='cmd'>option</b> manual entry for details on the standard options.
 
-<h2><a name="widgetspecificoptions">WIDGET SPECIFIC OPTIONS</a></h2>
+<h2><a name="widget_specific_options">WIDGET SPECIFIC OPTIONS</a></h2>
 <p>
 <dl>
 <dt>Command-Line Switch:	<strong>-backgroundimage</strong><br>
@@ -266,7 +294,7 @@ Database Name:	<strong>buttonBitmap</strong><br>
 Database Class:	<strong>ButtonBitmap</strong><br>
 <dd>
 Specifies the bitmap to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see <a href="#perstateoptions">PER-STATE OPTIONS</a>). If
+an item. This is a per-state option (see <a href="#per-state_options">PER-STATE OPTIONS</a>). If
 a bitmap is specified for a certain item state, it overrides the effects of
 -usetheme.
 
@@ -284,7 +312,7 @@ Database Name:	<strong>buttonImage</strong><br>
 Database Class:	<strong>ButtonImage</strong><br>
 <dd>
 Specifies the image to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see <a href="#perstateoptions">PER-STATE OPTIONS</a>).
+an item. This is a per-state option (see <a href="#per-state_options">PER-STATE OPTIONS</a>).
 If an image is specified for a certain item state, it overrides the effects of
 -buttonbitmap and -usetheme.
 
@@ -635,7 +663,7 @@ this option is less than or equal to zero, then vertical scrolling
 is unconstrained.
 </dl>
 
-<h2><a name="widgetcommand">WIDGET COMMAND</a></h2>
+<h2><a name="widget_command">WIDGET COMMAND</a></h2>
 <p>
 The <b class='cmd'>treectrl</b> command creates a new Tcl command whose
 name is the same as the path name of the treectrl's window.
@@ -832,7 +860,7 @@ Deprecated. Use <b class='cmd'>column id</b> instead.
 <dt><a name="18"><i class='arg'>pathName</i> <b class='cmd'>column id</b> <i class='arg'>column</i></a><dd>
 
 This command resolves the column description <i class='arg'>column</i> into a unique column
-identifier (see <a href="#columndescription">COLUMN DESCRIPTION</a> below).
+identifier (see <a href="#column_description">COLUMN DESCRIPTION</a> below).
 If the column described by <i class='arg'>column</i> doesn't exist, this command returns
 an empty string.
 
@@ -1220,7 +1248,7 @@ returned.
 
 Returns the current value of the configuration option for the item specified by
 <i class='arg'>itemDesc</i> whose name is <i class='arg'>option</i>. <i class='arg'>Option</i> may have any of the
-values accepted by the <b class='cmd'>item create</b> command when the item was created.
+values accepted by the <b class='cmd'>item configure</b> command.
 
 <br><br>
 <dt><a name="53"><i class='arg'>pathName</i> <b class='cmd'>item children</b> <i class='arg'>itemDesc</i></a><dd>
@@ -1261,15 +1289,17 @@ The return value of this command is 1 if the comparison evaluated to true,
 0 otherwise.
 
 <br><br>
-<dt><a name="56"><i class='arg'>pathName</i> <b class='cmd'>item complex</b> <i class='arg'>itemDesc</i> <i class='arg'>list</i> <i class='arg'>...</i></a><dd>
+<dt><a name="56"><i class='arg'>pathName</i> <b class='cmd'>item complex</b> <i class='arg'>itemDesc</i> ?<i class='arg'>list...</i>?</a><dd>
 
-Modifies the elements of the item described by <i class='arg'>itemDesc</i>.
-For every column of the treectrl there may be specified one <i class='arg'>list</i>,
-which in turn is an odd elemented list with at least three elements:
-the name of an element followed by <i class='arg'>option</i>-<i class='arg'>value</i> pairs.
+This horrible command is now deprecated. Use <b class='cmd'>item element configure</b>
+instead. For every column of the treectrl there may be specified one <i class='arg'>list</i>.
+Each <i class='arg'>list</i> should look like this:
+<p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
+{ {element option value...} {element option value...} ...}
+</pre></td></tr></table></p>
 Every <i class='arg'>option</i> must be known by the element's type
 (see <a href="#elements">ELEMENTS</a> below).
-The corresponding <i class='arg'>value</i> will overwrite the value of the element for this
+Each <i class='arg'>option</i> will be set to <i class='arg'>value</i> for the element in this
 one column in this item.
 
 <br><br>
@@ -1281,12 +1311,21 @@ information on the format of this list). If <i class='arg'>option</i> is specifi
 value, then the command returns a list describing the one named option (this
 list will be identical to the corresponding sublist of the value returned if
 no <i class='arg'>option</i> is specified). If one or more <i class='arg'>option</i>-<i class='arg'>value</i> pairs
-are specified, then the command modifies the given widget option(s) to have the
-given value(s); in this case the command returns an empty string. The options
-and values are the same as those permissible in the <b class='cmd'>item create</b> command
-when the item was created.
+are specified, then the command modifies the given item option(s) to have the
+given value(s); in this case the command returns an empty string.
+<br><br>
+The following options are supported by this command (see <b class='cmd'>item create</b> for
+the meaning of each option):
 
 <br><br>
+<dl>
+
+<dt><strong><strong>-button</strong></strong> <i class='arg'>boolean</i><dd>
+<dt><strong><strong>-height</strong></strong> <i class='arg'>height</i><dd>
+<dt><strong><strong>-visible</strong></strong> <i class='arg'>boolean</i><dd>
+
+</dl>
+
 <dt><a name="58"><i class='arg'>pathName</i> <b class='cmd'>item count</b></a><dd>
 
 Returns a decimal string giving the number of
@@ -1297,15 +1336,13 @@ root item.
 <br><br>
 <dt><a name="59"><i class='arg'>pathName</i> <b class='cmd'>item create</b> ?<i class='arg'>option value ...</i>?</a><dd>
 
-Creates a new item and returns its unique identifier.
-The new item has the states <strong>open</strong> and <strong>enabled</strong> set by default.
+Creates some new items and optionally returns a list of unique identifiers for
+those items.
+The new items have the states <strong>open</strong> and <strong>enabled</strong> set by default.
 If the treectrl widget currently has the focus,
-the state <strong>focus</strong> is also set. Each <i class='arg'>option</i>-<i class='arg'>value</i> pair sets one
-of the configuration options for the item. These same <i class='arg'>option</i>-<i class='arg'>value</i>
-pairs may be used in the <b class='cmd'>item configure</b> command to change the item's
-configuration.
+the state <strong>focus</strong> is also set.
 <br><br>
-The following options are supported by items:
+The following options are supported by this command:
 
 <br><br>
 <dl>
@@ -1315,8 +1352,43 @@ The following options are supported by items:
 indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
-a) the column specified by the widget option <strong>-treecolumn</strong> is visible;
-and b) the widget option <strong>-showbuttons</strong> is true
+a) the column specified by the treectrl option <strong>-treecolumn</strong> is visible;
+and b) the treectrl option <strong>-showbuttons</strong> is true
+
+<br><br>
+<dt><strong><strong>-count</strong></strong> <i class='arg'>numItems</i><dd>
+Specifies the number of items to create. Must be &gt;= 0. Defaults to 1.
+
+<br><br>
+<dt><strong><strong>-height</strong></strong> <i class='arg'>height</i><dd>
+Specifies a fixed height in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
+Must be &gt;= 0. If <i class='arg'>height</i> is zero then the item's height is unspecified.
+Defaults to 0.
+
+<br><br>
+<dt><strong><strong>-nextsibling</strong></strong> <i class='arg'>itemDesc</i><dd>
+Specifies the item before which the new items will be inserted. The new items
+will have the same parent as <i class='arg'>itemDesc</i>.
+
+<br><br>
+<dt><strong><strong>-open</strong></strong> <i class='arg'>boolean</i><dd>
+Specifies whether the items should be open or closed. Default is true.
+
+<br><br>
+<dt><strong><strong>-parent</strong></strong> <i class='arg'>itemDesc</i><dd>
+Specifies the item which the new items will be the children of. The new items
+will be appended to the list of children of <i class='arg'>itemDesc</i>.
+
+<br><br>
+<dt><strong><strong>-prevsibling</strong></strong> <i class='arg'>itemDesc</i><dd>
+Specifies the item after which the new items will be inserted. The new items
+will have the same parent as <i class='arg'>itemDesc</i>.
+
+<br><br>
+<dt><strong><strong>-returnid</strong></strong> <i class='arg'>boolean</i><dd>
+Specifies whether or not to return a list of item identifiers for the newly
+created items. Specifying false is useful when creating a large number of items in the
+console or to improve performance. Default is true.
 
 <br><br>
 <dt><strong><strong>-visible</strong></strong> <i class='arg'>boolean</i><dd>
@@ -1400,6 +1472,19 @@ If one or more <i class='arg'>option</i>-<i class='arg'>value</i> pairs are spec
 modifies the given option(s) to have the given value(s) in the
 <i class='arg'>element</i> inside <i class='arg'>column</i> of the item described by <i class='arg'>itemDesc</i>;
 in this case the command returns an empty string.
+<br><br>
+It is possible to configure multiple elements in more than one column with
+a single call. To configure another element in the same column, append a
+<strong>+</strong> argument followed by the element name followed by one or more
+option-value pairs. To configure elements in another column, append a <strong>,</strong>
+argument followed by the column. For example:
+<p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
+.t item element configure $I \
+	$C1 $E1 -text &quot;hello&quot; + $E2 -text &quot;world&quot; , \
+	$C2 $E3 -fill Blue , \
+	$C3 $E1 -text &quot;apples and oranges&quot;
+</pre></td></tr></table></p>
+
 </dl>
 
 <dt><a name="66"><i class='arg'>pathName</i> <b class='cmd'>item expand</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a><dd>
@@ -1433,7 +1518,7 @@ Then it will become the new first child of <i class='arg'>parent</i>.
 <dt><a name="68"><i class='arg'>pathName</i> <b class='cmd'>item id</b> <i class='arg'>itemDesc</i></a><dd>
 
 This command resolves the item description <i class='arg'>itemDesc</i> into a unique item
-identifier (see <a href="#itemdescription">ITEM DESCRIPTION</a> below). If the item described by
+identifier (see <a href="#item_description">ITEM DESCRIPTION</a> below). If the item described by
 <i class='arg'>itemDesc</i> doesn't exist, this command returns an empty string.
 
 <br><br>
@@ -1591,7 +1676,16 @@ Convert to integers and use integer comparison.
 Convert to floating-point values and use floating comparison.
 </dl>
 
-<dt><a name="81"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a><dd>
+<dt><a name="81"><i class='arg'>pathName</i> <b class='cmd'>item span</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>numColumns</i>? ?<i class='arg'>column numColumns ...</i>?</a><dd>
+
+This command sets or retrieves the number of columns that a style covers.
+If no <i class='arg'>column</i> is specified, the return value is a list of spans, one per column.
+If no <i class='arg'>numColumns</i> is specified, the return value is the span for <i class='arg'>column</i>.
+If one or more <i class='arg'>column</i>-<i class='arg'>numColumns</i> pairs is specified, the
+span for each <i class='arg'>column</i> is set to <i class='arg'>numColumns</i>.
+
+<br><br>
+<dt><a name="82"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a><dd>
 
 This command is used to manipulate the states of an item.
 The exact behavior of the command depends on the <i class='arg'>command</i> argument
@@ -1601,13 +1695,13 @@ The following forms of the command are supported:
 <br><br>
 <dl>
 
-<dt><a name="82"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a><dd>
+<dt><a name="83"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a><dd>
 
 Just like <b class='cmd'>item state set</b> but manipulates user-defined states for a single
 item column, not the item as a whole.
 
 <br><br>
-<dt><a name="83"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a><dd>
+<dt><a name="84"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a><dd>
 
 If no <i class='arg'>stateName</i> is specified, returns a list containing
 the names of all (predefined and user defined) states
@@ -1617,7 +1711,7 @@ If a <i class='arg'>stateName</i> is specified,
 0 otherwise.
 
 <br><br>
-<dt><a name="84"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a><dd>
+<dt><a name="85"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a><dd>
 
 Every element of <i class='arg'>stateDescList</i>
 must describe a user defined state (see <a href="#states">STATES</a> below),
@@ -1633,7 +1727,7 @@ then the state changes are made for all items of the treectrl widget.
 
 </dl>
 
-<dt><a name="85"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a><dd>
+<dt><a name="86"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a><dd>
 
 This command is used to manipulate the styles of an item.
 The exact behavior of the command depends on the <i class='arg'>command</i> argument
@@ -1642,14 +1736,14 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="86"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a><dd>
+<dt><a name="87"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a><dd>
 
 A list is returned
 containing the currently defined elements of the style,
 which is set for the item described by <i class='arg'>itemDesc</i> in <i class='arg'>column</i>.
 
 <br><br>
-<dt><a name="87"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a><dd>
+<dt><a name="88"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a><dd>
 
 Like the <b class='cmd'>item style set</b> command, this command may be used to assign a
 style to a specific column of an item. Unlike <b class='cmd'>item style set</b>, this
@@ -1662,32 +1756,40 @@ an element in the style specified by <i class='arg'>style</i>. Both <i class='ar
 <i class='arg'>elementNew</i> must be of the same type (<strong>bitmap</strong>, <strong>text</strong> etc).
 
 <br><br>
-<dt><a name="88"><i class='arg'>pathName</i> <b class='cmd'>item style set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>style</i>? ?<i class='arg'>column style ...</i>?</a><dd>
+<dt><a name="89"><i class='arg'>pathName</i> <b class='cmd'>item style set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>style</i>? ?<i class='arg'>column style ...</i>?</a><dd>
 
-If no <i class='arg'>column</i> is specified, returns a list containing the names of the
+This command sets or retrieves the style assigned to a column.
+
+If no <i class='arg'>column</i> is specified, this command returns a list containing the names of the
 styles set for all columns of the item described by <i class='arg'>itemDesc</i>.
-If no <i class='arg'>style</i> argument is specified,
+
+If no <i class='arg'>style</i> is specified, this command
 returns the name of the style set for the item described by
 <i class='arg'>itemDesc</i> in <i class='arg'>column</i>.
-If there are one or more <i class='arg'>style</i> arguments specified,
-it must be <i class='arg'>column</i>-<i class='arg'>style</i> pairs;
-then the style(s) of item in <i class='arg'>column</i> will be set to <i class='arg'>style</i>.
+
+If one or more <i class='arg'>column</i>-<i class='arg'>style</i> pairs is specified,
+then the style in each <i class='arg'>column</i> is set to <i class='arg'>style</i>.
 </dl>
 
-<dt><a name="89"><i class='arg'>pathName</i> <b class='cmd'>item text</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>text</i>? ?<i class='arg'>column text ...</i>?</a><dd>
+<dt><a name="90"><i class='arg'>pathName</i> <b class='cmd'>item text</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>text</i>? ?<i class='arg'>column text ...</i>?</a><dd>
 
-If no <i class='arg'>text</i> argument is specified,
-returns the text of the first text element in <i class='arg'>column</i> for the item
-described by <i class='arg'>itemDesc</i>.
-If there are one or more <i class='arg'>text</i> arguments specified,
-it must be <i class='arg'>column</i>-<i class='arg'>text</i> pairs;
-then the text(s) of item in <i class='arg'>column</i> will be set to <i class='arg'>text</i>. Note that
-this command is provided as a convenience. Use the
+This command sets or retrieves the value of the -text option of the first
+text element in a column.
+
+If no <i class='arg'>column</i> is specified, this command returns a list of strings,
+one per column.
+
+If no <i class='arg'>text</i> is specified, this command returns the string for <i class='arg'>column</i>.
+
+If one or more <i class='arg'>column</i>-<i class='arg'>text</i> pairs is specified,
+then the string in each <i class='arg'>column</i> is set to <i class='arg'>text</i>.
+
+Note that this command is provided as a convenience. Use the
 <b class='cmd'>item element configure</b> command if you want to set the text of a
 specific text element.
 
 <br><br>
-<dt><a name="90"><i class='arg'>pathName</i> <b class='cmd'>item toggle</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a><dd>
+<dt><a name="91"><i class='arg'>pathName</i> <b class='cmd'>item toggle</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a><dd>
 
 Changes the <strong>open</strong> state of the item(s) described by <i class='arg'>itemDesc</i>.
 If the state is currently switched off,
@@ -1700,7 +1802,7 @@ If <strong>-recurse</strong> is specified, the state of all descendants of
 
 </dl>
 
-<dt><a name="91"><i class='arg'>pathName</i> <b class='cmd'>marquee</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a><dd>
+<dt><a name="92"><i class='arg'>pathName</i> <b class='cmd'>marquee</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a><dd>
 
 This command is used to manipulate the marquee,
 a rectangular region of the treectrl widget
@@ -1717,7 +1819,7 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="92"><i class='arg'>pathName</i> <b class='cmd'>marquee anchor</b> ?<i class='arg'>x y</i>?</a><dd>
+<dt><a name="93"><i class='arg'>pathName</i> <b class='cmd'>marquee anchor</b> ?<i class='arg'>x y</i>?</a><dd>
 
 Returns a list containing the x and y coordinates of the anchor,
 if no additional arguments are specified.
@@ -1725,7 +1827,7 @@ If two coordinates are specified,
 sets the anchor to the given coordinates <i class='arg'>x</i> and <i class='arg'>y</i>.
 
 <br><br>
-<dt><a name="93"><i class='arg'>pathName</i> <b class='cmd'>marquee cget</b> <i class='arg'>option</i></a><dd>
+<dt><a name="94"><i class='arg'>pathName</i> <b class='cmd'>marquee cget</b> <i class='arg'>option</i></a><dd>
 
 This command returns the current value of the marquee option
 named <i class='arg'>option</i>.
@@ -1733,7 +1835,7 @@ named <i class='arg'>option</i>.
 <b class='cmd'>marquee configure</b> widget command.
 
 <br><br>
-<dt><a name="94"><i class='arg'>pathName</i> <b class='cmd'>marquee configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="95"><i class='arg'>pathName</i> <b class='cmd'>marquee configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
 
 This command is similar to the <b class='cmd'>configure</b> widget command except
 that it modifies the marquee options
@@ -1760,7 +1862,7 @@ whether the dotted line surrounding the region of the marquee
 should currently be visible.
 </dl>
 
-<dt><a name="95"><i class='arg'>pathName</i> <b class='cmd'>marquee coords</b> ?<i class='arg'>x1 y1 x2 y2</i>?</a><dd>
+<dt><a name="96"><i class='arg'>pathName</i> <b class='cmd'>marquee coords</b> ?<i class='arg'>x1 y1 x2 y2</i>?</a><dd>
 
 Returns a list containing the x and y coordinates of the anchor
 followed by the x and y coordinates of the corner,
@@ -1770,7 +1872,7 @@ sets the anchor to the given coordinates <i class='arg'>x1</i> and <i class='arg
 and the corner to the coordinates <i class='arg'>x2</i> and <i class='arg'>y2</i>.
 
 <br><br>
-<dt><a name="96"><i class='arg'>pathName</i> <b class='cmd'>marquee corner</b> ?<i class='arg'>x y</i>?</a><dd>
+<dt><a name="97"><i class='arg'>pathName</i> <b class='cmd'>marquee corner</b> ?<i class='arg'>x y</i>?</a><dd>
 
 Returns a list containing the x and y coordinates of the corner,
 if no additional arguments are specified.
@@ -1778,7 +1880,7 @@ If two coordinates are specified,
 sets the corner to the given coordinates <i class='arg'>x</i> and <i class='arg'>y</i>.
 
 <br><br>
-<dt><a name="97"><i class='arg'>pathName</i> <b class='cmd'>marquee identify</b></a><dd>
+<dt><a name="98"><i class='arg'>pathName</i> <b class='cmd'>marquee identify</b></a><dd>
 
 Returns a list with information about the items inside the marquee.
 The list has as elements a list itself
@@ -1792,7 +1894,7 @@ if there are any.
 
 </dl>
 
-<dt><a name="98"><i class='arg'>pathName</i> <b class='cmd'>notify</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a><dd>
+<dt><a name="99"><i class='arg'>pathName</i> <b class='cmd'>notify</b> <i class='arg'>option</i> ?<i class='arg'>arg ...</i>?</a><dd>
 
 Many Tk widgets communicate with the outside world via <strong>-command</strong>
 callbacks and/or virtual events. For example, the Text widget
@@ -1808,7 +1910,7 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="99"><i class='arg'>pathName</i> <b class='cmd'>notify bind</b> ?<i class='arg'>object</i>? ?<i class='arg'>pattern</i>? ?+??<i class='arg'>script</i>?</a><dd>
+<dt><a name="100"><i class='arg'>pathName</i> <b class='cmd'>notify bind</b> ?<i class='arg'>object</i>? ?<i class='arg'>pattern</i>? ?+??<i class='arg'>script</i>?</a><dd>
 
 This command associates Tcl scripts with events generated by a
 treectrl widget.
@@ -1832,12 +1934,12 @@ for which there exist bindings for <i class='arg'>object</i>.
 <br><br>
 The <i class='arg'>object</i> argument determines which window(s) the binding applies to.
 If <i class='arg'>object</i> begins with a dot, as in .a.b.c, then it must be the path name
-for a window; otherwise it may be an arbitrary string. Unlike the regular
-<b class='cmd'>bind</b> command, bindings on window names are not automatically removed if
+for a window; otherwise it may be an arbitrary string. Like the regular
+<b class='cmd'>bind</b> command, bindings on window names are automatically removed if
 that window is destroyed.
 
 <br><br>
-<dt><a name="100"><i class='arg'>pathName</i> <b class='cmd'>notify configure</b> <i class='arg'>object</i> <i class='arg'>pattern</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="101"><i class='arg'>pathName</i> <b class='cmd'>notify configure</b> <i class='arg'>object</i> <i class='arg'>pattern</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
 
 This command sets and retrieves options for bindings created by the
 <b class='cmd'>notify bind</b> command.
@@ -1862,7 +1964,7 @@ a binding script will not be evaluated when the corresponding event is
 generated.
 </dl>
 
-<dt><a name="101"><i class='arg'>pathName</i> <b class='cmd'>notify detailnames</b> <i class='arg'>eventName</i></a><dd>
+<dt><a name="102"><i class='arg'>pathName</i> <b class='cmd'>notify detailnames</b> <i class='arg'>eventName</i></a><dd>
 
 Returns a list containing the names of all details,
 which are installed for the event with the name <i class='arg'>eventName</i>
@@ -1870,14 +1972,14 @@ by means of the <b class='cmd'>notify install</b> widget command
 or by the treectrl widget itself.
 
 <br><br>
-<dt><a name="102"><i class='arg'>pathName</i> <b class='cmd'>notify eventnames</b></a><dd>
+<dt><a name="103"><i class='arg'>pathName</i> <b class='cmd'>notify eventnames</b></a><dd>
 
 Returns a list containing the names of all events,
 which are installed by means of the <b class='cmd'>notify install</b> widget command
 or by the treectrl widget itself.
 
 <br><br>
-<dt><a name="103"><i class='arg'>pathName</i> <b class='cmd'>notify generate</b> <i class='arg'>pattern</i> ?<i class='arg'>charMap</i>? ?<i class='arg'>percentsCommand</i>?</a><dd>
+<dt><a name="104"><i class='arg'>pathName</i> <b class='cmd'>notify generate</b> <i class='arg'>pattern</i> ?<i class='arg'>charMap</i>? ?<i class='arg'>percentsCommand</i>?</a><dd>
 
 This command causes the treectrl widget to generate an event. This command is
 typically used to generate dynamic events created by the <b class='cmd'>notify install</b>
@@ -1903,7 +2005,7 @@ command is available, then all %-substitution is done using <i class='arg'>charM
 See <b class='cmd'>notify install</b> for a description of <i class='arg'>percentsCommand</i>.
 
 <br><br>
-<dt><a name="104"><i class='arg'>pathName</i> <b class='cmd'>notify install</b> <i class='arg'>pattern</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
+<dt><a name="105"><i class='arg'>pathName</i> <b class='cmd'>notify install</b> <i class='arg'>pattern</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
 
 This command installs a new event or detail specified by <i class='arg'>pattern</i>. 
 Events created by this command are called dynamic,
@@ -1915,7 +2017,7 @@ an existing dynamic event.
 The optional <i class='arg'>percentsCommand</i> is a list containing the name of a Tcl
 command, plus any optional arguments, to which five additional arguments
 will be appended. The command will be called to perform %-substitution on any
-scripts bound to the event specified by <i class='arg'>pattern</i> (see <a href="#eventsandscriptsubstitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a>).
+scripts bound to the event specified by <i class='arg'>pattern</i> (see <a href="#events_and_script_substitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a>).
 <i class='arg'>PercentsCommand</i> should be defined as follows:
 <p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
 proc percentsCommand {?arg arg ...? char object event detail charMap} {
@@ -1938,19 +2040,19 @@ by itself.
 or an error if the event is not dynamic.
 
 <br><br>
-<dt><a name="105"><i class='arg'>pathName</i> <b class='cmd'>notify install detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
+<dt><a name="106"><i class='arg'>pathName</i> <b class='cmd'>notify install detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
 
-This command is for backward compatibility only.
+Deprecated.
 Use <b class='cmd'>notify install</b> with a <i class='arg'>pattern</i> of &lt;<i class='arg'>eventName</i>-<i class='arg'>detail</i>&gt; instead.
 
 <br><br>
-<dt><a name="106"><i class='arg'>pathName</i> <b class='cmd'>notify install event</b> <i class='arg'>eventName</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
+<dt><a name="107"><i class='arg'>pathName</i> <b class='cmd'>notify install event</b> <i class='arg'>eventName</i> ?<i class='arg'>percentsCommand</i>?</a><dd>
 
-This command is for backward compatibility only.
+Deprecated.
 Use <b class='cmd'>notify install</b> with a <i class='arg'>pattern</i> of &lt;<i class='arg'>eventName</i>&gt; instead.
 
 <br><br>
-<dt><a name="107"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>pattern</i></a><dd>
+<dt><a name="108"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>pattern</i></a><dd>
 
 Returns a string indicating
 whether the specified event or detail is created
@@ -1958,43 +2060,51 @@ by means of the <b class='cmd'>notify install</b> widget command (<strong>dynami
 or by the treectrl widget itself (<strong>static</strong>).
 
 <br><br>
-<dt><a name="108"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>eventName</i> ?<i class='arg'>detail</i>?</a><dd>
+<dt><a name="109"><i class='arg'>pathName</i> <b class='cmd'>notify linkage</b> <i class='arg'>eventName</i> ?<i class='arg'>detail</i>?</a><dd>
 
-This form of this command is for backward compatibility only.
+Deprecated.
 Use <b class='cmd'>notify linkage</b> with a <i class='arg'>pattern</i> of &lt;<i class='arg'>eventName</i>&gt; or
 &lt;<i class='arg'>eventName</i>-<i class='arg'>detail</i>&gt; instead.
 
 <br><br>
-<dt><a name="109"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall</b> <i class='arg'>pattern</i></a><dd>
+<dt><a name="110"><i class='arg'>pathName</i> <b class='cmd'>notify unbind</b> <i class='arg'>object</i> ?<i class='arg'>pattern</i>?</a><dd>
+
+If no <i class='arg'>pattern</i> is specified, all bindings on <i class='arg'>object</i> are removed.
+If <i class='arg'>pattern</i> is specified, then the current binding for <i class='arg'>pattern</i>
+is destroyed, leaving <i class='arg'>pattern</i> unbound.
+
+<br><br>
+<dt><a name="111"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall</b> <i class='arg'>pattern</i></a><dd>
 
 If the event or detail specified by <i class='arg'>pattern</i> is static
 (i.e. created by the treectrl widget itself), an error is generated.
-Otherwise the dynamic event or detail is removed.
+Otherwise the dynamic event or detail is removed. If an event name is specified
+without a detail, all details for that event are also removed.
 
 <br><br>
-<dt><a name="110"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i></a><dd>
+<dt><a name="112"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall detail</b> <i class='arg'>eventName</i> <i class='arg'>detail</i></a><dd>
 
-This command is for backward compatibility only.
+Deprecated.
 Use <b class='cmd'>notify uninstall</b> with a <i class='arg'>pattern</i> of &lt;<i class='arg'>eventName</i>-<i class='arg'>detail</i>&gt; instead.
 
 <br><br>
-<dt><a name="111"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall event</b> <i class='arg'>eventName</i></a><dd>
+<dt><a name="113"><i class='arg'>pathName</i> <b class='cmd'>notify uninstall event</b> <i class='arg'>eventName</i></a><dd>
 
-This command is for backward compatibility only.
+Deprecated.
 Use <b class='cmd'>notify uninstall</b> with a <i class='arg'>pattern</i> of &lt;<i class='arg'>eventName</i>&gt; instead.
 </dl>
 
-<dt><a name="112"><i class='arg'>pathName</i> <b class='cmd'>numcolumns</b></a><dd>
+<dt><a name="114"><i class='arg'>pathName</i> <b class='cmd'>numcolumns</b></a><dd>
 
 Deprecated. Use the <b class='cmd'>column count</b> command instead.
 
 <br><br>
-<dt><a name="113"><i class='arg'>pathName</i> <b class='cmd'>numitems</b></a><dd>
+<dt><a name="115"><i class='arg'>pathName</i> <b class='cmd'>numitems</b></a><dd>
 
 Deprecated. Use the <b class='cmd'>item count</b> command instead.
 
 <br><br>
-<dt><a name="114"><i class='arg'>pathName</i> <b class='cmd'>orphans</b></a><dd>
+<dt><a name="116"><i class='arg'>pathName</i> <b class='cmd'>orphans</b></a><dd>
 
 Returns a list containing the numerical ids of all items
 which has no parent item.
@@ -2003,12 +2113,12 @@ and can later become an orphan again
 by means of the <b class='cmd'>item remove</b> widget command.
 
 <br><br>
-<dt><a name="115"><i class='arg'>pathName</i> <b class='cmd'>range</b> <i class='arg'>first</i> <i class='arg'>last</i></a><dd>
+<dt><a name="117"><i class='arg'>pathName</i> <b class='cmd'>range</b> <i class='arg'>first</i> <i class='arg'>last</i></a><dd>
 
 Deprecated. Use the <b class='cmd'>item range</b> command instead.
 
 <br><br>
-<dt><a name="116"><i class='arg'>pathName</i> <b class='cmd'>state</b> <i class='arg'>option</i> ?<i class='arg'>stateName</i>?</a><dd>
+<dt><a name="118"><i class='arg'>pathName</i> <b class='cmd'>state</b> <i class='arg'>option</i> ?<i class='arg'>stateName</i>?</a><dd>
 
 This command is used to manipulate the list of user defined states,
 see section <a href="#states">STATES</a> below.
@@ -2018,13 +2128,13 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="117"><i class='arg'>pathName</i> <b class='cmd'>state define</b> <i class='arg'>stateName</i></a><dd>
+<dt><a name="119"><i class='arg'>pathName</i> <b class='cmd'>state define</b> <i class='arg'>stateName</i></a><dd>
 
 Defines a new state with the name <i class='arg'>stateName</i>,
 which must not be the name of a predefined or already user defined state.
 
 <br><br>
-<dt><a name="118"><i class='arg'>pathName</i> <b class='cmd'>state linkage</b> <i class='arg'>stateName</i></a><dd>
+<dt><a name="120"><i class='arg'>pathName</i> <b class='cmd'>state linkage</b> <i class='arg'>stateName</i></a><dd>
 
 Returns a string indicating
 whether the specified state is user defined
@@ -2032,18 +2142,18 @@ by means of the <b class='cmd'>state define</b> widget command (<strong>dynamic<
 or predefined by the treectrl widget itself (<strong>static</strong>).
 
 <br><br>
-<dt><a name="119"><i class='arg'>pathName</i> <b class='cmd'>state names</b></a><dd>
+<dt><a name="121"><i class='arg'>pathName</i> <b class='cmd'>state names</b></a><dd>
 
 Returns a list containing the names of all user defined states.
 
 <br><br>
-<dt><a name="120"><i class='arg'>pathName</i> <b class='cmd'>state undefine</b> ?<i class='arg'>stateName ...</i>?</a><dd>
+<dt><a name="122"><i class='arg'>pathName</i> <b class='cmd'>state undefine</b> ?<i class='arg'>stateName ...</i>?</a><dd>
 
 Every <i class='arg'>stateName</i> must be the name of a user defined state.
 Removes this state from the list of user defined states.
 </dl>
 
-<dt><a name="121"><i class='arg'>pathName</i> <b class='cmd'>see</b> <i class='arg'>itemDesc</i></a><dd>
+<dt><a name="123"><i class='arg'>pathName</i> <b class='cmd'>see</b> <i class='arg'>itemDesc</i></a><dd>
 
 Adjust the view in the treectrl so that the item
 described by <i class='arg'>itemDesc</i> is visible.
@@ -2053,14 +2163,14 @@ and the corresponding <strong>&lt;Scroll-x&gt;</strong> and/or <strong>&lt;Scrol
 events are generated.
 
 <br><br>
-<dt><a name="122"><i class='arg'>pathName</i> <b class='cmd'>selection</b> <i class='arg'>option</i> <i class='arg'>arg</i></a><dd>
+<dt><a name="124"><i class='arg'>pathName</i> <b class='cmd'>selection</b> <i class='arg'>option</i> <i class='arg'>arg</i></a><dd>
 
 This command is used to adjust the selection within a treectrl.
 It has several forms, depending on <i class='arg'>option</i>:
 
 <br><br>
 <dl>
-<dt><a name="123"><i class='arg'>pathName</i> <b class='cmd'>selection add</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
+<dt><a name="125"><i class='arg'>pathName</i> <b class='cmd'>selection add</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
 <i class='arg'>First</i> and <i class='arg'>last</i> (if specified)
 must be the string <strong>all</strong> or an <i class='arg'>itemDesc</i>.
@@ -2072,7 +2182,7 @@ all items of the treectrl widget are added to the selection instead.
 A <strong>&lt;Selection&gt;</strong> event is generated.
 
 <br><br>
-<dt><a name="124"><i class='arg'>pathName</i> <b class='cmd'>selection anchor</b> ?<i class='arg'>itemDesc</i>?</a><dd>
+<dt><a name="126"><i class='arg'>pathName</i> <b class='cmd'>selection anchor</b> ?<i class='arg'>itemDesc</i>?</a><dd>
 
 If <i class='arg'>itemDesc</i> is specified,
 the selection anchor is set to the described item.
@@ -2083,7 +2193,7 @@ This command doesn't modify the selection state of any item.
 Returns the numerical id of the selection anchor item.
 
 <br><br>
-<dt><a name="125"><i class='arg'>pathName</i> <b class='cmd'>selection clear</b> ?<i class='arg'>first</i>? ?<i class='arg'>last</i>?</a><dd>
+<dt><a name="127"><i class='arg'>pathName</i> <b class='cmd'>selection clear</b> ?<i class='arg'>first</i>? ?<i class='arg'>last</i>?</a><dd>
 
 <i class='arg'>First</i> and <i class='arg'>last</i> (if specified)
 must be the string <strong>all</strong> or an <i class='arg'>itemDesc</i>.
@@ -2096,13 +2206,13 @@ the selection is completely cleared instead.
 A <strong>&lt;Selection&gt;</strong> event is generated.
 
 <br><br>
-<dt><a name="126"><i class='arg'>pathName</i> <b class='cmd'>selection count</b></a><dd>
+<dt><a name="128"><i class='arg'>pathName</i> <b class='cmd'>selection count</b></a><dd>
 
 Returns an integer indicating the number
 of items in the treectrl that are currently selected.
 
 <br><br>
-<dt><a name="127"><i class='arg'>pathName</i> <b class='cmd'>selection get</b></a><dd>
+<dt><a name="129"><i class='arg'>pathName</i> <b class='cmd'>selection get</b></a><dd>
 
 Returns a list containing the numerical ids of
 all of the items in the treectrl that are currently selected.
@@ -2110,13 +2220,13 @@ If there are no items selected in the treectrl then an empty
 string is returned.
 
 <br><br>
-<dt><a name="128"><i class='arg'>pathName</i> <b class='cmd'>selection includes</b> <i class='arg'>itemDesc</i></a><dd>
+<dt><a name="130"><i class='arg'>pathName</i> <b class='cmd'>selection includes</b> <i class='arg'>itemDesc</i></a><dd>
 
 Returns 1 if the item indicated by <i class='arg'>itemDesc</i> is currently
 selected, 0 if it isn't.
 
 <br><br>
-<dt><a name="129"><i class='arg'>pathName</i> <b class='cmd'>selection modify</b> <i class='arg'>select</i> <i class='arg'>deselect</i></a><dd>
+<dt><a name="131"><i class='arg'>pathName</i> <b class='cmd'>selection modify</b> <i class='arg'>select</i> <i class='arg'>deselect</i></a><dd>
 
 Both arguments <i class='arg'>select</i> and <i class='arg'>deselect</i> must be
 the string <strong>all</strong> or a possibly empty list of <i class='arg'>itemDesc</i>s.
@@ -2129,7 +2239,7 @@ it is added to the selection.
 A <strong>&lt;Selection&gt;</strong> event is generated.
 </dl>
 
-<dt><a name="130"><i class='arg'>pathName</i> <b class='cmd'>style</b> <i class='arg'>option</i> ?<i class='arg'>element</i>? ?<i class='arg'>arg arg ...</i>?</a><dd>
+<dt><a name="132"><i class='arg'>pathName</i> <b class='cmd'>style</b> <i class='arg'>option</i> ?<i class='arg'>element</i>? ?<i class='arg'>arg arg ...</i>?</a><dd>
 
 This command is used to manipulate styles, which could be considered
 as a geometry manager for the elements of one item.
@@ -2139,7 +2249,7 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="131"><i class='arg'>pathName</i> <b class='cmd'>style cget</b> <i class='arg'>style</i> <i class='arg'>option</i></a><dd>
+<dt><a name="133"><i class='arg'>pathName</i> <b class='cmd'>style cget</b> <i class='arg'>style</i> <i class='arg'>option</i></a><dd>
 
 This command returns the current value of the option named <i class='arg'>option</i>
 associated with the style given by <i class='arg'>style</i>.
@@ -2147,7 +2257,7 @@ associated with the style given by <i class='arg'>style</i>.
 <b class='cmd'>style configure</b> widget command.
 
 <br><br>
-<dt><a name="132"><i class='arg'>pathName</i> <b class='cmd'>style configure</b> <i class='arg'>style</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="134"><i class='arg'>pathName</i> <b class='cmd'>style configure</b> <i class='arg'>style</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
 
 This command is similar to the <b class='cmd'>configure</b> widget command except
 that it modifies options associated with the style given by <i class='arg'>style</i>
@@ -2176,7 +2286,7 @@ Must be either <strong>horizontal</strong> (the default)
 or <strong>vertical</strong> or an abbreviation of one of these.
 </dl>
 
-<dt><a name="133"><i class='arg'>pathName</i> <b class='cmd'>style create</b> <i class='arg'>style</i> ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="135"><i class='arg'>pathName</i> <b class='cmd'>style create</b> <i class='arg'>style</i> ?<i class='arg'>option value ...</i>?</a><dd>
 
 Create a new style in <i class='arg'>pathName</i> with name <i class='arg'>style</i>.
 After <i class='arg'>style</i> there may be any number of <i class='arg'>option</i>-<i class='arg'>value</i>
@@ -2187,7 +2297,7 @@ configuration.
 Returns the name of the new style.
 
 <br><br>
-<dt><a name="134"><i class='arg'>pathName</i> <b class='cmd'>style delete</b> ?<i class='arg'>style ...</i>?</a><dd>
+<dt><a name="136"><i class='arg'>pathName</i> <b class='cmd'>style delete</b> ?<i class='arg'>style ...</i>?</a><dd>
 
 Deletes each of the named styles and returns an empty string.
 If a style is deleted while it is still used to display
@@ -2195,7 +2305,7 @@ one or more items,
 it is also removed from the style list of these items.
 
 <br><br>
-<dt><a name="135"><i class='arg'>pathName</i> <b class='cmd'>style elements</b> <i class='arg'>style</i> ?<i class='arg'>elementList</i>?</a><dd>
+<dt><a name="137"><i class='arg'>pathName</i> <b class='cmd'>style elements</b> <i class='arg'>style</i> ?<i class='arg'>elementList</i>?</a><dd>
 
 Specifies the elements which should be layed out by this style.
 Each element of <i class='arg'>elementList</i> must be the name of an element
@@ -2210,7 +2320,7 @@ If the <i class='arg'>elementList</i> argument is not specified, a list is retur
 containing the currently defined elements of <i class='arg'>style</i>.
 
 <br><br>
-<dt><a name="136"><i class='arg'>pathName</i> <b class='cmd'>style layout</b> <i class='arg'>style</i> <i class='arg'>element</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="138"><i class='arg'>pathName</i> <b class='cmd'>style layout</b> <i class='arg'>style</i> <i class='arg'>element</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
 
 This command is similar to the <b class='cmd'>configure</b> widget command except
 that it modifies options used by <i class='arg'>style</i> for laying out <i class='arg'>element</i>
@@ -2331,17 +2441,17 @@ around a piece of text.
 
 </dl>
 
-<dt><a name="137"><i class='arg'>pathName</i> <b class='cmd'>style names</b></a><dd>
+<dt><a name="139"><i class='arg'>pathName</i> <b class='cmd'>style names</b></a><dd>
 
 Returns a list containing the names of all existing styles.
 </dl>
 
-<dt><a name="138"><i class='arg'>pathName</i> <b class='cmd'>toggle</b> ?<strong>-recurse</strong>? ?<i class='arg'>itemDesc ...</i>?</a><dd>
+<dt><a name="140"><i class='arg'>pathName</i> <b class='cmd'>toggle</b> ?<strong>-recurse</strong>? ?<i class='arg'>itemDesc ...</i>?</a><dd>
 
 Use <b class='cmd'>item toggle</b> instead.
 
 <br><br>
-<dt><a name="139"><i class='arg'>pathName</i> <b class='cmd'>xview</b> ?<i class='arg'>args</i>?</a><dd>
+<dt><a name="141"><i class='arg'>pathName</i> <b class='cmd'>xview</b> ?<i class='arg'>args</i>?</a><dd>
 
 This command is used to query and change the horizontal position of the
 information displayed in the treectrl's window.
@@ -2349,7 +2459,7 @@ It can take any of the following forms:
 
 <br><br>
 <dl>
-<dt><a name="140"><i class='arg'>pathName</i> <b class='cmd'>xview</b></a><dd>
+<dt><a name="142"><i class='arg'>pathName</i> <b class='cmd'>xview</b></a><dd>
 
 Returns a list containing two elements.
 Each element is a real fraction between 0 and 1;  together they describe
@@ -2362,7 +2472,7 @@ These are the same values passed to scrollbars via the <strong>-xscrollcommand</
 option.
 
 <br><br>
-<dt><a name="141"><i class='arg'>pathName</i> <b class='cmd'>xview moveto</b> <i class='arg'>fraction</i></a><dd>
+<dt><a name="143"><i class='arg'>pathName</i> <b class='cmd'>xview moveto</b> <i class='arg'>fraction</i></a><dd>
 
 Adjusts the view in the window so that <i class='arg'>fraction</i> of the
 total width of the tree is off-screen to the left.
@@ -2370,7 +2480,7 @@ total width of the tree is off-screen to the left.
 A <strong>&lt;Scroll-x&gt;</strong> event is generated.
 
 <br><br>
-<dt><a name="142"><i class='arg'>pathName</i> <b class='cmd'>xview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a><dd>
+<dt><a name="144"><i class='arg'>pathName</i> <b class='cmd'>xview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a><dd>
 
 This command shifts the view in the window left or right according to
 <i class='arg'>number</i> and <i class='arg'>what</i>.
@@ -2388,7 +2498,7 @@ becomes visible.
 A <strong>&lt;Scroll-x&gt;</strong> event is generated.
 </dl>
 
-<dt><a name="143"><i class='arg'>pathName</i> <b class='cmd'>yview</b> ?<i class='arg'>args</i>?</a><dd>
+<dt><a name="145"><i class='arg'>pathName</i> <b class='cmd'>yview</b> ?<i class='arg'>args</i>?</a><dd>
 
 This command is used to query and change the vertical position of the
 information displayed in the treectrl's window.
@@ -2396,7 +2506,7 @@ It can take any of the following forms:
 
 <br><br>
 <dl>
-<dt><a name="144"><i class='arg'>pathName</i> <b class='cmd'>yview</b></a><dd>
+<dt><a name="146"><i class='arg'>pathName</i> <b class='cmd'>yview</b></a><dd>
 
 Returns a list containing two elements.
 Each element is a real fraction between 0 and 1;  together they describe
@@ -2407,7 +2517,7 @@ These are the same values passed to scrollbars via the <strong>-yscrollcommand</
 option.
 
 <br><br>
-<dt><a name="145"><i class='arg'>pathName</i> <b class='cmd'>yview moveto</b> <i class='arg'>fraction</i></a><dd>
+<dt><a name="147"><i class='arg'>pathName</i> <b class='cmd'>yview moveto</b> <i class='arg'>fraction</i></a><dd>
 
 Adjusts the view in the window so that <i class='arg'>fraction</i> of the tree's
 area is off-screen to the top.
@@ -2415,7 +2525,7 @@ area is off-screen to the top.
 A <strong>&lt;Scroll-y&gt;</strong> event is generated.
 
 <br><br>
-<dt><a name="146"><i class='arg'>pathName</i> <b class='cmd'>yview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a><dd>
+<dt><a name="148"><i class='arg'>pathName</i> <b class='cmd'>yview scroll</b> <i class='arg'>number</i> <i class='arg'>what</i></a><dd>
 
 This command adjusts the view in the window up or down according to
 <i class='arg'>number</i> and <i class='arg'>what</i>.
@@ -2441,7 +2551,7 @@ An item can be considered as a row, which reaches over all columns.
 
 <p>
 Columns in a treectrl may be specified in a number of ways.
-See <a href="#columndescription">COLUMN DESCRIPTION</a> below.
+See <a href="#column_description">COLUMN DESCRIPTION</a> below.
 
 <p>
 There is always one special column, the <strong>tail</strong> column, which fills
@@ -2452,7 +2562,7 @@ it can only be specified by its tag <strong>tail</strong>, which cannot be modif
 <p>
 When a column configuration option is specified as <strong>per-state</strong>, the state
 names are <strong>normal</strong>, <strong>active</strong>, <strong>pressed</strong> or <strong>up</strong>, i.e.
-do not use item state names. See <a href="#perstateoptions">PER-STATE OPTIONS</a>
+do not use item state names. See <a href="#per-state_options">PER-STATE OPTIONS</a>
 for more info.
 
 <p>
@@ -2674,7 +2784,7 @@ and d) the treectrl's <strong>-wrap</strong> option results in wrapping.
 
 </dl>
 
-<h2><a name="columndescription">COLUMN DESCRIPTION</a></h2>
+<h2><a name="column_description">COLUMN DESCRIPTION</a></h2>
 <p>
 Many of the commands and options for a treectrl take as an argument a
 description of which column to operate on.
@@ -2805,7 +2915,7 @@ which should be a non empty list of <i class='arg'>stateDesc</i>s.
 The pattern matches, if for every element of the list
 the <i class='arg'>stateDesc</i> describes the same state as the item currently has.
 
-<h2><a name="perstateoptions">PER-STATE OPTIONS</a></h2>
+<h2><a name="per-state_options">PER-STATE OPTIONS</a></h2>
 <p>
 
 The visual appearance of an item can change depending on the state the item
@@ -2862,7 +2972,7 @@ The last <i class='arg'>statePattern</i> can be empty,
 implementing a sort of <em>otherwise clause</em>.
 The options with this behaviour are called <em>per-state options</em>.
 
-<h2><a name="bitmapelement">BITMAP ELEMENT</a></h2>
+<h2><a name="bitmap_element">BITMAP ELEMENT</a></h2>
 <p>
 An element of type <strong>bitmap</strong> can be used to display a bitmap in an item.
 The following options are supported for bitmap elements:
@@ -2889,7 +2999,7 @@ Specifies as a per-state option
 the color to use for each of the bitmap's '1' valued pixels.
 </dl>
 
-<h2><a name="borderelement">BORDER ELEMENT</a></h2>
+<h2><a name="border_element">BORDER ELEMENT</a></h2>
 <p>
 An element of type <strong>border</strong> can be used to add a border to an item.
 The following options are supported for border elements:
@@ -2931,7 +3041,7 @@ Specifies the thickness of the border.
 Specifies the width of the area of the border.
 </dl>
 
-<h2><a name="imageelement">IMAGE ELEMENT</a></h2>
+<h2><a name="image_element">IMAGE ELEMENT</a></h2>
 <p>
 An element of type <strong>image</strong> can be used to display an image in an item.
 The following options are supported for image elements:
@@ -2956,7 +3066,7 @@ the image to display in the element.
 Specifies the width of the image.
 </dl>
 
-<h2><a name="rectangleelement">RECTANGLE ELEMENT</a></h2>
+<h2><a name="rectangle_element">RECTANGLE ELEMENT</a></h2>
 <p>
 An element of type <strong>rect</strong> can be used to display a rectangle in an item.
 The following options are supported for rectangle elements:
@@ -3015,7 +3125,7 @@ and the treectrl widget has currently the focus.
 Specifies the width of the rectangle.
 </dl>
 
-<h2><a name="textelement">TEXT ELEMENT</a></h2>
+<h2><a name="text_element">TEXT ELEMENT</a></h2>
 <p>
 An element of type <strong>text</strong> can be used to display a text in an item.
 The following options are supported for text elements:
@@ -3101,7 +3211,7 @@ text's area.
 Acceptable values are <strong>char</strong> or <strong>word</strong>.
 </dl>
 
-<h2><a name="windowelement">WINDOW ELEMENT</a></h2>
+<h2><a name="window_element">WINDOW ELEMENT</a></h2>
 <p>
 An element of type <strong>window</strong> can be used to display a Tk window in an item.
 The following options are supported for window elements:
@@ -3130,7 +3240,7 @@ the <b class='cmd'>element create</b> or <b class='cmd'>element configure</b> co
 with a particular item.
 </dl>
 
-<h2><a name="itemdescription">ITEM DESCRIPTION</a></h2>
+<h2><a name="item_description">ITEM DESCRIPTION</a></h2>
 <p>
 Many of the commands and options for a treectrl take as an argument a
 description of which item to operate on.
@@ -3264,7 +3374,7 @@ Use the <i class='arg'>n</i>th child of the item's parent.
 Use the item in the first row of this column.
 </dl>
 
-<h2><a name="eventsandscriptsubstitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a></h2>
+<h2><a name="events_and_script_substitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a></h2>
 <p>
 
 The <i class='arg'>script</i> argument to <b class='cmd'>notify bind</b> is a Tcl script, which will be
@@ -3378,7 +3488,7 @@ how the selection changed.
 
 </dl>
 
-<h2><a name="dynamicevents">DYNAMIC EVENTS</a></h2>
+<h2><a name="dynamic_events">DYNAMIC EVENTS</a></h2>
 <p>
 In addition to the pre-defined static events such as &lt;ActiveItem&gt;
 and &lt;Selection&gt;, new dynamic events can be created by using the
@@ -3471,7 +3581,7 @@ provides a list of %-substitution characters and values which is used by
 ::TreeCtrl::PercentsCmd. In this example any %C in any script bound to the
 &lt;Header-invoke&gt; event will be replaced by the value of $Priv(column).
 
-<h2><a name="defaultbindings">DEFAULT BINDINGS</a></h2>
+<h2><a name="default_bindings">DEFAULT BINDINGS</a></h2>
 <p>
 Tk automatically creates class bindings for treectrl widgets that give them
 the following default behavior.
@@ -3592,7 +3702,7 @@ $T notify bind MyTag &lt;ColumnDrag-receive&gt; {
 
 
 
-<h2><a name="seealso">SEE ALSO</a></h2>
+<h2><a name="see_also">SEE ALSO</a></h2>
 <p>
 bind(n), bitmap(n), image(n), listbox(n), options(n)
 <h2><a name="keywords">KEYWORDS</a></h2>

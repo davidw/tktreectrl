@@ -6,311 +6,315 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.43 2005/06/29 21:13:50 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.44 2005/07/11 01:53:56 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 2.0  "Tk Commands"
+.TH "treectrl" n 2.0 treectrl "Tk Commands"
 .BS
 .SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
 package require \fBtreectrl  2.0\fR
 .sp
-\fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?\fR
+\fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .sp
-\fIpathName\fR \fBactivate\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBactivate\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBcanvasx\fR \fIscreenx\fR\fR
+\fIpathName\fR \fBcanvasx\fR \fIscreenx\fR
 .sp
-\fIpathName\fR \fBcanvasy\fR \fIscreeny\fR\fR
+\fIpathName\fR \fBcanvasy\fR \fIscreeny\fR
 .sp
-\fIpathName\fR \fBcget\fR \fIoption\fR\fR
+\fIpathName\fR \fBcget\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBcollapse\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBcollapse\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 .sp
-\fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR\fR
+\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR\fR
+\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR
 .sp
-\fIpathName\fR \fBcolumn count\fR\fR
+\fIpathName\fR \fBcolumn count\fR
 .sp
-\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR\fR
+\fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBcolumn dragconfigure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn dragconfigure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?
 .sp
-\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR\fR
+\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR
 .sp
-\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?
 .sp
-\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+\fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
 .sp
-\fIpathName\fR \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?\fR
+\fIpathName\fR \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?
 .sp
-\fIpathName\fR \fBcontentbox\fR\fR
+\fIpathName\fR \fBcontentbox\fR
 .sp
-\fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?
 .sp
-\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBdebug dinfo\fR\fR
+\fIpathName\fR \fBdebug dinfo\fR
 .sp
-\fIpathName\fR \fBdebug scroll\fR\fR
+\fIpathName\fR \fBdebug scroll\fR
 .sp
-\fIpathName\fR \fBdepth\fR ?\fIitemDesc\fR?\fR
+\fIpathName\fR \fBdepth\fR ?\fIitemDesc\fR?
 .sp
-\fIpathName\fR \fBdragimage\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBdragimage\fR \fIoption\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBdragimage add\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?\fR
+\fIpathName\fR \fBdragimage add\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
 .sp
-\fIpathName\fR \fBdragimage cget\fR \fIoption\fR\fR
+\fIpathName\fR \fBdragimage cget\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBdragimage clear\fR\fR
+\fIpathName\fR \fBdragimage clear\fR
 .sp
-\fIpathName\fR \fBdragimage configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBdragimage configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?
 .sp
-\fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 .sp
-\fIpathName\fR \fBelement cget\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBelement cget\fR \fIelement\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBelement configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBelement configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBelement create\fR \fIelement\fR \fItype\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBelement create\fR \fIelement\fR \fItype\fR ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBelement delete\fR ?\fIelement ...\fR?\fR
+\fIpathName\fR \fBelement delete\fR ?\fIelement ...\fR?
 .sp
-\fIpathName\fR \fBelement names\fR\fR
+\fIpathName\fR \fBelement names\fR
 .sp
-\fIpathName\fR \fBelement type\fR \fIelement\fR\fR
+\fIpathName\fR \fBelement type\fR \fIelement\fR
 .sp
-\fIpathName\fR \fBexpand\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBexpand\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 .sp
-\fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR\fR
+\fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR
 .sp
-\fIpathName\fR \fBindex\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBindex\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem\fR \fIoption\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBitem ancestors\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem ancestors\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?\fR
+\fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
 .sp
-\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBitem children\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem children\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?
 .sp
-\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
 .sp
-\fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
+\fIpathName\fR \fBitem complex\fR \fIitemDesc\fR ?\fIlist...\fR?
 .sp
-\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBitem count\fR\fR
+\fIpathName\fR \fBitem count\fR
 .sp
-\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?\fR
+\fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?
 .sp
-\fIpathName\fR \fBitem dump\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 .sp
-\fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
+\fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?
 .sp
-\fIpathName\fR \fBitem id\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem id\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR\fR
+\fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR
 .sp
-\fIpathName\fR \fBitem isopen\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem isopen\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem lastchild\fR \fIparent\fR ?\fIchild\fR?\fR
+\fIpathName\fR \fBitem lastchild\fR \fIparent\fR ?\fIchild\fR?
 .sp
-\fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?\fR
+\fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?
 .sp
-\fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?
 .sp
-\fIpathName\fR \fBitem parent\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem parent\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?\fR
+\fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?
 .sp
-\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR\fR
+\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR
 .sp
-\fIpathName\fR \fBitem remove\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem remove\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem rnc\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem rnc\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?\fR
+\fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?
 .sp
-\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem span\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fInumColumns\fR? ?\fIcolumn numColumns ...\fR?
 .sp
-\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?\fR
+\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?\fR
+\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?
 .sp
-\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?\fR
+\fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?
 .sp
-\fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?
 .sp
-\fIpathName\fR \fBitem style elements\fR \fIitemDesc\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR\fR
+\fIpathName\fR \fBitem style elements\fR \fIitemDesc\fR \fIcolumn\fR
 .sp
-\fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?\fR
+\fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR
 .sp
-\fIpathName\fR \fBitem text\fR \fIitemDesc\fR \fIcolumn\fR ?\fItext\fR? ?\fIcolumn text ...\fR?\fR
+\fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?
 .sp
-\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem text\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fItext\fR? ?\fIcolumn text ...\fR?
 .sp
-\fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?
 .sp
-\fIpathName\fR \fBmarquee anchor\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBmarquee cget\fR \fIoption\fR\fR
+\fIpathName\fR \fBmarquee anchor\fR ?\fIx y\fR?
 .sp
-\fIpathName\fR \fBmarquee configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBmarquee cget\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?\fR
+\fIpathName\fR \fBmarquee configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBmarquee corner\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?
 .sp
-\fIpathName\fR \fBmarquee identify\fR\fR
+\fIpathName\fR \fBmarquee corner\fR ?\fIx y\fR?
 .sp
-\fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBmarquee identify\fR
 .sp
-\fIpathName\fR \fBnotify bind\fR ?\fIobject\fR? ?\fIpattern\fR? ?+??\fIscript\fR?\fR
+\fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBnotify configure\fR \fIobject\fR \fIpattern\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBnotify bind\fR ?\fIobject\fR? ?\fIpattern\fR? ?+??\fIscript\fR?
 .sp
-\fIpathName\fR \fBnotify detailnames\fR \fIeventName\fR\fR
+\fIpathName\fR \fBnotify configure\fR \fIobject\fR \fIpattern\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBnotify eventnames\fR\fR
+\fIpathName\fR \fBnotify detailnames\fR \fIeventName\fR
 .sp
-\fIpathName\fR \fBnotify generate\fR \fIpattern\fR ?\fIcharMap\fR? ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify eventnames\fR
 .sp
-\fIpathName\fR \fBnotify install\fR \fIpattern\fR ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify generate\fR \fIpattern\fR ?\fIcharMap\fR? ?\fIpercentsCommand\fR?
 .sp
-\fIpathName\fR \fBnotify install detail\fR \fIeventName\fR \fIdetail\fR ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify install\fR \fIpattern\fR ?\fIpercentsCommand\fR?
 .sp
-\fIpathName\fR \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify install detail\fR \fIeventName\fR \fIdetail\fR ?\fIpercentsCommand\fR?
 .sp
-\fIpathName\fR \fBnotify linkage\fR \fIpattern\fR\fR
+\fIpathName\fR \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?
 .sp
-\fIpathName\fR \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?\fR
+\fIpathName\fR \fBnotify linkage\fR \fIpattern\fR
 .sp
-\fIpathName\fR \fBnotify uninstall\fR \fIpattern\fR\fR
+\fIpathName\fR \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?
 .sp
-\fIpathName\fR \fBnotify uninstall detail\fR \fIeventName\fR \fIdetail\fR\fR
+\fIpathName\fR \fBnotify unbind\fR \fIobject\fR ?\fIpattern\fR?
 .sp
-\fIpathName\fR \fBnotify uninstall event\fR \fIeventName\fR\fR
+\fIpathName\fR \fBnotify uninstall\fR \fIpattern\fR
 .sp
-\fIpathName\fR \fBnumcolumns\fR\fR
+\fIpathName\fR \fBnotify uninstall detail\fR \fIeventName\fR \fIdetail\fR
 .sp
-\fIpathName\fR \fBnumitems\fR\fR
+\fIpathName\fR \fBnotify uninstall event\fR \fIeventName\fR
 .sp
-\fIpathName\fR \fBorphans\fR\fR
+\fIpathName\fR \fBnumcolumns\fR
 .sp
-\fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR\fR
+\fIpathName\fR \fBnumitems\fR
 .sp
-\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?\fR
+\fIpathName\fR \fBorphans\fR
 .sp
-\fIpathName\fR \fBstate define\fR \fIstateName\fR\fR
+\fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR
 .sp
-\fIpathName\fR \fBstate linkage\fR \fIstateName\fR\fR
+\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
 .sp
-\fIpathName\fR \fBstate names\fR\fR
+\fIpathName\fR \fBstate define\fR \fIstateName\fR
 .sp
-\fIpathName\fR \fBstate undefine\fR ?\fIstateName ...\fR?\fR
+\fIpathName\fR \fBstate linkage\fR \fIstateName\fR
 .sp
-\fIpathName\fR \fBsee\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBstate names\fR
 .sp
-\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR\fR
+\fIpathName\fR \fBstate undefine\fR ?\fIstateName ...\fR?
 .sp
-\fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?\fR
+\fIpathName\fR \fBsee\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBselection anchor\fR ?\fIitemDesc\fR?\fR
+\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR
 .sp
-\fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?\fR
+\fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?
 .sp
-\fIpathName\fR \fBselection count\fR\fR
+\fIpathName\fR \fBselection anchor\fR ?\fIitemDesc\fR?
 .sp
-\fIpathName\fR \fBselection get\fR\fR
+\fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?
 .sp
-\fIpathName\fR \fBselection includes\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBselection count\fR
 .sp
-\fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR\fR
+\fIpathName\fR \fBselection get\fR
 .sp
-\fIpathName\fR \fBstyle\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBselection includes\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBstyle cget\fR \fIstyle\fR \fIoption\fR\fR
+\fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR
 .sp
-\fIpathName\fR \fBstyle configure\fR \fIstyle\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 .sp
-\fIpathName\fR \fBstyle create\fR \fIstyle\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle cget\fR \fIstyle\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBstyle delete\fR ?\fIstyle ...\fR?\fR
+\fIpathName\fR \fBstyle configure\fR \fIstyle\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBstyle elements\fR \fIstyle\fR ?\fIelementList\fR?\fR
+\fIpathName\fR \fBstyle create\fR \fIstyle\fR ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle delete\fR ?\fIstyle ...\fR?
 .sp
-\fIpathName\fR \fBstyle names\fR\fR
+\fIpathName\fR \fBstyle elements\fR \fIstyle\fR ?\fIelementList\fR?
 .sp
-\fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBxview\fR ?\fIargs\fR?\fR
+\fIpathName\fR \fBstyle names\fR
 .sp
-\fIpathName\fR \fBxview\fR\fR
+\fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 .sp
-\fIpathName\fR \fBxview moveto\fR \fIfraction\fR\fR
+\fIpathName\fR \fBxview\fR ?\fIargs\fR?
 .sp
-\fIpathName\fR \fBxview scroll\fR \fInumber\fR \fIwhat\fR\fR
+\fIpathName\fR \fBxview\fR
 .sp
-\fIpathName\fR \fByview\fR ?\fIargs\fR?\fR
+\fIpathName\fR \fBxview moveto\fR \fIfraction\fR
 .sp
-\fIpathName\fR \fByview\fR\fR
+\fIpathName\fR \fBxview scroll\fR \fInumber\fR \fIwhat\fR
 .sp
-\fIpathName\fR \fByview moveto\fR \fIfraction\fR\fR
+\fIpathName\fR \fByview\fR ?\fIargs\fR?
 .sp
-\fIpathName\fR \fByview scroll\fR \fInumber\fR \fIwhat\fR\fR
+\fIpathName\fR \fByview\fR
+.sp
+\fIpathName\fR \fByview moveto\fR \fIfraction\fR
+.sp
+\fIpathName\fR \fByview scroll\fR \fInumber\fR \fIwhat\fR
 .sp
 .BE
 .SH "DESCRIPTION"
 .TP
-\fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?\fR
+\fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .PP
 The \fBtreectrl\fR command creates a new window (given by the
 \fIpathName\fR argument) and makes it into a treectrl widget.
@@ -322,12 +326,13 @@ path name of the new window.
 At the time this command is invoked, there must not
 exist a window named \fIpathName\fR, but \fIpathName\fR's parent must exist.
 .PP
-A treectrl is a widget which displays items one per line.
-Every item has a set of states, which are boolean properties.
-The item may be spread about one or more columns.
+A treectrl is a widget which displays items in a one- or two-dimensional arrangement.
+Items have a parent-child relationship with other items.
+Items have a set of states, which are boolean properties.
+Items may be spread about one or more columns.
 For each column of an item there is a style associated,
 which determines how to display the item's column
-respecting the item's current state set.
+taking into account the item's current state set.
 One column can be defined to display the data in a hierarchical structure.
 .PP
 Normally the origin of the coordinate system is at the
@@ -380,6 +385,7 @@ See the \fBoption\fR manual entry for details on the standard options.
 Command-Line Switch:	\fB-backgroundimage\fR
 Database Name:	\fBbackgroundImage\fR
 Database Class:	\fBBackgroundImage\fR
+
 .fi
 .IP
 Specifies the name of an image to draw as the list background. The image is
@@ -391,6 +397,7 @@ the image is transparent it is drawn on top of the background color(s).
 Command-Line Switch:	\fB-backgroundmode\fR
 Database Name:	\fBbackgroundMode\fR
 Database Class:	\fBBackgroundMode\fR
+
 .fi
 .IP
 Specifies how the background color of items is chosen in each column.
@@ -412,6 +419,7 @@ command, regardless of the layout of items.
 Command-Line Switch:	\fB-buttonbitmap\fR
 Database Name:	\fBbuttonBitmap\fR
 Database Class:	\fBButtonBitmap\fR
+
 .fi
 .IP
 Specifies the bitmap to be used as the expand/collapse button to the left of
@@ -424,6 +432,7 @@ a bitmap is specified for a certain item state, it overrides the effects of
 Command-Line Switch:	\fB-buttoncolor\fR
 Database Name:	\fBbuttonColor\fR
 Database Class:	\fBButtonColor\fR
+
 .fi
 .IP
 Specifies the foreground color which should be used for drawing the outline
@@ -434,6 +443,7 @@ and the plus or minus sign of the button to the left of an item.
 Command-Line Switch:	\fB-buttonimage\fR
 Database Name:	\fBbuttonImage\fR
 Database Class:	\fBButtonImage\fR
+
 .fi
 .IP
 Specifies the image to be used as the expand/collapse button to the left of
@@ -446,6 +456,7 @@ If an image is specified for a certain item state, it overrides the effects of
 Command-Line Switch:	\fB-buttonsize\fR
 Database Name:	\fBbuttonSize\fR
 Database Class:	\fBButtonSize\fR
+
 .fi
 .IP
 Specifies the diameter of the button drawn to the left of an item
@@ -456,6 +467,7 @@ in any of the forms acceptable to \fBTk_GetPixels\fR.
 Command-Line Switch:	\fB-buttonthickness\fR
 Database Name:	\fBbuttonThickness\fR
 Database Class:	\fBButtonThickness\fR
+
 .fi
 .IP
 Specifies the width of the outline and the plus or minus sign
@@ -467,6 +479,7 @@ in any of the forms acceptable to \fBTk_GetPixels\fR.
 Command-Line Switch:	\fB-columnprefix\fR
 Database Name:	\fBcolumnPrefix\fR
 Database Class:	\fBColumnPrefix\fR
+
 .fi
 .IP
 Specifies an ascii string that changes the way column ids are reported and
@@ -480,6 +493,7 @@ use it.
 Command-Line Switch:	\fB-columnproxy\fR
 Database Name:	\fBcolumnProxy\fR
 Database Class:	\fBColumnProxy\fR
+
 .fi
 .IP
 If this option specifies a non empty value,
@@ -498,6 +512,7 @@ during column resizing.
 Command-Line Switch:	\fB-columnresizemode\fR
 Database Name:	\fBcolumnResizeMode\fR
 Database Class:	\fBColumnResizeMode\fR
+
 .fi
 .IP
 Specifies the visual feedback used when resizing columns. The value should be
@@ -511,6 +526,7 @@ the user is dragging the right edge of the column.
 Command-Line Switch:	\fB-defaultstyle\fR
 Database Name:	\fBdefaultStyle\fR
 Database Class:	\fBDefaultStyle\fR
+
 .fi
 .IP
 Specifies a list of styles, one per column, to apply to each item created by
@@ -525,6 +541,7 @@ is updated if a style is deleted or if a column is moved.
 Command-Line Switch:	\fB-doublebuffer\fR
 Database Name:	\fBdoubleBuffer\fR
 Database Class:	\fBDoubleBuffer\fR
+
 .fi
 .IP
 Specifies if double-buffering should be used to improve displaying.
@@ -541,6 +558,7 @@ double-buffered, so it works with a buffer size as big as the biggest item.
 Command-Line Switch:	\fB-height\fR
 Database Name:	\fBheight\fR
 Database Class:	\fBHeight\fR
+
 .fi
 .IP
 Specifies the desired height for the window
@@ -554,6 +572,7 @@ not request any size at all.
 Command-Line Switch:	\fB-indent\fR
 Database Name:	\fBindent\fR
 Database Class:	\fBIndent\fR
+
 .fi
 .IP
 Specifies the amount of indentation
@@ -567,6 +586,7 @@ the right than its father.
 Command-Line Switch:	\fB-itemheight\fR
 Database Name:	\fBitemHeight\fR
 Database Class:	\fBItemHeight\fR
+
 .fi
 .IP
 Specifies a fixed height for every item
@@ -581,6 +601,7 @@ in each column. Items are never shorter than the maximum height of a button.
 Command-Line Switch:	\fB-itemprefix\fR
 Database Name:	\fBitemPrefix\fR
 Database Class:	\fBItemPrefix\fR
+
 .fi
 .IP
 Specifies an ascii string that changes the way item ids are reported and
@@ -594,6 +615,7 @@ use it.
 Command-Line Switch:	\fB-linecolor\fR
 Database Name:	\fBlineColor\fR
 Database Class:	\fBLineColor\fR
+
 .fi
 .IP
 Specifies the color which should be used for drawing
@@ -604,6 +626,7 @@ the connecting lines between related items.
 Command-Line Switch:	\fB-linestyle\fR
 Database Name:	\fBlineStyle\fR
 Database Class:	\fBLineStyle\fR
+
 .fi
 .IP
 Specifies the style of the connecting lines between related items,
@@ -614,6 +637,7 @@ should be \fBdot\fR which is the default, or \fBsolid\fR.
 Command-Line Switch:	\fB-linethickness\fR
 Database Name:	\fBlineThickness\fR
 Database Class:	\fBLineThickness\fR
+
 .fi
 .IP
 Specifies the thickness of the connecting lines between related items
@@ -624,6 +648,7 @@ in any of the forms acceptable to \fBTk_GetPixels\fR.
 Command-Line Switch:	\fB-minitemheight\fR
 Database Name:	\fBminItemHeight\fR
 Database Class:	\fBMinItemHeight\fR
+
 .fi
 .IP
 Specifies a minimum height for every item
@@ -638,6 +663,7 @@ Items are never shorter than the maximum height of a button.
 Command-Line Switch:	\fB-scrollmargin\fR
 Database Name:	\fBscrollMargin\fR
 Database Class:	\fBScrollMargin\fR
+
 .fi
 .IP
 The interpretation of this option is left to Tcl scripts
@@ -650,6 +676,7 @@ Defaults to 0.
 Command-Line Switch:	\fB-selectmode\fR
 Database Name:	\fBselectMode\fR
 Database Class:	\fBSelectMode\fR
+
 .fi
 .IP
 Specifies one of several styles for manipulating the selection.
@@ -662,6 +689,7 @@ or \fBextended\fR;  the default value is \fBbrowse\fR.
 Command-Line Switch:	\fB-showbuttons\fR
 Database Name:	\fBshowButtons\fR
 Database Class:	\fBShowButtons\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -676,6 +704,7 @@ The default value is true.
 Command-Line Switch:	\fB-showheader\fR
 Database Name:	\fBshowHeader\fR
 Database Class:	\fBShowHeader\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -687,6 +716,7 @@ The default value is true.
 Command-Line Switch:	\fB-showlines\fR
 Database Name:	\fBshowLines\fR
 Database Class:	\fBShowLines\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -698,6 +728,7 @@ The default value is true.
 Command-Line Switch:	\fB-showroot\fR
 Database Name:	\fBshowRoot\fR
 Database Class:	\fBShowRoot\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -711,6 +742,7 @@ The default value is true.
 Command-Line Switch:	\fB-showrootbutton\fR
 Database Name:	\fBshowRootButton\fR
 Database Class:	\fBShowRootButton\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -722,6 +754,7 @@ The default value is false.
 Command-Line Switch:	\fB-showrootlines\fR
 Database Name:	\fBshowRootLines\fR
 Database Class:	\fBShowRootLines\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
@@ -733,6 +766,7 @@ The default value is true.
 Command-Line Switch:	\fB-treecolumn\fR
 Database Name:	\fBtreeColumn\fR
 Database Class:	\fBTreeColumn\fR
+
 .fi
 .IP
 Specifies an integer value that determines which
@@ -744,6 +778,7 @@ Default is 0 meaning that the first column displays the tree.
 Command-Line Switch:	\fB-usetheme\fR
 Database Name:	\fBuseTheme\fR
 Database Class:	\fBUseTheme\fR
+
 .fi
 .IP
 Specifies a boolean value that determines whether this widget should draw
@@ -755,6 +790,7 @@ The default is false.
 Command-Line Switch:	\fB-width\fR
 Database Name:	\fBwidth\fR
 Database Class:	\fBWidth\fR
+
 .fi
 .IP
 Specifies the desired width for the window
@@ -768,6 +804,7 @@ not request any size at all.
 Command-Line Switch:	\fB-wrap\fR
 Database Name:	\fBwrap\fR
 Database Class:	\fBWrap\fR
+
 .fi
 .IP
 Specifies how to arrange items inside treectrl's window.
@@ -788,6 +825,7 @@ specified screen distance is reached.
 Command-Line Switch:	\fB-xscrolldelay\fR
 Database Name:	\fBxScrollDelay\fR
 Database Class:	\fBScrollDelay\fR
+
 .fi
 .IP
 Specifies the amount of time before the default binding should handle
@@ -804,6 +842,7 @@ after the seconds amount of miliseconds is elapsed.
 Command-Line Switch:	\fB-xscrollincrement\fR
 Database Name:	\fBxScrollIncrement\fR
 Database Class:	\fBScrollIncrement\fR
+
 .fi
 .IP
 Specifies an increment for horizontal scrolling, in any of the usual forms
@@ -821,6 +860,7 @@ is unconstrained.
 Command-Line Switch:	\fB-yscrolldelay\fR
 Database Name:	\fByScrollDelay\fR
 Database Class:	\fBScrollDelay\fR
+
 .fi
 .IP
 Specifies the amount of time before the default binding should handle
@@ -837,6 +877,7 @@ after the seconds amount of miliseconds is elapsed.
 Command-Line Switch:	\fB-yscrollincrement\fR
 Database Name:	\fByScrollIncrement\fR
 Database Class:	\fBScrollIncrement\fR
+
 .fi
 .IP
 Specifies an increment for vertical scrolling, in any of the usual forms
@@ -861,32 +902,32 @@ the treectrl widget's path name.  \fIOption\fR and the \fIarg\fRs
 determine the exact behavior of the command.  The following
 commands are possible for treectrl widgets:
 .TP
-\fIpathName\fR \fBactivate\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBactivate\fR \fIitemDesc\fR
 Sets the active item to the one described by \fIitemDesc\fR,
 and switches on the state \fBactive\fR for this item.
 From now on the item can be retrieved with the item description \fBactive\fR.
 An \fB<ActiveItem>\fR event is generated.
 .TP
-\fIpathName\fR \fBcanvasx\fR \fIscreenx\fR\fR
+\fIpathName\fR \fBcanvasx\fR \fIscreenx\fR
 Given a window x-coordinate in the treectrl \fIscreenx\fR,
 this command returns the treectrl x-coordinate
 that is displayed at that location.
 .TP
-\fIpathName\fR \fBcanvasy\fR \fIscreeny\fR\fR
+\fIpathName\fR \fBcanvasy\fR \fIscreeny\fR
 Given a window y-coordinate in the treectrl \fIscreeny\fR,
 this command returns the treectrl y-coordinate
 that is displayed at that location.
 .TP
-\fIpathName\fR \fBcget\fR \fIoption\fR\fR
+\fIpathName\fR \fBcget\fR \fIoption\fR
 Returns the current value of the configuration option given
 by \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the \fBtree\fR
 command.
 .TP
-\fIpathName\fR \fBcollapse\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBcollapse\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 Use \fBitem collapse\fR instead.
 .TP
-\fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
 This command is used to manipulate the columns of the treectrl widget
 (see section \fBCOLUMNS\fR below).
 The exact behavior of the command depends on the \fIoption\fR argument
@@ -894,21 +935,21 @@ that follows the \fBcolumn\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR
 Returns a list with four elements giving an approximate bounding box
 for the column header specified by \fIcolumn\fR.
 If the treectrl is configured to don't display the column headers
 by means of the \fB-showheader\fR option,
 an empty list is returned instead.
 .TP
-\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR\fR
+\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR
 This command returns the current value of the option named \fIoption\fR
 for the column specified by \fIcolumn\fR,
 \fIColumn\fR may also be the string \fBtail\fR to specify the tail column.
 \fIOption\fR may have any of the values accepted by the
 \fBcolumn configure\fR widget command.
 .TP
-\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with the column specified by \fIcolumn\fR
 instead of modifying options for the overall treectrl widget.
@@ -928,7 +969,7 @@ in this case the command returns an empty string.
 .sp
 See \fBCOLUMNS\fR below for details on the options available for columns.
 .TP
-\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR\fR
+\fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR
 From both \fIcolumn\fRs the index is retrieved
 (as returned from the \fBcolumn order\fR widget command).
 Then these indexes are compared using the operator \fIop\fR, which must
@@ -937,26 +978,26 @@ or \fB!=\fR.
 The return value of this command is 1 if the comparison evaluated to true,
 0 otherwise.
 .TP
-\fIpathName\fR \fBcolumn count\fR\fR
+\fIpathName\fR \fBcolumn count\fR
 Returns a decimal string giving the number of
 columns created by the \fBcolumn create\fR widget command which haven't been
 deleted by the \fBcolumn delete\fR widget command. The \fBtail\fR column
 is not counted.
 .TP
-\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?
 This command creates a new column in the treectrl widget. The new column is
 placed to the right of all other columns (except the \fBtail\fR column). Any
 \fIoption\fR-\fIvalue\fR arguments configure the new column according to the
 \fBcolumn configure\fR command. The return value is the unique identifier
 of the new column.
 .TP
-\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR
 Deletes the specified \fIcolumn\fR from the treectrl widget. If \fIcolumn\fR
 is the string \fBall\fR, all columns except the tail column are deleted.
 .TP
-\fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR\fR
+\fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR
 .TP
-\fIpathName\fR \fBcolumn dragconfigure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBcolumn dragconfigure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 The user can move a column within a treectrl by drag-and-drop. Feedback consists
 of a semi-transparent photo image of the header of the column being dragged
 and a 2-pixel-thick vertical line to indicate where the column may be dropped.
@@ -995,50 +1036,50 @@ starting position.
 The 2-pixel-thick line will be drawn over the left edge of \fIcolumn\fR.
 .RE
 .TP
-\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR
 Deprecated. Use \fBcolumn id\fR instead.
 .TP
-\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR
 This command resolves the column description \fIcolumn\fR into a unique column
 identifier (see \fBCOLUMN DESCRIPTION\fR below).
 If the column described by \fIcolumn\fR doesn't exist, this command returns
 an empty string.
 .TP
-\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?
 This command returns a list of identifiers for every column (except the tail)
 from left to right. If \fI-visible\fR is given, only columns whose -visible
 option is true are returned.
 .TP
-\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR\fR
+\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR
 Moves the specified \fIcolumn\fR to the left of the column
 specified by \fIbefore\fR.
 If \fIbefore\fR is the string \fBtail\fR,
 the column \fIcolumn\fR will become the last column.
 .TP
-\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR
 This command returns a decimal string giving the needed width
 of the column specified by \fIcolumn\fR.
 The needed width is the maximum of the width of the column header
 and the width of the \fIwidest\fR currently visible item.
 .TP
-\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?
 This command returns a decimal string giving the position of \fIcolumn\fR
 in the list of columns starting from zero for the leftmost column.
 If \fI-visible\fR is given, only columns whose -visible
 option is true are considered, and -1 is returned if \fIcolumn\fR's -visible
 option is false.
 .TP
-\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR
 This command returns a decimal string giving the width in pixels
 of the column specified by \fIcolumn\fR,
 even if the treectrl is configured to not display the column headers
 by means of the \fB-showheader\fR option.
 .RE
 .TP
-\fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+\fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
 Deprecated. Use the \fBitem compare\fR command instead.
 .TP
-\fIpathName\fR \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?\fR
+\fIpathName\fR \fBconfigure\fR ?\fIoption\fR? ?\fIvalue option value ...\fR?
 Query or modify the configuration options of the widget.
 If no \fIoption\fR is specified, returns a list describing all of
 the available options for \fIpathName\fR (see \fBTk_ConfigureInfo\fR for
@@ -1052,26 +1093,26 @@ this case the command returns an empty string.
 \fIOption\fR may have any of the values accepted by the \fBtreectrl\fR
 command.
 .TP
-\fIpathName\fR \fBcontentbox\fR\fR
+\fIpathName\fR \fBcontentbox\fR
 Returns a list with four elements giving an approximate bounding box
 for the space used to display the items inside the columns,
 i.e. the space of the treectrl widget without
 the surrounding borders and the column headers.
 .TP
-\fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?
 This command is used to facilitate debugging of the treectrl widget.
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBdebug\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR
 This command returns the current value of the debugging option
 named \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBdebug configure\fR widget command.
 .TP
-\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies debugging options
 instead of modifying options for the overall treectrl widget.
@@ -1121,17 +1162,17 @@ Setting this option has only an effect, if the
 debugging options \fB-enable\fR and \fB-display\fR are switched on.
 .RE
 .TP
-\fIpathName\fR \fBdebug dinfo\fR\fR
+\fIpathName\fR \fBdebug dinfo\fR
 For every of the treectrl widget
 a line with some internal valuess info about all items
 is printed to stdout.
 The command returns the empty string.
 .TP
-\fIpathName\fR \fBdebug scroll\fR\fR
+\fIpathName\fR \fBdebug scroll\fR
 Returns a string useful for debugging vertical scrolling.
 .RE
 .TP
-\fIpathName\fR \fBdepth\fR ?\fIitemDesc\fR?\fR
+\fIpathName\fR \fBdepth\fR ?\fIitemDesc\fR?
 If the additional argument \fIitemDesc\fR is specified,
 returns a decimal string giving the depth of
 the item describing by \fIitemDesc\fR, whereas depth is defined as
@@ -1139,7 +1180,7 @@ the number of steps you must go upward to reach to root item.
 If no \fIitemDesc\fR is specified, the maximum depth of all
 items in the treectrl widget is returned instead.
 .TP
-\fIpathName\fR \fBdragimage\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBdragimage\fR \fIoption\fR ?\fIarg ...\fR?
 This command is used to manipulate the dragimage,
 one or more dotted lines around rectangular regions of the treectrl widget.
 The exact behavior of the command depends on the \fIoption\fR argument
@@ -1147,7 +1188,7 @@ that follows the \fBdragimage\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBdragimage add\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?\fR
+\fIpathName\fR \fBdragimage add\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
 Adds the shapes of the item described by \fIitemDesc\fR
 to the shapes of the dragimage.
 Specifying additional arguments reduces
@@ -1158,17 +1199,17 @@ If \fIcolumn\fR is specified, all elements in other columns are ignored.
 If also \fIelement\fR is specified, only a rectangle for this one element
 of the specified item in the given column is added.
 .TP
-\fIpathName\fR \fBdragimage cget\fR \fIoption\fR\fR
+\fIpathName\fR \fBdragimage cget\fR \fIoption\fR
 This command returns the current value of the dragimage option
 named \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBdragimage configure\fR widget command.
 .TP
-\fIpathName\fR \fBdragimage clear\fR\fR
+\fIpathName\fR \fBdragimage clear\fR
 Removes all shapes (if there are any) from the dragimage.
 This command does not modify the dragimage offset.
 .TP
-\fIpathName\fR \fBdragimage configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBdragimage configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies the dragimage options
 instead of modifying options for the overall treectrl widget.
@@ -1191,7 +1232,7 @@ Specifies a boolean value which determines
 whether the dragimage should currently be visible.
 .RE
 .TP
-\fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBdragimage offset\fR ?\fIx y\fR?
 Returns a list containing the x and y offsets of the dragimage,
 if no additional arguments are specified.
 The dragimage offset is the screen distance, the image is displayed
@@ -1200,20 +1241,20 @@ If two coordinates are specified,
 sets the dragimage offset to the given coordinates \fIx\fR and \fIy\fR.
 .RE
 .TP
-\fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBelement\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 This command is used to manipulate elements (see \fBELEMENTS\fR below).
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBelement\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBelement cget\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBelement cget\fR \fIelement\fR \fIoption\fR
 This command returns the current value of the option named \fIoption\fR
 associated with the element given by \fIelement\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBelement configure\fR widget command.
 .TP
-\fIpathName\fR \fBelement configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBelement configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with the element given by \fIelement\fR
 instead of modifying options for the overall treectrl widget.
@@ -1229,7 +1270,7 @@ modifies the given option(s) to have the given value(s) in \fIelement\fR;
 in this case the command returns an empty string.
 See \fBELEMENTS\fR below for details on the options available for elements.
 .TP
-\fIpathName\fR \fBelement create\fR \fIelement\fR \fItype\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBelement create\fR \fIelement\fR \fItype\fR ?\fIoption value ...\fR?
 Create a new elememt in \fIpathName\fR of type \fItype\fR
 with name \fIelement\fR.
 The exact format of the arguments after \fItype\fR depends on \fItype\fR,
@@ -1238,25 +1279,25 @@ See the subsections on individual element types below for more
 on the syntax of this command.
 This command returns the name for the new element.
 .TP
-\fIpathName\fR \fBelement delete\fR ?\fIelement ...\fR?\fR
+\fIpathName\fR \fBelement delete\fR ?\fIelement ...\fR?
 Deletes each of the named elements and returns an empty string.
 If an element is deleted while it is still configured
 as an element of one or more styles
 by means of the \fBstyle elements\fR widget command,
 it is also removed from the element lists of these styles.
 .TP
-\fIpathName\fR \fBelement names\fR\fR
+\fIpathName\fR \fBelement names\fR
 Returns a list containing the names of all existing elements.
 .TP
-\fIpathName\fR \fBelement type\fR \fIelement\fR\fR
+\fIpathName\fR \fBelement type\fR \fIelement\fR
 Returns the type of the elements given by \fIelement\fR,
 such as \fBrect\fR or \fBtext\fR.
 .RE
 .TP
-\fIpathName\fR \fBexpand\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBexpand\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 Use \fBitem expand\fR instead.
 .TP
-\fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR\fR
+\fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR
 Returns a list containing some diagnostics about what
 is displayed at the given windows coordinates \fIx\fR and \fIy\fR.
 The resulting list may be empty,
@@ -1289,22 +1330,22 @@ if the x coordinate is above an element of the item;
 if the x coordinate is to the right of the elements;
 nothing otherwise.
 .TP
-\fIpathName\fR \fBindex\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBindex\fR \fIitemDesc\fR
 Deprecated. Use \fBitem id\fR instead.
 .TP
-\fIpathName\fR \fBitem\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem\fR \fIoption\fR ?\fIarg ...\fR?
 This command is used to manipulate items.
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBitem\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBitem ancestors\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem ancestors\fR \fIitemDesc\fR
 Returns a list containing the numerical indexes of all ancestors
 of the item specified by \fIitemDesc\fR from its parent up to the
 root item.
 .TP
-\fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?\fR
+\fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
 Returns a list with four elements giving an approximate bounding box
 for the item described by \fIitemDesc\fR.
 If no further argument is specified, the bbox spans the area of the item
@@ -1313,17 +1354,17 @@ in this column is considered, if an additional \fIelement\fR is specified,
 the area of this \fIelement\fR in \fIcolumn\fR of the specified item is
 returned.
 .TP
-\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem cget\fR \fIitemDesc\fR \fIoption\fR
 Returns the current value of the configuration option for the item specified by
 \fIitemDesc\fR whose name is \fIoption\fR. \fIOption\fR may have any of the
-values accepted by the \fBitem create\fR command when the item was created.
+values accepted by the \fBitem configure\fR command.
 .TP
-\fIpathName\fR \fBitem children\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem children\fR \fIitemDesc\fR
 Returns a list containing the numerical indexes of all children
 of the item specified by \fIitemDesc\fR in the correct order from
 the first child to the last child.
 .TP
-\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Switches off the \fBopen\fR state of the item(s)
 described by \fIitemDesc\fR.
 If the item has descendants, they are no longer displayed.
@@ -1341,7 +1382,7 @@ two events are generated:
 a \fB<Collapse-before>\fR event before the item state is changed,
 and a \fB<Collapse-after>\fR event after the item state was changed.
 .TP
-\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR\fR
+\fIpathName\fR \fBitem compare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
 From both items described by the \fIitemDesc\fRs the index is retrieved
 (as returned from the \fBitem order\fR widget command).
 Then these indexes are compared using the operator \fIop\fR, which must
@@ -1350,44 +1391,55 @@ or \fB!=\fR.
 The return value of this command is 1 if the comparison evaluated to true,
 0 otherwise.
 .TP
-\fIpathName\fR \fBitem complex\fR \fIitemDesc\fR \fIlist\fR \fI...\fR\fR
-Modifies the elements of the item described by \fIitemDesc\fR.
-For every column of the treectrl there may be specified one \fIlist\fR,
-which in turn is an odd elemented list with at least three elements:
-the name of an element followed by \fIoption\fR-\fIvalue\fR pairs.
+\fIpathName\fR \fBitem complex\fR \fIitemDesc\fR ?\fIlist...\fR?
+This horrible command is now deprecated. Use \fBitem element configure\fR
+instead. For every column of the treectrl there may be specified one \fIlist\fR.
+Each \fIlist\fR should look like this:
+.nf
+
+{ {element option value...} {element option value...} ...}
+
+.fi
 Every \fIoption\fR must be known by the element's type
 (see \fBELEMENTS\fR below).
-The corresponding \fIvalue\fR will overwrite the value of the element for this
+Each \fIoption\fR will be set to \fIvalue\fR for the element in this
 one column in this item.
 .TP
-\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 If no \fIoption\fR is specified, returns a list describing all of the available
 options for the item given by \fIitemDesc\fR (see \fBTk_ConfigureInfo\fR for
 information on the format of this list). If \fIoption\fR is specified with no
 value, then the command returns a list describing the one named option (this
 list will be identical to the corresponding sublist of the value returned if
 no \fIoption\fR is specified). If one or more \fIoption\fR-\fIvalue\fR pairs
-are specified, then the command modifies the given widget option(s) to have the
-given value(s); in this case the command returns an empty string. The options
-and values are the same as those permissible in the \fBitem create\fR command
-when the item was created.
+are specified, then the command modifies the given item option(s) to have the
+given value(s); in this case the command returns an empty string.
+.sp
+The following options are supported by this command (see \fBitem create\fR for
+the meaning of each option):
+.RS
 .TP
-\fIpathName\fR \fBitem count\fR\fR
+\fB\fB-button\fR\fR \fIboolean\fR
+.TP
+\fB\fB-height\fR\fR \fIheight\fR
+.TP
+\fB\fB-visible\fR\fR \fIboolean\fR
+.RE
+.TP
+\fIpathName\fR \fBitem count\fR
 Returns a decimal string giving the number of
 items created by the \fBitem create\fR widget command which haven't been
 deleted by the \fBitem delete\fR widget command, plus 1 for the ever-present
 root item.
 .TP
-\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?\fR
-Creates a new item and returns its unique identifier.
-The new item has the states \fBopen\fR and \fBenabled\fR set by default.
+\fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?
+Creates some new items and optionally returns a list of unique identifiers for
+those items.
+The new items have the states \fBopen\fR and \fBenabled\fR set by default.
 If the treectrl widget currently has the focus,
-the state \fBfocus\fR is also set. Each \fIoption\fR-\fIvalue\fR pair sets one
-of the configuration options for the item. These same \fIoption\fR-\fIvalue\fR
-pairs may be used in the \fBitem configure\fR command to change the item's
-configuration.
+the state \fBfocus\fR is also set.
 .sp
-The following options are supported by items:
+The following options are supported by this command:
 .RS
 .TP
 \fB\fB-button\fR\fR \fIboolean\fR
@@ -1395,8 +1447,36 @@ The following options are supported by items:
 indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
-a) the column specified by the widget option \fB-treecolumn\fR is visible;
-and b) the widget option \fB-showbuttons\fR is true
+a) the column specified by the treectrl option \fB-treecolumn\fR is visible;
+and b) the treectrl option \fB-showbuttons\fR is true
+.TP
+\fB\fB-count\fR\fR \fInumItems\fR
+Specifies the number of items to create. Must be >= 0. Defaults to 1.
+.TP
+\fB\fB-height\fR\fR \fIheight\fR
+Specifies a fixed height in any of the forms acceptable to \fBTk_GetPixels\fR.
+Must be >= 0. If \fIheight\fR is zero then the item's height is unspecified.
+Defaults to 0.
+.TP
+\fB\fB-nextsibling\fR\fR \fIitemDesc\fR
+Specifies the item before which the new items will be inserted. The new items
+will have the same parent as \fIitemDesc\fR.
+.TP
+\fB\fB-open\fR\fR \fIboolean\fR
+Specifies whether the items should be open or closed. Default is true.
+.TP
+\fB\fB-parent\fR\fR \fIitemDesc\fR
+Specifies the item which the new items will be the children of. The new items
+will be appended to the list of children of \fIitemDesc\fR.
+.TP
+\fB\fB-prevsibling\fR\fR \fIitemDesc\fR
+Specifies the item after which the new items will be inserted. The new items
+will have the same parent as \fIitemDesc\fR.
+.TP
+\fB\fB-returnid\fR\fR \fIboolean\fR
+Specifies whether or not to return a list of item identifiers for the newly
+created items. Specifying false is useful when creating a large number of items in the
+console or to improve performance. Default is true.
 .TP
 \fB\fB-visible\fR\fR \fIboolean\fR
 \fIBoolean\fR must have one of the forms accepted by \fBTk_GetBoolean\fR. It
@@ -1406,7 +1486,7 @@ a) each ancestor is a descendant of the root item (not an orphan);
 and b) each ancestor's \fB-visible\fR option is true
 .RE
 .TP
-\fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?\fR
+\fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?
 Deletes the specified item(s).
 \fIFirst\fR and \fIlast\fR must be the string \fBall\fR or an \fIitemDesc\fR.
 If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, all items are
@@ -1422,19 +1502,19 @@ If the current selection \fBanchor\fR item is deleted, the root item becomes the
 There is no way to delete the root item of the treectrl widget;
 in all cases the specification of the root item is ignored.
 .TP
-\fIpathName\fR \fBitem dump\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
 Returns a list with six elements in the form
 \fBindex\fR \fIindex\fR \fBindexVis\fR \fIindexVis\fR
 \fBneededHeight\fR \fIneededHeight\fR.
 .TP
-\fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?
 This command is used to manipulate elements of the item.
 The exact behavior of the command depends on the \fIcommand\fR argument
 that follows the \fBelement\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
 This command returns the current value of the configuration option named \fIoption\fR
 associated with \fIelement\fR inside \fIcolumn\fR of the item described by
 \fIitemDesc\fR. If \fIoption\fR was configured using the
@@ -1444,14 +1524,14 @@ was used. Otherwise the value of the configuration option of the underlying elem
 \fIOption\fR may have any of the values accepted by the type of the
 specified element (see \fBELEMENTS\fR below)
 .TP
-\fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR\fR
+\fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
 This command returns the value of the option named \fIoption\fR
 associated with \fIelement\fR inside \fIcolumn\fR of the item described by
 \fIitemDesc\fR, if it was already configured for the actual item.
 \fIOption\fR may have any of the values accepted by the type of the
 specified element (see \fBELEMENTS\fR below)
 .TP
-\fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with
 \fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR
@@ -1467,9 +1547,23 @@ If one or more \fIoption\fR-\fIvalue\fR pairs are specified, then the command
 modifies the given option(s) to have the given value(s) in the
 \fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR;
 in this case the command returns an empty string.
+.sp
+It is possible to configure multiple elements in more than one column with
+a single call. To configure another element in the same column, append a
+\fB+\fR argument followed by the element name followed by one or more
+option-value pairs. To configure elements in another column, append a \fB,\fR
+argument followed by the column. For example:
+.nf
+
+.t item element configure $I \\
+	$C1 $E1 -text "hello" + $E2 -text "world" , \\
+	$C2 $E3 -fill Blue , \\
+	$C3 $E1 -text "apples and oranges"
+
+.fi
 .RE
 .TP
-\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the item has descendants, they are now displayed.
 If the item is configured to have a button,
@@ -1486,44 +1580,44 @@ two events are generated:
 an \fB<Expand-before>\fR event before the item state is changed,
 and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
-\fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?\fR
+\fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?
 If \fIchild\fR is not specified, returns the numerical index of the first
 child of the item described by \fIparent\fR.
 If \fIchild\fR is specified, it must described an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new first child of \fIparent\fR.
 .TP
-\fIpathName\fR \fBitem id\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem id\fR \fIitemDesc\fR
 This command resolves the item description \fIitemDesc\fR into a unique item
 identifier (see \fBITEM DESCRIPTION\fR below). If the item described by
 \fIitemDesc\fR doesn't exist, this command returns an empty string.
 .TP
-\fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR\fR
+\fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR
 Returns 1 if the item described by \fIitemDesc\fR is a direct or indirect
 parent of the item decribed by \fIdescendant\fR, 0 otherwise.
 .TP
-\fIpathName\fR \fBitem isopen\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem isopen\fR \fIitemDesc\fR
 Returns 1, if the item described by \fIitemDesc\fR has cuurently the
 state \fBopen\fR switched on, 0 otherwise.
 .TP
-\fIpathName\fR \fBitem lastchild\fR \fIparent\fR ?\fIchild\fR?\fR
+\fIpathName\fR \fBitem lastchild\fR \fIparent\fR ?\fIchild\fR?
 If \fIchild\fR is not specified, returns the numerical index of the last
 child of the item described by \fIparent\fR.
 If \fIchild\fR is specified, it must described an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new last child of \fIparent\fR.
 .TP
-\fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?\fR
+\fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?
 If \fInext\fR is not specified, returns the numerical index of the next
 sibling of the item described by \fIsibling\fR.
 If \fInext\fR is specified, it must described an item
 that is not an ancestor of \fIsibling\fR.
 Then it will become the new next sibling of \fIsibling\fR.
 .TP
-\fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem numchildren\fR \fIitemDesc\fR
 Returns the number of children of the item described by \fIitemDesc\fR.
 .TP
-\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?\fR
+\fIpathName\fR \fBitem order\fR \fIitemDesc\fR ?\fI-visible\fR?
 This command returns the position of the item \fIitemDesc\fR relative to
 its toplevel ancestor (usually the root item, unless the ancestor is an
 orphan). If you imagine all the items flattened into a vertical list, the
@@ -1532,18 +1626,18 @@ result of this command is the row the item falls in. If the optional argument
 -visible option is true, get counted; in this case -1 is returned if the item
 is not visible.
 .TP
-\fIpathName\fR \fBitem parent\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem parent\fR \fIitemDesc\fR
 Returns the numerical index of the parent of the item
 described by \fIitemDesc\fR.
 .TP
-\fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?\fR
+\fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?
 If \fIprev\fR is not specified, returns the numerical index of the previous
 sibling of the item described by \fIsibling\fR.
 If \fIprev\fR is specified, it must described an item
 that is not an ancestor of \fIsibling\fR.
 Then it will become the new previous sibling of \fIsibling\fR.
 .TP
-\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR\fR
+\fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR
 Returns a list containing the unique identifiers of all items
 in the range between \fIfirst\fR and \fIlast\fR, inclusive.
 The order between \fIfirst\fR and \fIlast\fR doesn't matter,
@@ -1551,15 +1645,15 @@ and the result is always ordered by the increasing index of the items.
 The items specified by \fIfirst\fR and \fIlast\fR must share a common
 ancestor.
 .TP
-\fIpathName\fR \fBitem remove\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem remove\fR \fIitemDesc\fR
 Removes the item described by \fIitemDesc\fR
 from the children list of its father, so that it will become an orphan.
 .TP
-\fIpathName\fR \fBitem rnc\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBitem rnc\fR \fIitemDesc\fR
 Returns a list of two integers, which corresponds to the row and column
 of the item described by \fIitemDesc\fR.
 .TP
-\fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?\fR
+\fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?
 Sorts the children of the item described by \fIitemDesc\fR,
 and redisplays the tree with the items in the new order.
 .sp
@@ -1618,18 +1712,25 @@ Convert to integers and use integer comparison.
 Convert to floating-point values and use floating comparison.
 .RE
 .TP
-\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem span\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fInumColumns\fR? ?\fIcolumn numColumns ...\fR?
+This command sets or retrieves the number of columns that a style covers.
+If no \fIcolumn\fR is specified, the return value is a list of spans, one per column.
+If no \fInumColumns\fR is specified, the return value is the span for \fIcolumn\fR.
+If one or more \fIcolumn\fR-\fInumColumns\fR pairs is specified, the
+span for each \fIcolumn\fR is set to \fInumColumns\fR.
+.TP
+\fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 This command is used to manipulate the states of an item.
 The exact behavior of the command depends on the \fIcommand\fR argument
 that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?\fR
+\fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?
 Just like \fBitem state set\fR but manipulates user-defined states for a single
 item column, not the item as a whole.
 .TP
-\fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?\fR
+\fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?
 If no \fIstateName\fR is specified, returns a list containing
 the names of all (predefined and user defined) states
 which are currently switched on for the item described by \fIitemDesc\fR.
@@ -1637,7 +1738,7 @@ If a \fIstateName\fR is specified,
 1 is returned if the specified state is currently switched on for the item,
 0 otherwise.
 .TP
-\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?\fR
+\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?
 Every element of \fIstateDescList\fR
 must describe a user defined state (see \fBSTATES\fR below),
 with the particularity that the state name may have also a leading \fB~\fR.
@@ -1651,19 +1752,19 @@ in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
 then the state changes are made for all items of the treectrl widget.
 .RE
 .TP
-\fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 This command is used to manipulate the styles of an item.
 The exact behavior of the command depends on the \fIcommand\fR argument
 that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBitem style elements\fR \fIitemDesc\fR \fIcolumn\fR\fR
+\fIpathName\fR \fBitem style elements\fR \fIitemDesc\fR \fIcolumn\fR
 A list is returned
 containing the currently defined elements of the style,
 which is set for the item described by \fIitemDesc\fR in \fIcolumn\fR.
 .TP
-\fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR\fR
+\fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR
 Like the \fBitem style set\fR command, this command may be used to assign a
 style to a specific column of an item. Unlike \fBitem style set\fR, this
 command can transfer configuration values of elements in the current style
@@ -1673,29 +1774,30 @@ to elements in the new style specified by \fIstyle\fR.
 an element in the style specified by \fIstyle\fR. Both \fIelementOld\fR and
 \fIelementNew\fR must be of the same type (\fBbitmap\fR, \fBtext\fR etc).
 .TP
-\fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?\fR
-If no \fIcolumn\fR is specified, returns a list containing the names of the
+\fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?
+This command sets or retrieves the style assigned to a column.
+If no \fIcolumn\fR is specified, this command returns a list containing the names of the
 styles set for all columns of the item described by \fIitemDesc\fR.
-If no \fIstyle\fR argument is specified,
+If no \fIstyle\fR is specified, this command
 returns the name of the style set for the item described by
 \fIitemDesc\fR in \fIcolumn\fR.
-If there are one or more \fIstyle\fR arguments specified,
-it must be \fIcolumn\fR-\fIstyle\fR pairs;
-then the style(s) of item in \fIcolumn\fR will be set to \fIstyle\fR.
+If one or more \fIcolumn\fR-\fIstyle\fR pairs is specified,
+then the style in each \fIcolumn\fR is set to \fIstyle\fR.
 .RE
 .TP
-\fIpathName\fR \fBitem text\fR \fIitemDesc\fR \fIcolumn\fR ?\fItext\fR? ?\fIcolumn text ...\fR?\fR
-If no \fItext\fR argument is specified,
-returns the text of the first text element in \fIcolumn\fR for the item
-described by \fIitemDesc\fR.
-If there are one or more \fItext\fR arguments specified,
-it must be \fIcolumn\fR-\fItext\fR pairs;
-then the text(s) of item in \fIcolumn\fR will be set to \fItext\fR. Note that
-this command is provided as a convenience. Use the
+\fIpathName\fR \fBitem text\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fItext\fR? ?\fIcolumn text ...\fR?
+This command sets or retrieves the value of the -text option of the first
+text element in a column.
+If no \fIcolumn\fR is specified, this command returns a list of strings,
+one per column.
+If no \fItext\fR is specified, this command returns the string for \fIcolumn\fR.
+If one or more \fIcolumn\fR-\fItext\fR pairs is specified,
+then the string in each \fIcolumn\fR is set to \fItext\fR.
+Note that this command is provided as a convenience. Use the
 \fBitem element configure\fR command if you want to set the text of a
 specific text element.
 .TP
-\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?\fR
+\fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the state is currently switched off,
 this command does the same as the \fBitem expand\fR widget command,
@@ -1706,7 +1808,7 @@ If \fB-recurse\fR is specified, the state of all descendants of
 \fIitemDesc\fR will also be toggled.
 .RE
 .TP
-\fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?
 This command is used to manipulate the marquee,
 a rectangular region of the treectrl widget
 optionally marked with a surrounding dotted line.
@@ -1721,19 +1823,19 @@ that follows the \fBmarquee\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBmarquee anchor\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBmarquee anchor\fR ?\fIx y\fR?
 Returns a list containing the x and y coordinates of the anchor,
 if no additional arguments are specified.
 If two coordinates are specified,
 sets the anchor to the given coordinates \fIx\fR and \fIy\fR.
 .TP
-\fIpathName\fR \fBmarquee cget\fR \fIoption\fR\fR
+\fIpathName\fR \fBmarquee cget\fR \fIoption\fR
 This command returns the current value of the marquee option
 named \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBmarquee configure\fR widget command.
 .TP
-\fIpathName\fR \fBmarquee configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBmarquee configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies the marquee options
 instead of modifying options for the overall treectrl widget.
@@ -1757,7 +1859,7 @@ whether the dotted line surrounding the region of the marquee
 should currently be visible.
 .RE
 .TP
-\fIpathName\fR \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?\fR
+\fIpathName\fR \fBmarquee coords\fR ?\fIx1 y1 x2 y2\fR?
 Returns a list containing the x and y coordinates of the anchor
 followed by the x and y coordinates of the corner,
 if no additional arguments are specified.
@@ -1765,13 +1867,13 @@ If four coordinates are specified,
 sets the anchor to the given coordinates \fIx1\fR and \fIy1\fR
 and the corner to the coordinates \fIx2\fR and \fIy2\fR.
 .TP
-\fIpathName\fR \fBmarquee corner\fR ?\fIx y\fR?\fR
+\fIpathName\fR \fBmarquee corner\fR ?\fIx y\fR?
 Returns a list containing the x and y coordinates of the corner,
 if no additional arguments are specified.
 If two coordinates are specified,
 sets the corner to the given coordinates \fIx\fR and \fIy\fR.
 .TP
-\fIpathName\fR \fBmarquee identify\fR\fR
+\fIpathName\fR \fBmarquee identify\fR
 Returns a list with information about the items inside the marquee.
 The list has as elements a list itself
 for every item which is displayed inside the marquee.
@@ -1783,7 +1885,7 @@ followed by the elements of the style defined for the item in this column
 if there are any.
 .RE
 .TP
-\fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?\fR
+\fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?
 Many Tk widgets communicate with the outside world via \fB-command\fR
 callbacks and/or virtual events. For example, the Text widget
 evaluates its \fB-yscrollcommand\fR when the view in the widget changes,
@@ -1796,7 +1898,7 @@ that follows the \fBnotify\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBnotify bind\fR ?\fIobject\fR? ?\fIpattern\fR? ?+??\fIscript\fR?\fR
+\fIpathName\fR \fBnotify bind\fR ?\fIobject\fR? ?\fIpattern\fR? ?+??\fIscript\fR?
 This command associates Tcl scripts with events generated by a
 treectrl widget.
 If all three arguments are specified, \fBnotify bind\fR will arrange for
@@ -1816,11 +1918,11 @@ for which there exist bindings for \fIobject\fR.
 .sp
 The \fIobject\fR argument determines which window(s) the binding applies to.
 If \fIobject\fR begins with a dot, as in .a.b.c, then it must be the path name
-for a window; otherwise it may be an arbitrary string. Unlike the regular
-\fBbind\fR command, bindings on window names are not automatically removed if
+for a window; otherwise it may be an arbitrary string. Like the regular
+\fBbind\fR command, bindings on window names are automatically removed if
 that window is destroyed.
 .TP
-\fIpathName\fR \fBnotify configure\fR \fIobject\fR \fIpattern\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBnotify configure\fR \fIobject\fR \fIpattern\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command sets and retrieves options for bindings created by the
 \fBnotify bind\fR command.
 .sp
@@ -1843,18 +1945,18 @@ a binding script will not be evaluated when the corresponding event is
 generated.
 .RE
 .TP
-\fIpathName\fR \fBnotify detailnames\fR \fIeventName\fR\fR
+\fIpathName\fR \fBnotify detailnames\fR \fIeventName\fR
 Returns a list containing the names of all details,
 which are installed for the event with the name \fIeventName\fR
 by means of the \fBnotify install\fR widget command
 or by the treectrl widget itself.
 .TP
-\fIpathName\fR \fBnotify eventnames\fR\fR
+\fIpathName\fR \fBnotify eventnames\fR
 Returns a list containing the names of all events,
 which are installed by means of the \fBnotify install\fR widget command
 or by the treectrl widget itself.
 .TP
-\fIpathName\fR \fBnotify generate\fR \fIpattern\fR ?\fIcharMap\fR? ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify generate\fR \fIpattern\fR ?\fIcharMap\fR? ?\fIpercentsCommand\fR?
 This command causes the treectrl widget to generate an event. This command is
 typically used to generate dynamic events created by the \fBnotify install\fR
 command, but may be used to generate static events also.
@@ -1876,7 +1978,7 @@ will be used if it was provided. If the event is static or no %-substitution
 command is available, then all %-substitution is done using \fIcharMap\fR only .
 See \fBnotify install\fR for a description of \fIpercentsCommand\fR.
 .TP
-\fIpathName\fR \fBnotify install\fR \fIpattern\fR ?\fIpercentsCommand\fR?\fR
+\fIpathName\fR \fBnotify install\fR \fIpattern\fR ?\fIpercentsCommand\fR?
 This command installs a new event or detail specified by \fIpattern\fR.
 Events created by this command are called dynamic,
 whereas events created by the treectrl widget itself are called static.
@@ -1889,12 +1991,14 @@ will be appended. The command will be called to perform %-substitution on any
 scripts bound to the event specified by \fIpattern\fR (see \fBEVENTS AND SCRIPT SUBSTITUTIONS\fR).
 \fIPercentsCommand\fR should be defined as follows:
 .nf
+
 proc percentsCommand {?arg arg ...? char object event detail charMap} {
 	switch -- $char {
 		...
 	}
 	return $value
 }
+
 .fi
 The optional \fIarg\fR arguments are part of the \fIpercentsCommand\fR list.
 \fIChar\fR is the %-character to be substituted. \fIObject\fR is the same
@@ -1907,56 +2011,62 @@ by itself.
 \fBnotify install\fR returns the current \fIpercentsCommand\fR for the event,
 or an error if the event is not dynamic.
 .TP
-\fIpathName\fR \fBnotify install detail\fR \fIeventName\fR \fIdetail\fR ?\fIpercentsCommand\fR?\fR
-This command is for backward compatibility only.
+\fIpathName\fR \fBnotify install detail\fR \fIeventName\fR \fIdetail\fR ?\fIpercentsCommand\fR?
+Deprecated.
 Use \fBnotify install\fR with a \fIpattern\fR of <\fIeventName\fR-\fIdetail\fR> instead.
 .TP
-\fIpathName\fR \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?\fR
-This command is for backward compatibility only.
+\fIpathName\fR \fBnotify install event\fR \fIeventName\fR ?\fIpercentsCommand\fR?
+Deprecated.
 Use \fBnotify install\fR with a \fIpattern\fR of <\fIeventName\fR> instead.
 .TP
-\fIpathName\fR \fBnotify linkage\fR \fIpattern\fR\fR
+\fIpathName\fR \fBnotify linkage\fR \fIpattern\fR
 Returns a string indicating
 whether the specified event or detail is created
 by means of the \fBnotify install\fR widget command (\fBdynamic\fR)
 or by the treectrl widget itself (\fBstatic\fR).
 .TP
-\fIpathName\fR \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?\fR
-This form of this command is for backward compatibility only.
+\fIpathName\fR \fBnotify linkage\fR \fIeventName\fR ?\fIdetail\fR?
+Deprecated.
 Use \fBnotify linkage\fR with a \fIpattern\fR of <\fIeventName\fR> or
 <\fIeventName\fR-\fIdetail\fR> instead.
 .TP
-\fIpathName\fR \fBnotify uninstall\fR \fIpattern\fR\fR
+\fIpathName\fR \fBnotify unbind\fR \fIobject\fR ?\fIpattern\fR?
+If no \fIpattern\fR is specified, all bindings on \fIobject\fR are removed.
+If \fIpattern\fR is specified, then the current binding for \fIpattern\fR
+is destroyed, leaving \fIpattern\fR unbound.
+.TP
+\fIpathName\fR \fBnotify uninstall\fR \fIpattern\fR
 If the event or detail specified by \fIpattern\fR is static
 (i.e. created by the treectrl widget itself), an error is generated.
-Otherwise the dynamic event or detail is removed.
+Otherwise the dynamic event or detail is removed. If an event name is specified
+without a detail, all details for that event are also removed.
 .TP
-\fIpathName\fR \fBnotify uninstall detail\fR \fIeventName\fR \fIdetail\fR\fR
-This command is for backward compatibility only.
+\fIpathName\fR \fBnotify uninstall detail\fR \fIeventName\fR \fIdetail\fR
+Deprecated.
 Use \fBnotify uninstall\fR with a \fIpattern\fR of <\fIeventName\fR-\fIdetail\fR> instead.
 .TP
-\fIpathName\fR \fBnotify uninstall event\fR \fIeventName\fR\fR
-This command is for backward compatibility only.
+\fIpathName\fR \fBnotify uninstall event\fR \fIeventName\fR
+Deprecated.
 Use \fBnotify uninstall\fR with a \fIpattern\fR of <\fIeventName\fR> instead.
 .RE
 .TP
-\fIpathName\fR \fBnumcolumns\fR\fR
+\fIpathName\fR \fBnumcolumns\fR
 Deprecated. Use the \fBcolumn count\fR command instead.
 .TP
-\fIpathName\fR \fBnumitems\fR\fR
+\fIpathName\fR \fBnumitems\fR
 Deprecated. Use the \fBitem count\fR command instead.
 .TP
-\fIpathName\fR \fBorphans\fR\fR
+\fIpathName\fR \fBorphans\fR
 Returns a list containing the numerical ids of all items
 which has no parent item.
 An item is created without having a parent,
 and can later become an orphan again
 by means of the \fBitem remove\fR widget command.
 .TP
-\fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR\fR
+\fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR
 Deprecated. Use the \fBitem range\fR command instead.
 .TP
-\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?\fR
+\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
 This command is used to manipulate the list of user defined states,
 see section \fBSTATES\fR below.
 The exact behavior of the command depends on the \fIoption\fR argument
@@ -1964,25 +2074,25 @@ that follows the \fBstate\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBstate define\fR \fIstateName\fR\fR
+\fIpathName\fR \fBstate define\fR \fIstateName\fR
 Defines a new state with the name \fIstateName\fR,
 which must not be the name of a predefined or already user defined state.
 .TP
-\fIpathName\fR \fBstate linkage\fR \fIstateName\fR\fR
+\fIpathName\fR \fBstate linkage\fR \fIstateName\fR
 Returns a string indicating
 whether the specified state is user defined
 by means of the \fBstate define\fR widget command (\fBdynamic\fR)
 or predefined by the treectrl widget itself (\fBstatic\fR).
 .TP
-\fIpathName\fR \fBstate names\fR\fR
+\fIpathName\fR \fBstate names\fR
 Returns a list containing the names of all user defined states.
 .TP
-\fIpathName\fR \fBstate undefine\fR ?\fIstateName ...\fR?\fR
+\fIpathName\fR \fBstate undefine\fR ?\fIstateName ...\fR?
 Every \fIstateName\fR must be the name of a user defined state.
 Removes this state from the list of user defined states.
 .RE
 .TP
-\fIpathName\fR \fBsee\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBsee\fR \fIitemDesc\fR
 Adjust the view in the treectrl so that the item
 described by \fIitemDesc\fR is visible.
 If the item is already visible then the command has no effect;
@@ -1990,12 +2100,12 @@ otherwise the treectrl scrolls to bring the item into view,
 and the corresponding \fB<Scroll-x>\fR and/or \fB<Scroll-y>\fR
 events are generated.
 .TP
-\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR\fR
+\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR
 This command is used to adjust the selection within a treectrl.
 It has several forms, depending on \fIoption\fR:
 .RS
 .TP
-\fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?\fR
+\fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
 must be the string \fBall\fR or an \fIitemDesc\fR.
 Selects all of the items in the range between
@@ -2005,7 +2115,7 @@ If one of the arguments is the string \fBall\fR,
 all items of the treectrl widget are added to the selection instead.
 A \fB<Selection>\fR event is generated.
 .TP
-\fIpathName\fR \fBselection anchor\fR ?\fIitemDesc\fR?\fR
+\fIpathName\fR \fBselection anchor\fR ?\fIitemDesc\fR?
 If \fIitemDesc\fR is specified,
 the selection anchor is set to the described item.
 The selection anchor is the end of the selection that is fixed
@@ -2014,7 +2124,7 @@ The item description \fBanchor\fR may be used to refer to the anchor item.
 This command doesn't modify the selection state of any item.
 Returns the numerical id of the selection anchor item.
 .TP
-\fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?\fR
+\fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
 must be the string \fBall\fR or an \fIitemDesc\fR.
 If any of the items between \fIfirst\fR and \fIlast\fR
@@ -2025,21 +2135,21 @@ or one of the arguments is the string \fBall\fR,
 the selection is completely cleared instead.
 A \fB<Selection>\fR event is generated.
 .TP
-\fIpathName\fR \fBselection count\fR\fR
+\fIpathName\fR \fBselection count\fR
 Returns an integer indicating the number
 of items in the treectrl that are currently selected.
 .TP
-\fIpathName\fR \fBselection get\fR\fR
+\fIpathName\fR \fBselection get\fR
 Returns a list containing the numerical ids of
 all of the items in the treectrl that are currently selected.
 If there are no items selected in the treectrl then an empty
 string is returned.
 .TP
-\fIpathName\fR \fBselection includes\fR \fIitemDesc\fR\fR
+\fIpathName\fR \fBselection includes\fR \fIitemDesc\fR
 Returns 1 if the item indicated by \fIitemDesc\fR is currently
 selected, 0 if it isn't.
 .TP
-\fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR\fR
+\fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR
 Both arguments \fIselect\fR and \fIdeselect\fR must be
 the string \fBall\fR or a possibly empty list of \fIitemDesc\fRs.
 Selects all of the items described by \fIselect\fR,
@@ -2051,7 +2161,7 @@ it is added to the selection.
 A \fB<Selection>\fR event is generated.
 .RE
 .TP
-\fIpathName\fR \fBstyle\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?\fR
+\fIpathName\fR \fBstyle\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
 This command is used to manipulate styles, which could be considered
 as a geometry manager for the elements of one item.
 The exact behavior of the command depends on the \fIoption\fR argument
@@ -2059,13 +2169,13 @@ that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBstyle cget\fR \fIstyle\fR \fIoption\fR\fR
+\fIpathName\fR \fBstyle cget\fR \fIstyle\fR \fIoption\fR
 This command returns the current value of the option named \fIoption\fR
 associated with the style given by \fIstyle\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBstyle configure\fR widget command.
 .TP
-\fIpathName\fR \fBstyle configure\fR \fIstyle\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle configure\fR \fIstyle\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options associated with the style given by \fIstyle\fR
 instead of modifying options for the overall treectrl widget.
@@ -2091,7 +2201,7 @@ Must be either \fBhorizontal\fR (the default)
 or \fBvertical\fR or an abbreviation of one of these.
 .RE
 .TP
-\fIpathName\fR \fBstyle create\fR \fIstyle\fR ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle create\fR \fIstyle\fR ?\fIoption value ...\fR?
 Create a new style in \fIpathName\fR with name \fIstyle\fR.
 After \fIstyle\fR there may be any number of \fIoption\fR-\fIvalue\fR
 pairs, each of which sets one of the configuration options
@@ -2100,13 +2210,13 @@ used in \fBstyle configure\fR widget commands to change the style's
 configuration.
 Returns the name of the new style.
 .TP
-\fIpathName\fR \fBstyle delete\fR ?\fIstyle ...\fR?\fR
+\fIpathName\fR \fBstyle delete\fR ?\fIstyle ...\fR?
 Deletes each of the named styles and returns an empty string.
 If a style is deleted while it is still used to display
 one or more items,
 it is also removed from the style list of these items.
 .TP
-\fIpathName\fR \fBstyle elements\fR \fIstyle\fR ?\fIelementList\fR?\fR
+\fIpathName\fR \fBstyle elements\fR \fIstyle\fR ?\fIelementList\fR?
 Specifies the elements which should be layed out by this style.
 Each element of \fIelementList\fR must be the name of an element
 created by the widget command \fBelement create\fR.
@@ -2118,7 +2228,7 @@ will be deleted from the elements layed out by \fIstyle\fR.
 If the \fIelementList\fR argument is not specified, a list is returned
 containing the currently defined elements of \fIstyle\fR.
 .TP
-\fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?\fR
+\fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies options used by \fIstyle\fR for laying out \fIelement\fR
 instead of modifying options for the overall treectrl widget.
@@ -2231,20 +2341,20 @@ it surrounds. This option is typically used to display a selection rectangle
 around a piece of text.
 .RE
 .TP
-\fIpathName\fR \fBstyle names\fR\fR
+\fIpathName\fR \fBstyle names\fR
 Returns a list containing the names of all existing styles.
 .RE
 .TP
-\fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?\fR
+\fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 Use \fBitem toggle\fR instead.
 .TP
-\fIpathName\fR \fBxview\fR ?\fIargs\fR?\fR
+\fIpathName\fR \fBxview\fR ?\fIargs\fR?
 This command is used to query and change the horizontal position of the
 information displayed in the treectrl's window.
 It can take any of the following forms:
 .RS
 .TP
-\fIpathName\fR \fBxview\fR\fR
+\fIpathName\fR \fBxview\fR
 Returns a list containing two elements.
 Each element is a real fraction between 0 and 1;  together they describe
 the horizontal span that is visible in the window.
@@ -2255,13 +2365,13 @@ in the window, and 40% of the tree is off-screen to the right.
 These are the same values passed to scrollbars via the \fB-xscrollcommand\fR
 option.
 .TP
-\fIpathName\fR \fBxview moveto\fR \fIfraction\fR\fR
+\fIpathName\fR \fBxview moveto\fR \fIfraction\fR
 Adjusts the view in the window so that \fIfraction\fR of the
 total width of the tree is off-screen to the left.
 \fIFraction\fR must be a fraction between 0 and 1.
 A \fB<Scroll-x>\fR event is generated.
 .TP
-\fIpathName\fR \fBxview scroll\fR \fInumber\fR \fIwhat\fR\fR
+\fIpathName\fR \fBxview scroll\fR \fInumber\fR \fIwhat\fR
 This command shifts the view in the window left or right according to
 \fInumber\fR and \fIwhat\fR.
 \fINumber\fR must be an integer.
@@ -2278,13 +2388,13 @@ becomes visible.
 A \fB<Scroll-x>\fR event is generated.
 .RE
 .TP
-\fIpathName\fR \fByview\fR ?\fIargs\fR?\fR
+\fIpathName\fR \fByview\fR ?\fIargs\fR?
 This command is used to query and change the vertical position of the
 information displayed in the treectrl's window.
 It can take any of the following forms:
 .RS
 .TP
-\fIpathName\fR \fByview\fR\fR
+\fIpathName\fR \fByview\fR
 Returns a list containing two elements.
 Each element is a real fraction between 0 and 1;  together they describe
 the vertical span that is visible in the window.
@@ -2293,13 +2403,13 @@ the lowest 40% of the tree's area is visible in the window.
 These are the same values passed to scrollbars via the \fB-yscrollcommand\fR
 option.
 .TP
-\fIpathName\fR \fByview moveto\fR \fIfraction\fR\fR
+\fIpathName\fR \fByview moveto\fR \fIfraction\fR
 Adjusts the view in the window so that \fIfraction\fR of the tree's
 area is off-screen to the top.
 \fIFraction\fR is a fraction between 0 and 1.
 A \fB<Scroll-y>\fR event is generated.
 .TP
-\fIpathName\fR \fByview scroll\fR \fInumber\fR \fIwhat\fR\fR
+\fIpathName\fR \fByview scroll\fR \fInumber\fR \fIwhat\fR
 This command adjusts the view in the window up or down according to
 \fInumber\fR and \fIwhat\fR.
 \fINumber\fR must be an integer.
@@ -2629,11 +2739,15 @@ the per-state option must be specified as an even-numbered list. For example,
 to use the font "Times 12 bold" in a \fBtext\fR element regardless of the
 item state you can write:
 .nf
+
 $T element configure MyTextElement -font {{Times 12 bold}}
+
 .fi
 However, to use a different font when the item is selected you could write:
 .nf
+
 $T element configure MyTextElement -font {{Courier 10} selected {Times 12 bold} {}}
+
 .fi
 In the example above, the -font option reads "value stateList value stateList".
 If \fIstateList\fR is an empty list, the preceding \fIvalue\fR is used regardless
@@ -2642,7 +2756,9 @@ set for the item in order to use the preceding value. Each stateList can also
 include state names preceded by a ! sign, indicating the state must *not* be
 set for the item. For example:
 .nf
+
 $T element configure MyRectElement -fill {blue {selected focus} gray {selected !focus}}
+
 .fi
 In the example above, the \fBrect\fR element is filled with blue when the treectrl
 has the focus and the item is selected. If the treectrl does not have the focus, the
@@ -3159,6 +3275,7 @@ The library scripts provide an example
 of using a dynamic event called <Header-invoke>, which is generated when
 the mouse button is released over a column header.
 .nf
+
 treectrl .t
 .t notify install <Header-invoke>
 .t notify bind ConsoleTag <Header-invoke> {
@@ -3170,6 +3287,7 @@ proc ::TreeCtrl::Release1 {w x y} {
 		[list ::TreeCtrl::PercentsCmd $w]
 	...
 }
+
 .fi
 In the example a new treectrl widget is created and the <Header-invoke> event
 is installed. For convenience there is no \fIpercentsCommand\fR argument to
@@ -3243,36 +3361,50 @@ The active cursor or the selection is not affected.
 .SH "EXAMPLES"
 Get the unique identifier for the leftmost visible column:
 .nf
+
 set id [$T column index "first visible"]
+
 .fi
 Delete the leftmost column:
 .nf
+
 $T column delete "order 0"
+
 .fi
 Take the visible column that is to the left of the last column, and move that
 column in front of the tail column:
 .nf
+
 $T column move "last prev visible" tail
+
 .fi
 Get the unique identifier for the first visible item:
 .nf
+
 set id [$T item index "first visible"]
+
 .fi
 Delete the parent of the item that is under the point x,y:
 .nf
+
 $T item delete "nearest $x $y parent"
+
 .fi
 Add the 10th child of the second child of the root item to the selection:
 .nf
+
 $T selection add "root firstchild nextsibling child 10"
+
 .fi
 Move a column that the user drag-and-dropped:
 .nf
+
 $T column dragconfigure -enable yes
 $T notify install <ColumnDrag-receive>
 $T notify bind MyTag <ColumnDrag-receive> {
 	%T column move %C %b
 }
+
 .fi
 .SH "SEE ALSO"
 bind(n), bitmap(n), image(n), listbox(n), options(n)
