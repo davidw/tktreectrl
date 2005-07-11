@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.46 2005/07/10 22:22:50 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.47 2005/07/11 01:57:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1664,16 +1664,30 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 
 	/* If this is the single visible column, use the provided width which
 	 * may be different than the column's width */
-	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis))
+	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis)) {
 	    columnWidth = width;
+	    if ((columnWidth >= 0) &&
+		    (x + totalWidth < maxX) &&
+		    (x + totalWidth + columnWidth > minX)) {
+		column = (Column *) spans[columnIndex].itemColumn;
+		ItemDrawBackground(tree, treeColumn, self, column, drawable,
+			x + totalWidth, y, columnWidth, height, index);
+	    }
 
 	/* More than one column is visible, or this is not the visible
 	 * column. Add up the widths of all columns this column spans */
-	else {
+	} else {
 	    columnWidth = 0;
 	    for (i = columnIndex; i < tree->columnCount; i++) {
+		int x2 = x + totalWidth + columnWidth;
 		if (spans[i].itemColumnIndex != columnIndex)
 		    break;
+		if ((spans[i].width >= 0) && (x2 < maxX) &&
+			(x2 + spans[i].width > minX)) {
+		    column = (Column *) spans[columnIndex].itemColumn;
+		    ItemDrawBackground(tree, spans[i].treeColumn, self, column,
+			    drawable, x2, y, spans[i].width, height, index);
+		}
 		columnWidth += spans[i].width;
 	    }
 	}
@@ -1681,10 +1695,6 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
 	    continue;
 	if ((x + totalWidth < maxX) && (x + totalWidth + columnWidth > minX)) {
 	    column = (Column *) spans[columnIndex].itemColumn;
-	    ItemDrawBackground(tree, treeColumn, self, column, drawable,
-		    x + totalWidth, y,
-		    columnWidth, height,
-		    index);
 	    if ((column != NULL) && (column->style != NULL)) {
 		if (treeColumn == tree->columnTree)
 		    indent = TreeItem_Indent(tree, item_);
@@ -2186,12 +2196,12 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *optionNames[] = { "-button", "-count", "-height",
-	"-nextsibling", "-noresult", "-open", "-parent", "-prevsibling",
+	"-nextsibling", "-open", "-parent", "-prevsibling", "-returnid",
 	"-visible",
 	(char *) NULL };
-    enum { OPT_BUTTON, OPT_COUNT, OPT_HEIGHT, OPT_NEXTSIBLING, OPT_NORESULT,
-	OPT_OPEN, OPT_PARENT, OPT_PREVSIBLING, OPT_VISIBLE };
-    int index, i, count = 1, button = 0, noResult = 0, open = 1, visible = 1;
+    enum { OPT_BUTTON, OPT_COUNT, OPT_HEIGHT, OPT_NEXTSIBLING,
+	OPT_OPEN, OPT_PARENT, OPT_PREVSIBLING, OPT_RETURNID, OPT_VISIBLE };
+    int index, i, count = 1, button = 0, returnId = 1, open = 1, visible = 1;
     int height = 0;
     Item *item, *parent = NULL, *prevSibling = NULL, *nextSibling = NULL;
     Item *head = NULL, *tail = NULL;
@@ -2238,12 +2248,6 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		parent = prevSibling = NULL;
 		break;
-	    case OPT_NORESULT:
-		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &noResult)
-			!= TCL_OK) {
-		    return TCL_ERROR;
-		}
-		break;
 	    case OPT_OPEN:
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &open)
 			!= TCL_OK) {
@@ -2264,6 +2268,12 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		parent = nextSibling = NULL;
 		break;
+	    case OPT_RETURNID:
+		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &returnId)
+			!= TCL_OK) {
+		    return TCL_ERROR;
+		}
+		break;
 	    case OPT_VISIBLE:
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &visible)
 			!= TCL_OK) {
@@ -2276,7 +2286,7 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     if (!count)
 	return TCL_OK;
 
-    if (!noResult)
+    if (returnId)
 	listObj = Tcl_NewListObj(0, NULL);
 
     for (i = 0; i < count; i++) {
@@ -2311,7 +2321,7 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    tail = item;
 	}
 
-	if (!noResult)
+	if (returnId)
 	    Tcl_ListObjAppendElement(interp, listObj, TreeItem_ToObj(tree,
 		    (TreeItem) item));
     }
@@ -2352,7 +2362,7 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	TreeItem_AddToParent(tree, (TreeItem) head);
     }
 
-    if (!noResult)
+    if (returnId)
 	Tcl_SetObjResult(interp, listObj);
 
     return TCL_OK;
