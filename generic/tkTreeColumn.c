@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.33 2005/07/07 02:50:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.34 2005/07/12 03:36:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1790,7 +1790,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int index;
 
     if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 

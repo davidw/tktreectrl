@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.48 2005/07/07 02:47:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.49 2005/07/12 03:37:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -412,7 +412,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int index;
 
     if (objc < 2) {
-	Tcl_WrongNumArgs(interp, 1, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 1, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
@@ -918,7 +918,7 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    int x, y, gain = 10, xOrigin, yOrigin;
 
 	    if (objc < 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, "option ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "option ?arg arg ...?");
 		goto error;
 	    }
 	    if (Tcl_GetIndexFromObj(interp, objv[2], optionName, "option",
@@ -1729,7 +1729,7 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     int index;
 
     if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
@@ -1882,7 +1882,7 @@ static int TreeSelectionCmd(Tcl_Interp *interp,
     TreeItem item, itemFirst, itemLast;
 
     if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
@@ -2612,7 +2612,7 @@ static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int index;
 
     if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
