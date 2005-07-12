@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.2 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.3 2005/07/12 03:42:33 treectrl Exp $
 
 proc DemoBigList {} {
 
@@ -11,7 +11,7 @@ proc DemoBigList {} {
 	#
 
 	$T configure -selectmode extended \
-		-showroot no -showbuttons yes -showlines no \
+		-showroot no -showbuttons no -showlines no \
 		-showrootlines no
 
 	# Hide the borders because child windows appear on top of them
@@ -101,7 +101,7 @@ proc DemoBigList {} {
 	set index 1
 	foreach I [$T item create -count 10000 -parent root -button yes -open no \
 		-height 20] {
-		set ::BigList(titleIndex,$I) $index
+		set BigList(titleIndex,$I) $index
 		incr index 10
 	}
 
@@ -116,8 +116,9 @@ proc DemoBigList {} {
 		BigListItemVisibility %T %v %h
 	}
 
-	set ::BigList(freeWindows) {}
-	set ::BigList(nextWindowId) 0
+	set BigList(freeWindows) {}
+	set BigList(nextWindowId) 0
+	set BigList(prev) ""
 
 	# Create a new window just to get the requested size. This will be the
 	# value of the item -height option for some items.
@@ -125,7 +126,7 @@ proc DemoBigList {} {
 	update idletasks
 	set height [winfo reqheight $w]
 	incr height
-	set ::BigList(windowHeight) $height
+	set BigList(windowHeight) $height
 
 	bind DemoBigList <Double-ButtonPress-1> {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
@@ -138,6 +139,15 @@ proc DemoBigList {} {
 	bind DemoBigList <ButtonPress-1> {
 		BigListButton1 %W %x %y
 		break
+	}
+	bind DemoBigList <Motion> {
+		BigListMotion %W %x %y
+	}
+
+	bind DemoBigListChildWindow <Motion> {
+		set x [expr {%X - [winfo rootx .f2.f1.t]}]
+		set y [expr {%Y - [winfo rooty .f2.f1.t]}]
+		BigListMotion .f2.f1.t $x $y
 	}
 
 	bindtags $T [list $T DemoBigList TreeCtrl [winfo toplevel $T] all]
@@ -273,6 +283,7 @@ puts "reuse window $w"
 				-command [list $w.mb2 configure -text $label]
 		}
 
+		# Button
 		button $w.b3 -text "Anal Probe Wizard..." -command [list tk_messageBox \
 			-parent . -message \
 			"After abducting and probing these people over the last\n\
@@ -284,6 +295,10 @@ puts "reuse window $w"
 		grid $w.label2 -row 1 -column 0 -sticky w -padx {0 8}
 		grid $w.mb2 -row 1 -column 1 -sticky w -pady 4
 		grid $w.b3 -row 3 -column 0 -columnspan 2 -sticky we -pady {0 4}
+
+		AddBindTag $w DemoBigListChildWindow
+		AddBindTag $w TagIdentify
+
 puts "create window $w"
 	}
 
@@ -323,6 +338,26 @@ proc BigListButton1 {w x y} {
 		if {[$w depth $item] < 3} {
 			$w toggle $item
 		}
+	}
+	return
+}
+
+proc BigListMotion {w x y} {
+	global BigList
+	set id [$w identify $x $y]
+	if {[lindex $id 0] eq "item"} {
+		set item [lindex $id 1]
+		if {[$w depth $item] < 3} {
+			if {$item ne $BigList(prev)} {
+				$w configure -cursor hand2
+				set BigList(prev) $item
+			}
+			return
+		}
+	}
+	if {$BigList(prev) ne ""} {
+		$w configure -cursor ""
+		set BigList(prev) ""
 	}
 	return
 }
