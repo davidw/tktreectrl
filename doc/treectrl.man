@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.28 2005/07/11 01:53:56 treectrl Exp $}
+  $Id: treectrl.man,v 1.29 2005/07/12 02:54:20 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -983,14 +983,7 @@ The following forms of the command are supported:
 [list_begin definitions]
 [call [arg pathName] [cmd {item element actual}] [arg itemDesc] [arg column] \
      [arg element] [arg option]]
-This command returns the current value of the configuration option named [arg option]
-associated with [arg element] inside [arg column] of the item described by
-[arg itemDesc]. If [arg option] was configured using the
-[cmd "item element configure"] command, the
-return value is the same as if the [cmd {item element cget}] command
-was used. Otherwise the value of the configuration option of the underlying element is returned.
-[arg Option] may have any of the values accepted by the type of the
-specified element (see [sectref ELEMENTS] below)
+Deprecated. Use [cmd {item element perstate}] instead.
 
 [call [arg pathName] [cmd {item element cget}] [arg itemDesc] [arg column] \
      [arg element] [arg option]]
@@ -1019,17 +1012,25 @@ modifies the given option(s) to have the given value(s) in the
 [arg element] inside [arg column] of the item described by [arg itemDesc];
 in this case the command returns an empty string.
 [nl]
-It is possible to configure multiple elements in more than one column with
+It is possible to configure multiple elements in multiple columns with
 a single call. To configure another element in the same column, append a
-'[const +]' argument followed by the element name followed by one or more
-option-value pairs. To configure elements in another column, append a '[const ,]'
-argument followed by the column. For example:
+'[const +]' argument followed by the element name. To configure elements in
+another column, append a '[const ,]' argument followed by the column.
+For example:
 [example_begin]
 .t item element configure $I \
 	$C1 $E1 -text "hello" + $E2 -text "world" , \
 	$C2 $E3 -fill Blue , \
 	$C3 $E1 -text "apples and oranges"
 [example_end]
+
+[call [arg pathName] [cmd {item element perstate}] [arg itemDesc] [arg column] \
+     [arg element] [arg option] [opt [arg stateList]]]
+This command returns the current value of the per-state option named [arg option]
+for [arg element] inside [arg column] of the item described by
+[arg itemDesc]. If [arg stateList] is specified, the list of state names (static
+and dynamic, see [sectref STATES]) is used in place of the current state for
+[arg item] and [arg column.]
 
 [list_end]
 
@@ -1061,6 +1062,24 @@ Then it will become the new first child of [arg parent].
 This command resolves the item description [arg itemDesc] into a unique item
 identifier (see [sectref {ITEM DESCRIPTION}] below). If the item described by
 [arg itemDesc] doesn't exist, this command returns an empty string.
+
+[call [arg pathName] [cmd {item image}] [arg itemDesc] [opt [arg column]] \
+     [opt [arg image]] [opt [arg {column image ...}]]]
+This command sets or retrieves the value of the -image option for the first
+image element in one or more columns. Keep in mind that the -image option is a
+per-state option (see [sectref {PER-STATE OPTIONS}] below).
+
+If no [arg column] is specified, this command returns a list of values,
+one per column.
+
+If no [arg image] is specified, this command returns the value for [arg column].
+
+If one or more [arg column]-[arg image] pairs is specified,
+then the value of the -image option in each [arg column] is set to [arg image].
+
+Note that this command is provided as a convenience. Use the
+[cmd "item element configure"] or [cmd "item element cget"] commands if you want
+to set or retrieve the value of the -image option for a specific image element.
 
 [call [arg pathName] [cmd {item isancestor}] [arg itemDesc] [arg descendant]]
 Returns 1 if the item described by [arg itemDesc] is a direct or indirect
@@ -1260,7 +1279,7 @@ an element in the style specified by [arg style]. Both [arg elementOld] and
 
 [call [arg pathName] [cmd {item style set}] [arg itemDesc] [opt [arg column]] \
      [opt [arg style]] [opt [arg {column style ...}]]]
-This command sets or retrieves the style assigned to a column.
+This command sets or retrieves the style assigned to one or more columns.
 
 If no [arg column] is specified, this command returns a list containing the names of the
 styles set for all columns of the item described by [arg itemDesc].
@@ -1275,20 +1294,20 @@ then the style in each [arg column] is set to [arg style].
 
 [call [arg pathName] [cmd {item text}] [arg itemDesc] [opt [arg column]] \
      [opt [arg text]] [opt [arg {column text ...}]]]
-This command sets or retrieves the value of the -text option of the first
-text element in a column.
+This command sets or retrieves the value of the -text option for the first
+text element in one or more columns.
 
-If no [arg column] is specified, this command returns a list of strings,
+If no [arg column] is specified, this command returns a list of values,
 one per column.
 
-If no [arg text] is specified, this command returns the string for [arg column].
+If no [arg text] is specified, this command returns the value for [arg column].
 
 If one or more [arg column]-[arg text] pairs is specified,
-then the string in each [arg column] is set to [arg text].
+then the value of the -text option in each [arg column] is set to [arg text].
 
 Note that this command is provided as a convenience. Use the
-[cmd "item element configure"] command if you want to set the text of a
-specific text element.
+[cmd "item element configure"] or [cmd "item element cget"] commands if you
+want to set or retrieve the value of the -text option for a specific text element.
 
 [call [arg pathName] [cmd {item toggle}] [arg itemDesc] [opt [option -recurse]]]
 Changes the [const open] state of the item(s) described by [arg itemDesc].

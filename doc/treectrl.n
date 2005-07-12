@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.44 2005/07/11 01:53:56 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.45 2005/07/12 02:54:20 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0 treectrl "Tk Commands"
 .BS
@@ -145,11 +145,15 @@ package require \fBtreectrl  2.0\fR
 .sp
 \fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
+\fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
+.sp
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 .sp
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?
 .sp
 \fIpathName\fR \fBitem id\fR \fIitemDesc\fR
+.sp
+\fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
 .sp
 \fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR
 .sp
@@ -1515,14 +1519,7 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBitem element actual\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
-This command returns the current value of the configuration option named \fIoption\fR
-associated with \fIelement\fR inside \fIcolumn\fR of the item described by
-\fIitemDesc\fR. If \fIoption\fR was configured using the
-\fBitem element configure\fR command, the
-return value is the same as if the \fBitem element cget\fR command
-was used. Otherwise the value of the configuration option of the underlying element is returned.
-\fIOption\fR may have any of the values accepted by the type of the
-specified element (see \fBELEMENTS\fR below)
+Deprecated. Use \fBitem element perstate\fR instead.
 .TP
 \fIpathName\fR \fBitem element cget\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR
 This command returns the value of the option named \fIoption\fR
@@ -1548,11 +1545,11 @@ modifies the given option(s) to have the given value(s) in the
 \fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR;
 in this case the command returns an empty string.
 .sp
-It is possible to configure multiple elements in more than one column with
+It is possible to configure multiple elements in multiple columns with
 a single call. To configure another element in the same column, append a
-\fB+\fR argument followed by the element name followed by one or more
-option-value pairs. To configure elements in another column, append a \fB,\fR
-argument followed by the column. For example:
+\'\fB+\fR' argument followed by the element name. To configure elements in
+another column, append a '\fB,\fR' argument followed by the column.
+For example:
 .nf
 
 .t item element configure $I \\
@@ -1561,6 +1558,13 @@ argument followed by the column. For example:
 	$C3 $E1 -text "apples and oranges"
 
 .fi
+.TP
+\fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
+This command returns the current value of the per-state option named \fIoption\fR
+for \fIelement\fR inside \fIcolumn\fR of the item described by
+\fIitemDesc\fR. If \fIstateList\fR is specified, the list of state names (static
+and dynamic, see \fBSTATES\fR) is used in place of the current state for
+\fIitem\fR and \fIcolumn.\fR
 .RE
 .TP
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
@@ -1591,6 +1595,19 @@ Then it will become the new first child of \fIparent\fR.
 This command resolves the item description \fIitemDesc\fR into a unique item
 identifier (see \fBITEM DESCRIPTION\fR below). If the item described by
 \fIitemDesc\fR doesn't exist, this command returns an empty string.
+.TP
+\fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
+This command sets or retrieves the value of the -image option for the first
+image element in one or more columns. Keep in mind that the -image option is a
+per-state option (see \fBPER-STATE OPTIONS\fR below).
+If no \fIcolumn\fR is specified, this command returns a list of values,
+one per column.
+If no \fIimage\fR is specified, this command returns the value for \fIcolumn\fR.
+If one or more \fIcolumn\fR-\fIimage\fR pairs is specified,
+then the value of the -image option in each \fIcolumn\fR is set to \fIimage\fR.
+Note that this command is provided as a convenience. Use the
+\fBitem element configure\fR or \fBitem element cget\fR commands if you want
+to set or retrieve the value of the -image option for a specific image element.
 .TP
 \fIpathName\fR \fBitem isancestor\fR \fIitemDesc\fR \fIdescendant\fR
 Returns 1 if the item described by \fIitemDesc\fR is a direct or indirect
@@ -1775,7 +1792,7 @@ an element in the style specified by \fIstyle\fR. Both \fIelementOld\fR and
 \fIelementNew\fR must be of the same type (\fBbitmap\fR, \fBtext\fR etc).
 .TP
 \fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?
-This command sets or retrieves the style assigned to a column.
+This command sets or retrieves the style assigned to one or more columns.
 If no \fIcolumn\fR is specified, this command returns a list containing the names of the
 styles set for all columns of the item described by \fIitemDesc\fR.
 If no \fIstyle\fR is specified, this command
@@ -1786,16 +1803,16 @@ then the style in each \fIcolumn\fR is set to \fIstyle\fR.
 .RE
 .TP
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fItext\fR? ?\fIcolumn text ...\fR?
-This command sets or retrieves the value of the -text option of the first
-text element in a column.
-If no \fIcolumn\fR is specified, this command returns a list of strings,
+This command sets or retrieves the value of the -text option for the first
+text element in one or more columns.
+If no \fIcolumn\fR is specified, this command returns a list of values,
 one per column.
-If no \fItext\fR is specified, this command returns the string for \fIcolumn\fR.
+If no \fItext\fR is specified, this command returns the value for \fIcolumn\fR.
 If one or more \fIcolumn\fR-\fItext\fR pairs is specified,
-then the string in each \fIcolumn\fR is set to \fItext\fR.
+then the value of the -text option in each \fIcolumn\fR is set to \fItext\fR.
 Note that this command is provided as a convenience. Use the
-\fBitem element configure\fR command if you want to set the text of a
-specific text element.
+\fBitem element configure\fR or \fBitem element cget\fR commands if you
+want to set or retrieve the value of the -text option for a specific text element.
 .TP
 \fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
