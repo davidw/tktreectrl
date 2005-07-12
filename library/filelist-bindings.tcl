@@ -477,7 +477,10 @@ proc ::TreeCtrl::EntryOpen {T item column element} {
     scan [$T item bbox $item $column $element] "%d %d" x y
 
     # Get the font used by the Element
-    set font [$T item element actual $item $column $element -font]
+    set font [$T item element perstate $item $column $element -font]
+    if {$font eq ""} {
+	set font [$T cget -font]
+    }
 
     # Get the text used by the Element. Could check master Element too.
     set text [$T item element cget $item $column $element -text]
@@ -563,7 +566,10 @@ proc ::TreeCtrl::EntryExpanderOpen {T item column element} {
     scan [$T item bbox $item $column $element] "%d %d" x y
 
     # Get the font used by the Element
-    set font [$T item element actual $item $column $element -font]
+    set font [$T item element perstate $item $column $element -font]
+    if {$font eq ""} {
+	set font [$T cget -font]
+    }
 
     set Priv(entry,$T,font) $font
 
@@ -689,7 +695,10 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
     scan [$T item bbox $item $column $element] "%d %d %d %d" x1 y1 x2 y2
 
     # Get the font used by the Element
-    set font [$T item element actual $item $column $element -font]
+    set font [$T item element perstate $item $column $element -font]
+    if {$font eq ""} {
+	set font [$T cget -font]
+    }
 
     # Get the text used by the Element. Could check master Element too.
     set text [$T item element cget $item $column $element -text]
@@ -761,7 +770,10 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     set Priv(text,$T,center) [expr {$x1 + ($x2 - $x1) / 2}]
 
     # Get the font used by the Element
-    set font [$T item element actual $item $column $element -font]
+    set font [$T item element perstate $item $column $element -font]
+    if {$font eq ""} {
+	set font [$T cget -font]
+    }
 
     # Get the text used by the Element. Could check master Element too.
     set text [$T item element cget $item $column $element -text]
