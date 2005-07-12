@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.47 2005/07/11 01:57:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.48 2005/07/12 02:44:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2382,8 +2382,9 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = { "actual", "cget", "configure", (char *) NULL };
-    enum { COMMAND_ACTUAL, COMMAND_CGET, COMMAND_CONFIGURE };
+    static CONST char *commandNames[] = { "actual", "cget", "configure",
+	"perstate", (char *) NULL };
+    enum { COMMAND_ACTUAL, COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_PERSTATE };
     int index;
     int columnIndex;
     Column *column;
@@ -2405,17 +2406,36 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     }
 
     switch (index) {
-	/* T item element actual I C E option */
+	/* T item element perstate I C E option ?stateList? */
 	case COMMAND_ACTUAL:
+	case COMMAND_PERSTATE:
 	{
-	    if (objc != 8) {
+	    int state = item->state | column->cstate;
+
+	    if (objc < 8 || objc > 9) {
 		Tcl_WrongNumArgs(tree->interp, 4, objv,
-			"item column element option");
+			"item column element option ?stateList?");
 		return TCL_ERROR;
 	    }
+	    if (objc == 9) {
+		int i, listObjc;
+		Tcl_Obj **listObjv;
+		int states[3];
+
+		if (Tcl_ListObjGetElements(interp, objv[8], &listObjc,
+			&listObjv) != TCL_OK)
+		    return TCL_ERROR;
+
+		states[0] = states[1] = states[2] = 0;
+		for (i = 0; i < listObjc; i++) {
+		    if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
+				SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
+			return TCL_ERROR;
+		}
+		state = states[STATE_OP_ON];
+	    }
 	    return TreeStyle_ElementActual(tree, column->style,
-		    item->state | column->cstate,
-		    objv[6], objv[7]);
+		    state, objv[6], objv[7]);
 	}
 
 	/* T item element cget I C E option */
@@ -3895,6 +3915,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	"element",
 	"expand",
 	"id",
+	"image",
 	"isancestor",
 	"isopen",
 	"order",
@@ -3934,6 +3955,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	COMMAND_ELEMENT,
 	COMMAND_EXPAND,
 	COMMAND_ID,
+	COMMAND_IMAGE,
 	COMMAND_ISANCESTOR,
 	COMMAND_ISOPEN,
 	COMMAND_ORDER,
@@ -3962,7 +3984,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     } argInfo[] = {
 	{ 1, 1, 0, 0, "item" }, /* ancestors */
 	{ 1, 1, 0, 0, "item" }, /* children */
-	{ 0, 10000, AF_NOT_ITEM, AF_NOT_ITEM, "?option value...?" }, /* create */
+	{ 0, 10000, AF_NOT_ITEM, AF_NOT_ITEM, "?option value ...?" }, /* create */
 	{ 1, 2, IFO_ALLOK, IFO_ALLOK | AF_SAMEROOT, "first ?last?" }, /* delete */
 	{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, "item ?newFirstChild?" }, /* firstchild */
 	{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, "item ?newLastChild?" }, /* lastchild */
@@ -3976,13 +3998,14 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{ 2, 2, 0, AF_NOT_ITEM, "item option" }, /* cget */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* collapse */
 	{ 3, 3, 0, AF_NOT_ITEM, "item1 op item2" }, /* compare */
-	{ 2, 100000, 0, AF_NOT_ITEM, "item list..." }, /* complex */
-	{ 1, 100000, 0, AF_NOT_ITEM, "item ?option? ?value? ?option value...?" }, /* configure */
+	{ 2, 100000, 0, AF_NOT_ITEM, "item list ..." }, /* complex */
+	{ 1, 100000, 0, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?" }, /* configure */
 	{ 0, 0, 0, 0, NULL }, /* count */
 	{ 1, 1, 0, 0, "item" }, /* dump */
 	{ 4, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item column element ?arg ...?" }, /* element */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* expand */
 	{ 1, 1, IFO_NULLOK, 0, "item" }, /* id */
+	{ 1, 100000, 0, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?" }, /* text */
 	{ 2, 2, 0, 0, "item item2" }, /* isancestor */
 	{ 1, 1, 0, 0, "item" }, /* isopen */
 	{ 1, 2, 0, AF_NOT_ITEM, "item ?-visible?" }, /* order */
@@ -4002,7 +4025,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     Item *item = NULL, *item2 = NULL, *child;
 
     if (objc < 3) {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
@@ -4305,7 +4328,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    }
 		    if (objc2 < 3) {
 			FormatResult(interp,
-				"wrong # args: should be \"element option value...\"");
+				"wrong # args: should be \"element option value ...\"");
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
@@ -4756,7 +4779,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		break;
 	    }
 	    if ((objc - 4) & 1) {
-		FormatResult(interp, "wrong # args: should be \"column span column span...\"");
+		FormatResult(interp, "wrong # args: should be \"column span column span ...\"");
 		return TCL_ERROR;
 	    }
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
@@ -4787,24 +4810,30 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	{
 	    return ItemStyleCmd(clientData, interp, objc, objv);
 	}
+	/* T item image I ?C? ?image? ?C image ...? */
+	case COMMAND_IMAGE:
 	/* T item text I ?C? ?text? ?C text ...? */
 	case COMMAND_TEXT:
 	{
 	    TreeColumn treeColumn = tree->columns;
 	    Column *column = item->columns;
-	    Tcl_Obj *textObj;
+	    Tcl_Obj *objPtr;
 	    int i, columnIndex;
+	    int isImage = (index == COMMAND_IMAGE);
+	    int result;
 
 	    if (objc == 4) {
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
 		while (treeColumn != NULL) {
 		    if ((column != NULL) && (column->style != NULL))
-			textObj = TreeStyle_GetText(tree, column->style);
+			objPtr = isImage ?
+			    TreeStyle_GetImage(tree, column->style) :
+			    TreeStyle_GetText(tree, column->style);
 		    else
-			textObj = NULL;
-		    if (textObj == NULL)
-			textObj = Tcl_NewObj();
-		    Tcl_ListObjAppendElement(interp, listObj, textObj);
+			objPtr = NULL;
+		    if (objPtr == NULL)
+			objPtr = Tcl_NewObj();
+		    Tcl_ListObjAppendElement(interp, listObj, objPtr);
 		    treeColumn = TreeColumn_Next(treeColumn);
 		    if (column != NULL)
 			column = column->next;
@@ -4817,14 +4846,17 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    return TCL_ERROR;
 		}
 		if ((column != NULL) && (column->style != NULL)) {
-		    textObj = TreeStyle_GetText(tree, column->style);
-		    if (textObj != NULL)
-			Tcl_SetObjResult(interp, textObj);
+		    objPtr = isImage ?
+			TreeStyle_GetImage(tree, column->style) :
+			TreeStyle_GetText(tree, column->style);
+		    if (objPtr != NULL)
+			Tcl_SetObjResult(interp, objPtr);
 		}
 		break;
 	    }
 	    if ((objc - 4) & 1) {
-		FormatResult(interp, "wrong # args: should be \"column text column text...\"");
+		FormatResult(interp, "missing argument after column \"%s\"",
+			Tcl_GetString(objv[objc - 1]));
 		return TCL_ERROR;
 	    }
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
@@ -4838,7 +4870,13 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    NoStyleMsg(tree, item, columnIndex);
 		    return TCL_ERROR;
 		}
-		TreeStyle_SetText(tree, (TreeItem) item, (TreeItemColumn) column, column->style, objv[i + 1]);
+		result = isImage ?
+		    TreeStyle_SetImage(tree, (TreeItem) item,
+			(TreeItemColumn) column, column->style, objv[i + 1]) :
+		    TreeStyle_SetText(tree, (TreeItem) item,
+			(TreeItemColumn) column, column->style, objv[i + 1]);
+		if (result != TCL_OK)
+		    return TCL_ERROR;
 		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		Tree_InvalidateColumnWidth(tree, columnIndex);
 	    }
