@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.9 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.10 2005/07/12 03:46:43 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -349,7 +349,6 @@ proc DemoFirefoxPrivacyButton1 {w x y} {
 }
 
 proc DemoFirefoxPrivacyMotion {w x y} {
-	variable TreeCtrl::Priv
 	global FirefoxPrivacy
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "item"} {
