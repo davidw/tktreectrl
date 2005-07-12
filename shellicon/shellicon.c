@@ -7,7 +7,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: shellicon.c,v 1.1 2005/07/10 22:44:12 treectrl Exp $
+ * RCS: @(#) $Id: shellicon.c,v 1.2 2005/07/12 02:48:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -123,6 +123,16 @@ static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
     }
 #define BOOLEAN_FOR_STATE(xVAR,xFIELD,xSTATE) \
     OPTION_FOR_STATE(PerStateBoolean_ForState,int,xVAR,xFIELD,xSTATE)
+
+/* This macro gets the object for a per-state option for an element, then
+ * looks for a better match from the master element if it exists */
+#define OBJECT_FOR_STATE(xVAR,xTYPE,xFIELD,xSTATE) \
+    xVAR = PerStateInfo_ObjForState(tree, &xTYPE, &elemX->xFIELD, xSTATE, &match); \
+    if ((match != MATCH_EXACT) && (masterX != NULL)) { \
+	Tcl_Obj *objM = PerStateInfo_ObjForState(tree, &xTYPE, &masterX->xFIELD, xSTATE, &matchM); \
+	if (matchM > match) \
+	    xVAR = objM; \
+    }
 
 typedef struct ElementShellIcon ElementShellIcon;
 
@@ -619,6 +629,28 @@ static int UndefProcShellIcon(ElementArgs *args)
 
 static int ActualProcShellIcon(ElementArgs *args)
 {
+    TreeCtrl *tree = args->tree;
+    ElementText *elemX = (ElementText *) args->elem;
+    ElementText *masterX = (ElementText *) args->elem->master;
+    static CONST char *optionName[] = {
+	"-draw",
+	(char *) NULL };
+    int index, match, matchM;
+    Tcl_Obj *obj = NULL;
+
+    if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
+		"option", 0, &index) != TCL_OK)
+	return TCL_ERROR;
+
+    switch (index) {
+	case 0:
+	{
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    break;
+	}
+    }
+    if (obj != NULL)
+	Tcl_SetObjResult(tree->interp, obj);
     return TCL_OK;
 }
 
