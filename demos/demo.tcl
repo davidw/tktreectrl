@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.34 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.35 2005/07/12 03:46:00 treectrl Exp $
 
 set VERSION 2.0.1
 
@@ -596,9 +596,17 @@ proc MakeMainWindow {} {
     grid configure .f2.f1 -row 0 -column 0 -sticky news -pady 0
 
     # Window to display result of "T identify"
-    bind .f2.f1.t <Motion> {
-	UpdateIdentifyWindow %W %x %y
+    bind TagIdentify <Motion> {
+	if {"%W" ne ".f2.f1.t"} {
+	    set x [expr {%X - [winfo rootx .f2.f1.t]}]
+	    set y [expr {%Y - [winfo rooty .f2.f1.t]}]
+	} else {
+	    set x %x
+	    set y %y
+	}
+	UpdateIdentifyWindow .f2.f1.t $x $y
     }
+    AddBindTag .f2.f1.t TagIdentify
 
     .pw2 add .pw1 -width 200
     .pw2 add .f2 -width 450
@@ -774,6 +782,17 @@ proc MakeHeaderPopup {T} {
     return
 }
 
+proc AddBindTag {w tag} {
+
+    if {[lsearch -exact [bindtags $w] $tag] == -1} {
+	bindtags $w [concat [bindtags $w] $tag]
+    }
+    foreach child [winfo children $w] {
+	AddBindTag $child $tag
+    }
+    return
+}
+
 MakeMainWindow
 
 InitPics sky
@@ -939,6 +958,8 @@ proc DemoSet {cmd file} {
 	    StyleEditor::SetListOfStyles
 	}
     }
+    AddBindTag .f2.f1.t TagIdentify
+    return
 }
 
 .f1.t notify bind .f1.t <Selection> {
@@ -1135,9 +1156,7 @@ proc DemoClear {} {
     $T notify unbind $T
 
     # Clear all run-time states
-    foreach state [$T state names] {
-	$T state undefine $state
-    }
+    eval $T state undefine [$T state names]
 
     # Clear the styles-in-item list
     .f3.t item delete all
@@ -1167,7 +1186,7 @@ proc DemoClear {} {
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
 	-indent 19 -defaultstyle {} -backgroundimage "" \
 	-showrootlines yes -minitemheight 0 -borderwidth 6 \
-	-highlightthickness 3 -usetheme yes
+	-highlightthickness 3 -usetheme yes -cursor {}
 
     # Undo "column configure all" in a demo
     $T column configure tail -background \
