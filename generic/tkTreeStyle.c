@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.38 2005/07/05 02:17:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.39 2005/07/12 02:49:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2596,29 +2596,30 @@ TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_)
 	return (TreeStyle) ((Style *) style_)->master;
 }
 
+static Tcl_Obj *confImageObj = NULL;
 static Tcl_Obj *confTextObj = NULL;
 
-Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
+static Tcl_Obj *Style_GetImageOrText(TreeCtrl *tree, Style *style,
+	ElementType *typePtr, CONST char *optionName, Tcl_Obj **optionNameObj)
 {
-	Style *style = (Style *) style_;
 	ElementLink *eLink;
 	int i;
 
-	if (confTextObj == NULL)
+	if (*optionNameObj == NULL)
 	{
-		confTextObj = Tcl_NewStringObj("-text", -1);
-		Tcl_IncrRefCount(confTextObj);
+		*optionNameObj = Tcl_NewStringObj(optionName, -1);
+		Tcl_IncrRefCount(*optionNameObj);
 	}
 
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &style->elements[i];
-		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, typePtr))
 		{
 			Tcl_Obj *resultObjPtr;
 			resultObjPtr = Tk_GetOptionValue(tree->interp,
 				(char *) eLink->elem, eLink->elem->typePtr->optionTable,
-				confTextObj, tree->tkwin);
+				*optionNameObj, tree->tkwin);
 			return resultObjPtr;
 		}
 	}
@@ -2626,51 +2627,79 @@ Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
 	return NULL;
 }
 
-void TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
-	TreeStyle style_, Tcl_Obj *textObj)
+Tcl_Obj *TreeStyle_GetImage(TreeCtrl *tree, TreeStyle style_)
 {
-	Style *style = (Style *) style_;
+	return Style_GetImageOrText(tree, (Style *) style_, &elemTypeImage,
+		"-image", &confImageObj);
+}
+
+Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
+{
+	return Style_GetImageOrText(tree, (Style *) style_, &elemTypeText,
+		"-text", &confTextObj);
+}
+
+static int Style_SetImageOrText(TreeCtrl *tree, TreeItem item,
+	TreeItemColumn column, Style *style, ElementType *typePtr,
+	CONST char *optionName, Tcl_Obj **optionNameObj, Tcl_Obj *valueObj)
+{
 	Style *masterStyle = style->master;
 	ElementLink *eLink;
 	int i;
 
 	if (masterStyle == NULL)
-		panic("TreeStyle_SetText called with master Style");
+		panic("Style_SetImageOrText called with master Style");
 
-	if (confTextObj == NULL)
+	if (*optionNameObj == NULL)
 	{
-		confTextObj = Tcl_NewStringObj("-text", -1);
-		Tcl_IncrRefCount(confTextObj);
+		*optionNameObj = Tcl_NewStringObj(optionName, -1);
+		Tcl_IncrRefCount(*optionNameObj);
 	}
 
 	for (i = 0; i < style->numElements; i++)
 	{
 		eLink = &masterStyle->elements[i];
-		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
+		if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, typePtr))
 		{
 			Tcl_Obj *objv[2];
 			ElementArgs args;
 
 			eLink = Style_CreateElem(tree, item, column, style, eLink->elem, NULL);
-			objv[0] = confTextObj;
-			objv[1] = textObj;
+			objv[0] = *optionNameObj;
+			objv[1] = valueObj;
 			args.tree = tree;
 			args.elem = eLink->elem;
 			args.config.objc = 2;
 			args.config.objv = objv;
 			args.config.flagSelf = 0;
-			(void) (*eLink->elem->typePtr->configProc)(&args);
+			if ((*eLink->elem->typePtr->configProc)(&args) != TCL_OK)
+				return TCL_ERROR;
 
 			args.change.flagSelf = args.config.flagSelf;
 			args.change.flagTree = 0;
 			args.change.flagMaster = 0;
-			(*eLink->elem->typePtr->changeProc)(&args);
+			(void) (*eLink->elem->typePtr->changeProc)(&args);
 
 			eLink->neededWidth = eLink->neededHeight = -1;
 			style->neededWidth = style->neededHeight = -1;
-			return;
+			break;
 		}
 	}
+	return TCL_OK;
+}
+
+int TreeStyle_SetImage(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
+	TreeStyle style_, Tcl_Obj *valueObj)
+{
+	return Style_SetImageOrText(tree, item, column, (Style *) style_,
+		&elemTypeImage, "-image", &confImageObj, valueObj);
+}
+
+int TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
+	TreeStyle style_, Tcl_Obj *valueObj)
+{
+	return Style_SetImageOrText(tree, item, column, (Style *) style_,
+		&elemTypeText, "-text", &confTextObj, valueObj);
 }
 
 static void Style_Deleted(TreeCtrl *tree, Style *masterStyle)
@@ -3156,7 +3185,7 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (objc < 3)
 	{
-		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 		return TCL_ERROR;
 	}
 
@@ -3196,7 +3225,7 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc < 4)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value...?");
+				Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value ...?");
 				return TCL_ERROR;
 			}
 			if (Element_FromObj(tree, objv[3], &elem) != TCL_OK)
@@ -3244,7 +3273,7 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc < 5)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "name type ?option value...?");
+				Tcl_WrongNumArgs(interp, 3, objv, "name type ?option value ...?");
 				return TCL_ERROR;
 			}
 			name = Tcl_GetStringFromObj(objv[3], &length);
@@ -3978,7 +4007,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (objc < 3)
 	{
-		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 		return TCL_ERROR;
 	}
 
@@ -4017,7 +4046,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc < 4)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value...?");
+				Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value ...?");
 				return TCL_ERROR;
 			}
 			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
@@ -4053,7 +4082,7 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 			if (objc < 4)
 			{
-				Tcl_WrongNumArgs(interp, 3, objv, "name ?option value...?");
+				Tcl_WrongNumArgs(interp, 3, objv, "name ?option value ...?");
 				return TCL_ERROR;
 			}
 			name = Tcl_GetStringFromObj(objv[3], &len);
