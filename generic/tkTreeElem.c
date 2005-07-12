@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.34 2005/07/10 22:20:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.35 2005/07/12 02:41:27 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -248,40 +248,82 @@ static void StringTableRestore(
 
 int BooleanCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName)
 {
-	int i;
+    int i;
 
-	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
-		if (!strcmp(optionTable[i].optionName, optionName)) {
-			optionTable[i].clientData = (ClientData) &booleanCO;
-			return TCL_OK;
-		}
+    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+	if (!strcmp(optionTable[i].optionName, optionName)) {
+
+	    /* Update the option table */
+	    optionTable[i].clientData = (ClientData) &booleanCO;
+	    return TCL_OK;
 	}
-	return TCL_ERROR;
+    }
+    return TCL_ERROR;
+}
+
+int IntegerCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
+	int min, int max, int empty, int flags)
+{
+    IntegerClientData *cd;
+    Tk_ObjCustomOption *co;
+    int i;
+
+    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+	if (!strcmp(optionTable[i].optionName, optionName)) {
+
+	    /* ClientData for the Tk custom option record */
+	    cd = (IntegerClientData *) ckalloc(sizeof(IntegerClientData));
+	    cd->min = min;
+	    cd->max = max;
+	    cd->empty = empty;
+	    cd->flags = flags;
+
+	    /* The Tk custom option record */
+	    co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+	    co->name = (char *) optionName + 1;
+	    co->setProc = IntegerSet;
+	    co->getProc = IntegerGet;
+	    co->restoreProc = IntegerRestore;
+	    co->freeProc = NULL;
+	    co->clientData = (ClientData) cd;
+
+	    /* Update the option table */
+	    optionTable[i].clientData = (ClientData) co;
+	    return TCL_OK;
+	}
+    }
+    return TCL_ERROR;
 }
 
 int StringTableCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName, CONST char **tablePtr)
 {
-	StringTableClientData *cd;
-	Tk_ObjCustomOption *co;
-	int i;
+    StringTableClientData *cd;
+    Tk_ObjCustomOption *co;
+    int i;
 
-	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
-		if (!strcmp(optionTable[i].optionName, optionName)) {
-			cd = (StringTableClientData *) ckalloc(sizeof(StringTableClientData));
-			cd->tablePtr = tablePtr;
-			cd->msg = optionName + 1;
-			co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
-			co->name = (char *) optionName + 1;
-			co->setProc = StringTableSet;
-			co->getProc = StringTableGet;
-			co->restoreProc = StringTableRestore;
-			co->freeProc = NULL;
-			co->clientData = (ClientData) cd;
-			optionTable[i].clientData = (ClientData) co;
-			return TCL_OK;
-		}
+    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+	if (!strcmp(optionTable[i].optionName, optionName)) {
+
+	    /* ClientData for the Tk custom option record */
+	    cd = (StringTableClientData *) ckalloc(sizeof(StringTableClientData));
+	    cd->tablePtr = tablePtr;
+	    cd->msg = optionName + 1;
+
+	    /* The Tk custom option record */
+	    co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+	    co->name = (char *) optionName + 1;
+	    co->setProc = StringTableSet;
+	    co->getProc = StringTableGet;
+	    co->restoreProc = StringTableRestore;
+	    co->freeProc = NULL;
+	    co->clientData = (ClientData) cd;
+
+	    /* Update the option table */
+	    optionTable[i].clientData = (ClientData) co;
+	    return TCL_OK;
 	}
-	return TCL_ERROR;
+    }
+    return TCL_ERROR;
 }
 
 /*****/
@@ -357,6 +399,16 @@ static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
     OPTION_FOR_STATE(PerStateImage_ForState,Tk_Image,xVAR,xFIELD,xSTATE)
 #define RELIEF_FOR_STATE(xVAR,xFIELD,xSTATE) \
     OPTION_FOR_STATE(PerStateRelief_ForState,int,xVAR,xFIELD,xSTATE)
+
+/* This macro gets the object for a per-state option for an element, then
+ * looks for a better match from the master element if it exists */
+#define OBJECT_FOR_STATE(xVAR,xTYPE,xFIELD,xSTATE) \
+    xVAR = PerStateInfo_ObjForState(tree, &xTYPE, &elemX->xFIELD, xSTATE, &match); \
+    if ((match != MATCH_EXACT) && (masterX != NULL)) { \
+	Tcl_Obj *objM = PerStateInfo_ObjForState(tree, &xTYPE, &masterX->xFIELD, xSTATE, &matchM); \
+	if (matchM > match) \
+	    xVAR = objM; \
+    }
 
 /*****/
 
@@ -634,10 +686,10 @@ static int ActualProcBitmap(ElementArgs *args)
     ElementBitmap *elemX = (ElementBitmap *) args->elem;
     ElementBitmap *masterX = (ElementBitmap *) args->elem->master;
     static CONST char *optionName[] = {
-	"-background", "-bitmap", "-foreground",
+	"-background", "-bitmap", "-draw", "-foreground",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -646,44 +698,22 @@ static int ActualProcBitmap(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstColor, &elemX->bg,
-		    args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstColor, &masterX->bg,
-			args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
-	    /* When -background isn't specified, GC default (white) is used */
-	    if (ObjectIsEmpty(obj))
-		obj = Tcl_NewStringObj("white", -1);
+	    OBJECT_FOR_STATE(obj, pstColor, bg, args->state)
 	    break;
 	}
 	case 1:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstBitmap, &elemX->bitmap,
-		    args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstBitmap,
-			&masterX->bitmap, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
+	    OBJECT_FOR_STATE(obj, pstBitmap, bitmap, args->state)
 	    break;
 	}
 	case 2:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstColor, &elemX->fg,
-		    args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstColor, &masterX->fg,
-			args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
-	    /* When -foreground isn't specified, GC default (black) is used */
-	    if (ObjectIsEmpty(obj))
-		obj = Tcl_NewStringObj("black", -1);
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    break;
+	}
+	case 3:
+	{
+	    OBJECT_FOR_STATE(obj, pstColor, fg, args->state)
 	    break;
 	}
     }
@@ -1005,10 +1035,10 @@ static int ActualProcBorder(ElementArgs *args)
     ElementBorder *elemX = (ElementBorder *) args->elem;
     ElementBorder *masterX = (ElementBorder *) args->elem->master;
     static CONST char *optionName[] = {
-	"-background", "-relief",
+	"-background", "-draw", "-relief",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -1017,28 +1047,17 @@ static int ActualProcBorder(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstBorder, &elemX->border,
-		    args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstBorder,
-			&masterX->border, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
+	    OBJECT_FOR_STATE(obj, pstBorder, border, args->state)
 	    break;
 	}
 	case 1:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstRelief, &elemX->relief,
-		    args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstRelief,
-			&masterX->relief, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
-	    if (ObjectIsEmpty(obj))
-		obj = Tcl_NewStringObj("flat", -1);
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    break;
+	}
+	case 2:
+	{
+	    OBJECT_FOR_STATE(obj, pstRelief, relief, args->state)
 	    break;
 	}
     }
@@ -1353,7 +1372,7 @@ static int ActualProcCheckButton(ElementArgs *args)
 	"-image",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -1643,10 +1662,10 @@ static int ActualProcImage(ElementArgs *args)
     ElementImage *elemX = (ElementImage *) args->elem;
     ElementImage *masterX = (ElementImage *) args->elem->master;
     static CONST char *optionName[] = {
-	"-image",
+	"-draw", "-image",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -1655,14 +1674,12 @@ static int ActualProcImage(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstImage,
-		    &elemX->image, args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstImage,
-			&masterX->image, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    break;
+	}
+	case 1:
+	{
+	    OBJECT_FOR_STATE(obj, pstImage, image, args->state)
 	    break;
 	}
     }
@@ -2065,10 +2082,10 @@ static int ActualProcRect(ElementArgs *args)
     ElementRect *elemX = (ElementRect *) args->elem;
     ElementRect *masterX = (ElementRect *) args->elem->master;
     static CONST char *optionName[] = {
-	"-fill", "-outline",
+	"-draw", "-fill", "-outline",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -2077,22 +2094,17 @@ static int ActualProcRect(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstColor, &elemX->fill, args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstColor, &masterX->fill, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
 	case 1:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstColor, &elemX->outline, args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstColor, &masterX->outline, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
+	    OBJECT_FOR_STATE(obj, pstColor, fill, args->state)
+	    break;
+	}
+	case 2:
+	{
+	    OBJECT_FOR_STATE(obj, pstColor, outline, args->state)
 	    break;
 	}
     }
@@ -2179,69 +2191,8 @@ struct ElementText
 
 static CONST char *textDataTypeST[] = { "double", "integer", "long", "string",
 					"time", (char *) NULL };
-static StringTableClientData textDataTypeCD =
-{
-    textDataTypeST,
-    "datatype"
-};
-static Tk_ObjCustomOption textDataTypeCO =
-{
-    "datatype",
-    StringTableSet,
-    StringTableGet,
-    StringTableRestore,
-    NULL,
-    (ClientData) &textDataTypeCD
-};
-
 static CONST char *textJustifyST[] = { "left", "right", "center", (char *) NULL };
-static StringTableClientData textJustifyCD =
-{
-    textJustifyST,
-    "justification"
-};
-static Tk_ObjCustomOption textJustifyCO =
-{
-    "justification",
-    StringTableSet,
-    StringTableGet,
-    StringTableRestore,
-    NULL,
-    (ClientData) &textJustifyCD
-};
-
-static IntegerClientData textLinesCD =
-{
-    0, /* min */
-    0, /* max (ignored) */
-    -1, /* empty */
-    0x01 /* flags: min */
-};
-static Tk_ObjCustomOption textLinesCO =
-{
-    "integer",
-    IntegerSet,
-    IntegerGet,
-    IntegerRestore,
-    NULL,
-    (ClientData) &textLinesCD
-};
-
 static CONST char *textWrapST[] = { "char", "word", (char *) NULL };
-static StringTableClientData textWrapCD =
-{
-    textWrapST,
-    "wrap"
-};
-static Tk_ObjCustomOption textWrapCO =
-{
-    "wrap",
-    StringTableSet,
-    StringTableGet,
-    StringTableRestore,
-    NULL,
-    (ClientData) &textWrapCD
-};
 
 static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_STRING, "-data", (char *) NULL, (char *) NULL,
@@ -2249,7 +2200,7 @@ static Tk_OptionSpec textOptionSpecs[] = {
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
     {TK_OPTION_CUSTOM, "-datatype", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, dataType),
-     TK_OPTION_NULL_OK, (ClientData) &textDataTypeCO, TEXT_CONF_DATA},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
     {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, draw.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DRAW},
@@ -2264,10 +2215,10 @@ static Tk_OptionSpec textOptionSpecs[] = {
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_FONT},
     {TK_OPTION_CUSTOM, "-justify", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, justify),
-     TK_OPTION_NULL_OK, (ClientData) &textJustifyCO, TEXT_CONF_LAYOUT},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_CUSTOM, "-lines", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, lines),
-     TK_OPTION_NULL_OK, (ClientData) &textLinesCO, TEXT_CONF_LAYOUT},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, textObj),
      Tk_Offset(ElementText, text),
@@ -2283,7 +2234,7 @@ static Tk_OptionSpec textOptionSpecs[] = {
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_CUSTOM, "-wrap", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementText, wrap),
-     TK_OPTION_NULL_OK, (ClientData) &textWrapCO, TEXT_CONF_LAYOUT},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, 0, 0}
 };
@@ -3203,7 +3154,7 @@ static int UndefProcText(ElementArgs *args)
     modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstColor, &elemX->fill, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstFont, &elemX->font, args->state);
-	return modified;
+    return modified;
 }
 
 static int ActualProcText(ElementArgs *args)
@@ -3212,10 +3163,10 @@ static int ActualProcText(ElementArgs *args)
     ElementText *elemX = (ElementText *) args->elem;
     ElementText *masterX = (ElementText *) args->elem->master;
     static CONST char *optionName[] = {
-	"-fill", "-font",
+	"-draw", "-fill", "-font",
 	(char *) NULL };
     int index, match, matchM;
-    Tcl_Obj *obj = NULL, *objM;
+    Tcl_Obj *obj = NULL;
 
     if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
 		"option", 0, &index) != TCL_OK)
@@ -3224,26 +3175,17 @@ static int ActualProcText(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstColor, &elemX->fill, args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstColor, &masterX->fill, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
-	    if (ObjectIsEmpty(obj))
-		obj = tree->fgObj;
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
 	case 1:
 	{
-	    obj = PerStateInfo_ObjForState(tree, &pstFont, &elemX->font, args->state, &match);
-	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
-		objM = PerStateInfo_ObjForState(tree, &pstFont, &masterX->font, args->state, &matchM);
-		if (matchM > match)
-		    obj = objM;
-	    }
-	    if (ObjectIsEmpty(obj))
-		obj = tree->fontObj;
+	    OBJECT_FOR_STATE(obj, pstColor, fill, args->state)
+	    break;
+	}
+	case 2:
+	{
+	    OBJECT_FOR_STATE(obj, pstFont, font, args->state)
 	    break;
 	}
     }
@@ -3650,6 +3592,28 @@ static int UndefProcWindow(ElementArgs *args)
 
 static int ActualProcWindow(ElementArgs *args)
 {
+    TreeCtrl *tree = args->tree;
+    ElementText *elemX = (ElementText *) args->elem;
+    ElementText *masterX = (ElementText *) args->elem->master;
+    static CONST char *optionName[] = {
+	"-draw",
+	(char *) NULL };
+    int index, match, matchM;
+    Tcl_Obj *obj = NULL;
+
+    if (Tcl_GetIndexFromObj(tree->interp, args->actual.obj, optionName,
+		"option", 0, &index) != TCL_OK)
+	return TCL_ERROR;
+
+    switch (index) {
+	case 0:
+	{
+	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    break;
+	}
+    }
+    if (obj != NULL)
+	Tcl_SetObjResult(tree->interp, obj);
     return TCL_OK;
 }
 
@@ -3816,6 +3780,15 @@ static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
 int TreeElement_Init(Tcl_Interp *interp)
 {
     ElementAssocData *assocData;
+
+    IntegerCO_Init(elemTypeText.optionSpecs, "-lines",
+	0, 	/* min */
+	0, 	/* max (ignored) */
+	-1, 	/* empty */
+	0x01); 	/* flags: min */
+    StringTableCO_Init(elemTypeText.optionSpecs, "-datatype", textDataTypeST);
+    StringTableCO_Init(elemTypeText.optionSpecs, "-justify", textJustifyST);
+    StringTableCO_Init(elemTypeText.optionSpecs, "-wrap", textWrapST);
 
     assocData = (ElementAssocData *) ckalloc(sizeof(ElementAssocData));
     assocData->typeList = NULL;
