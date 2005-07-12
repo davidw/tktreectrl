@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.12 2005/07/07 02:54:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.13 2005/07/12 02:50:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -206,7 +206,7 @@ int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (objc < 3)
 	{
-		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 		return TCL_ERROR;
 	}
 

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.4 2005/05/01 01:39:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.5 2005/07/12 02:50:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -165,7 +165,7 @@ int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	if (objc < 3)
 	{
-		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg...?");
+		Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 		return TCL_ERROR;
 	}
 
