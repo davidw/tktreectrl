@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.45 2005/07/12 02:54:20 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.46 2005/07/15 01:39:20 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.0 treectrl "Tk Commands"
 .BS
@@ -102,6 +102,8 @@ package require \fBtreectrl  2.0\fR
 \fIpathName\fR \fBelement delete\fR ?\fIelement ...\fR?
 .sp
 \fIpathName\fR \fBelement names\fR
+.sp
+\fIpathName\fR \fBelement perstate\fR \fIelement\fR \fIoption\fR \fIstateList\fR
 .sp
 \fIpathName\fR \fBelement type\fR \fIelement\fR
 .sp
@@ -427,7 +429,7 @@ Database Class:	\fBButtonBitmap\fR
 .fi
 .IP
 Specifies the bitmap to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see \fBPER-STATE OPTIONS\fR). If
+an item. This is a \fBper-state\fR option. If
 a bitmap is specified for a certain item state, it overrides the effects of
 -usetheme.
 .LP
@@ -451,7 +453,7 @@ Database Class:	\fBButtonImage\fR
 .fi
 .IP
 Specifies the image to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see \fBPER-STATE OPTIONS\fR).
+an item. This is a \fBper-state\fR option.
 If an image is specified for a certain item state, it overrides the effects of
 -buttonbitmap and -usetheme.
 .LP
@@ -463,7 +465,7 @@ Database Class:	\fBButtonSize\fR
 
 .fi
 .IP
-Specifies the diameter of the button drawn to the left of an item
+Specifies the width and height of the button drawn to the left of an item
 in any of the forms acceptable to \fBTk_GetPixels\fR.
 .LP
 .nf
@@ -613,6 +615,64 @@ processed. If this option is a non-empty string, the usual integer value
 of an item id is prefixed with the given string. This can aid debugging
 but it is important your code doesn't assume item ids are integers if you
 use it.
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-itemwidth\fR
+Database Name:	\fBitemWidth\fR
+Database Class:	\fBItemWidth\fR
+
+.fi
+.IP
+Specifies a fixed width for every item in any of the forms acceptable to \fBTk_GetPixels\fR.
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "".
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-itemwidthequal\fR
+Database Name:	\fBitemWidthEqual\fR
+Database Class:	\fBItemWidthEqual\fR
+
+.fi
+.IP
+Specifies a boolean that says whether all items should have the same width.
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, and
+the treectrl's -itemwidth option is <= 0, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -itemwidth option is <= 0.
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-itemwidthmultiple\fR
+Database Name:	\fBitemWidthMultiple\fR
+Database Class:	\fBItemWidthMultiple\fR
+
+.fi
+.IP
+Specifies a screen distance that every item's width will be evenly divisible by in any of the forms acceptable to \fBTk_GetPixels\fR.
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, and
+the treectrl's -itemwidth option is <= 0, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -itemwidth option is <= 0.
 .LP
 .nf
 .ta 6c
@@ -1293,6 +1353,12 @@ it is also removed from the element lists of these styles.
 \fIpathName\fR \fBelement names\fR
 Returns a list containing the names of all existing elements.
 .TP
+\fIpathName\fR \fBelement perstate\fR \fIelement\fR \fIoption\fR \fIstateList\fR
+This command returns the value of the \fBper-state\fR
+option named \fIoption\fR for \fIelement\fR for a certain state.
+\fIStateList\fR is a list of state names (static and dynamic, see \fBSTATES\fR)
+which specifies the state to use.
+.TP
 \fIpathName\fR \fBelement type\fR \fIelement\fR
 Returns the type of the elements given by \fIelement\fR,
 such as \fBrect\fR or \fBtext\fR.
@@ -1447,7 +1513,7 @@ The following options are supported by this command:
 .RS
 .TP
 \fB\fB-button\fR\fR \fIboolean\fR
-\fIBoolean\fR must have one of the forms accepted by \fBTk_GetBoolean\fR. It
+\fIBoolean\fR must have one of the forms accepted by \fBTcl_GetBoolean\fR. It
 indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
@@ -1483,7 +1549,7 @@ created items. Specifying false is useful when creating a large number of items 
 console or to improve performance. Default is true.
 .TP
 \fB\fB-visible\fR\fR \fIboolean\fR
-\fIBoolean\fR must have one of the forms accepted by \fBTk_GetBoolean\fR. It
+\fIBoolean\fR must have one of the forms accepted by \fBTcl_GetBoolean\fR. It
 indicates that the item should be displayed in the list. The item will only be
 displayed if:
 a) each ancestor is a descendant of the root item (not an orphan);
@@ -1560,8 +1626,8 @@ For example:
 .fi
 .TP
 \fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
-This command returns the current value of the per-state option named \fIoption\fR
-for \fIelement\fR inside \fIcolumn\fR of the item described by
+This command returns the current value of the \fBper-state\fR
+option named \fIoption\fR for \fIelement\fR inside \fIcolumn\fR of the item described by
 \fIitemDesc\fR. If \fIstateList\fR is specified, the list of state names (static
 and dynamic, see \fBSTATES\fR) is used in place of the current state for
 \fIitem\fR and \fIcolumn.\fR
@@ -1597,9 +1663,8 @@ identifier (see \fBITEM DESCRIPTION\fR below). If the item described by
 \fIitemDesc\fR doesn't exist, this command returns an empty string.
 .TP
 \fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
-This command sets or retrieves the value of the -image option for the first
-image element in one or more columns. Keep in mind that the -image option is a
-per-state option (see \fBPER-STATE OPTIONS\fR below).
+This command sets or retrieves the value of the \fBper-state\fR
+-image option for the first image element in one or more columns.
 If no \fIcolumn\fR is specified, this command returns a list of values,
 one per column.
 If no \fIimage\fR is specified, this command returns the value for \fIcolumn\fR.
@@ -2454,10 +2519,9 @@ all space to the right of the last ordinary column.
 This column has no number;
 it can only be specified by its tag \fBtail\fR, which cannot be modified.
 .PP
-When a column configuration option is specified as \fBper-state\fR, the state
-names are \fBnormal\fR, \fBactive\fR, \fBpressed\fR or \fBup\fR, i.e.
-do not use item state names. See \fBPER-STATE OPTIONS\fR
-for more info.
+When a column configuration option is specified as \fBper-state\fR,
+the state names are \fBnormal\fR, \fBactive\fR, \fBpressed\fR or \fBup\fR, i.e.
+do not use item state names.
 .PP
 The following options are supported for columns:
 .TP
@@ -2468,13 +2532,13 @@ to the right of the column title.
 \fBnone\fR (the default), \fBup\fR, or \fBdown\fR.
 .TP
 \fB\fB-arrowbitmap\fR\fR \fIbitmap\fR
-Specifies as a per-state option the bitmap to use to draw the arrow if
-this column's -arrow option is not \fBnone\fR.
+Specifies as a \fBper-state\fR option the bitmap to
+use to draw the arrow if this column's -arrow option is not \fBnone\fR.
 .TP
 \fB\fB-arrowimage\fR\fR \fIimage\fR
-Specifies as a per-state option the image to use to draw the arrow if
-this column's -arrow option is not \fBnone\fR. If an image is specified for
-a certain state, it overrides the -arrowbitmap option.
+Specifies as a \fBper-state\fR option the image to
+use to draw the arrow if this column's -arrow option is not \fBnone\fR.
+If an image is specified for a certain state, it overrides the -arrowbitmap option.
 .TP
 \fB\fB-arrowside\fR\fR \fIside\fR
 Indicates on which side an arrow should be drawn, if at all.
@@ -2504,8 +2568,8 @@ Specifies the bitmap to display in the element
 to the left of the column title.
 .TP
 \fB\fB-background\fR\fR \fIcolor\fR
-Specifies as a per-state option the color to use for the background of the
-column header.
+Specifies as a \fBper-state\fR option the color to
+use for the background of the column header.
 .TP
 \fB\fB-borderwidth\fR\fR \fIsize\fR
 Specifies a non-negative value indicating the width
@@ -2582,10 +2646,7 @@ or \fBpressed\fR. The active state is used when the mouse is over the header.
 The pressed state is used when the mouse button is pressed in the header.
 .TP
 \fB\fB-stepwidth\fR\fR \fIsize\fR
-Specifies a sort of tabbed alignment for columns that displays
-more than one item next to each other
-(typically in a treectrl widget with horizontal orientation).
-Every item will get an x-coordinate which is a multiple of \fIsize\fR.
+Deprecated. Use the treectrl's \fB-itemwidthmultiple\fR option instead.
 .TP
 \fB\fB-tag\fR\fR \fItag\fR
 Defines a unique name for the column which can be used
@@ -2635,12 +2696,7 @@ This calculated width is also affected by the \fB-expand\fR option and the
 than the \fB-maxwidth\fR option, if specified.
 .TP
 \fB\fB-widthhack\fR\fR \fIboolean\fR
-Indicates whether or not all items should have the same width. This option only
-has effect when all of these conditions are met:
-a) the treectrl's \fB-orientation\fR option is \fBvertical\fR;
-b) only a single column is visible;
-c) the single visible column's \fB-width\fR option is an empty string;
-and d) the treectrl's \fB-wrap\fR option results in wrapping.
+Deprecated. Use the treectrl's \fB-itemwidthequal\fR option instead.
 .SH "COLUMN DESCRIPTION"
 Many of the commands and options for a treectrl take as an argument a
 description of which column to operate on.
@@ -2749,7 +2805,7 @@ the \fIstateDesc\fR describes the same state as the item currently has.
 The visual appearance of an item can change depending on the state the item
 is in, such as being the active item, being included in the selection, being
 collapsed, or some combination of those or other states. When a configuration
-option is described as \fBper-state\fR, it means the option describes a
+option is described as \fIper-state\fR, it means the option describes a
 value which varies depending on the state of the item. If a per-state option is
 specified as a single value, the value is used for all states. Otherwise
 the per-state option must be specified as an even-numbered list. For example,
@@ -2791,105 +2847,121 @@ An element can be of type \fBbitmap\fR, \fBborder\fR, \fBimage\fR,
 For each element type there is a section below describing the options
 which can modify an element of that type.
 .PP
-There are some options which can be configured to get different values
-dependent on the state of the item in which their element is included.
-The values of these options are basically a list.
-If the list has one element, the value is valid regardless of the item state.
-A list with an even number of elements (\fIvalue\fR-\fIstatePattern\fR pairs)
-specifies different values for different states.
-For acceptable values of \fIstatePattern\fR
-see the section \fBSTATES\fR above.
-The last \fIstatePattern\fR can be empty,
-implementing a sort of \fIotherwise clause\fR.
-The options with this behaviour are called \fIper-state options\fR.
+All of the element configuration options described below are unspecified
+by default, meaning that no value whatsoever has been given to the option.
+It may seem strange to you that a boolean option would be unspecified
+instead of simply "true" or "false". The reason for this is that when an
+element displayed by an item has no value specified for an option, the element refers
+to the master element created by the \fBelement create\fR command for a
+value for that option. This allows items which are displaying a certain
+element to be redisplayed when the master element's options change.
+The \fBitem element configure\fR command can be used to override the
+master element's configuration options for a specific item.
 .SH "BITMAP ELEMENT"
 An element of type \fBbitmap\fR can be used to display a bitmap in an item.
 The following options are supported for bitmap elements:
 .TP
 \fB\fB-background\fR\fR \fIcolor\fR
-Specifies as a per-state option
+Specifies as a \fBper-state\fR option
 the color to use for each of the bitmap's '0' valued pixels.
+If the value for a certain state is an empty string (the default),
+the bitmap is drawn transparent.
 .TP
 \fB\fB-bitmap\fR\fR \fIbitmap\fR
-Specifies as a per-state option
+Specifies as a \fBper-state\fR option
 the bitmap to display in the element.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
 \fB\fB-foreground\fR\fR \fIcolor\fR
-Specifies as a per-state option
+Specifies as a \fBper-state\fR option
 the color to use for each of the bitmap's '1' valued pixels.
+If the value for a certain state is an empty string (the default),
+the bitmap's foreground color is black.
 .SH "BORDER ELEMENT"
-An element of type \fBborder\fR can be used to add a border to an item.
+An element of type \fBborder\fR can be used to display a 3D border in an item.
 The following options are supported for border elements:
 .TP
 \fB\fB-background\fR\fR \fIcolor\fR
-Specifies as a per-state option
+Specifies as a \fBper-state\fR option
 the color to use for the background of the border.
+If the value for a certain state is an empty string (the default), the
+element will not be drawn.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
 \fB\fB-filled\fR\fR \fIboolean\fR
-Specifies whether the interior of the border should also be filled with
-the specified background color. Default to false, which means that the
-background color of the tree is visible between the borders.
+Specifies whether the interior of the border should be filled with
+the background color. If this option is unspecified (the default),
+it it treated as false which means that only the edges of the
+border will be drawn.
 .TP
 \fB\fB-height\fR\fR \fIsize\fR
-Specifies the height of the area of the border.
+Specifies the height of the border. If this value is unspecified
+(the default), the border will be exactly as tall as its display area as
+determined by the style layout options.
 .TP
-\fB\fB-relief\fR\fR \fIreliefList\fR
-Specifies as a per-state option
-relief of the border.
+\fB\fB-relief\fR\fR \fIrelief\fR
+Specifies as a \fBper-state\fR option the
+relief of the border. If the value for a certain state is an empty string
+(the default), it is treated as flat.
 For acceptable values see the description of the
 \fB-relief\fR option in the \fBoptions\fR manual page.
 .TP
 \fB\fB-thickness\fR\fR \fIthickness\fR
-Specifies the thickness of the border.
+Specifies the thickness of the edges of the border.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
-Specifies the width of the area of the border.
+Specifies the width of the border. If this value is unspecified
+(the default), the border will be exactly as wide as its display area as
+determined by the style layout options.
 .SH "IMAGE ELEMENT"
 An element of type \fBimage\fR can be used to display an image in an item.
 The following options are supported for image elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
 \fB\fB-height\fR\fR \fIsize\fR
-Specifies the height of the image.
+Specifies the requested height of the display area for this element.
+If unspecified (the default), the element requests a height equal to the
+height of the image, or zero if there is no image.
 .TP
 \fB\fB-image\fR\fR \fIimage\fR
-Specifies as a per-state option
+Specifies as a \fBper-state\fR option
 the image to display in the element.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
-Specifies the width of the image.
+Specifies the requested width of the display area for this element.
+If unspecified (the default), the element requests a width equal to the
+width of the image, or zero if there is no image.
 .SH "RECTANGLE ELEMENT"
 An element of type \fBrect\fR can be used to display a rectangle in an item.
 The following options are supported for rectangle elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
-\fB\fB-fill\fR\fR \fIfillColor\fR
-Specifies as a per-state option
-the color to be used to fill rectangle's area.
-\fIColor\fR may have any of the forms accepted by \fBTk_GetColor\fR.
-If \fIcolor\fR is an empty string (the default), then
-the rectangle will not be filled.
+\fB\fB-fill\fR\fR \fIcolor\fR
+Specifies as a \fBper-state\fR option the color to
+be used to fill the rectangle's area.
+If the color for a certain state is an empty string (the default), then
+the rectangle will not be filled (but the outline may still be drawn).
 .TP
 \fB\fB-height\fR\fR \fIsize\fR
-Specifies the height of the rectangle.
+Specifies the height of the rectangle. If this value is unspecified
+(the default), the rectangle will be exactly as tall as its display area as
+determined by the style layout options.
 .TP
 \fB\fB-open\fR\fR \fIopen\fR
 This option may be used to get an incomplete drawing of the outline.
@@ -2899,98 +2971,114 @@ Each letter refers to a side (north, south, east, or west) that the outline
 will not be drawn.
 The default is the empty string, which causes the outline to be drawn completely.
 .TP
-\fB\fB-outline\fR\fR \fIoutlineColor\fR
-Specifies as a per-state option
-the color that should be used to draw the outline of the rectangle.
-\fIColor\fR may have any of the forms accepted by \fBTk_GetColor\fR.
-If \fIcolor\fR is specified as an empty string (the default),
+\fB\fB-outline\fR\fR \fIcolor\fR
+Specifies as a \fBper-state\fR option the color to
+be used to draw the outline of the rectangle.
+If the color for a certain state is an empty string (the default),
 then no outline is drawn for the rectangle.
 .TP
 \fB\fB-outlinewidth\fR\fR \fIoutlineWidth\fR
 Specifies the width of the outline to be drawn around the rectangle's region.
 \fIoutlineWidth\fR may be in any of the forms acceptable to \fBTk_GetPixels\fR.
-If the \fB-outline\fR option has been specified as an empty string
-(the default), then no outline is drawn.
+If this option is specified as an empty string (the default), then no outline
+is drawn.
 .TP
 \fB\fB-showfocus\fR\fR \fIboolean\fR
 Specifies a boolean value indicating whether
 a "focus ring" should be drawn around the rectangle,
 if the item containing the rectangle is the active item
-and the treectrl widget has currently the focus.
+and the treectrl widget currently has the focus.
+If this option is specified as an empty string (the default),
+then a focus rectangle is not drawn.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
-Specifies the width of the rectangle.
+Specifies the width of the rectangle. If this value is unspecified
+(the default), the rectangle will be exactly as wide as its display area as
+determined by the style layout options.
 .SH "TEXT ELEMENT"
 An element of type \fBtext\fR can be used to display a text in an item.
 The following options are supported for text elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
 \fB\fB-data\fR\fR \fIdata\fR
-Specifies raw data to be printed as text.
+Specifies a value that together with the \fB-datatype\fR and \fB-format\fR
+options will be displayed as text.
 .TP
 \fB\fB-datatype\fR\fR \fIdataType\fR
-Specifies the datatype which should be used to convert the value of the
-\fB-data\fR option to the text to be printed. Acceptable values are
-\fBdouble\fR, \fBinteger\fR, \fBlong\fR, \fBstring\fR, or \fBtime\fR.
+Specifies the type of information in the \fB-data\fR option.
+Acceptable values are \fBdouble\fR, \fBinteger\fR, \fBlong\fR,
+\fBstring\fR, or \fBtime\fR.
 .TP
 \fB\fB-fill\fR\fR \fIcolor\fR
-Specifies as a per-state option
-the color to be used as foreground color of the text.
-\fIColor\fR may have any of the forms accepted by \fBTk_GetColor\fR.
-If \fIcolor\fR is an empty string (the default), then
-the text will be displayed with the color specified as foreground color
-of the treectrl widget.
+Specifies as a \fBper-state\fR option the
+foreground color to use when displaying the text.
+If the color for a certain state is an empty string (the default), then
+the text will be displayed using the color specified by the treectrl's
+\fB-foreground\fR option.
 .TP
-\fB\fB-format\fR\fR \fIformat\fR
-This option overwrites the default format choosen
-by means of the \fB-datatype\fR option.
-For a datatype \fBtime\fR \fIformat\fR should be
-a valid format string for the \fBclock\fR command,
-for all other datatypes it should be
-a valid format element of the \fBformat\fR command.
+\fB\fB-format\fR\fR \fIformatString\fR
+This option specifies the format string used to display the value of the \fB-data\fR option.
+If \fB-datatype\fR is \fBtime\fR, \fIformatString\fR should be
+a valid format string for the Tcl \fBclock\fR command.
+For all other \fB-datatype\fR values \fIformatString\fR should be
+a valid format string for the Tcl \fBformat\fR command.
+If this value is unspecified the following defaults are used:
+for -datatype double "%g", for -datatype integer "%d", for -datatype long "%ld",
+for -datatype string "%s", and for -datatype time the default format string of the Tcl \fBclock\fR
+command.
 .TP
-\fB\fB-font\fR\fR \fIfontName\fR
-Specifies as a per-state option
-the font to use for the text.
-\fIFontName\fR may be any string acceptable to \fBTk_GetFont\fR.
-If this option isn't specified, it defaults to the font configured for
-the treectrl widget.
+\fB\fB-font\fR\fR \fIfont\fR
+Specifies as a \fBper-state\fR option the font to
+use when displaying the text.
+If the font for a certain state is an empty string, the text is displayed
+using the font specified by the treectrl's \fB-font\fR option.
 .TP
 \fB\fB-justify\fR\fR \fIhow\fR
-Specifies how to justify the text within its bounding region.
+Specifies how to justify the text when multiple lines are displayed.
 \fIHow\fR must be one of the values \fBleft\fR, \fBright\fR, or \fBcenter\fR.
-This option will only matter if the text is displayed as multiple lines.
-If the option is omitted, it defaults to \fBleft\fR.
+If this option is specified as an empty string (the default), \fBleft\fR is used.
 .TP
 \fB\fB-lines\fR\fR \fIlineCount\fR
-Specifies the maximal number of lines the text should be printed.
-If the doesn't fit into the area of \fIlineCount\fR lines with the
-configured width, it will be truncated at the right end and filled up with
-an ellipsis.
+Specifies the maximum number of lines to display.
+If more than \fIlineCount\fR lines would be displayed, the last line will
+be truncated with an ellipsis at the right.
+If this option is specified as zero or an empty string (the default),
+there is no limit to the number of lines displayed.
 .TP
 \fB\fB-text\fR\fR \fIstring\fR
-\fIString\fR specifies the characters to be displayed by the element.
-Non printable characters are displayed in their escaped form
-(e.g. a new line character is displayed as the two characters \fB\\n\fR).
-If this option is specified, any values of \fB-data\fR, \fB-datatype\fR,
-and \fB-format\fR are ignored.
+\fIString\fR specifies a string to be displayed by the element.
+\fIString\fR may contain newline characters in which case multiple lines of text
+will be displayed.
+If this option is specified, the \fB-data\fR, \fB-datatype\fR,
+\fB-format\fR, and \fB-textvariable\fR options are ignored.
 .TP
 \fB\fB-textvariable\fR\fR \fIvarName\fR
-Specifies the name of a variable.  The value of the variable is a text string
+Specifies the name of a variable.  The value of the variable is a string
 to be displayed by the element;  if the variable value changes then the element
-will automatically update itself to reflect the new value.
+will automatically update itself to display the new value.
+If this option is specified, the \fB-data\fR, \fB-datatype\fR,
+and \fB-format\fR options are ignored.
 .TP
 \fB\fB-width\fR\fR \fIsize\fR
-Specifies the width of the area of the text.
+Specifies the maximum line length in any of the forms acceptable to \fBTk_GetPixels\fR.
+For text to wrap lines the value of the \fB-width\fR
+option must be less than the needed width of the text, or the display area
+for this element must be less than the needed width of the text.
+For the display area to be less than the needed width of the text,
+one of the style layout options \fB-maxwidth\fR, \fB-width\fR or
+\fB-squeeze\fR must be used.
 .TP
 \fB\fB-wrap\fR\fR \fImode\fR
-\fIMode\fR specifies how to handle lines that are wider than the
-text's area.
-Acceptable values are \fBchar\fR or \fBword\fR.
+\fIMode\fR specifies how to handle lines in the text that are longer than the
+maximum line length.
+Acceptable values are \fBnone\fR, \fBchar\fR or \fBword\fR.
+If this option is unspecified (the default), \fBword\fR is used.
+See the \fB-width\fR option for a description of how the maximum line
+length is determined.
 .SH "WINDOW ELEMENT"
 An element of type \fBwindow\fR can be used to display a Tk window in an item.
 The following options are supported for window elements:
@@ -2999,12 +3087,14 @@ The following options are supported for window elements:
 Specifies whether the associated Tk window should be destroyed when the
 element is deleted. The element is deleted when the item containing the
 element is deleted, when the column containing the element is deleted,
-or when the style associated with the item's column is changed.
+or when the style assigned to the item's column is changed. If this option
+is unspecified (the default), it is treated as false and the Tk window
+will not be destroyed.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a \fBper-state\fR option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 .TP
 \fB\fB-window\fR\fR \fIpathName\fR
 Specifies the window to associate with this element. The window specified by
@@ -3192,6 +3282,17 @@ Generated when items are about to be deleted by the \fBitem delete\fR command.
 .RS
 .TP
 \fB%i\fR List of items ids being deleted.
+.RE
+.TP
+\fB<ItemVisibility>\fR
+Generated when items become visible on screen and when items are no longer visible on screen.
+This event is useful if you have a very large number of items and want to assign
+styles only when items are actually going to be displayed.
+.RS
+.TP
+\fB%h\fR List of items ids which are no longer visible.
+.TP
+\fB%v\fR List of items ids which are now visible.
 .RE
 .TP
 \fB<Scroll-x>\fR

@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.29 2005/07/12 02:54:20 treectrl Exp $}
+  $Id: treectrl.man,v 1.30 2005/07/15 01:39:20 treectrl Exp $}
 ][manpage_begin treectrl n 2.0]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -95,7 +95,7 @@ command, regardless of the layout of items.
 
 [tkoption_def -buttonbitmap buttonBitmap ButtonBitmap]
 Specifies the bitmap to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see [sectref {PER-STATE OPTIONS}]). If
+an item. This is a [sectref {PER-STATE OPTIONS} per-state] option. If
 a bitmap is specified for a certain item state, it overrides the effects of
 -usetheme.
 
@@ -105,12 +105,12 @@ and the plus or minus sign of the button to the left of an item.
 
 [tkoption_def -buttonimage buttonImage ButtonImage]
 Specifies the image to be used as the expand/collapse button to the left of
-an item. This is a per-state option (see [sectref {PER-STATE OPTIONS}]).
+an item. This is a [sectref {PER-STATE OPTIONS} per-state] option.
 If an image is specified for a certain item state, it overrides the effects of
 -buttonbitmap and -usetheme.
 
 [tkoption_def -buttonsize buttonSize ButtonSize]
-Specifies the diameter of the button drawn to the left of an item
+Specifies the width and height of the button drawn to the left of an item
 in any of the forms acceptable to [fun Tk_GetPixels].
 
 [tkoption_def -buttonthickness buttonThickness ButtonThickness]
@@ -190,6 +190,43 @@ processed. If this option is a non-empty string, the usual integer value
 of an item id is prefixed with the given string. This can aid debugging
 but it is important your code doesn't assume item ids are integers if you
 use it.
+
+[tkoption_def -itemwidth itemWidth ItemWidth]
+Specifies a fixed width for every item in any of the forms acceptable to [fun Tk_GetPixels].
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "".
+
+[tkoption_def -itemwidthequal itemWidthEqual ItemWidthEqual]
+Specifies a boolean that says whether all items should have the same width.
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, and
+the treectrl's -itemwidth option is <= 0, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -itemwidth option is <= 0.
+
+[tkoption_def -itemwidthmultiple itemWidthMultiple ItemWidthMultiple]
+Specifies a screen distance that every item's width will be evenly divisible by in any of the forms acceptable to [fun Tk_GetPixels].
+This option only has an effect when either of these sets of conditions are met:
+a) the treectrl's -orient option is vertical, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -wrap option causes a 2-dimension arrangement of items, and
+the treectrl's -itemwidth option is <= 0, or
+b) the treectrl's -orient option is horizontal, and
+only a single column is visible, and
+the visible column's -width option is "", and
+the treectrl's -itemwidth option is <= 0.
 
 [tkoption_def -linecolor lineColor LineColor]
 Specifies the color which should be used for drawing
@@ -751,6 +788,12 @@ it is also removed from the element lists of these styles.
 [call [arg pathName] [cmd {element names}]]
 Returns a list containing the names of all existing elements.
 
+[call [arg pathName] [cmd {element perstate}] [arg element] [arg option] [arg stateList]]
+This command returns the value of the [sectref {PER-STATE OPTIONS} per-state]
+option named [arg option] for [arg element] for a certain state.
+[arg StateList] is a list of state names (static and dynamic, see [sectref STATES])
+which specifies the state to use.
+
 [call [arg pathName] [cmd {element type}] [arg element]]
 Returns the type of the elements given by [arg element],
 such as [const rect] or [const text].
@@ -908,7 +951,7 @@ The following options are supported by this command:
 [list_begin opt]
 
 [opt_def [option -button] [arg boolean]]
-[arg Boolean] must have one of the forms accepted by [fun Tk_GetBoolean]. It
+[arg Boolean] must have one of the forms accepted by [fun Tcl_GetBoolean]. It
 indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
@@ -944,7 +987,7 @@ created items. Specifying false is useful when creating a large number of items 
 console or to improve performance. Default is true.
 
 [opt_def [option -visible] [arg boolean]]
-[arg Boolean] must have one of the forms accepted by [fun Tk_GetBoolean]. It
+[arg Boolean] must have one of the forms accepted by [fun Tcl_GetBoolean]. It
 indicates that the item should be displayed in the list. The item will only be
 displayed if:
 a) each ancestor is a descendant of the root item (not an orphan);
@@ -1026,8 +1069,8 @@ For example:
 
 [call [arg pathName] [cmd {item element perstate}] [arg itemDesc] [arg column] \
      [arg element] [arg option] [opt [arg stateList]]]
-This command returns the current value of the per-state option named [arg option]
-for [arg element] inside [arg column] of the item described by
+This command returns the current value of the [sectref {PER-STATE OPTIONS} per-state]
+option named [arg option] for [arg element] inside [arg column] of the item described by
 [arg itemDesc]. If [arg stateList] is specified, the list of state names (static
 and dynamic, see [sectref STATES]) is used in place of the current state for
 [arg item] and [arg column.]
@@ -1065,9 +1108,8 @@ identifier (see [sectref {ITEM DESCRIPTION}] below). If the item described by
 
 [call [arg pathName] [cmd {item image}] [arg itemDesc] [opt [arg column]] \
      [opt [arg image]] [opt [arg {column image ...}]]]
-This command sets or retrieves the value of the -image option for the first
-image element in one or more columns. Keep in mind that the -image option is a
-per-state option (see [sectref {PER-STATE OPTIONS}] below).
+This command sets or retrieves the value of the [sectref {PER-STATE OPTIONS} per-state]
+-image option for the first image element in one or more columns.
 
 If no [arg column] is specified, this command returns a list of values,
 one per column.
@@ -1976,10 +2018,9 @@ This column has no number;
 it can only be specified by its tag [const tail], which cannot be modified.
 
 [para]
-When a column configuration option is specified as [const per-state], the state
-names are [const normal], [const active], [const pressed] or [const up], i.e.
-do not use item state names. See [sectref {PER-STATE OPTIONS}]
-for more info.
+When a column configuration option is specified as [sectref {PER-STATE OPTIONS} per-state],
+the state names are [const normal], [const active], [const pressed] or [const up], i.e.
+do not use item state names.
 
 [para]
 The following options are supported for columns:
@@ -1992,13 +2033,13 @@ to the right of the column title.
 [const none] (the default), [const up], or [const down].
 
 [opt_def [option -arrowbitmap] [arg bitmap]]
-Specifies as a per-state option the bitmap to use to draw the arrow if
-this column's -arrow option is not [const none].
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the bitmap to
+use to draw the arrow if this column's -arrow option is not [const none].
 
 [opt_def [option -arrowimage] [arg image]]
-Specifies as a per-state option the image to use to draw the arrow if
-this column's -arrow option is not [const none]. If an image is specified for
-a certain state, it overrides the -arrowbitmap option.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the image to
+use to draw the arrow if this column's -arrow option is not [const none].
+If an image is specified for a certain state, it overrides the -arrowbitmap option.
 
 [opt_def [option -arrowside] [arg side]]
 Indicates on which side an arrow should be drawn, if at all.
@@ -2028,8 +2069,8 @@ Specifies the bitmap to display in the element
 to the left of the column title.
 
 [opt_def [option -background] [arg color]]
-Specifies as a per-state option the color to use for the background of the
-column header.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the color to
+use for the background of the column header.
 
 [opt_def [option -borderwidth] [arg size]]
 Specifies a non-negative value indicating the width
@@ -2106,10 +2147,7 @@ or [const pressed]. The active state is used when the mouse is over the header.
 The pressed state is used when the mouse button is pressed in the header.
 
 [opt_def [option -stepwidth] [arg size]]
-Specifies a sort of tabbed alignment for columns that displays
-more than one item next to each other
-(typically in a treectrl widget with horizontal orientation).
-Every item will get an x-coordinate which is a multiple of [arg size].
+Deprecated. Use the treectrl's [option -itemwidthmultiple] option instead.
 
 [opt_def [option -tag] [arg tag]]
 Defines a unique name for the column which can be used 
@@ -2159,12 +2197,7 @@ This calculated width is also affected by the [option -expand] option and the
 than the [option -maxwidth] option, if specified.
 
 [opt_def [option -widthhack] [arg boolean]]
-Indicates whether or not all items should have the same width. This option only
-has effect when all of these conditions are met:
-a) the treectrl's [option -orientation] option is [const vertical];
-b) only a single column is visible;
-c) the single visible column's [option -width] option is an empty string;
-and d) the treectrl's [option -wrap] option results in wrapping.
+Deprecated. Use the treectrl's [option -itemwidthequal] option instead.
 
 [list_end]
 
@@ -2290,7 +2323,7 @@ the [arg stateDesc] describes the same state as the item currently has.
 The visual appearance of an item can change depending on the state the item
 is in, such as being the active item, being included in the selection, being
 collapsed, or some combination of those or other states. When a configuration
-option is described as [const per-state], it means the option describes a
+option is described as [emph per-state], it means the option describes a
 value which varies depending on the state of the item. If a per-state option is
 specified as a single value, the value is used for all states. Otherwise
 the per-state option must be specified as an even-numbered list. For example,
@@ -2328,17 +2361,16 @@ For each element type there is a section below describing the options
 which can modify an element of that type.
 
 [para]
-There are some options which can be configured to get different values
-dependent on the state of the item in which their element is included.
-The values of these options are basically a list.
-If the list has one element, the value is valid regardless of the item state.
-A list with an even number of elements ([arg value]-[arg statePattern] pairs)
-specifies different values for different states.
-For acceptable values of [arg statePattern]
-see the section [sectref STATES] above.
-The last [arg statePattern] can be empty,
-implementing a sort of [emph {otherwise clause}].
-The options with this behaviour are called [emph {per-state options}].
+All of the element configuration options described below are unspecified
+by default, meaning that no value whatsoever has been given to the option.
+It may seem strange to you that a boolean option would be unspecified
+instead of simply "true" or "false". The reason for this is that when an
+element displayed by an item has no value specified for an option, the element refers
+to the master element created by the [cmd {element create}] command for a
+value for that option. This allows items which are displaying a certain
+element to be redisplayed when the master element's options change.
+The [cmd {item element configure}] command can be used to override the
+master element's configuration options for a specific item.
 
 [section {BITMAP ELEMENT}]
 An element of type [const bitmap] can be used to display a bitmap in an item.
@@ -2346,56 +2378,69 @@ The following options are supported for bitmap elements:
 
 [list_begin opt]
 [opt_def [option -background] [arg color]]
-Specifies as a per-state option
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the color to use for each of the bitmap's '0' valued pixels.
+If the value for a certain state is an empty string (the default),
+the bitmap is drawn transparent.
 
 [opt_def [option -bitmap] [arg bitmap]]
-Specifies as a per-state option
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the bitmap to display in the element.
 
 [opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 
 [opt_def [option -foreground] [arg color]]
-Specifies as a per-state option
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the color to use for each of the bitmap's '1' valued pixels.
+If the value for a certain state is an empty string (the default),
+the bitmap's foreground color is black.
 [list_end]
 
 [section {BORDER ELEMENT}]
-An element of type [const border] can be used to add a border to an item.
+An element of type [const border] can be used to display a 3D border in an item.
 The following options are supported for border elements:
 
 [list_begin opt]
 [opt_def [option -background] [arg color]]
-Specifies as a per-state option
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the color to use for the background of the border.
+If the value for a certain state is an empty string (the default), the
+element will not be drawn.
 
 [opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 
 [opt_def [option -filled] [arg boolean]]
-Specifies whether the interior of the border should also be filled with
-the specified background color. Default to false, which means that the
-background color of the tree is visible between the borders.
+Specifies whether the interior of the border should be filled with
+the background color. If this option is unspecified (the default),
+it it treated as false which means that only the edges of the
+border will be drawn.
 
 [opt_def [option -height] [arg size]]
-Specifies the height of the area of the border.
+Specifies the height of the border. If this value is unspecified
+(the default), the border will be exactly as tall as its display area as
+determined by the style layout options.
 
-[opt_def [option -relief] [arg reliefList]]
-Specifies as a per-state option
-relief of the border.
+[opt_def [option -relief] [arg relief]]
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the
+relief of the border. If the value for a certain state is an empty string
+(the default), it is treated as flat.
 For acceptable values see the description of the
 [option -relief] option in the [cmd options] manual page.
 
 [opt_def [option -thickness] [arg thickness]]
-Specifies the thickness of the border.
+Specifies the thickness of the edges of the border.
 
 [opt_def [option -width] [arg size]]
-Specifies the width of the area of the border.
+Specifies the width of the border. If this value is unspecified
+(the default), the border will be exactly as wide as its display area as
+determined by the style layout options.
+
 [list_end]
 
 [section {IMAGE ELEMENT}]
@@ -2403,20 +2448,26 @@ An element of type [const image] can be used to display an image in an item.
 The following options are supported for image elements:
 
 [list_begin opt]
+
 [opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 
 [opt_def [option -height] [arg size]]
-Specifies the height of the image.
+Specifies the requested height of the display area for this element.
+If unspecified (the default), the element requests a height equal to the
+height of the image, or zero if there is no image.
 
 [opt_def [option -image] [arg image]]
-Specifies as a per-state option
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the image to display in the element.
 
 [opt_def [option -width] [arg size]]
-Specifies the width of the image.
+Specifies the requested width of the display area for this element.
+If unspecified (the default), the element requests a width equal to the
+width of the image, or zero if there is no image.
+
 [list_end]
 
 [section {RECTANGLE ELEMENT}]
@@ -2424,20 +2475,22 @@ An element of type [const rect] can be used to display a rectangle in an item.
 The following options are supported for rectangle elements:
 
 [list_begin opt]
-[opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
 
-[opt_def [option -fill] [arg fillColor]]
-Specifies as a per-state option
-the color to be used to fill rectangle's area.
-[arg Color] may have any of the forms accepted by [fun Tk_GetColor].
-If [arg color] is an empty string (the default), then
-the rectangle will not be filled.
+[opt_def [option -draw] [arg boolean]]
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
+
+[opt_def [option -fill] [arg color]]
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the color to
+be used to fill the rectangle's area.
+If the color for a certain state is an empty string (the default), then
+the rectangle will not be filled (but the outline may still be drawn).
 
 [opt_def [option -height] [arg size]]
-Specifies the height of the rectangle.
+Specifies the height of the rectangle. If this value is unspecified
+(the default), the rectangle will be exactly as tall as its display area as
+determined by the style layout options.
 
 [opt_def [option -open] [arg open]]
 This option may be used to get an incomplete drawing of the outline.
@@ -2447,27 +2500,31 @@ Each letter refers to a side (north, south, east, or west) that the outline
 will not be drawn. 
 The default is the empty string, which causes the outline to be drawn completely.
 
-[opt_def [option -outline] [arg outlineColor]]
-Specifies as a per-state option
-the color that should be used to draw the outline of the rectangle.
-[arg Color] may have any of the forms accepted by [fun Tk_GetColor].
-If [arg color] is specified as an empty string (the default),
+[opt_def [option -outline] [arg color]]
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the color to
+be used to draw the outline of the rectangle.
+If the color for a certain state is an empty string (the default),
 then no outline is drawn for the rectangle.
 
 [opt_def [option -outlinewidth] [arg outlineWidth]]
 Specifies the width of the outline to be drawn around the rectangle's region.
 [arg outlineWidth] may be in any of the forms acceptable to [fun Tk_GetPixels].
-If the [option -outline] option has been specified as an empty string
-(the default), then no outline is drawn.
+If this option is specified as an empty string (the default), then no outline
+is drawn.
 
 [opt_def [option -showfocus] [arg boolean]]
 Specifies a boolean value indicating whether
 a "focus ring" should be drawn around the rectangle,
 if the item containing the rectangle is the active item
-and the treectrl widget has currently the focus.
+and the treectrl widget currently has the focus.
+If this option is specified as an empty string (the default),
+then a focus rectangle is not drawn.
 
 [opt_def [option -width] [arg size]]
-Specifies the width of the rectangle.
+Specifies the width of the rectangle. If this value is unspecified
+(the default), the rectangle will be exactly as wide as its display area as
+determined by the style layout options.
+
 [list_end]
 
 [section {TEXT ELEMENT}]
@@ -2476,72 +2533,86 @@ The following options are supported for text elements:
 
 [list_begin opt]
 [opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 
 [opt_def [option -data] [arg data]]
-Specifies raw data to be printed as text.
+Specifies a value that together with the [option -datatype] and [option -format]
+options will be displayed as text.
 
 [opt_def [option -datatype] [arg dataType]]
-Specifies the datatype which should be used to convert the value of the
-[option -data] option to the text to be printed. Acceptable values are
-[const double], [const integer], [const long], [const string], or [const time].
+Specifies the type of information in the [option -data] option.
+Acceptable values are [const double], [const integer], [const long],
+[const string], or [const time].
 
 [opt_def [option -fill] [arg color]]
-Specifies as a per-state option
-the color to be used as foreground color of the text.
-[arg Color] may have any of the forms accepted by [fun Tk_GetColor].
-If [arg color] is an empty string (the default), then
-the text will be displayed with the color specified as foreground color
-of the treectrl widget.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the
+foreground color to use when displaying the text.
+If the color for a certain state is an empty string (the default), then
+the text will be displayed using the color specified by the treectrl's
+[option -foreground] option.
 
-[opt_def [option -format] [arg format]]
-This option overwrites the default format choosen
-by means of the [option -datatype] option.
-For a datatype [const time] [arg format] should be
-a valid format string for the [cmd clock] command,
-for all other datatypes it should be
-a valid format element of the [cmd format] command.
+[opt_def [option -format] [arg formatString]]
+This option specifies the format string used to display the value of the [option -data] option.
+If [option -datatype] is [const time], [arg formatString] should be
+a valid format string for the Tcl [cmd clock] command.
+For all other [option -datatype] values [arg formatString] should be
+a valid format string for the Tcl [cmd format] command.
+If this value is unspecified the following defaults are used:
+for -datatype double "%g", for -datatype integer "%d", for -datatype long "%ld",
+for -datatype string "%s", and for -datatype time the default format string of the Tcl [cmd clock]
+command.
 
-[opt_def [option -font] [arg fontName]]
-Specifies as a per-state option
-the font to use for the text.
-[arg FontName] may be any string acceptable to [fun Tk_GetFont].
-If this option isn't specified, it defaults to the font configured for
-the treectrl widget.
+[opt_def [option -font] [arg font]]
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option the font to
+use when displaying the text.
+If the font for a certain state is an empty string, the text is displayed
+using the font specified by the treectrl's [option -font] option.
 
 [opt_def [option -justify] [arg how]]
-Specifies how to justify the text within its bounding region.
+Specifies how to justify the text when multiple lines are displayed.
 [arg How] must be one of the values [const left], [const right], or [const center].
-This option will only matter if the text is displayed as multiple lines.
-If the option is omitted, it defaults to [const left].
+If this option is specified as an empty string (the default), [const left] is used.
 
 [opt_def [option -lines] [arg lineCount]]
-Specifies the maximal number of lines the text should be printed.
-If the doesn't fit into the area of [arg lineCount] lines with the
-configured width, it will be truncated at the right end and filled up with
-an ellipsis.
+Specifies the maximum number of lines to display.
+If more than [arg lineCount] lines would be displayed, the last line will
+be truncated with an ellipsis at the right.
+If this option is specified as zero or an empty string (the default),
+there is no limit to the number of lines displayed.
 
 [opt_def [option -text] [arg string]]
-[arg String] specifies the characters to be displayed by the element.
-Non printable characters are displayed in their escaped form
-(e.g. a new line character is displayed as the two characters [const \\n]).
-If this option is specified, any values of [option -data], [option -datatype],
-and [option -format] are ignored.
+[arg String] specifies a string to be displayed by the element.
+[arg String] may contain newline characters in which case multiple lines of text
+will be displayed.
+If this option is specified, the [option -data], [option -datatype],
+[option -format], and [option -textvariable] options are ignored.
 
 [opt_def [option -textvariable] [arg varName]]
-Specifies the name of a variable.  The value of the variable is a text string
+Specifies the name of a variable.  The value of the variable is a string
 to be displayed by the element;  if the variable value changes then the element
-will automatically update itself to reflect the new value.
+will automatically update itself to display the new value.
+If this option is specified, the [option -data], [option -datatype],
+and [option -format] options are ignored.
 
 [opt_def [option -width] [arg size]]
-Specifies the width of the area of the text.
+Specifies the maximum line length in any of the forms acceptable to [fun Tk_GetPixels].
+For text to wrap lines the value of the [option -width]
+option must be less than the needed width of the text, or the display area
+for this element must be less than the needed width of the text.
+For the display area to be less than the needed width of the text,
+one of the style layout options [option -maxwidth], [option -width] or
+[option -squeeze] must be used.
 
 [opt_def [option -wrap] [arg mode]]
-[arg Mode] specifies how to handle lines that are wider than the
-text's area.
-Acceptable values are [const char] or [const word].
+[arg Mode] specifies how to handle lines in the text that are longer than the
+maximum line length.
+Acceptable values are [const none], [const char] or [const word].
+If this option is unspecified (the default), [const word] is used.
+See the [option -width] option for a description of how the maximum line
+length is determined.
+
 [list_end]
 
 [section {WINDOW ELEMENT}]
@@ -2553,12 +2624,14 @@ The following options are supported for window elements:
 Specifies whether the associated Tk window should be destroyed when the
 element is deleted. The element is deleted when the item containing the
 element is deleted, when the column containing the element is deleted,
-or when the style associated with the item's column is changed.
+or when the style assigned to the item's column is changed. If this option
+is unspecified (the default), it is treated as false and the Tk window
+will not be destroyed.
 
 [opt_def [option -draw] [arg boolean]]
-Specifies as a per-state option
-whether to draw the element. If the value is unspecified (the default),
-the element will be drawn.
+Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
+whether to draw the element. If the value for a certain state is an empty
+string (the default), it is treated as true and the element will be drawn.
 
 [opt_def [option -window] [arg pathName]]
 Specifies the window to associate with this element. The window specified by
@@ -2744,6 +2817,15 @@ Generated after an item is expanded.
 Generated when items are about to be deleted by the [cmd {item delete}] command.
 [list_begin opt]
 [opt_def %i] List of items ids being deleted.
+[list_end]
+
+[lst_item [const <ItemVisibility>]]
+Generated when items become visible on screen and when items are no longer visible on screen.
+This event is useful if you have a very large number of items and want to assign
+styles only when items are actually going to be displayed.
+[list_begin opt]
+[opt_def %h] List of items ids which are no longer visible.
+[opt_def %v] List of items ids which are now visible.
 [list_end]
 
 [lst_item [const <Scroll-x>]]
