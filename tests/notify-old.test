@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: notify-old.test,v 1.2 2005/05/11 03:31:59 treectrl Exp $
+# CVS: @(#) $Id: notify-old.test,v 1.3 2005/07/15 01:43:39 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -26,7 +26,7 @@ test notify-0.1 {some needed preparations} -body {
 
 test notify-1.1 {notify: missing args} -body {
     .t notify
-} -returnCodes error -result {wrong # args: should be ".t notify command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t notify command ?arg arg ...?"}
 
 test notify-1.2 {notify: unknown command} -body {
     .t notify foo
@@ -38,7 +38,7 @@ test notify-2.1 {notify eventnames: too much args} -body {
 
 test notify-2.2 {notify eventnames: nothing own installed yet} -body {
     lsort [.t notify eventnames]
-} -result {ActiveItem Collapse Expand ItemDelete Scroll Selection}
+} -result {ActiveItem Collapse Expand ItemDelete ItemVisibility Scroll Selection}
 
 test notify-2.3 {notify install: missing args} -body {
     .t notify install
@@ -63,7 +63,7 @@ test notify-2.7 {notify install event} -body {
 
 test notify-2.8 {notify eventnames: list Greetings} -body {
     lsort [.t notify eventnames]
-} -result {ActiveItem Collapse Expand GoodBye Greetings ItemDelete Scroll Selection}
+} -result {ActiveItem Collapse Expand GoodBye Greetings ItemDelete ItemVisibility Scroll Selection}
 
 test notify-2.9 {notify detailnames: missing args} -body {
     .t notify detailnames

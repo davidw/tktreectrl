@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: style.test,v 1.5 2005/06/03 02:39:59 treectrl Exp $
+# CVS: @(#) $Id: style.test,v 1.6 2005/07/15 01:43:39 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -34,7 +34,7 @@ test style-0.1 {some other preparations} -body {
 
 test style-1.1 {style: missing args} -body {
     .t style
-} -returnCodes error -result {wrong # args: should be ".t style command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t style command ?arg arg ...?"}
 
 test style-1.2 {style: invalid command} -body {
     .t style foo
@@ -46,7 +46,7 @@ test style-1.3 {style names: no style exists yet} -body {
 
 test style-2.1 {style create: missing args} -body {
     .t style create
-} -returnCodes error -result {wrong # args: should be ".t style create name ?option value...?"}
+} -returnCodes error -result {wrong # args: should be ".t style create name ?option value ...?"}
 
 test style-2.2 {style create: invalid option} -body {
     .t style create testStyle -foo bar
@@ -125,7 +125,7 @@ test style-6.1 {style layout: missing args} -body {
 
 test style-6.2 {style layout: no options specified} -body {
     .t style layout testStyle eText
-} -result {-padx 0 -pady 0 -ipadx 0 -ipady 0 -expand {} -iexpand {} -detach no * -squeeze {} -union {}} -match glob
+} -result {-detach no -expand {} -height {} -iexpand {} *} -match glob
 
 test style-6.3 {style layout: option -padx} -body {
     .t style layout testStyle eText -padx 3
@@ -195,7 +195,7 @@ test style-6.17 {style layout: option invalid -detach} -body {
 test style-6.18 {style layout: option -detach} -body {
     .t style layout testStyle eText -detach true
     .t style layout testStyle eText -detach
-} -result {1}
+} -result {yes}
 
 test style-99.1 {some needed cleanup} -body {
     destroy .t

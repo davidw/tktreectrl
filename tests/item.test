@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.11 2005/06/03 02:39:59 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.12 2005/07/15 01:43:39 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -26,7 +26,7 @@ test item-0.1 {some needed preparations} -body {
 
 test item-1.1 {item: missing command} -body {
     .t item
-} -returnCodes error -result {wrong # args: should be ".t item command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t item command ?arg arg ...?"}
 
 test item-2.2 {item: invalid command} -body {
     .t item foo
@@ -180,7 +180,7 @@ test item-12.2 {item remove} -body {
 
 test item-13.1 {item complex: missing args} -body {
     .t item complex 8
-} -returnCodes error -result {wrong # args: should be ".t item complex item list..."}
+} -returnCodes error -result {wrong # args: should be ".t item complex item list ..."}
 
 test item-13.2 {item complex: only allowed if column style is defined} -body {
     .t item complex 8 {{e1 -text Hallo}}
@@ -190,7 +190,7 @@ test item-13.3 {item complex: invalid list} -body {
 	.t column create
     .t item style set 8 0 testStyle
     .t item complex 8 {{e1 -text}}
-} -returnCodes error -result {wrong # args: should be "element option value..."}
+} -returnCodes error -result {wrong # args: should be "element option value ..."}
 
 test item-13.4 {item complex: element name not defined in style} -body {
     .t item complex 8 {{e1 -text Hallo}}
@@ -212,11 +212,11 @@ test item-14.2 {item element: invalid command} -body {
     .t item element foo 8 0 eText
 } -returnCodes error -result {bad command "foo": must be *} -match glob
 
-test item-14.3 {item element actual: missing arg} -body {
-    .t item element actual 8 0 eText
-} -returnCodes error -result {wrong # args: should be ".t item element actual item column element option"}
+test item-14.3 {item element perstate: missing arg} -body {
+    .t item element perstate 8 0 eText
+} -returnCodes error -result {wrong # args: should be ".t item element perstate item column element option ?stateList?"}
 
-test item-14.4 {item element actual} -body {
+test item-14.4 {item element perstate} -body {
     .t item element actual 8 0 eText -fill
 } -result {red}
 
@@ -263,7 +263,7 @@ test item-15.5 {item style elements: invalid item} -body {
 
 test item-15.6 {item style elements: item without style} -body {
     .t item style elements 1 0
-} -returnCodes error -result {item 1 doesn't have column 0}
+} -returnCodes error -result {item 1 column 0 has no style}
 
 test item-15.7 {item style elements} -body {
     .t item style elements 8 0
@@ -312,11 +312,11 @@ test item-15.16 {item style set: invalid item} -body {
 
 test item-15.17 {item style set: without args returns all styles} -body {
     .t item style set 2
-} -result {}
+} -result {{}}
 
 test item-15.18 {item style set: without args returns style} -body {
     .t item style set 2 0
-} -returnCodes error -result {item 2 doesn't have column 0}
+} -result {}
 
 test item-15.19 {item style set: without args returns style} -body {
     .t item style set 8 0

@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.26 2005/06/03 02:39:59 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.27 2005/07/15 01:43:39 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -497,7 +497,7 @@ test treectrl-2.37 {modifier cocktail} -body {
 
 test treectrl-5.1 {state: missing args} -body {
     .t state
-} -returnCodes error -result {wrong # args: should be ".t state command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t state command ?arg arg ...?"}
 
 test treectrl-5.2 {state: invalid command} -body {
     .t state foo
@@ -593,7 +593,7 @@ test treectrl-7.0 {some prerequisites for the marquee test} -body {
 
 test treectrl-7.1 {marquee: missing args} -body {
     .t marquee
-} -returnCodes error -result {wrong # args: should be ".t marquee command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t marquee command ?arg arg ...?"}
 
 test treectrl-7.2 {marquee: unknown command} -body {
     .t marquee foo
@@ -646,7 +646,7 @@ test treectrl-7.12 {marquee visible} -body {
 
 test treectrl-8.1 {selection: missing args} -body {
     .t selection
-} -returnCodes error -result {wrong # args: should be ".t selection command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t selection command ?arg arg ...?"}
 
 test treectrl-8.2 {selection: unknown command} -body {
     .t selection foo
@@ -902,7 +902,7 @@ test treectrl-15.11 {identify: item (to the right)} -body {
 
 test treectrl-16.1 {dragimage: missing args} -body {
     .t dragimage
-} -returnCodes error -result {wrong # args: should be ".t dragimage command ?arg arg...?"}
+} -returnCodes error -result {wrong # args: should be ".t dragimage command ?arg arg ...?"}
 
 test treectrl-16.2 {dragimage: unknown command} -body {
     .t dragimage foo
