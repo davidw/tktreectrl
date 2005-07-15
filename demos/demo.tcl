@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.35 2005/07/12 03:46:00 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.36 2005/07/15 01:24:51 treectrl Exp $
 
 set VERSION 2.0.1
 
@@ -216,9 +216,7 @@ proc MakeEventsWindow {} {
 
     set T $w.f.t
 
-    $T configure -showheader no -showroot no -showrootlines no -height 300 \
-	-font {Courier 8}
-
+    $T configure -showheader no -showroot no -showrootlines no -height 300
     $T column create -tag C0
     $T configure -treecolumn C0
 
@@ -234,7 +232,7 @@ proc MakeEventsWindow {} {
 
     set S [$T style create s2]
     $T style elements $S {e3 e1 e2}
-    $T style layout $S e2 -padx {12 0}
+    $T style layout $S e1 -width 20 -sticky w
     $T style layout $S e3 -union [list e1 e2] -ipadx 1 -ipady {0 1}
 
     set S [$T style create s3]
@@ -495,7 +493,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
 	    set font {{Lucida Grande} 11}
 	}
 	unix {
-	    set font {Helvetica 16}
+	    set font {Helvetica 12}
 	}
 	default {
 	    # There is a bug on my Win98 box with Tk_MeasureChars() and
@@ -811,7 +809,7 @@ proc ShowPopup {T x y X Y} {
 	    set Popup(expand) [$T column cget $Popup(column) -expand]
 	    set Popup(squeeze) [$T column cget $Popup(column) -squeeze]
 	    set Popup(justify) [$T column cget $Popup(column) -justify]
-	    set Popup(treecolumn) [expr {[$T cget -treecolumn] eq $Popup(column)}]
+	    set Popup(treecolumn) [expr {[$T column id tree] eq $Popup(column)}]
 	    tk_popup $T.mHeader $X $Y
 	    return
 	}
@@ -1186,7 +1184,8 @@ proc DemoClear {} {
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
 	-indent 19 -defaultstyle {} -backgroundimage "" \
 	-showrootlines yes -minitemheight 0 -borderwidth 6 \
-	-highlightthickness 3 -usetheme yes -cursor {}
+	-highlightthickness 3 -usetheme yes -cursor {} \
+	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0
 
     # Undo "column configure all" in a demo
     $T column configure tail -background \
