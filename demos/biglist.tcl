@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.3 2005/07/12 03:42:33 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.4 2005/07/15 01:19:17 treectrl Exp $
 
 proc DemoBigList {} {
 
@@ -125,8 +125,10 @@ proc DemoBigList {} {
 	set w [BigListNewWindow $T root]
 	update idletasks
 	set height [winfo reqheight $w]
+	# Add 1 pixel for the border
 	incr height
 	set BigList(windowHeight) $height
+	BigListFreeWindow $T $w
 
 	bind DemoBigList <Double-ButtonPress-1> {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
