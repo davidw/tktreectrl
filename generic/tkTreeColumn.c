@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.34 2005/07/12 03:36:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.35 2005/07/15 01:26:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2723,9 +2723,27 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
 		indX, y, 2, tree->headerHeight);
 	}
 	if (image != NULL) {
+#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
+	    int ix = 0, iy = 0, iw = imageW, ih = tree->headerHeight;
+	    /*
+	     * Do boundary clipping, so that Tk_RedrawImage is passed
+	     * valid coordinates. [Tk Bug 979239]
+	     */
+	    imageX += tree->columnDrag.offset;
+	    if (imageX < minX) {
+		ix = minX - imageX;
+		iw -= ix;
+		imageX = minX;
+	    } else if (imageX + imageW >= maxX) {
+		iw -= (imageX + imageW) - maxX;
+	    }
+	    Tk_RedrawImage(image, ix, iy, iw, ih, pixmap,
+		imageX, y);
+#else
 	    Tk_RedrawImage(image, 0, 0, imageW,
 		tree->headerHeight, pixmap,
 		imageX + tree->columnDrag.offset, y);
+#endif
 	    Tk_FreeImage(image);
 	}
     }
