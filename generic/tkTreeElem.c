@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.35 2005/07/12 02:41:27 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.36 2005/07/15 01:34:50 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2163,10 +2163,10 @@ struct ElementText
     int width;				/* -width */
 #define TEXT_WRAP_NULL -1
 #define TEXT_WRAP_CHAR 0
-#define TEXT_WRAP_WORD 1
+#define TEXT_WRAP_NONE 1
+#define TEXT_WRAP_WORD 2
     int wrap;				/* -wrap */
     TextLayout layout;
-    int layoutInvalid;
     int layoutWidth;
     int neededWidth;
     int totalWidth;
@@ -2192,7 +2192,7 @@ struct ElementText
 static CONST char *textDataTypeST[] = { "double", "integer", "long", "string",
 					"time", (char *) NULL };
 static CONST char *textJustifyST[] = { "left", "right", "center", (char *) NULL };
-static CONST char *textWrapST[] = { "char", "word", (char *) NULL };
+static CONST char *textWrapST[] = { "char", "none", "word", (char *) NULL };
 
 static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_STRING, "-data", (char *) NULL, (char *) NULL,
@@ -2263,7 +2263,6 @@ static int WorldChangedProcText(ElementArgs *args)
 	    ((flagS | flagM) & (TEXT_CONF_FONT | TEXT_CONF_LAYOUT)) ||
 	    /* Not always needed */
 	    (flagT & TREE_CONF_FONT)) {
-	elemX->layoutInvalid = TRUE;
 	mask |= CS_DISPLAY | CS_LAYOUT;
     }
 
@@ -2490,16 +2489,23 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
     if (tkfont == NULL)
 	tkfont = tree->tkfont;
 
-    if (fixedWidth >= 0)
-	width = fixedWidth;
-    else if (maxWidth >= 0)
-	width = maxWidth;
-    if (elemX->widthObj != NULL) {
-	if (!width || (elemX->width < width))
-	    width = elemX->width;
-    } else if ((masterX != NULL) && (masterX->widthObj != NULL)) {
-	if (!width || (masterX->width < width))
-	    width = masterX->width;
+    if (elemX->wrap != TEXT_WRAP_NULL)
+	wrap = elemX->wrap;
+    else if ((masterX != NULL) && (masterX->wrap != TEXT_WRAP_NULL))
+	wrap = masterX->wrap;
+
+    if (wrap != TEXT_WRAP_NONE) {
+	if (fixedWidth >= 0)
+	    width = fixedWidth;
+	else if (maxWidth >= 0)
+	    width = maxWidth;
+	if (elemX->widthObj != NULL) {
+	    if (!width || (elemX->width < width))
+		width = elemX->width;
+	} else if ((masterX != NULL) && (masterX->widthObj != NULL)) {
+	    if (!width || (masterX->width < width))
+		width = masterX->width;
+	}
     }
 
     for (i = 0; i < textLen; i++) {
@@ -2509,8 +2515,8 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
 	}
     }
     if (tree->debug.enable && tree->debug.textLayout)
-	dbwin("    lines %d multiLine %d width %d\n",
-		lines, multiLine, width);
+	dbwin("    lines %d multiLine %d width %d wrap %s\n",
+		lines, multiLine, width, textWrapST[wrap]);
     if (!multiLine) {
 	if (width == 0)
 	    return;
@@ -2524,11 +2530,6 @@ if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", te
 	justify = elemX->justify;
     else if ((masterX != NULL) && (masterX->justify != TK_JUSTIFY_NULL))
 	justify = masterX->justify;
-
-    if (elemX->wrap != TEXT_WRAP_NULL)
-	wrap = elemX->wrap;
-    else if ((masterX != NULL) && (masterX->wrap != TEXT_WRAP_NULL))
-	wrap = masterX->wrap;
 
     if (wrap == TEXT_WRAP_WORD)
 	flags |= TK_WHOLE_WORDS;
@@ -2764,11 +2765,21 @@ static int CreateProcText(ElementArgs *args)
 static void TextRedoLayoutIfNeeded(char *func, ElementArgs *args, int fixedWidth)
 {
     ElementText *elemX = (ElementText *) args->elem;
+    ElementText *masterX = (ElementText *) args->elem->master;
     int doLayout = 0;
+    int wrap = TEXT_WRAP_WORD;
+
+    /* If text wrapping is disabled, the layout doesn't change */
+    if (elemX->wrap != TEXT_WRAP_NULL)
+	wrap = elemX->wrap;
+    else if ((masterX != NULL) && (masterX->wrap != TEXT_WRAP_NULL))
+	wrap = masterX->wrap;
+    if (wrap == TEXT_WRAP_NONE)
+	return;
 
     if (elemX->layout != NULL) {
 	/* See comment in NeededProc about totalWidth */
-	if ((elemX->neededWidth != -1) && fixedWidth >= elemX->neededWidth)
+	if ((elemX->neededWidth != -1) && (fixedWidth >= elemX->neededWidth))
 	    fixedWidth = elemX->totalWidth;
 
 	/* Already layed out at this width */
@@ -2794,7 +2805,6 @@ static void TextRedoLayoutIfNeeded(char *func, ElementArgs *args, int fixedWidth
     }
     if (doLayout)
 	TextUpdateLayout(func, args, fixedWidth, -1);
-elemX->layoutInvalid = FALSE;
     if (elemX->layout != NULL)
 	elemX->layoutWidth = fixedWidth;
     else
@@ -2973,7 +2983,6 @@ static void NeededProcText(ElementArgs *args)
     }
 
     TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth, args->needed.maxWidth);
-elemX->layoutInvalid = FALSE;
     elemX->layoutWidth = -1;
     elemX->neededWidth = -1;
 
