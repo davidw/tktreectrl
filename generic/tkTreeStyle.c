@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.39 2005/07/12 02:49:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.40 2005/07/15 01:35:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3174,12 +3174,12 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	static CONST char *commandNames[] = {
-		"cget", "configure", "create", "delete", "names", "type",
+		"cget", "configure", "create", "delete", "names", "perstate", "type",
 		(char *) NULL
 	};
 	enum {
 		COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
-		COMMAND_NAMES, COMMAND_TYPE
+		COMMAND_NAMES, COMMAND_PERSTATE, COMMAND_TYPE
 	};
 	int index;
 
@@ -3333,6 +3333,42 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			Tcl_SetObjResult(interp, listObj);
 			break;
+		}
+
+		/* T element perstate E option stateList */
+		case COMMAND_PERSTATE:
+		{
+			Element *elem;
+			int i, listObjc;
+			Tcl_Obj **listObjv;
+			int states[3];
+			ElementArgs args;
+
+			if (objc != 6) {
+				Tcl_WrongNumArgs(tree->interp, 4, objv,
+					"element option stateList");
+				return TCL_ERROR;
+			}
+
+			if (Element_FromObj(tree, objv[3], &elem) != TCL_OK)
+				return TCL_ERROR;
+
+			if (Tcl_ListObjGetElements(interp, objv[5], &listObjc,
+				&listObjv) != TCL_OK)
+				return TCL_ERROR;
+
+			states[0] = states[1] = states[2] = 0;
+			for (i = 0; i < listObjc; i++) {
+				if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
+					SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
+				return TCL_ERROR;
+			}
+
+			args.tree = tree;
+			args.elem = elem;
+			args.state = states[STATE_OP_ON];
+			args.actual.obj = objv[4];
+			return (*elem->typePtr->actualProc)(&args);
 		}
 
 		case COMMAND_TYPE:
