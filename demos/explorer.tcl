@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.16 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.17 2005/07/15 01:20:52 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -286,7 +286,7 @@ proc DemoExplorerLargeIcons {} {
 
 	$T configure -showroot no -showbuttons no -showlines no \
 		-selectmode extended -wrap window -orient horizontal \
-		-itemheight $itemHeight -showheader no \
+		-itemheight $itemHeight -itemwidth 75 -showheader no \
 		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
 
 	InitPics big-*
@@ -295,7 +295,7 @@ proc DemoExplorerLargeIcons {} {
 	# Create columns
 	#
 
-	$T column create -width 75 -tag C0
+	$T column create -tag C0
 
 	#
 	# Create elements
@@ -414,8 +414,8 @@ proc DemoExplorerLargeIcons {} {
 proc DemoExplorerSmallIcons {} {
 	set T .f2.f1.t
 	DemoExplorerList
-	$T configure -orient horizontal -xscrollincrement 0
-	$T column configure C0 -width {} -stepwidth 110 -widthhack no
+	$T configure -orient horizontal \
+		-itemwidthmultiple 110 -itemwidthequal no
 	return
 }
 
@@ -436,7 +436,8 @@ proc DemoExplorerList {} {
 
 	$T configure -showroot no -showbuttons no -showlines no -itemheight $height \
 		-selectmode extended -wrap window -showheader no \
-		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50"
+		-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50" \
+		-itemwidthequal yes
 
 	InitPics small-*
 
@@ -444,7 +445,7 @@ proc DemoExplorerList {} {
 	# Create columns
 	#
 
-	$T column create -widthhack yes -tag C0
+	$T column create -tag C0
 
 	#
 	# Create elements
