@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.30 2005/07/07 03:18:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.31 2005/07/15 01:27:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -794,17 +794,18 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
     if ((visual->class == DirectColor) || (visual->class == TrueColor)) {
 	separated = 1;
 	red_shift = green_shift = blue_shift = 0;
-	while ((0x0001 & (ximage->red_mask >> red_shift)) == 0)
+	/* ximage->red_mask etc are zero */
+	while ((0x0001 & (visual->red_mask >> red_shift)) == 0)
 	    red_shift++;
-	while ((0x0001 & (ximage->green_mask >> green_shift)) == 0)
+	while ((0x0001 & (visual->green_mask >> green_shift)) == 0)
 	    green_shift++;
-	while ((0x0001 & (ximage->blue_mask >> blue_shift)) == 0)
+	while ((0x0001 & (visual->blue_mask >> blue_shift)) == 0)
 	    blue_shift++;
 	for (i = 0; i < ncolors; i++) {
 	    xcolors[i].pixel =
-		((i << red_shift) & ximage->red_mask) |
-		((i << green_shift) & ximage->green_mask) |
-		((i << blue_shift) & ximage->blue_mask);
+		((i << red_shift) & visual->red_mask) |
+		((i << green_shift) & visual->green_mask) |
+		((i << blue_shift) & visual->blue_mask);
 	}
     } else {
 	red_shift = green_shift = blue_shift = 0;
@@ -832,9 +833,9 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 
 	    pixel = XGetPixel(ximage, x, y);
 	    if (separated) {
-		r = (pixel & ximage->red_mask) >> red_shift;
-		g = (pixel & ximage->green_mask) >> green_shift;
-		b = (pixel & ximage->blue_mask) >> blue_shift;
+		r = (pixel & visual->red_mask) >> red_shift;
+		g = (pixel & visual->green_mask) >> green_shift;
+		b = (pixel & visual->blue_mask) >> blue_shift;
 		r = ((double) xcolors[r].red / USHRT_MAX) * 255;
 		g = ((double) xcolors[g].green / USHRT_MAX) * 255;
 		b = ((double) xcolors[b].blue / USHRT_MAX) * 255;
