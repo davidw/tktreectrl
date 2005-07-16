@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.31 2005/07/15 01:32:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.32 2005/07/16 18:01:39 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -180,7 +180,7 @@ Range_Redo(TreeCtrl *tree)
 	/* Single item column, want all items same width */
 	else if (tree->itemWidthEqual ||
 		/* This option is deprecated */
-		TreeColumn_WidthHack(tree->columnVis))
+		TreeColumn_WidthHack(tree->columnVis)) {
 
 	    /* This takes in to account TreeColumn_MinWidth as well */
 	    fixedWidth = TreeColumn_UseWidth(tree->columnVis);
@@ -196,7 +196,7 @@ Range_Redo(TreeCtrl *tree)
 		fixedWidth += stepWidth - fixedWidth % stepWidth;
 
 	/* Single item column, variable item width */
-	else {
+	} else {
 	    /* Possible minimum width */
 	    minWidth = TreeColumn_MinWidth(tree->columns);
 
@@ -2661,56 +2661,53 @@ CalcWhiteSpaceRegion(TreeCtrl *tree)
  *
  * Tree_DrawTiledImage --
  *
- *	This procedure draws a tiled image in the indicated box.
- *  The image is offset to start at the upper left corner of the actual
- *  items drawing area.
+ *  This procedure draws a tiled image in the indicated box.
  *
  * Results:
- *	None.
+ *  None.
  *
  * Side effects:
- *	None.
+ *  None.
  *
  *----------------------------------------------------------------------
  */
 
 void
 Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image,
-	int x1, int y1, int x2, int y2)
+	int x1, int y1, int x2, int y2, int xOffset, int yOffset)
 {
-    int		imgWidth, imgHeight;
-    int		srcX, srcY;
-    int		srcW, srcH;
-    int		dstX, dstY;
+    int imgWidth, imgHeight;
+    int srcX, srcY;
+    int srcW, srcH;
+    int dstX, dstY;
 
     Tk_SizeOfImage(image, &imgWidth, &imgHeight);
 
-    srcX = (x1 + tree->drawableXOrigin) % imgWidth;
+    srcX = (x1 + xOffset) % imgWidth;
     dstX = x1;
-    while (dstX < x2)
-	{
-	    srcW = imgWidth - srcX;
-	    if (dstX + srcW > x2) {
-		srcW = x2 - dstX;
-	    }
+    while (dstX < x2) {
+	srcW = imgWidth - srcX;
+	if (dstX + srcW > x2) {
+	    srcW = x2 - dstX;
+	}
 
-	    srcY = (y1 + tree->drawableYOrigin) % imgHeight;
-	    dstY = y1;
-	    while (dstY < y2) {
-		srcH = imgHeight - srcY;
-		if (dstY + srcH > y2) {
-		    srcH = y2 - dstY;
-		}
-		Tk_RedrawImage(image, srcX, srcY, srcW, srcH, drawable, dstX, dstY);
-		srcY = 0;
-		dstY += srcH;
+	srcY = (y1 + yOffset) % imgHeight;
+	dstY = y1;
+	while (dstY < y2) {
+	    srcH = imgHeight - srcY;
+	    if (dstY + srcH > y2) {
+		srcH = y2 - dstY;
 	    }
-	    srcX = 0;
+	    Tk_RedrawImage(image, srcX, srcY, srcW, srcH, drawable, dstX, dstY);
+	    srcY = 0;
+	    dstY += srcH;
+	}
+	srcX = 0;
 
-	    /* the last tile gives dstX = x2 which ends the while loop; same
-	     * for y above */
-	    dstX += srcW;
-	};
+	/* the last tile gives dstX == x2 which ends the while loop; same
+	* for dstY above */
+	dstX += srcW;
+    };
 }
 
 void
@@ -2926,11 +2923,12 @@ Tree_Display(ClientData clientData)
 	    Tk_FillRegion(tree->display, pixmap, gc, wsRgnDif);
 	    Tk_OffsetRegion(wsRgnDif, wsBox.x, wsBox.y);
 
-	    tree->drawableXOrigin = tree->xOrigin + wsBox.x;
-	    tree->drawableYOrigin = tree->yOrigin + wsBox.y;
+/*	    tree->drawableXOrigin = tree->xOrigin + wsBox.x;
+	    tree->drawableYOrigin = tree->yOrigin + wsBox.y;*/
 
 	    Tree_DrawTiledImage(tree, pixmap, tree->backgroundImage,
-		    0, 0, wsBox.width, wsBox.height);
+		    0, 0, wsBox.width, wsBox.height,
+		    tree->xOrigin + wsBox.x, tree->yOrigin + wsBox.y);
 
 	    TkSetRegion(tree->display, tree->copyGC, wsRgnNew);
 /*			XSetClipOrigin(tree->display, tree->copyGC, 0,
@@ -3135,6 +3133,7 @@ Tree_Display(ClientData clientData)
 		top = dItem->y + dItem->dirty[TOP];
 		bottom = dItem->y + dItem->dirty[BOTTOM];
 	    }
+
 	    if (left < minX)
 		left = minX;
 	    if (right > maxX)
