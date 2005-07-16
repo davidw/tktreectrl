@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.36 2005/07/15 01:24:51 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.37 2005/07/16 18:07:16 treectrl Exp $
 
 set VERSION 2.0.1
 
@@ -128,7 +128,8 @@ option add *TreeCtrl.useTheme 1
 
 # Resizing columns can be done in realtime or by displaying a proxy line
 switch -- $::thisPlatform {
-    macosx {
+    macosx -
+    unix {
 	option add *TreeCtrl.columnResizeMode realtime
     }
     windows {
@@ -414,7 +415,7 @@ proc MakeSourceWindow {} {
 	    set font {Geneva 9}
 	}
 	unix {
-	    set font {Courier 16}
+	    set font {Courier -12}
 	}
 	default {
 	    set font {Courier 9}
