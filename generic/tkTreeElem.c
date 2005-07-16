@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.36 2005/07/15 01:34:50 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.37 2005/07/16 18:02:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1430,11 +1430,13 @@ struct ElementImage
     Tcl_Obj *widthObj;
     int height;
     Tcl_Obj *heightObj;
+    int tiled;
 };
 
 #define IMAGE_CONF_IMAGE 0x0001
 #define IMAGE_CONF_SIZE 0x0002
 #define IMAGE_CONF_DRAW 0x0004
+#define IMAGE_CONF_DISPLAY 0x0008
 
 static Tk_OptionSpec imageOptionSpecs[] = {
     {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
@@ -1447,6 +1449,9 @@ static Tk_OptionSpec imageOptionSpecs[] = {
     {TK_OPTION_STRING, "-image", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, image.obj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_IMAGE},
+    {TK_OPTION_CUSTOM, "-tiled", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(ElementImage, tiled),
+     TK_OPTION_NULL_OK, (ClientData) &booleanCO, IMAGE_CONF_DISPLAY},
     {TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, widthObj),
      Tk_Offset(ElementImage, width),
@@ -1473,6 +1478,8 @@ static int WorldChangedProcImage(ElementArgs *args)
 
     if ((flagS | flagM) & (IMAGE_CONF_DRAW | IMAGE_CONF_IMAGE | IMAGE_CONF_SIZE))
 	mask |= CS_DISPLAY | CS_LAYOUT;
+    if ((flagS | flagM) & IMAGE_CONF_DISPLAY)
+	mask |= CS_DISPLAY;
 
     return mask;
 }
@@ -1540,6 +1547,9 @@ static int ConfigProcImage(ElementArgs *args)
 
 static int CreateProcImage(ElementArgs *args)
 {
+    ElementImage *elemX = (ElementImage *) args->elem;
+
+    elemX->tiled = -1;
     return TCL_OK;
 }
 
@@ -1556,6 +1566,7 @@ static void DisplayProcImage(ElementArgs *args)
     int draw;
     Tk_Image image;
     int imgW, imgH;
+    int tiled = 0;
 
     BOOLEAN_FOR_STATE(draw, draw, state)
     if (!draw)
@@ -1564,6 +1575,16 @@ static void DisplayProcImage(ElementArgs *args)
     IMAGE_FOR_STATE(image, image, state)
     if (image == NULL)
 	return;
+
+    if (elemX->tiled != -1)
+	tiled = elemX->tiled;
+    else if ((masterX != NULL) && (masterX->tiled != -1))
+	tiled = masterX->tiled;
+    if (tiled) {
+	Tree_DrawTiledImage(tree, args->display.drawable, image, x, y,
+	    x + args->display.width, y + args->display.height, -x, -y);
+	return;
+    }
 
     Tk_SizeOfImage(image, &imgW, &imgH);
     width = imgW, height = imgH;
