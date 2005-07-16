@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.10 2005/07/12 03:46:43 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.11 2005/07/16 18:06:32 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -63,8 +63,10 @@ proc DemoFirefoxPrivacy {} {
 
 	$T element create eWindow window
 	$T element create eText1 text -font [list "[$T cget -font] bold"]
-	$T element create eRectTop rect -outline black -fill #FFFFCC -draw {yes open no {}} -outlinewidth 1 -open s
-	$T element create eRectBottom rect -outline black -fill #FFFFCC -outlinewidth 1 -open n
+	$T element create eRectTop rect -outline black -fill #FFFFCC \
+		-draw {yes open no {}} -outlinewidth 1 -open s
+	$T element create eRectBottom rect -outline black -fill #FFFFCC \
+		-outlinewidth 1 -open n
 
 	# Destroy the window when the element is deleted. Could also bind to the
 	# <ItemDelete> event.
@@ -136,10 +138,13 @@ proc DemoFirefoxPrivacy {} {
 	set I [$T item create]
 	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
-	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
-	$f.t1 insert end "Information entered in web page forms and the Search Bar is saved to make filling out forms and searching faster."
+	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
+		-width 10 -height 1 -wrap word -cursor ""
+	$f.t1 insert end "Information entered in web page forms and the Search\
+		Bar is saved to make filling out forms and searching faster."
 	bindtags $f.t1 TextWrapBindTag
-	$checkbuttonCmd $f.cb1 -background $bg -text "Save information I enter in web page forms and the Search Bar" \
+	$checkbuttonCmd $f.cb1 -background $bg -highlightthickness 0 -text "Save\
+		information I enter in web page forms and the Search Bar" \
 		-variable ::cbvar($f.cb1)
 	set ::cbvar($f.cb1) 1
 	pack $f.t1 -side top -anchor w -fill x -padx {0 8} -pady {0 4}
@@ -153,10 +158,14 @@ proc DemoFirefoxPrivacy {} {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
-	text $fLeft.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
-	$fLeft.t1 insert end "Login information for web pages can be kept in the Password Manager so that you do not need to re-enter your login details every time you visit."
+	text $fLeft.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
+		-width 10 -height 1 -wrap word -cursor ""
+	$fLeft.t1 insert end "Login information for web pages can be kept in the\
+		Password Manager so that you do not need to re-enter your login\
+		details every time you visit."
 	bindtags $fLeft.t1 TextWrapBindTag
-	$checkbuttonCmd $fLeft.cb1 -background $bg -text "Remember Passwords" -variable ::cbvar($fLeft.cb1)
+	$checkbuttonCmd $fLeft.cb1 -background $bg -highlightthickness 0 \
+		-text "Remember Passwords" -variable ::cbvar($fLeft.cb1)
 	set ::cbvar($fLeft.cb1) 1
 	pack $fLeft.t1 -side top -expand yes -fill x -pady {0 6}
 	pack $fLeft.cb1 -side top -anchor w
@@ -175,7 +184,8 @@ proc DemoFirefoxPrivacy {} {
 	set I [$T item create]
 	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
-	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
+	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
+		-width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "The Download Manager keeps track of recently downloaded files."
 	bindtags $f.t1 TextWrapBindTag
 
@@ -196,7 +206,8 @@ proc DemoFirefoxPrivacy {} {
 			"Upon successful download"
 			"When firefox exits"
 			Manually} {
-			$m add command -label $label -command [list $f1.mb1 configure -text $label]
+			$m add command -label $label -command [list $f1.mb1 configure\
+				-text $label]
 		}
 	}
 	pack $f1.l1 -side left
@@ -210,15 +221,19 @@ proc DemoFirefoxPrivacy {} {
 	set I [$T item create]
 	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
-	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
-	$f.t1 insert end "Cookies are pieces of information stored by web pages on your computer. They are used to remember login information and other data."
+	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
+		-width 10 -height 1 -wrap word -cursor ""
+	$f.t1 insert end "Cookies are pieces of information stored by web pages\
+		on your computer. They are used to remember login information and\
+		other data."
 	bindtags $f.t1 TextWrapBindTag
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
-	$checkbuttonCmd $fLeft.cb1 -background $bg -text "Allow sites to set cookies" \
-		-variable ::cbvar($fLeft.cb1)
+	$checkbuttonCmd $fLeft.cb1 -background $bg -highlightthickness 0 \
+		-text "Allow sites to set cookies" -variable ::cbvar($fLeft.cb1)
 	set ::cbvar($fLeft.cb1) 1
-	$checkbuttonCmd $fLeft.cb2 -background $bg -text "for the originating web site only" \
+	$checkbuttonCmd $fLeft.cb2 -background $bg -highlightthickness 0 \
+		-text "for the originating web site only" \
 		-variable ::cbar($fLeft.cb2)
 	set ::cbar($fLeft.cb2) 0
 	pack $fLeft.cb1 -side top -anchor w
@@ -240,7 +255,8 @@ proc DemoFirefoxPrivacy {} {
 			} -state readonly -width [string length "until I close Firefox"]
 		$f1.mb1 current 0
 	} else {
-		menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m -text "until they expire" \
+		menubutton $f1.mb1 -indicatoron yes -menu $f1.mb1.m \
+			-text "until they expire" \
 			-width [string length "until I close Firefox"] -justify left
 		set m [menu $f1.mb1.m -tearoff no]
 		foreach label {
@@ -265,14 +281,17 @@ proc DemoFirefoxPrivacy {} {
 	set I [$T item create]
 	$T item style set $I C0 styFrame
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
-	text $f.t1 -background $textBg -borderwidth 0 -width 10 -height 1 -wrap word -cursor ""
-	$f.t1 insert end "Pages you view are stored in the cache for quicker viewing later on."
+	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
+		-width 10 -height 1 -wrap word -cursor ""
+	$f.t1 insert end "Pages you view are stored in the cache for quicker\
+		viewing later on."
 	bindtags $f.t1 TextWrapBindTag
 	set f1 [frame $f.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Use up to:"
 	entry $f1.e1 -width 10
 	$f1.e1 insert end 50000
-	label $f1.l2 -background $bg -text "KB of disk space for the cache." -background $bg
+	label $f1.l2 -background $bg -text "KB of disk space for the cache." \
+		-background $bg
 	pack $f1.l1 -side left
 	pack $f1.e1 -side left -padx 8
 	pack $f1.l2 -side left
@@ -284,7 +303,8 @@ proc DemoFirefoxPrivacy {} {
 	# This binding configures the -height option of a Text widget to the
 	# number of lines it is displaying
 	bind TextWrapBindTag <Configure> {
-		scan [textlayout [%W cget -font] [%W get 1.0 "end - 1 chars"] -width %w] "%%d %%d" width height
+		scan [textlayout [%W cget -font] [%W get 1.0 "end - 1 chars"] \
+			-width %w] "%%d %%d" width height
 		%W configure -height [expr {$height / [font metrics [%W cget -font] -linespace]}]
 	}
 
