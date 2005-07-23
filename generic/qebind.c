@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.13 2005/07/10 22:15:50 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.14 2005/07/23 00:35:53 treectrl Exp $
  */
 
 /*
@@ -1330,11 +1330,11 @@ static int ParseEventDescription(BindingTable *bindPtr, char *eventString,
 	Pattern *patPtr, EventInfo **eventInfoPtr, Detail **detailPtr)
 {
 	Tcl_Interp *interp = bindPtr->interp;
-	Tcl_Obj *resultPtr = Tcl_GetObjResult(interp);
 	Tcl_HashEntry *hPtr;
 	char eventName[FIELD_SIZE], detailName[FIELD_SIZE];
 	EventInfo *eiPtr;
 	Detail *dPtr;
+	char errorMsg[512];
 
 	if (eventInfoPtr) *eventInfoPtr = NULL;
 	if (detailPtr) *detailPtr = NULL;
@@ -1348,8 +1348,8 @@ static int ParseEventDescription(BindingTable *bindPtr, char *eventString,
 	hPtr = Tcl_FindHashEntry(&bindPtr->eventTableByName, eventName);
 	if (hPtr == NULL)
 	{
-		Tcl_AppendStringsToObj(resultPtr, "unknown event \"",
-			eventName, "\"", NULL);
+		sprintf(errorMsg, "unknown event \"%.128s\"", eventName);
+		Tcl_SetResult(interp, errorMsg, TCL_VOLATILE);
 		return TCL_ERROR;
 	}
 	eiPtr = (EventInfo *) Tcl_GetHashValue(hPtr);
@@ -1368,8 +1368,9 @@ static int ParseEventDescription(BindingTable *bindPtr, char *eventString,
 		}
 		if (dPtr == NULL)
 		{
-			Tcl_AppendStringsToObj(resultPtr, "unknown detail \"",
-				detailName, "\" for event \"", eiPtr->name, "\"", NULL);
+			sprintf(errorMsg, "unknown detail \"%.128s\" for event \"%.128s\"",
+				detailName, eiPtr->name);
+			Tcl_SetResult(interp, errorMsg, TCL_VOLATILE);
 			return TCL_ERROR;
 		}
 		patPtr->detail = dPtr->code;
@@ -1839,7 +1840,7 @@ QE_ConfigureCmd(QE_BindingTable bindingTable, int objOffset, int objc,
 		switch (index)
 		{
 			case 0: /* -active */
-				Tcl_SetBooleanObj(Tcl_GetObjResult(interp), valuePtr->active);
+				Tcl_SetObjResult(interp, Tcl_NewBooleanObj(valuePtr->active));
 				break;
 		}
 		return TCL_OK;
