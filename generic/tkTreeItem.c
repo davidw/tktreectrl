@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.49 2005/07/16 18:03:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.50 2005/07/23 00:37:42 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2209,6 +2209,7 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	OPT_OPEN, OPT_PARENT, OPT_PREVSIBLING, OPT_RETURNID, OPT_VISIBLE };
     int index, i, count = 1, button = 0, returnId = 1, open = 1, visible = 1;
     int height = 0;
+    TreeItem _item;
     Item *item, *parent = NULL, *prevSibling = NULL, *nextSibling = NULL;
     Item *head = NULL, *tail = NULL;
     Tcl_Obj *listObj = NULL;
@@ -2248,10 +2249,11 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		break;
 	    case OPT_NEXTSIBLING:
-		if (TreeItem_FromObj(tree, objv[i + 1],
-			(TreeItem *) &nextSibling, IFO_NOTROOT) != TCL_OK) {
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, IFO_NOTROOT)
+			!= TCL_OK) {
 		    return TCL_ERROR;
 		}
+		nextSibling = (Item *) _item;
 		parent = prevSibling = NULL;
 		break;
 	    case OPT_OPEN:
@@ -2261,17 +2263,18 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 		break;
 	    case OPT_PARENT:
-		if (TreeItem_FromObj(tree, objv[i + 1], (TreeItem *) &parent,
-			0) != TCL_OK) {
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK) {
 		    return TCL_ERROR;
 		}
+		parent = (Item *) _item;
 		prevSibling = nextSibling = NULL;
 		break;
 	    case OPT_PREVSIBLING:
-		if (TreeItem_FromObj(tree, objv[i + 1],
-			(TreeItem *) &prevSibling, IFO_NOTROOT) != TCL_OK) {
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, IFO_NOTROOT)
+			!= TCL_OK) {
 		    return TCL_ERROR;
 		}
+		prevSibling = (Item *) _item;
 		parent = nextSibling = NULL;
 		break;
 	    case OPT_RETURNID:
@@ -2394,14 +2397,16 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int index;
     int columnIndex;
     Column *column;
+    TreeItem _item;
     Item *item;
 
     if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
 		&index) != TCL_OK)
 	return TCL_ERROR;
 
-    if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0) != TCL_OK)
+    if (TreeItem_FromObj(tree, objv[4], &_item, 0) != TCL_OK)
 	return TCL_ERROR;
+    item = (Item *) _item;
 
     if (Item_FindColumnFromObj(tree, item, objv[5], &column, &columnIndex) != TCL_OK)
 	return TCL_ERROR;
@@ -2587,6 +2592,7 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     static CONST char *commandNames[] = { "elements", "map", "set", (char *) NULL };
     enum { COMMAND_ELEMENTS, COMMAND_MAP, COMMAND_SET };
     int index;
+    TreeItem _item;
     Item *item;
 
     if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
@@ -2594,9 +2600,10 @@ static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	return TCL_ERROR;
     }
 
-    if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0) != TCL_OK) {
+    if (TreeItem_FromObj(tree, objv[4], &_item, 0) != TCL_OK) {
 	return TCL_ERROR;
     }
+    item = (Item *) _item;
 
     switch (index) {
 	/* T item style elements I C */
@@ -3131,6 +3138,7 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeItem _item;
     Item *item, *first, *last, *walk, *lastChild;
     Column *column;
     int i, j, count, elemIndex, index, indexF = 0, indexL = 0;
@@ -3143,8 +3151,9 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     int notReally = FALSE;
     int result = TCL_OK;
 
-    if (TreeItem_FromObj(tree, objv[3], (TreeItem *) &item, 0) != TCL_OK)
+    if (TreeItem_FromObj(tree, objv[3], &_item, 0) != TCL_OK)
 	return TCL_ERROR;
+    item = (Item *) _item;
 
     /* If the item has no children, then nothing is done and no error
      * is generated. */
@@ -3279,8 +3288,9 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		break;
 	    }
 	    case OPT_FIRST:
-		if (TreeItem_FromObj(tree, objv[i + 1], (TreeItem *) &first, 0) != TCL_OK)
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK)
 		    return TCL_ERROR;
+		first = (Item *) _item;
 		if (first->parent != item) {
 		    FormatResult(interp,
 			    "item %s%d is not a child of item %s%d",
@@ -3295,8 +3305,9 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		sortData.columns[sortData.count - 1].sortBy = SORT_LONG;
 		break;
 	    case OPT_LAST:
-		if (TreeItem_FromObj(tree, objv[i + 1], (TreeItem *) &last, 0) != TCL_OK)
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK)
 		    return TCL_ERROR;
+		last = (Item *) _item;
 		if (last->parent != item) {
 		    FormatResult(interp,
 			    "item %s%d is not a child of item %s%d",
@@ -3559,6 +3570,7 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	COMMAND_FORCOLUMN, COMMAND_GET, COMMAND_SET
     };
     int index;
+    TreeItem _item;
     Item *item;
 
     if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
@@ -3580,9 +3592,10 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 5, objv, "column ?stateList?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0)
+	    if (TreeItem_FromObj(tree, objv[4], &_item, 0)
 		    != TCL_OK)
 		return TCL_ERROR;
+	    item = (Item *) _item;
 	    if (Item_FindColumnFromObj(tree, item, objv[5], &column,
 			&columnIndex) != TCL_OK)
 		return TCL_ERROR;
@@ -3634,8 +3647,9 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 5, objv, "?state?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[4], &_item, 0) != TCL_OK)
 		return TCL_ERROR;
+	    item = (Item *) _item;
 	    if (objc == 6) {
 		states[STATE_OP_ON] = 0;
 		if (Tree_StateFromObj(tree, objv[5], states, NULL,
@@ -4028,6 +4042,7 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     };
     int index;
     int numArgs = objc - 3;
+    TreeItem _item, _item2;
     Item *item = NULL, *item2 = NULL, *child;
 
     if (objc < 3) {
@@ -4047,10 +4062,11 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     }
 
     if ((numArgs >= 1) && !(argInfo[index].flags & AF_NOT_ITEM)) {
-	if (TreeItem_FromObj(tree, objv[3], (TreeItem *) &item,
+	if (TreeItem_FromObj(tree, objv[3], &_item,
 		    argInfo[index].flags & 0xFFFF) != TCL_OK) {
 	    return TCL_ERROR;
 	}
+	item = (Item *) _item;
 	if ((argInfo[index].flags & AF_PARENT) && (item->parent == NULL)) {
 	    FormatResult(interp, "item %s%d must have a parent", tree->itemPrefix,
 		    item->id);
@@ -4058,10 +4074,11 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	}
     }
     if ((numArgs >= 2) && !(argInfo[index].flags2 & AF_NOT_ITEM)) {
-	if (TreeItem_FromObj(tree, objv[4], (TreeItem *) &item2,
+	if (TreeItem_FromObj(tree, objv[4], &_item2,
 		    argInfo[index].flags2 & 0xFFFF) != TCL_OK) {
 	    return TCL_ERROR;
 	}
+	item2 = (Item *) _item2;
 	if ((argInfo[index].flags2 & AF_NOT_EQUAL) && (item == item2)) {
 	    FormatResult(interp, "item %s%d same as second item", tree->itemPrefix,
 		    item->id);
@@ -4257,18 +4274,19 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	    if (Tcl_GetIndexFromObj(interp, objv[4], opName, "comparison operator", 0,
 		    &op) != TCL_OK)
 		return TCL_ERROR;
-	    if (TreeItem_FromObj(tree, objv[5], (TreeItem *) &item2, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[5], &_item2, 0) != TCL_OK)
 		return TCL_ERROR;
-	    if (TreeItem_RootAncestor(tree, (TreeItem) item) !=
-		    TreeItem_RootAncestor(tree, (TreeItem) item2)) {
+	    item2 = (Item *) _item2;
+	    if (TreeItem_RootAncestor(tree, _item) !=
+		    TreeItem_RootAncestor(tree, _item2)) {
 		FormatResult(interp,
 			"item %s%d and item %s%d don't share a common ancestor",
 			tree->itemPrefix, item->id,
 			tree->itemPrefix, item2->id);
 		return TCL_ERROR;
 	    }
-	    TreeItem_ToIndex(tree, (TreeItem) item, &index1, NULL);
-	    TreeItem_ToIndex(tree, (TreeItem) item2, &index2, NULL);
+	    TreeItem_ToIndex(tree, _item, &index1, NULL);
+	    TreeItem_ToIndex(tree, _item2, &index2, NULL);
 	    switch (op) {
 		case 0: compare = index1 < index2; break;
 		case 1: compare = index1 <= index2; break;

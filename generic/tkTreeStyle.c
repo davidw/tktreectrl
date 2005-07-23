@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.40 2005/07/15 01:35:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.41 2005/07/23 00:38:11 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3586,6 +3586,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	Tcl_Obj *CONST objv[])
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
+	TreeStyle _style;
 	Style *style;
 	Element *elem;
 	ElementLink saved, *eLink;
@@ -3603,8 +3604,9 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		return TCL_ERROR;
 	}
 
-	if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
+	if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 		return TCL_ERROR;
+	style = (Style *) _style;
 
 	if (Element_FromObj(tree, objv[4], &elem) != TCL_OK)
 		return TCL_ERROR;
@@ -4040,6 +4042,8 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_CREATE, COMMAND_DELETE,
 		COMMAND_ELEMENTS, COMMAND_LAYOUT, COMMAND_NAMES };
 	int index;
+	TreeStyle _style;
+	Style *style;
 
 	if (objc < 3)
 	{
@@ -4058,15 +4062,15 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		case COMMAND_CGET:
 		{
 			Tcl_Obj *resultObjPtr;
-			Style *style;
 
 			if (objc != 5)
 			{
 				Tcl_WrongNumArgs(interp, 3, objv, "name option");
 				return TCL_ERROR;
 			}
-			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
+			if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 				return TCL_ERROR;
+			style = (Style *) _style;
 			resultObjPtr = Tk_GetOptionValue(interp, (char *) style,
 				style->optionTable, objv[4], tree->tkwin);
 			if (resultObjPtr == NULL)
@@ -4078,15 +4082,15 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		case COMMAND_CONFIGURE:
 		{
 			Tcl_Obj *resultObjPtr = NULL;
-			Style *style;
 
 			if (objc < 4)
 			{
 				Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value ...?");
 				return TCL_ERROR;
 			}
-			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
+			if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 				return TCL_ERROR;
+			style = (Style *) _style;
 			if (objc <= 5)
 			{
 				resultObjPtr = Tk_GetOptionInfo(interp, (char *) style,
@@ -4114,7 +4118,6 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			int len;
 			Tcl_HashEntry *hPtr;
 			int isNew;
-			Style *style;
 
 			if (objc < 4)
 			{
@@ -4144,7 +4147,6 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 		case COMMAND_DELETE:
 		{
-			Style *style;
 			int i;
 
 			if (objc < 3)
@@ -4154,10 +4156,10 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			}
 			for (i = 3; i < objc; i++)
 			{
-				if (TreeStyle_FromObj(tree, objv[i], (TreeStyle *) &style) != TCL_OK)
+				if (TreeStyle_FromObj(tree, objv[i], &_style) != TCL_OK)
 					return TCL_ERROR;
-				Style_Deleted(tree, style);
-				TreeStyle_FreeResources(tree, (TreeStyle) style);
+				Style_Deleted(tree, (Style *) _style);
+				TreeStyle_FreeResources(tree, _style);
 			}
 			break;
 		}
@@ -4165,7 +4167,6 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		/* T style elements S ?{E ...}? */
 		case COMMAND_ELEMENTS:
 		{
-			Style *style;
 			Element *elem, **elemList = NULL;
 			int i, j, count = 0;
 			int staticMap[STATIC_SIZE], *map = staticMap;
@@ -4177,8 +4178,9 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 				Tcl_WrongNumArgs(interp, 3, objv, "name ?elementList?");
 				return TCL_ERROR;
 			}
-			if (TreeStyle_FromObj(tree, objv[3], (TreeStyle *) &style) != TCL_OK)
+			if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 				return TCL_ERROR;
+			style = (Style *) _style;
 			if (objc == 5)
 			{
 				if (Tcl_ListObjGetElements(interp, objv[4], &listObjc, &listObjv) != TCL_OK)
@@ -4249,15 +4251,14 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			Tcl_Obj *listObj;
 			Tcl_HashSearch search;
 			Tcl_HashEntry *hPtr;
-			TreeStyle style;
 
 			listObj = Tcl_NewListObj(0, NULL);
 			hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
 			while (hPtr != NULL)
 			{
-				style = (TreeStyle) Tcl_GetHashValue(hPtr);
+				_style = (TreeStyle) Tcl_GetHashValue(hPtr);
 				Tcl_ListObjAppendElement(interp, listObj,
-					TreeStyle_ToObj(style));
+					TreeStyle_ToObj(_style));
 				hPtr = Tcl_NextHashEntry(&search);
 			}
 			Tcl_SetObjResult(interp, listObj);

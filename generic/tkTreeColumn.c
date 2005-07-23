@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.35 2005/07/15 01:26:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.36 2005/07/23 00:36:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1803,15 +1803,17 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	case COMMAND_BBOX:
 	{
 	    int x = 0;
+	    TreeColumn _column;
 	    Column *column, *walk;
 
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 	    if (!tree->showHeader || !column->visible)
 		break;
 	    /* Update layout */
@@ -1886,15 +1888,17 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	case COMMAND_CONFIGURE:
 	{
+	    TreeColumn _column;
 	    Column *column;
 
 	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column ?option? ?value?");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 		    CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 	    if (objc <= 5 && (column == (Column *) COLUMN_ALL)) {
 		FormatResult(interp, "can't specify \"all\" without an option-value pair");
 		return TCL_ERROR;
@@ -1955,6 +1959,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	case COMMAND_DELETE:
 	{
 	    int columnIndex;
+	    TreeColumn _column;
 	    Column *column, *prev;
 	    TreeItem item;
 	    TreeItemColumn itemColumn;
@@ -1965,9 +1970,10 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 
 	    /* T column delete "all" */
 	    if (column == (Column *) COLUMN_ALL) {
@@ -2102,15 +2108,17 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	case COMMAND_WIDTH:
 	{
+	    TreeColumn _column;
 	    Column *column;
 
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 	    /* Update layout if needed */
 	    (void) Tree_WidthOfColumns(tree);
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(column->useWidth));
@@ -2170,6 +2178,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	/* T column move C before */
 	case COMMAND_MOVE:
 	{
+	    TreeColumn _move, _before;
 	    Column *move, *before;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
@@ -2180,12 +2189,14 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 3, objv, "column before");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &move,
+	    if (TreeColumn_FromObj(tree, objv[3], &_move,
 		    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
-	    if (TreeColumn_FromObj(tree, objv[4], (TreeColumn *) &before,
+	    move = (Column *) _move;
+	    if (TreeColumn_FromObj(tree, objv[4], &_before,
 		    CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
+	    before = (Column *) _before;
 	    if (move == before)
 		break;
 	    if (move->index == before->index - 1)
@@ -2315,6 +2326,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	case COMMAND_NEEDEDWIDTH:
 	{
+	    TreeColumn _column;
 	    Column *column;
 	    int width;
 
@@ -2322,9 +2334,10 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 	    /* Update layout if needed */
 	    (void) Tree_TotalWidth(tree);
 	    width = TreeColumn_WidthOfItems((TreeColumn) column);
@@ -2336,6 +2349,7 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	/* T column order C ?-visible? */
 	case COMMAND_ORDER:
 	{
+	    TreeColumn _column;
 	    Column *column;
 	    int visible = FALSE;
 	    int index = 0;
@@ -2355,9 +2369,10 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		    return TCL_ERROR;
 		}
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], (TreeColumn *) &column,
+	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 		CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
+	    column = (Column *) _column;
 	    if (visible) {
 		Column *walk = (Column *) tree->columns;
 		while (walk != NULL) {
