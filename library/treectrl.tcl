@@ -369,6 +369,10 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
 	    }
 	    if {[$w column compare $column == "tail"]} return
 	    $w column configure $column -width ""
+	    CursorCheck $w $x $y
+	    MotionInHeader $w $x $y
+	} else {
+	    ButtonPress1 $w $x $y
 	}
     }
     return
