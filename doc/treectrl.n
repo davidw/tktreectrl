@@ -6,14 +6,14 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.46 2005/07/15 01:39:20 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.47 2005/07/23 00:35:21 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 2.0 treectrl "Tk Commands"
+.TH "treectrl" n 2.1 treectrl "Tk Commands"
 .BS
 .SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
-package require \fBtreectrl  2.0\fR
+package require \fBtreectrl  2.1\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .sp
@@ -189,7 +189,7 @@ package require \fBtreectrl  2.0\fR
 .sp
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?
 .sp
-\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?
+\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? \fIstateDescList\fR
 .sp
 \fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 .sp
@@ -569,7 +569,7 @@ Database Class:	\fBHeight\fR
 .IP
 Specifies the desired height for the window
 in any of the forms acceptable to \fBTk_GetPixels\fR.
-The default is 200 pixel.
+The default is 200 pixels.
 If this option is less than or equal to zero then the window will
 not request any size at all.
 .LP
@@ -625,14 +625,9 @@ Database Class:	\fBItemWidth\fR
 .fi
 .IP
 Specifies a fixed width for every item in any of the forms acceptable to \fBTk_GetPixels\fR.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "".
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
 .LP
 .nf
 .ta 6c
@@ -643,16 +638,10 @@ Database Class:	\fBItemWidthEqual\fR
 .fi
 .IP
 Specifies a boolean that says whether all items should have the same width.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is <= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -itemwidth option is <= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 .LP
 .nf
 .ta 6c
@@ -663,16 +652,10 @@ Database Class:	\fBItemWidthMultiple\fR
 .fi
 .IP
 Specifies a screen distance that every item's width will be evenly divisible by in any of the forms acceptable to \fBTk_GetPixels\fR.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is <= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -itemwidth option is <= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 .LP
 .nf
 .ta 6c
@@ -833,9 +816,9 @@ Database Class:	\fBTreeColumn\fR
 
 .fi
 .IP
-Specifies an integer value that determines which
-column displays the data in an hierarchical fashion.
-Default is 0 meaning that the first column displays the tree.
+Specifies a \fBcolumn description\fR that determines which
+column displays the buttons and lines.
+The default is unspecified.
 .LP
 .nf
 .ta 6c
@@ -871,18 +854,18 @@ Database Class:	\fBWrap\fR
 
 .fi
 .IP
-Specifies how to arrange items inside treectrl's window.
-The value must be an empty string, \fBwindow\fR,
-or a list with an integer as first element
-and either \fBitems\fR or \fBpixels\fR as second element.
-The empty string as wrap mode means that each item appears on
-exactly one line on the screen.
-In the other modes multiple items may be displayed in one screen line.
-In \fBwindow\fR mode a screen line break may occur after any element;
-in \fBitems\fR mode a line break will only be made after the specified
-number of items;
-in \fBpixels\fR mode a line break will only be made after the
-specified screen distance is reached.
+Specifies whether items are arranged in a 1- or 2-dimensional layout.
+If the value is an empty string (the default), then items are arranged from top
+to bottom (-orient vertical) or from left to right (-orient horizontal) in
+a 1-dimensional layout.
+If the value is "\fIN\fR \fBitems\fR", then a no more than \fIN\fR items will appear in
+a vertical group (-orient vertical) or horizontal group (-orient horizontal).
+If the value is "\fIN\fR \fBpixels\fR", then a no vertical group of items will be
+taller than \fIN\fR pixels (-orient vertical) or no horizontal group of items will
+be wider than \fIN\fR pixels (-orient horizontal).
+If the value is \fBwindow\fR, then a no vertical group of items will be
+taller than the window (-orient vertical) or no horizontal group of items will
+be wider than the window (-orient horizontal).
 .LP
 .nf
 .ta 6c
@@ -1000,10 +983,10 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the column header specified by \fIcolumn\fR.
-If the treectrl is configured to don't display the column headers
-by means of the \fB-showheader\fR option,
+If the treectrl is configured not to display the column headers
+by means of the \fB-showheader\fR option, then
 an empty list is returned instead.
 .TP
 \fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR
@@ -1158,10 +1141,10 @@ this case the command returns an empty string.
 command.
 .TP
 \fIpathName\fR \fBcontentbox\fR
-Returns a list with four elements giving an approximate bounding box
-for the space used to display the items inside the columns,
-i.e. the space of the treectrl widget without
-the surrounding borders and the column headers.
+Returns a list with four elements giving the bounding box
+for the space used to display the items,
+i.e. the space of the treectrl window without
+the surrounding borders or the column headers.
 .TP
 \fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?
 This command is used to facilitate debugging of the treectrl widget.
@@ -1228,7 +1211,7 @@ debugging options \fB-enable\fR and \fB-display\fR are switched on.
 .TP
 \fIpathName\fR \fBdebug dinfo\fR
 For every of the treectrl widget
-a line with some internal valuess info about all items
+a line with some internal values info about all items
 is printed to stdout.
 The command returns the empty string.
 .TP
@@ -1411,12 +1394,13 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBitem ancestors\fR \fIitemDesc\fR
-Returns a list containing the numerical indexes of all ancestors
-of the item specified by \fIitemDesc\fR from its parent up to the
-root item.
+Returns a list containing the item ids of the ancestors
+of the item specified by \fIitemDesc\fR. The first list value is the parent,
+the second is the parent's parent, an so on. The last list value will be the
+root item if \fIitemDesc\fR is a descendant of the root item.
 .TP
 \fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the item described by \fIitemDesc\fR.
 If no further argument is specified, the bbox spans the area of the item
 over all columns. If a \fIcolumn\fR is specified, only the area of the item
@@ -1430,7 +1414,7 @@ Returns the current value of the configuration option for the item specified by
 values accepted by the \fBitem configure\fR command.
 .TP
 \fIpathName\fR \fBitem children\fR \fIitemDesc\fR
-Returns a list containing the numerical indexes of all children
+Returns a list containing the item ids of all children
 of the item specified by \fIitemDesc\fR in the correct order from
 the first child to the last child.
 .TP
@@ -1558,9 +1542,10 @@ and b) each ancestor's \fB-visible\fR option is true
 .TP
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?
 Deletes the specified item(s).
-\fIFirst\fR and \fIlast\fR must be the string \fBall\fR or an \fIitemDesc\fR.
-If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, all items are
-deleted; if \fIfirst\fR is specified as \fIitemDesc\fR and \fIlast\fR isn't
+\fIFirst\fR and \fIlast\fR must be the string \fBall\fR or a valid
+\fBitem description\fR.
+If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, then all items are
+deleted. If \fIfirst\fR is specified and \fIlast\fR isn't
 specified, the item described by \fIfirst\fR is deleted.
 If both \fIfirst\fR and \fIlast\fR are specified,
 they must decribe items with a common ancestor;
@@ -1571,6 +1556,12 @@ If the current \fBactive\fR item is deleted, the root item becomes the new activ
 If the current selection \fBanchor\fR item is deleted, the root item becomes the new anchor item.
 There is no way to delete the root item of the treectrl widget;
 in all cases the specification of the root item is ignored.
+.sp
+For each call to this command, two events may be generated.
+If any of the deleted items are selected, then a \fB<Selection>\fR event
+is generated just before the items are deleted.
+If any items were actually deleted, then an \fB<ItemDelete>\fR event event is generated just before the items
+are deleted.
 .TP
 \fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
 Returns a list with six elements in the form
@@ -1651,15 +1642,15 @@ an \fB<Expand-before>\fR event before the item state is changed,
 and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?
-If \fIchild\fR is not specified, returns the numerical index of the first
+If \fIchild\fR is not specified, returns the item id of the first
 child of the item described by \fIparent\fR.
 If \fIchild\fR is specified, it must described an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new first child of \fIparent\fR.
 .TP
 \fIpathName\fR \fBitem id\fR \fIitemDesc\fR
-This command resolves the item description \fIitemDesc\fR into a unique item
-identifier (see \fBITEM DESCRIPTION\fR below). If the item described by
+This command resolves the \fBitem description\fR \fIitemDesc\fR into a unique item
+identifier. If the item described by
 \fIitemDesc\fR doesn't exist, this command returns an empty string.
 .TP
 \fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
@@ -1679,20 +1670,20 @@ Returns 1 if the item described by \fIitemDesc\fR is a direct or indirect
 parent of the item decribed by \fIdescendant\fR, 0 otherwise.
 .TP
 \fIpathName\fR \fBitem isopen\fR \fIitemDesc\fR
-Returns 1, if the item described by \fIitemDesc\fR has cuurently the
+Returns 1 if the item described by \fIitemDesc\fR has the
 state \fBopen\fR switched on, 0 otherwise.
 .TP
 \fIpathName\fR \fBitem lastchild\fR \fIparent\fR ?\fIchild\fR?
-If \fIchild\fR is not specified, returns the numerical index of the last
+If \fIchild\fR is not specified, returns the item id of the last
 child of the item described by \fIparent\fR.
-If \fIchild\fR is specified, it must described an item
+If \fIchild\fR is specified, it must describe an item
 that is not an ancestor of \fIparent\fR.
 Then it will become the new last child of \fIparent\fR.
 .TP
 \fIpathName\fR \fBitem nextsibling\fR \fIsibling\fR ?\fInext\fR?
-If \fInext\fR is not specified, returns the numerical index of the next
+If \fInext\fR is not specified, returns the item id of the next
 sibling of the item described by \fIsibling\fR.
-If \fInext\fR is specified, it must described an item
+If \fInext\fR is specified, it must describe an item
 that is not an ancestor of \fIsibling\fR.
 Then it will become the new next sibling of \fIsibling\fR.
 .TP
@@ -1709,31 +1700,34 @@ result of this command is the row the item falls in. If the optional argument
 is not visible.
 .TP
 \fIpathName\fR \fBitem parent\fR \fIitemDesc\fR
-Returns the numerical index of the parent of the item
+Returns the item id of the parent of the item
 described by \fIitemDesc\fR.
 .TP
 \fIpathName\fR \fBitem prevsibling\fR \fIsibling\fR ?\fIprev\fR?
-If \fIprev\fR is not specified, returns the numerical index of the previous
+If \fIprev\fR is not specified, returns the item id of the previous
 sibling of the item described by \fIsibling\fR.
-If \fIprev\fR is specified, it must described an item
+If \fIprev\fR is specified, it must describe an item
 that is not an ancestor of \fIsibling\fR.
 Then it will become the new previous sibling of \fIsibling\fR.
 .TP
 \fIpathName\fR \fBitem range\fR \fIfirst\fR \fIlast\fR
-Returns a list containing the unique identifiers of all items
+Returns a list containing the item ids of all items
 in the range between \fIfirst\fR and \fIlast\fR, inclusive.
 The order between \fIfirst\fR and \fIlast\fR doesn't matter,
-and the result is always ordered by the increasing index of the items.
+and the result is always sorted by the increasing order of the items (as
+returned by the \fBitem order\fR command).
 The items specified by \fIfirst\fR and \fIlast\fR must share a common
 ancestor.
 .TP
 \fIpathName\fR \fBitem remove\fR \fIitemDesc\fR
 Removes the item described by \fIitemDesc\fR
-from the children list of its father, so that it will become an orphan.
+from the list of children of its parent, so that it will become an orphan.
 .TP
 \fIpathName\fR \fBitem rnc\fR \fIitemDesc\fR
 Returns a list of two integers, which corresponds to the row and column
-of the item described by \fIitemDesc\fR.
+of the item described by \fIitemDesc\fR. The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options. If the item is not displayed, this command returns an empty string.
 .TP
 \fIpathName\fR \fBitem sort\fR \fIitemDesc\fR ?\fIoption ...\fR?
 Sorts the children of the item described by \fIitemDesc\fR,
@@ -1809,28 +1803,30 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBitem state forcolumn\fR \fIitemDesc\fR \fIcolumn\fR ?\fIstateDescList\fR?
-Just like \fBitem state set\fR but manipulates user-defined states for a single
-item column, not the item as a whole.
+Just like \fBitem state set\fR but manipulates dynamic states for a single
+item column, not the item as a whole. If \fIstateDescList\fR is unspecified,
+this command returns a list containing the names of all the dynamic states
+which are switched on in \fIcolumn\fR.
 .TP
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?
 If no \fIstateName\fR is specified, returns a list containing
-the names of all (predefined and user defined) states
+the names of all (static and dynamic) states
 which are currently switched on for the item described by \fIitemDesc\fR.
 If a \fIstateName\fR is specified,
 1 is returned if the specified state is currently switched on for the item,
 0 otherwise.
 .TP
-\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? ?\fIstateDescList\fR?
+\fIpathName\fR \fBitem state set\fR \fIitemDesc\fR ?\fIlastItem\fR? \fIstateDescList\fR
 Every element of \fIstateDescList\fR
-must describe a user defined state (see \fBSTATES\fR below),
-with the particularity that the state name may have also a leading \fB~\fR.
+must be the name of a dynamic state (see \fBSTATES\fR below),
+optionally preceded by a \fB~\fR or \fB!\fR character.
 Every state with a leading \fB!\fR will be switched off for the
 item described by \fIitemDesc\fR,
 every state with a leading \fB~\fR will be toggled, and
 every state without leading \fB!\fR or \fB~\fR will be switched on.
 If \fIlastItem\fR is specified, the state changes will be made for all items
 in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
-\fIItemDesc\fR may be the string \fBall\fR,
+If \fIItemDesc\fR is the string \fBall\fR,
 then the state changes are made for all items of the treectrl widget.
 .RE
 .TP
@@ -1842,9 +1838,10 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBitem style elements\fR \fIitemDesc\fR \fIcolumn\fR
-A list is returned
-containing the currently defined elements of the style,
-which is set for the item described by \fIitemDesc\fR in \fIcolumn\fR.
+This command returns a list containing the names of elements which were
+configured by the \fBitem element configure\fR command for the item
+described by \fIitemDesc\fR in \fIcolumn\fR. If there is no style assigned
+to \fIcolumn\fR an error is returned.
 .TP
 \fIpathName\fR \fBitem style map\fR \fIitemDesc\fR \fIcolumn\fR \fIstyle\fR \fImap\fR
 Like the \fBitem style set\fR command, this command may be used to assign a
@@ -2139,17 +2136,17 @@ Deprecated. Use the \fBcolumn count\fR command instead.
 Deprecated. Use the \fBitem count\fR command instead.
 .TP
 \fIpathName\fR \fBorphans\fR
-Returns a list containing the numerical ids of all items
-which has no parent item.
-An item is created without having a parent,
-and can later become an orphan again
-by means of the \fBitem remove\fR widget command.
+Returns a list containing the item ids of all items
+which have no parent.
+When an item is created, it has no parent by default,
+and can later become an orphan
+by means of the \fBitem remove\fR widget command. The root item is not returned.
 .TP
 \fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR
 Deprecated. Use the \fBitem range\fR command instead.
 .TP
 \fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
-This command is used to manipulate the list of user defined states,
+This command is used to manipulate the list of user-defined states,
 see section \fBSTATES\fR below.
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBstate\fR argument.
@@ -2158,20 +2155,20 @@ The following forms of the command are supported:
 .TP
 \fIpathName\fR \fBstate define\fR \fIstateName\fR
 Defines a new state with the name \fIstateName\fR,
-which must not be the name of a predefined or already user defined state.
+which must not be the name of an existing state.
 .TP
 \fIpathName\fR \fBstate linkage\fR \fIstateName\fR
 Returns a string indicating
-whether the specified state is user defined
+whether the specified state is user-defined
 by means of the \fBstate define\fR widget command (\fBdynamic\fR)
 or predefined by the treectrl widget itself (\fBstatic\fR).
 .TP
 \fIpathName\fR \fBstate names\fR
-Returns a list containing the names of all user defined states.
+Returns a list containing the names of all user-defined states.
 .TP
 \fIpathName\fR \fBstate undefine\fR ?\fIstateName ...\fR?
-Every \fIstateName\fR must be the name of a user defined state.
-Removes this state from the list of user defined states.
+Every \fIstateName\fR must be the name of a user-defined state.
+Removes this state from the list of user-defined states.
 .RE
 .TP
 \fIpathName\fR \fBsee\fR \fIitemDesc\fR
@@ -2189,13 +2186,14 @@ It has several forms, depending on \fIoption\fR:
 .TP
 \fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
-must be the string \fBall\fR or an \fIitemDesc\fR.
-Selects all of the items in the range between
-\fIfirst\fR and \fIlast\fR, inclusive,
+must be the string \fBall\fR or a valid \fBitem description\fR.
+Adds every unselected item in the range between
+\fIfirst\fR and \fIlast\fR, inclusive, to the selection
 without affecting the selection state of items outside that range.
 If one of the arguments is the string \fBall\fR,
-all items of the treectrl widget are added to the selection instead.
-A \fB<Selection>\fR event is generated.
+every unselected item in the treectrl widget is added to the selection.
+A \fB<Selection>\fR event is generated if any items were added to the
+selection.
 .TP
 \fIpathName\fR \fBselection anchor\fR ?\fIitemDesc\fR?
 If \fIitemDesc\fR is specified,
@@ -2208,44 +2206,42 @@ Returns the numerical id of the selection anchor item.
 .TP
 \fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
-must be the string \fBall\fR or an \fIitemDesc\fR.
+must be the string \fBall\fR or a valid \fBitem description\fR.
 If any of the items between \fIfirst\fR and \fIlast\fR
 (inclusive) are selected, they are deselected.
 The selection state is not changed for items outside this range.
-If no additional arguments is given
-or one of the arguments is the string \fBall\fR,
-the selection is completely cleared instead.
-A \fB<Selection>\fR event is generated.
+If no additional arguments are given,
+or if one of the arguments is the string \fBall\fR,
+then all items are removed from the selection.
+A \fB<Selection>\fR event is generated if any items were removed from the
+selection.
 .TP
 \fIpathName\fR \fBselection count\fR
 Returns an integer indicating the number
 of items in the treectrl that are currently selected.
 .TP
 \fIpathName\fR \fBselection get\fR
-Returns a list containing the numerical ids of
+Returns a list containing the item ids of
 all of the items in the treectrl that are currently selected.
 If there are no items selected in the treectrl then an empty
 string is returned.
 .TP
 \fIpathName\fR \fBselection includes\fR \fIitemDesc\fR
-Returns 1 if the item indicated by \fIitemDesc\fR is currently
+Returns 1 if the item described by \fIitemDesc\fR is currently
 selected, 0 if it isn't.
 .TP
 \fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR
 Both arguments \fIselect\fR and \fIdeselect\fR must be
-the string \fBall\fR or a possibly empty list of \fIitemDesc\fRs.
-Selects all of the items described by \fIselect\fR,
-then deselects all items described by \fIdeselect\fR,
-without affecting the selection state of any item
-not mentioned in both arguments.
-If one item is described in both arguments \fIselect\fR and \fIdeselect\fR,
-it is added to the selection.
-A \fB<Selection>\fR event is generated.
+the string \fBall\fR or a possibly-empty list of \fBitem descriptions\fR.
+Any unselected items in \fIselect\fR are added to the selection,
+and any selected items in \fIdeselect\fR are removed from the selection (except
+for those items which are also in \fIselect\fR).
+A \fB<Selection>\fR event is generated if any items were selected or deselected.
 .RE
 .TP
 \fIpathName\fR \fBstyle\fR \fIoption\fR ?\fIelement\fR? ?\fIarg arg ...\fR?
-This command is used to manipulate styles, which could be considered
-as a geometry manager for the elements of one item.
+This command is used to manipulate styles, which can be thought of
+as a geometry manager for elements.
 The exact behavior of the command depends on the \fIoption\fR argument
 that follows the \fBstyle\fR argument.
 The following forms of the command are supported:
@@ -2526,8 +2522,7 @@ do not use item state names.
 The following options are supported for columns:
 .TP
 \fB\fB-arrow\fR\fR \fIdirection\fR
-Indicates whether or not an arrow should be drawn in the column header
-to the right of the column title.
+Indicates whether or not an arrow should be drawn in the column header.
 \fIDirection\fR must have one of the values
 \fBnone\fR (the default), \fBup\fR, or \fBdown\fR.
 .TP
@@ -2541,7 +2536,7 @@ use to draw the arrow if this column's -arrow option is not \fBnone\fR.
 If an image is specified for a certain state, it overrides the -arrowbitmap option.
 .TP
 \fB\fB-arrowside\fR\fR \fIside\fR
-Indicates on which side an arrow should be drawn, if at all.
+Indicates on which side of the bitmap/image/text the arrow should be drawn.
 \fISide\fR must be either \fBleft\fR or \fBright\fR (the default).
 .TP
 \fB\fB-arrowgravity\fR\fR \fIside\fR
@@ -2551,7 +2546,7 @@ if there is more space available for drawing the arrow then needed.
 .TP
 \fB\fB-arrowpadx\fR\fR \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left and right side of the arrow.
+leave on the left and right of the arrow.
 \fIAmount\fR may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2597,21 +2592,21 @@ This option overrides the \fB-bitmap\fR column option.
 .TP
 \fB\fB-imagepadx\fR\fR \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left and right side of the image.
+leave on the left and right of the image (or bitmap).
 \fIAmount\fR may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
 .TP
 \fB\fB-imagepady\fR\fR \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the top and bottom of the image.
+leave on the top and bottom of the image (or bitmap).
 \fIAmount\fR may be a list
 of two values to specify padding for top and bottom separately;
 it defaults to 0.
 .TP
 \fB\fB-itembackground\fR\fR \fIcolorList\fR
-Specifies a list of colors, which should be used as
-alternating background color for the items of this column.
+Specifies a list of zero or more colors, which are used as
+alternating background colors for items in this column.
 See also the \fB-backgroundmode\fR widget option for more on this.
 .TP
 \fB\fB-justify\fR\fR \fIjustification\fR
@@ -2653,7 +2648,7 @@ Defines a unique name for the column which can be used
 whenever a column must be specified.
 .TP
 \fB\fB-text\fR\fR \fItext\fR
-Specifies a text to be displayed inside the column title.
+Specifies a text string to be displayed as the column title.
 .TP
 \fB\fB-textcolor\fR\fR \fIcolor\fR
 Specifies a color, which should be used as foreground color
@@ -2670,7 +2665,7 @@ of text.
 .TP
 \fB\fB-textpadx\fR\fR \fIamount\fR
 \fIAmount\fR specifies how much padding to
-leave on the left and right side of the text.
+leave on the left and right of the text.
 \fIAmount\fR may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2750,16 +2745,15 @@ is true.
 Use the column to the left, or the column to the left whose -visible option
 is true.
 .SH "STATES"
-A state consists basically of just a string: its \fIstateName\fR.
-For every item a set of these states is managed,
-which means that every item can have every state switched on or off.
+For every item a set of boolean states is managed. These states play an
+integral role in the appearance of each item.
 The following states are predefined for every item:
 .TP
 \fBactive\fR
-At every time this state is set for exactly one item,
-which therefore is called the active item.
+At all times this state is set for exactly one item. The active item is
+used with keyboard navigation.
 When the treectrl widget is created or when the active item is deleted,
-the root item will become the active element.
+the root item will become the active item.
 This state can be modified by means of the widget command \fBactivate\fR.
 .TP
 \fBenabled\fR
@@ -2768,9 +2762,9 @@ It cannot be modified.
 .TP
 \fBfocus\fR
 This state is set for every item,
-if the treectrl widget has currently the focus.
+if the treectrl widget currently has the focus.
 It cannot be modified by means of a widget command,
-but is maintained as reaction of a <FocusIn> or <FocusOut> event.
+but is maintained in reaction to the <FocusIn> and <FocusOut> events.
 .TP
 \fBopen\fR
 If this state is switched on,
@@ -2779,28 +2773,16 @@ the descendants of the item are displayed
 If this state is switched off,
 the descendants of the item are not displayed
 - the item is collapsed.
-For a new item this state is switched on.
-It can be modified by means of the widget commands
+For a new item this state is switched on by default.
+This state can be modified by means of the widget commands
 \fBitem expand\fR, \fBitem collapse\fR, or \fBitem toggle\fR.
 .TP
 \fBselected\fR
-This state is set for every item, which is included in the selection.
+This state is set for every item included in the selection.
 It can be modified by means of the widget command \fBselection\fR.
 .PP
 By means of the \fBstate define\fR widget command
-up to 27 additional \fIstateName\fRs can be defined.
-.PP
-Some widget commands expect a \fIstateDesc\fR argument,
-which is a \fIstateName\fR
-optionally preceded by an exclamation mark (\fB!\fR).
-If the \fIstateName\fR has no leading \fB!\fR
-it describes a currently switched on state,
-if it has a leading \fB!\fR it describes a currently switched off state.
-.PP
-Some widget commands expect a \fIstatePattern\fR argument,
-which should be a non empty list of \fIstateDesc\fRs.
-The pattern matches, if for every element of the list
-the \fIstateDesc\fR describes the same state as the item currently has.
+up to 27 additional states can be defined.
 .SH "PER-STATE OPTIONS"
 The visual appearance of an item can change depending on the state the item
 is in, such as being the active item, being included in the selection, being
@@ -3145,6 +3127,9 @@ Indicates the item nearest to the point given by \fIx\fR and \fIy\fR.
 .TP
 \fBrnc\fR \fIrow column\fR
 Indicates the item in the given \fIrow\fR and \fIcolumn\fR.
+The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options.
 You can memorize \fBrnc\fR as abbreviation of "row 'n' column".
 .TP
 \fBroot\fR

@@ -1,14 +1,14 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.29 2005/07/15 01:39:19 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.30 2005/07/23 00:35:20 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.29 2005/07/15 01:39:19 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.30 2005/07/23 00:35:20 treectrl Exp $ treectrl.n
    -->
 
 <body>
-<h1> treectrl(n) 2.0 treectrl &quot;Tk Commands&quot;</h1>
+<h1> treectrl(n) 2.1 treectrl &quot;Tk Commands&quot;</h1>
 <h2><a name="name">NAME</a></h2>
 <p>
 <p> treectrl - Create and manipulate hierarchical multicolumn widgets
@@ -43,7 +43,7 @@
 &nbsp;&nbsp;&nbsp;&nbsp;<a href="#keywords">KEYWORDS</a><br>
 <h2><a name="synopsis">SYNOPSIS</a></h2>
 <p>
-package require <b>treectrl 2.0</b><br>
+package require <b>treectrl 2.1</b><br>
 <br><table border=1 width=100% cellspacing=0 cellpadding=0><tr            bgcolor=lightyellow><td bgcolor=lightyellow><table 0 width=100% cellspacing=0 cellpadding=0><tr valign=top ><td ><a href="#1"><b class='cmd'>treectrl</b> <i class='arg'>pathName</i> ?<i class='arg'>options</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#2"><i class='arg'>pathName</i> <b class='cmd'>activate</b> <i class='arg'>itemDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#3"><i class='arg'>pathName</i> <b class='cmd'>canvasx</b> <i class='arg'>screenx</i></a></td></tr>
@@ -131,7 +131,7 @@ package require <b>treectrl 2.0</b><br>
 <tr valign=top ><td ><a href="#85"><i class='arg'>pathName</i> <b class='cmd'>item state</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#86"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#87"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#88"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#88"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? <i class='arg'>stateDescList</i></a></td></tr>
 <tr valign=top ><td ><a href="#89"><i class='arg'>pathName</i> <b class='cmd'>item style</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#90"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a></td></tr>
 <tr valign=top ><td ><a href="#91"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a></td></tr>
@@ -407,7 +407,7 @@ Database Class:	<strong>Height</strong><br>
 <dd>
 Specifies the desired height for the window
 in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-The default is 200 pixel.
+The default is 200 pixels.
 If this option is less than or equal to zero then the window will
 not request any size at all.
 
@@ -451,14 +451,9 @@ Database Name:	<strong>itemWidth</strong><br>
 Database Class:	<strong>ItemWidth</strong><br>
 <dd>
 Specifies a fixed width for every item in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;, and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-itemwidthequal</strong><br>
@@ -466,16 +461,10 @@ Database Name:	<strong>itemWidthEqual</strong><br>
 Database Class:	<strong>ItemWidthEqual</strong><br>
 <dd>
 Specifies a boolean that says whether all items should have the same width.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;, and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is &lt;= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;, and
-the treectrl's -itemwidth option is &lt;= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-itemwidthmultiple</strong><br>
@@ -483,16 +472,10 @@ Database Name:	<strong>itemWidthMultiple</strong><br>
 Database Class:	<strong>ItemWidthMultiple</strong><br>
 <dd>
 Specifies a screen distance that every item's width will be evenly divisible by in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;, and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is &lt;= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is &quot;&quot;, and
-the treectrl's -itemwidth option is &lt;= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-linecolor</strong><br>
@@ -614,9 +597,9 @@ The default value is true.
 Database Name:	<strong>treeColumn</strong><br>
 Database Class:	<strong>TreeColumn</strong><br>
 <dd>
-Specifies an integer value that determines which
-column displays the data in an hierarchical fashion.
-Default is 0 meaning that the first column displays the tree.
+Specifies a <a href="#column_description">column description</a> that determines which
+column displays the buttons and lines.
+The default is unspecified.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-usetheme</strong><br>
@@ -643,18 +626,22 @@ not request any size at all.
 Database Name:	<strong>wrap</strong><br>
 Database Class:	<strong>Wrap</strong><br>
 <dd>
-Specifies how to arrange items inside treectrl's window.
-The value must be an empty string, <strong>window</strong>,
-or a list with an integer as first element
-and either <strong>items</strong> or <strong>pixels</strong> as second element.
-The empty string as wrap mode means that each item appears on
-exactly one line on the screen.
-In the other modes multiple items may be displayed in one screen line.
-In <strong>window</strong> mode a screen line break may occur after any element;
-in <strong>items</strong> mode a line break will only be made after the specified
-number of items;
-in <strong>pixels</strong> mode a line break will only be made after the
-specified screen distance is reached.
+Specifies whether items are arranged in a 1- or 2-dimensional layout.
+
+If the value is an empty string (the default), then items are arranged from top
+to bottom (-orient vertical) or from left to right (-orient horizontal) in
+a 1-dimensional layout.
+
+If the value is &quot;<em>N</em> <strong>items</strong>&quot;, then a no more than <em>N</em> items will appear in
+a vertical group (-orient vertical) or horizontal group (-orient horizontal).
+
+If the value is &quot;<em>N</em> <strong>pixels</strong>&quot;, then a no vertical group of items will be
+taller than <em>N</em> pixels (-orient vertical) or no horizontal group of items will
+be wider than <em>N</em> pixels (-orient horizontal).
+
+If the value is <strong>window</strong>, then a no vertical group of items will be
+taller than the window (-orient vertical) or no horizontal group of items will
+be wider than the window (-orient horizontal).
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-xscrolldelay</strong><br>
@@ -780,10 +767,10 @@ The following forms of the command are supported:
 <dl>
 <dt><a name="8"><i class='arg'>pathName</i> <b class='cmd'>column bbox</b> <i class='arg'>column</i></a><dd>
 
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the column header specified by <i class='arg'>column</i>.
-If the treectrl is configured to don't display the column headers
-by means of the <strong>-showheader</strong> option,
+If the treectrl is configured not to display the column headers
+by means of the <strong>-showheader</strong> option, then
 an empty list is returned instead.
 
 <br><br>
@@ -980,10 +967,10 @@ command.
 <br><br>
 <dt><a name="26"><i class='arg'>pathName</i> <b class='cmd'>contentbox</b></a><dd>
 
-Returns a list with four elements giving an approximate bounding box
-for the space used to display the items inside the columns,
-i.e. the space of the treectrl widget without
-the surrounding borders and the column headers.
+Returns a list with four elements giving the bounding box
+for the space used to display the items,
+i.e. the space of the treectrl window without
+the surrounding borders or the column headers.
 
 <br><br>
 <dt><a name="27"><i class='arg'>pathName</i> <b class='cmd'>debug</b> <i class='arg'>option</i> ?<i class='arg'>arg arg ...</i>?</a><dd>
@@ -1062,7 +1049,7 @@ debugging options <strong>-enable</strong> and <strong>-display</strong> are swi
 <dt><a name="30"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b></a><dd>
 
 For every of the treectrl widget
-a line with some internal valuess info about all items
+a line with some internal values info about all items
 is printed to stdout.
 The command returns the empty string.
 
@@ -1288,14 +1275,15 @@ The following forms of the command are supported:
 <dl>
 <dt><a name="51"><i class='arg'>pathName</i> <b class='cmd'>item ancestors</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns a list containing the numerical indexes of all ancestors
-of the item specified by <i class='arg'>itemDesc</i> from its parent up to the
-root item.
+Returns a list containing the item ids of the ancestors
+of the item specified by <i class='arg'>itemDesc</i>. The first list value is the parent,
+the second is the parent's parent, an so on. The last list value will be the
+root item if <i class='arg'>itemDesc</i> is a descendant of the root item.
 
 <br><br>
 <dt><a name="52"><i class='arg'>pathName</i> <b class='cmd'>item bbox</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>element</i>?</a><dd>
 
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the item described by <i class='arg'>itemDesc</i>.
 If no further argument is specified, the bbox spans the area of the item
 over all columns. If a <i class='arg'>column</i> is specified, only the area of the item
@@ -1313,7 +1301,7 @@ values accepted by the <b class='cmd'>item configure</b> command.
 <br><br>
 <dt><a name="54"><i class='arg'>pathName</i> <b class='cmd'>item children</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns a list containing the numerical indexes of all children
+Returns a list containing the item ids of all children
 of the item specified by <i class='arg'>itemDesc</i> in the correct order from
 the first child to the last child.
 
@@ -1463,9 +1451,10 @@ and b) each ancestor's <strong>-visible</strong> option is true
 <dt><a name="61"><i class='arg'>pathName</i> <b class='cmd'>item delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
 Deletes the specified item(s).
-<i class='arg'>First</i> and <i class='arg'>last</i> must be the string <strong>all</strong> or an <i class='arg'>itemDesc</i>.
-If either <i class='arg'>first</i> or <i class='arg'>last</i> is specified as <strong>all</strong>, all items are
-deleted; if <i class='arg'>first</i> is specified as <i class='arg'>itemDesc</i> and <i class='arg'>last</i> isn't
+<i class='arg'>First</i> and <i class='arg'>last</i> must be the string <strong>all</strong> or a valid
+<a href="#item_description">item description</a>.
+If either <i class='arg'>first</i> or <i class='arg'>last</i> is specified as <strong>all</strong>, then all items are
+deleted. If <i class='arg'>first</i> is specified and <i class='arg'>last</i> isn't
 specified, the item described by <i class='arg'>first</i> is deleted.
 If both <i class='arg'>first</i> and <i class='arg'>last</i> are specified,
 they must decribe items with a common ancestor;
@@ -1476,6 +1465,12 @@ If the current <strong>active</strong> item is deleted, the root item becomes th
 If the current selection <strong>anchor</strong> item is deleted, the root item becomes the new anchor item.
 There is no way to delete the root item of the treectrl widget;
 in all cases the specification of the root item is ignored.
+<br><br>
+For each call to this command, two events may be generated.
+If any of the deleted items are selected, then a <strong>&lt;Selection&gt;</strong> event
+is generated just before the items are deleted.
+If any items were actually deleted, then an <strong>&lt;ItemDelete&gt;</strong> event event is generated just before the items
+are deleted.
 
 <br><br>
 <dt><a name="62"><i class='arg'>pathName</i> <b class='cmd'>item dump</b> <i class='arg'>itemDesc</i></a><dd>
@@ -1570,7 +1565,7 @@ and an <strong>&lt;Expand-after&gt;</strong> event after the item state was chan
 <br><br>
 <dt><a name="69"><i class='arg'>pathName</i> <b class='cmd'>item firstchild</b> <i class='arg'>parent</i> ?<i class='arg'>child</i>?</a><dd>
 
-If <i class='arg'>child</i> is not specified, returns the numerical index of the first
+If <i class='arg'>child</i> is not specified, returns the item id of the first
 child of the item described by <i class='arg'>parent</i>.
 If <i class='arg'>child</i> is specified, it must described an item
 that is not an ancestor of <i class='arg'>parent</i>.
@@ -1579,8 +1574,8 @@ Then it will become the new first child of <i class='arg'>parent</i>.
 <br><br>
 <dt><a name="70"><i class='arg'>pathName</i> <b class='cmd'>item id</b> <i class='arg'>itemDesc</i></a><dd>
 
-This command resolves the item description <i class='arg'>itemDesc</i> into a unique item
-identifier (see <a href="#item_description">ITEM DESCRIPTION</a> below). If the item described by
+This command resolves the <a href="#item_description">item description</a> <i class='arg'>itemDesc</i> into a unique item
+identifier. If the item described by
 <i class='arg'>itemDesc</i> doesn't exist, this command returns an empty string.
 
 <br><br>
@@ -1610,24 +1605,24 @@ parent of the item decribed by <i class='arg'>descendant</i>, 0 otherwise.
 <br><br>
 <dt><a name="73"><i class='arg'>pathName</i> <b class='cmd'>item isopen</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns 1, if the item described by <i class='arg'>itemDesc</i> has cuurently the
+Returns 1 if the item described by <i class='arg'>itemDesc</i> has the
 state <strong>open</strong> switched on, 0 otherwise.
 
 <br><br>
 <dt><a name="74"><i class='arg'>pathName</i> <b class='cmd'>item lastchild</b> <i class='arg'>parent</i> ?<i class='arg'>child</i>?</a><dd>
 
-If <i class='arg'>child</i> is not specified, returns the numerical index of the last
+If <i class='arg'>child</i> is not specified, returns the item id of the last
 child of the item described by <i class='arg'>parent</i>.
-If <i class='arg'>child</i> is specified, it must described an item
+If <i class='arg'>child</i> is specified, it must describe an item
 that is not an ancestor of <i class='arg'>parent</i>.
 Then it will become the new last child of <i class='arg'>parent</i>.
 
 <br><br>
 <dt><a name="75"><i class='arg'>pathName</i> <b class='cmd'>item nextsibling</b> <i class='arg'>sibling</i> ?<i class='arg'>next</i>?</a><dd>
 
-If <i class='arg'>next</i> is not specified, returns the numerical index of the next
+If <i class='arg'>next</i> is not specified, returns the item id of the next
 sibling of the item described by <i class='arg'>sibling</i>.
-If <i class='arg'>next</i> is specified, it must described an item
+If <i class='arg'>next</i> is specified, it must describe an item
 that is not an ancestor of <i class='arg'>sibling</i>.
 Then it will become the new next sibling of <i class='arg'>sibling</i>.
 
@@ -1650,25 +1645,26 @@ is not visible.
 <br><br>
 <dt><a name="78"><i class='arg'>pathName</i> <b class='cmd'>item parent</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns the numerical index of the parent of the item
+Returns the item id of the parent of the item
 described by <i class='arg'>itemDesc</i>.
 
 <br><br>
 <dt><a name="79"><i class='arg'>pathName</i> <b class='cmd'>item prevsibling</b> <i class='arg'>sibling</i> ?<i class='arg'>prev</i>?</a><dd>
 
-If <i class='arg'>prev</i> is not specified, returns the numerical index of the previous
+If <i class='arg'>prev</i> is not specified, returns the item id of the previous
 sibling of the item described by <i class='arg'>sibling</i>.
-If <i class='arg'>prev</i> is specified, it must described an item
+If <i class='arg'>prev</i> is specified, it must describe an item
 that is not an ancestor of <i class='arg'>sibling</i>.
 Then it will become the new previous sibling of <i class='arg'>sibling</i>.
 
 <br><br>
 <dt><a name="80"><i class='arg'>pathName</i> <b class='cmd'>item range</b> <i class='arg'>first</i> <i class='arg'>last</i></a><dd>
 
-Returns a list containing the unique identifiers of all items
+Returns a list containing the item ids of all items
 in the range between <i class='arg'>first</i> and <i class='arg'>last</i>, inclusive.
 The order between <i class='arg'>first</i> and <i class='arg'>last</i> doesn't matter,
-and the result is always ordered by the increasing index of the items.
+and the result is always sorted by the increasing order of the items (as
+returned by the <b class='cmd'>item order</b> command).
 The items specified by <i class='arg'>first</i> and <i class='arg'>last</i> must share a common
 ancestor.
 
@@ -1676,13 +1672,15 @@ ancestor.
 <dt><a name="81"><i class='arg'>pathName</i> <b class='cmd'>item remove</b> <i class='arg'>itemDesc</i></a><dd>
 
 Removes the item described by <i class='arg'>itemDesc</i>
-from the children list of its father, so that it will become an orphan.
+from the list of children of its parent, so that it will become an orphan.
 
 <br><br>
 <dt><a name="82"><i class='arg'>pathName</i> <b class='cmd'>item rnc</b> <i class='arg'>itemDesc</i></a><dd>
 
 Returns a list of two integers, which corresponds to the row and column
-of the item described by <i class='arg'>itemDesc</i>.
+of the item described by <i class='arg'>itemDesc</i>. The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options. If the item is not displayed, this command returns an empty string.
 
 <br><br>
 <dt><a name="83"><i class='arg'>pathName</i> <b class='cmd'>item sort</b> <i class='arg'>itemDesc</i> ?<i class='arg'>option ...</i>?</a><dd>
@@ -1777,32 +1775,34 @@ The following forms of the command are supported:
 
 <dt><a name="86"><i class='arg'>pathName</i> <b class='cmd'>item state forcolumn</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> ?<i class='arg'>stateDescList</i>?</a><dd>
 
-Just like <b class='cmd'>item state set</b> but manipulates user-defined states for a single
-item column, not the item as a whole.
+Just like <b class='cmd'>item state set</b> but manipulates dynamic states for a single
+item column, not the item as a whole. If <i class='arg'>stateDescList</i> is unspecified,
+this command returns a list containing the names of all the dynamic states
+which are switched on in <i class='arg'>column</i>.
 
 <br><br>
 <dt><a name="87"><i class='arg'>pathName</i> <b class='cmd'>item state get</b> <i class='arg'>itemDesc</i> ?<i class='arg'>stateName</i>?</a><dd>
 
 If no <i class='arg'>stateName</i> is specified, returns a list containing
-the names of all (predefined and user defined) states
+the names of all (static and dynamic) states
 which are currently switched on for the item described by <i class='arg'>itemDesc</i>.
 If a <i class='arg'>stateName</i> is specified,
 1 is returned if the specified state is currently switched on for the item,
 0 otherwise.
 
 <br><br>
-<dt><a name="88"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? ?<i class='arg'>stateDescList</i>?</a><dd>
+<dt><a name="88"><i class='arg'>pathName</i> <b class='cmd'>item state set</b> <i class='arg'>itemDesc</i> ?<i class='arg'>lastItem</i>? <i class='arg'>stateDescList</i></a><dd>
 
 Every element of <i class='arg'>stateDescList</i>
-must describe a user defined state (see <a href="#states">STATES</a> below),
-with the particularity that the state name may have also a leading <strong>~</strong>.
+must be the name of a dynamic state (see <a href="#states">STATES</a> below),
+optionally preceded by a <strong>~</strong> or <strong>!</strong> character.
 Every state with a leading <strong>!</strong> will be switched off for the
 item described by <i class='arg'>itemDesc</i>,
 every state with a leading <strong>~</strong> will be toggled, and
 every state without leading <strong>!</strong> or <strong>~</strong> will be switched on.
 If <i class='arg'>lastItem</i> is specified, the state changes will be made for all items
 in the range betwen <i class='arg'>itemDesc</i> and <i class='arg'>lastItem</i>.
-<i class='arg'>ItemDesc</i> may be the string <strong>all</strong>,
+If <i class='arg'>ItemDesc</i> is the string <strong>all</strong>,
 then the state changes are made for all items of the treectrl widget.
 
 </dl>
@@ -1818,9 +1818,10 @@ The following forms of the command are supported:
 <dl>
 <dt><a name="90"><i class='arg'>pathName</i> <b class='cmd'>item style elements</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i></a><dd>
 
-A list is returned
-containing the currently defined elements of the style,
-which is set for the item described by <i class='arg'>itemDesc</i> in <i class='arg'>column</i>.
+This command returns a list containing the names of elements which were
+configured by the <b class='cmd'>item element configure</b> command for the item
+described by <i class='arg'>itemDesc</i> in <i class='arg'>column</i>. If there is no style assigned
+to <i class='arg'>column</i> an error is returned.
 
 <br><br>
 <dt><a name="91"><i class='arg'>pathName</i> <b class='cmd'>item style map</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>style</i> <i class='arg'>map</i></a><dd>
@@ -2186,11 +2187,11 @@ Deprecated. Use the <b class='cmd'>item count</b> command instead.
 <br><br>
 <dt><a name="119"><i class='arg'>pathName</i> <b class='cmd'>orphans</b></a><dd>
 
-Returns a list containing the numerical ids of all items
-which has no parent item.
-An item is created without having a parent,
-and can later become an orphan again
-by means of the <b class='cmd'>item remove</b> widget command.
+Returns a list containing the item ids of all items
+which have no parent.
+When an item is created, it has no parent by default,
+and can later become an orphan
+by means of the <b class='cmd'>item remove</b> widget command. The root item is not returned.
 
 <br><br>
 <dt><a name="120"><i class='arg'>pathName</i> <b class='cmd'>range</b> <i class='arg'>first</i> <i class='arg'>last</i></a><dd>
@@ -2200,7 +2201,7 @@ Deprecated. Use the <b class='cmd'>item range</b> command instead.
 <br><br>
 <dt><a name="121"><i class='arg'>pathName</i> <b class='cmd'>state</b> <i class='arg'>option</i> ?<i class='arg'>stateName</i>?</a><dd>
 
-This command is used to manipulate the list of user defined states,
+This command is used to manipulate the list of user-defined states,
 see section <a href="#states">STATES</a> below.
 The exact behavior of the command depends on the <i class='arg'>option</i> argument
 that follows the <b class='cmd'>state</b> argument.
@@ -2211,26 +2212,26 @@ The following forms of the command are supported:
 <dt><a name="122"><i class='arg'>pathName</i> <b class='cmd'>state define</b> <i class='arg'>stateName</i></a><dd>
 
 Defines a new state with the name <i class='arg'>stateName</i>,
-which must not be the name of a predefined or already user defined state.
+which must not be the name of an existing state.
 
 <br><br>
 <dt><a name="123"><i class='arg'>pathName</i> <b class='cmd'>state linkage</b> <i class='arg'>stateName</i></a><dd>
 
 Returns a string indicating
-whether the specified state is user defined
+whether the specified state is user-defined
 by means of the <b class='cmd'>state define</b> widget command (<strong>dynamic</strong>)
 or predefined by the treectrl widget itself (<strong>static</strong>).
 
 <br><br>
 <dt><a name="124"><i class='arg'>pathName</i> <b class='cmd'>state names</b></a><dd>
 
-Returns a list containing the names of all user defined states.
+Returns a list containing the names of all user-defined states.
 
 <br><br>
 <dt><a name="125"><i class='arg'>pathName</i> <b class='cmd'>state undefine</b> ?<i class='arg'>stateName ...</i>?</a><dd>
 
-Every <i class='arg'>stateName</i> must be the name of a user defined state.
-Removes this state from the list of user defined states.
+Every <i class='arg'>stateName</i> must be the name of a user-defined state.
+Removes this state from the list of user-defined states.
 </dl>
 
 <dt><a name="126"><i class='arg'>pathName</i> <b class='cmd'>see</b> <i class='arg'>itemDesc</i></a><dd>
@@ -2253,13 +2254,14 @@ It has several forms, depending on <i class='arg'>option</i>:
 <dt><a name="128"><i class='arg'>pathName</i> <b class='cmd'>selection add</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
 <i class='arg'>First</i> and <i class='arg'>last</i> (if specified)
-must be the string <strong>all</strong> or an <i class='arg'>itemDesc</i>.
-Selects all of the items in the range between
-<i class='arg'>first</i> and <i class='arg'>last</i>, inclusive,
+must be the string <strong>all</strong> or a valid <a href="#item_description">item description</a>.
+Adds every unselected item in the range between
+<i class='arg'>first</i> and <i class='arg'>last</i>, inclusive, to the selection
 without affecting the selection state of items outside that range.
 If one of the arguments is the string <strong>all</strong>,
-all items of the treectrl widget are added to the selection instead.
-A <strong>&lt;Selection&gt;</strong> event is generated.
+every unselected item in the treectrl widget is added to the selection.
+A <strong>&lt;Selection&gt;</strong> event is generated if any items were added to the
+selection.
 
 <br><br>
 <dt><a name="129"><i class='arg'>pathName</i> <b class='cmd'>selection anchor</b> ?<i class='arg'>itemDesc</i>?</a><dd>
@@ -2276,14 +2278,15 @@ Returns the numerical id of the selection anchor item.
 <dt><a name="130"><i class='arg'>pathName</i> <b class='cmd'>selection clear</b> ?<i class='arg'>first</i>? ?<i class='arg'>last</i>?</a><dd>
 
 <i class='arg'>First</i> and <i class='arg'>last</i> (if specified)
-must be the string <strong>all</strong> or an <i class='arg'>itemDesc</i>.
+must be the string <strong>all</strong> or a valid <a href="#item_description">item description</a>.
 If any of the items between <i class='arg'>first</i> and <i class='arg'>last</i>
 (inclusive) are selected, they are deselected.
 The selection state is not changed for items outside this range.
-If no additional arguments is given
-or one of the arguments is the string <strong>all</strong>,
-the selection is completely cleared instead.
-A <strong>&lt;Selection&gt;</strong> event is generated.
+If no additional arguments are given,
+or if one of the arguments is the string <strong>all</strong>,
+then all items are removed from the selection.
+A <strong>&lt;Selection&gt;</strong> event is generated if any items were removed from the
+selection.
 
 <br><br>
 <dt><a name="131"><i class='arg'>pathName</i> <b class='cmd'>selection count</b></a><dd>
@@ -2294,7 +2297,7 @@ of items in the treectrl that are currently selected.
 <br><br>
 <dt><a name="132"><i class='arg'>pathName</i> <b class='cmd'>selection get</b></a><dd>
 
-Returns a list containing the numerical ids of
+Returns a list containing the item ids of
 all of the items in the treectrl that are currently selected.
 If there are no items selected in the treectrl then an empty
 string is returned.
@@ -2302,27 +2305,24 @@ string is returned.
 <br><br>
 <dt><a name="133"><i class='arg'>pathName</i> <b class='cmd'>selection includes</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns 1 if the item indicated by <i class='arg'>itemDesc</i> is currently
+Returns 1 if the item described by <i class='arg'>itemDesc</i> is currently
 selected, 0 if it isn't.
 
 <br><br>
 <dt><a name="134"><i class='arg'>pathName</i> <b class='cmd'>selection modify</b> <i class='arg'>select</i> <i class='arg'>deselect</i></a><dd>
 
 Both arguments <i class='arg'>select</i> and <i class='arg'>deselect</i> must be
-the string <strong>all</strong> or a possibly empty list of <i class='arg'>itemDesc</i>s.
-Selects all of the items described by <i class='arg'>select</i>,
-then deselects all items described by <i class='arg'>deselect</i>,
-without affecting the selection state of any item
-not mentioned in both arguments.
-If one item is described in both arguments <i class='arg'>select</i> and <i class='arg'>deselect</i>,
-it is added to the selection.
-A <strong>&lt;Selection&gt;</strong> event is generated.
+the string <strong>all</strong> or a possibly-empty list of <a href="#item_description">item descriptions</a>.
+Any unselected items in <i class='arg'>select</i> are added to the selection,
+and any selected items in <i class='arg'>deselect</i> are removed from the selection (except
+for those items which are also in <i class='arg'>select</i>).
+A <strong>&lt;Selection&gt;</strong> event is generated if any items were selected or deselected.
 </dl>
 
 <dt><a name="135"><i class='arg'>pathName</i> <b class='cmd'>style</b> <i class='arg'>option</i> ?<i class='arg'>element</i>? ?<i class='arg'>arg arg ...</i>?</a><dd>
 
-This command is used to manipulate styles, which could be considered
-as a geometry manager for the elements of one item.
+This command is used to manipulate styles, which can be thought of
+as a geometry manager for elements.
 The exact behavior of the command depends on the <i class='arg'>option</i> argument
 that follows the <b class='cmd'>style</b> argument.
 The following forms of the command are supported:
@@ -2649,8 +2649,7 @@ The following options are supported for columns:
 
 <dl>
 <dt><strong><strong>-arrow</strong></strong> <i class='arg'>direction</i><dd>
-Indicates whether or not an arrow should be drawn in the column header
-to the right of the column title.
+Indicates whether or not an arrow should be drawn in the column header.
 <i class='arg'>Direction</i> must have one of the values
 <strong>none</strong> (the default), <strong>up</strong>, or <strong>down</strong>.
 
@@ -2667,7 +2666,7 @@ If an image is specified for a certain state, it overrides the -arrowbitmap opti
 
 <br><br>
 <dt><strong><strong>-arrowside</strong></strong> <i class='arg'>side</i><dd>
-Indicates on which side an arrow should be drawn, if at all.
+Indicates on which side of the bitmap/image/text the arrow should be drawn.
 <i class='arg'>Side</i> must be either <strong>left</strong> or <strong>right</strong> (the default).
 
 <br><br>
@@ -2679,7 +2678,7 @@ if there is more space available for drawing the arrow then needed.
 <br><br>
 <dt><strong><strong>-arrowpadx</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the left and right side of the arrow.
+leave on the left and right of the arrow.
 <i class='arg'>Amount</i> may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2734,7 +2733,7 @@ This option overrides the <strong>-bitmap</strong> column option.
 <br><br>
 <dt><strong><strong>-imagepadx</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the left and right side of the image.
+leave on the left and right of the image (or bitmap).
 <i class='arg'>Amount</i> may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2742,15 +2741,15 @@ it defaults to 6.
 <br><br>
 <dt><strong><strong>-imagepady</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the top and bottom of the image.
+leave on the top and bottom of the image (or bitmap).
 <i class='arg'>Amount</i> may be a list
 of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 <br><br>
 <dt><strong><strong>-itembackground</strong></strong> <i class='arg'>colorList</i><dd>
-Specifies a list of colors, which should be used as
-alternating background color for the items of this column.
+Specifies a list of zero or more colors, which are used as
+alternating background colors for items in this column.
 See also the <strong>-backgroundmode</strong> widget option for more on this.
 
 <br><br>
@@ -2801,7 +2800,7 @@ whenever a column must be specified.
 
 <br><br>
 <dt><strong><strong>-text</strong></strong> <i class='arg'>text</i><dd>
-Specifies a text to be displayed inside the column title.
+Specifies a text string to be displayed as the column title.
 
 <br><br>
 <dt><strong><strong>-textcolor</strong></strong> <i class='arg'>color</i><dd>
@@ -2821,7 +2820,7 @@ of text.
 <br><br>
 <dt><strong><strong>-textpadx</strong></strong> <i class='arg'>amount</i><dd>
 <i class='arg'>Amount</i> specifies how much padding to
-leave on the left and right side of the text.
+leave on the left and right of the text.
 <i class='arg'>Amount</i> may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2925,17 +2924,16 @@ is true.
 
 <h2><a name="states">STATES</a></h2>
 <p>
-A state consists basically of just a string: its <i class='arg'>stateName</i>.
-For every item a set of these states is managed,
-which means that every item can have every state switched on or off.
+For every item a set of boolean states is managed. These states play an
+integral role in the appearance of each item.
 The following states are predefined for every item:
 
 <dl>
 <dt><strong>active</strong><dd>
-At every time this state is set for exactly one item,
-which therefore is called the active item.
+At all times this state is set for exactly one item. The active item is
+used with keyboard navigation.
 When the treectrl widget is created or when the active item is deleted,
-the root item will become the active element.
+the root item will become the active item.
 This state can be modified by means of the widget command <b class='cmd'>activate</b>.
 
 <br><br>
@@ -2946,9 +2944,9 @@ It cannot be modified.
 <br><br>
 <dt><strong>focus</strong><dd>
 This state is set for every item,
-if the treectrl widget has currently the focus.
+if the treectrl widget currently has the focus.
 It cannot be modified by means of a widget command,
-but is maintained as reaction of a &lt;FocusIn&gt; or &lt;FocusOut&gt; event.
+but is maintained in reaction to the &lt;FocusIn&gt; and &lt;FocusOut&gt; events.
 
 <br><br>
 <dt><strong>open</strong><dd>
@@ -2958,33 +2956,19 @@ the descendants of the item are displayed
 If this state is switched off,
 the descendants of the item are not displayed
 - the item is collapsed.
-For a new item this state is switched on.
-It can be modified by means of the widget commands
+For a new item this state is switched on by default.
+This state can be modified by means of the widget commands
 <b class='cmd'>item expand</b>, <b class='cmd'>item collapse</b>, or <b class='cmd'>item toggle</b>.
 
 <br><br>
 <dt><strong>selected</strong><dd>
-This state is set for every item, which is included in the selection.
+This state is set for every item included in the selection.
 It can be modified by means of the widget command <b class='cmd'>selection</b>.
 </dl>
 
 <p>
 By means of the <b class='cmd'>state define</b> widget command
-up to 27 additional <i class='arg'>stateName</i>s can be defined.
-
-<p>
-Some widget commands expect a <i class='arg'>stateDesc</i> argument,
-which is a <i class='arg'>stateName</i>
-optionally preceded by an exclamation mark (<strong>!</strong>).
-If the <i class='arg'>stateName</i> has no leading <strong>!</strong>
-it describes a currently switched on state,
-if it has a leading <strong>!</strong> it describes a currently switched off state.
-
-<p>
-Some widget commands expect a <i class='arg'>statePattern</i> argument,
-which should be a non empty list of <i class='arg'>stateDesc</i>s.
-The pattern matches, if for every element of the list
-the <i class='arg'>stateDesc</i> describes the same state as the item currently has.
+up to 27 additional states can be defined.
 
 <h2><a name="per-state_options">PER-STATE OPTIONS</a></h2>
 <p>
@@ -3399,6 +3383,9 @@ Indicates the item nearest to the point given by <i class='arg'>x</i> and <i cla
 <br><br>
 <dt><strong>rnc</strong> <i class='arg'>row column</i><dd>
 Indicates the item in the given <i class='arg'>row</i> and <i class='arg'>column</i>.
+The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options.
 You can memorize <strong>rnc</strong> as abbreviation of &quot;row 'n' column&quot;.
 
 <br><br>

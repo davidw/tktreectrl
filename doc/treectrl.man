@@ -3,11 +3,11 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.30 2005/07/15 01:39:20 treectrl Exp $}
-][manpage_begin treectrl n 2.0]
+  $Id: treectrl.man,v 1.31 2005/07/23 00:35:20 treectrl Exp $}
+][manpage_begin treectrl n 2.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
-[require treectrl 2.0]
+[require treectrl 2.1]
 
 [description]
 [list_begin definitions] 
@@ -165,7 +165,7 @@ double-buffered, so it works with a buffer size as big as the biggest item.
 [tkoption_def -height height Height]
 Specifies the desired height for the window
 in any of the forms acceptable to [fun Tk_GetPixels].
-The default is 200 pixel.
+The default is 200 pixels.
 If this option is less than or equal to zero then the window will
 not request any size at all.
 
@@ -193,40 +193,23 @@ use it.
 
 [tkoption_def -itemwidth itemWidth ItemWidth]
 Specifies a fixed width for every item in any of the forms acceptable to [fun Tk_GetPixels].
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "".
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
 
 [tkoption_def -itemwidthequal itemWidthEqual ItemWidthEqual]
 Specifies a boolean that says whether all items should have the same width.
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is <= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -itemwidth option is <= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 
 [tkoption_def -itemwidthmultiple itemWidthMultiple ItemWidthMultiple]
 Specifies a screen distance that every item's width will be evenly divisible by in any of the forms acceptable to [fun Tk_GetPixels].
-This option only has an effect when either of these sets of conditions are met:
-a) the treectrl's -orient option is vertical, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -wrap option causes a 2-dimension arrangement of items, and
-the treectrl's -itemwidth option is <= 0, or
-b) the treectrl's -orient option is horizontal, and
-only a single column is visible, and
-the visible column's -width option is "", and
-the treectrl's -itemwidth option is <= 0.
+If more than one column is visible, then this option has no effect.
+If the -orient option is vertical, and the -wrap option is unspecified, then this
+option has no effect (in that case all items are as wide as the column).
+If the -itemwidth option is specified, then this option has no effect.
 
 [tkoption_def -linecolor lineColor LineColor]
 Specifies the color which should be used for drawing
@@ -296,9 +279,9 @@ should draw the connecting lines between children of the root item.
 The default value is true.
 
 [tkoption_def -treecolumn treeColumn TreeColumn]
-Specifies an integer value that determines which
-column displays the data in an hierarchical fashion.
-Default is 0 meaning that the first column displays the tree.
+Specifies a [sectref {COLUMN DESCRIPTION} {column description}] that determines which
+column displays the buttons and lines.
+The default is unspecified.
 
 [tkoption_def -usetheme useTheme UseTheme]
 Specifies a boolean value that determines whether this widget should draw
@@ -313,18 +296,22 @@ If this option is less than or equal to zero then the window will
 not request any size at all.
 
 [tkoption_def -wrap wrap Wrap]
-Specifies how to arrange items inside treectrl's window.
-The value must be an empty string, [const window],
-or a list with an integer as first element
-and either [const items] or [const pixels] as second element.
-The empty string as wrap mode means that each item appears on
-exactly one line on the screen.
-In the other modes multiple items may be displayed in one screen line.
-In [const window] mode a screen line break may occur after any element;
-in [const items] mode a line break will only be made after the specified
-number of items;
-in [const pixels] mode a line break will only be made after the
-specified screen distance is reached.
+Specifies whether items are arranged in a 1- or 2-dimensional layout.
+
+If the value is an empty string (the default), then items are arranged from top
+to bottom (-orient vertical) or from left to right (-orient horizontal) in
+a 1-dimensional layout.
+
+If the value is "[emph N] [const items]", then a no more than [emph N] items will appear in
+a vertical group (-orient vertical) or horizontal group (-orient horizontal).
+
+If the value is "[emph N] [const pixels]", then a no vertical group of items will be
+taller than [emph N] pixels (-orient vertical) or no horizontal group of items will
+be wider than [emph N] pixels (-orient horizontal).
+
+If the value is [const window], then a no vertical group of items will be
+taller than the window (-orient vertical) or no horizontal group of items will
+be wider than the window (-orient horizontal).
 
 [tkoption_def -xscrolldelay xScrollDelay ScrollDelay]
 Specifies the amount of time before the default binding should handle
@@ -422,10 +409,10 @@ The following forms of the command are supported:
 
 [list_begin definitions]
 [call [arg pathName] [cmd {column bbox}] [arg column]]
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the column header specified by [arg column].
-If the treectrl is configured to don't display the column headers
-by means of the [option -showheader] option,
+If the treectrl is configured not to display the column headers
+by means of the [option -showheader] option, then
 an empty list is returned instead.
 
 [call [arg pathName] [cmd {column cget}] [arg column] [arg option]]
@@ -585,10 +572,10 @@ this case the command returns an empty string.
 command.
 
 [call [arg pathName] [cmd contentbox]]
-Returns a list with four elements giving an approximate bounding box
-for the space used to display the items inside the columns,
-i.e. the space of the treectrl widget without
-the surrounding borders and the column headers.
+Returns a list with four elements giving the bounding box
+for the space used to display the items,
+i.e. the space of the treectrl window without
+the surrounding borders or the column headers.
 
 [call [arg pathName] [cmd debug] [arg option] [opt [arg {arg arg ...}]]]
 This command is used to facilitate debugging of the treectrl widget.
@@ -656,7 +643,7 @@ debugging options [option -enable] and [option -display] are switched on.
 
 [call [arg pathName] [cmd {debug dinfo}]]
 For every of the treectrl widget
-a line with some internal valuess info about all items
+a line with some internal values info about all items
 is printed to stdout.
 The command returns the empty string.
 
@@ -849,13 +836,14 @@ The following forms of the command are supported:
 
 [list_begin definitions]
 [call [arg pathName] [cmd {item ancestors}] [arg itemDesc]]
-Returns a list containing the numerical indexes of all ancestors
-of the item specified by [arg itemDesc] from its parent up to the
-root item.
+Returns a list containing the item ids of the ancestors
+of the item specified by [arg itemDesc]. The first list value is the parent,
+the second is the parent's parent, an so on. The last list value will be the
+root item if [arg itemDesc] is a descendant of the root item.
 
 [call [arg pathName] [cmd {item bbox}] [arg itemDesc] [opt [arg column]] \
      [opt [arg element]]]
-Returns a list with four elements giving an approximate bounding box
+Returns a list with four elements giving the bounding box
 for the item described by [arg itemDesc].
 If no further argument is specified, the bbox spans the area of the item
 over all columns. If a [arg column] is specified, only the area of the item
@@ -869,7 +857,7 @@ Returns the current value of the configuration option for the item specified by
 values accepted by the [cmd "item configure"] command.
 
 [call [arg pathName] [cmd {item children}] [arg itemDesc]]
-Returns a list containing the numerical indexes of all children
+Returns a list containing the item ids of all children
 of the item specified by [arg itemDesc] in the correct order from
 the first child to the last child.
 
@@ -997,9 +985,10 @@ and b) each ancestor's [option -visible] option is true
 
 [call [arg pathName] [cmd {item delete}] [arg first] [opt [arg last]]]
 Deletes the specified item(s).
-[arg First] and [arg last] must be the string [const all] or an [arg itemDesc].
-If either [arg first] or [arg last] is specified as [const all], all items are
-deleted; if [arg first] is specified as [arg itemDesc] and [arg last] isn't
+[arg First] and [arg last] must be the string [const all] or a valid
+[sectref {ITEM DESCRIPTION} {item description}].
+If either [arg first] or [arg last] is specified as [const all], then all items are
+deleted. If [arg first] is specified and [arg last] isn't
 specified, the item described by [arg first] is deleted.
 If both [arg first] and [arg last] are specified,
 they must decribe items with a common ancestor;
@@ -1010,6 +999,12 @@ If the current [const active] item is deleted, the root item becomes the new act
 If the current selection [const anchor] item is deleted, the root item becomes the new anchor item.
 There is no way to delete the root item of the treectrl widget;
 in all cases the specification of the root item is ignored.
+[nl]
+For each call to this command, two events may be generated.
+If any of the deleted items are selected, then a [const <Selection>] event
+is generated just before the items are deleted.
+If any items were actually deleted, then an [const <ItemDelete>] event event is generated just before the items
+are deleted.
 
 [call [arg pathName] [cmd {item dump}] [arg itemDesc]]
 Returns a list with six elements in the form
@@ -1095,15 +1090,15 @@ an [const <Expand-before>] event before the item state is changed,
 and an [const <Expand-after>] event after the item state was changed.
 
 [call [arg pathName] [cmd {item firstchild}] [arg parent] [opt [arg child]]]
-If [arg child] is not specified, returns the numerical index of the first
+If [arg child] is not specified, returns the item id of the first
 child of the item described by [arg parent].
 If [arg child] is specified, it must described an item
 that is not an ancestor of [arg parent].
 Then it will become the new first child of [arg parent].
 
 [call [arg pathName] [cmd {item id}] [arg itemDesc]]
-This command resolves the item description [arg itemDesc] into a unique item
-identifier (see [sectref {ITEM DESCRIPTION}] below). If the item described by
+This command resolves the [sectref {ITEM DESCRIPTION} {item description}] [arg itemDesc] into a unique item
+identifier. If the item described by
 [arg itemDesc] doesn't exist, this command returns an empty string.
 
 [call [arg pathName] [cmd {item image}] [arg itemDesc] [opt [arg column]] \
@@ -1128,20 +1123,20 @@ Returns 1 if the item described by [arg itemDesc] is a direct or indirect
 parent of the item decribed by [arg descendant], 0 otherwise.
 
 [call [arg pathName] [cmd {item isopen}] [arg itemDesc]]
-Returns 1, if the item described by [arg itemDesc] has cuurently the
+Returns 1 if the item described by [arg itemDesc] has the
 state [const open] switched on, 0 otherwise.
 
 [call [arg pathName] [cmd {item lastchild}] [arg parent] [opt [arg child]]]
-If [arg child] is not specified, returns the numerical index of the last
+If [arg child] is not specified, returns the item id of the last
 child of the item described by [arg parent].
-If [arg child] is specified, it must described an item
+If [arg child] is specified, it must describe an item
 that is not an ancestor of [arg parent].
 Then it will become the new last child of [arg parent].
 
 [call [arg pathName] [cmd {item nextsibling}] [arg sibling] [opt [arg next]]]
-If [arg next] is not specified, returns the numerical index of the next
+If [arg next] is not specified, returns the item id of the next
 sibling of the item described by [arg sibling].
-If [arg next] is specified, it must described an item
+If [arg next] is specified, it must describe an item
 that is not an ancestor of [arg sibling].
 Then it will become the new next sibling of [arg sibling].
 
@@ -1158,31 +1153,34 @@ result of this command is the row the item falls in. If the optional argument
 is not visible.
 
 [call [arg pathName] [cmd {item parent}] [arg itemDesc]]
-Returns the numerical index of the parent of the item
+Returns the item id of the parent of the item
 described by [arg itemDesc].
 
 [call [arg pathName] [cmd {item prevsibling}] [arg sibling] [opt [arg prev]]]
-If [arg prev] is not specified, returns the numerical index of the previous
+If [arg prev] is not specified, returns the item id of the previous
 sibling of the item described by [arg sibling].
-If [arg prev] is specified, it must described an item
+If [arg prev] is specified, it must describe an item
 that is not an ancestor of [arg sibling].
 Then it will become the new previous sibling of [arg sibling].
 
 [call [arg pathName] [cmd {item range}] [arg first] [arg last]]
-Returns a list containing the unique identifiers of all items
+Returns a list containing the item ids of all items
 in the range between [arg first] and [arg last], inclusive.
 The order between [arg first] and [arg last] doesn't matter,
-and the result is always ordered by the increasing index of the items.
+and the result is always sorted by the increasing order of the items (as
+returned by the [cmd {item order}] command).
 The items specified by [arg first] and [arg last] must share a common
 ancestor.
 
 [call [arg pathName] [cmd {item remove}] [arg itemDesc]]
 Removes the item described by [arg itemDesc]
-from the children list of its father, so that it will become an orphan.
+from the list of children of its parent, so that it will become an orphan.
 
 [call [arg pathName] [cmd {item rnc}] [arg itemDesc]]
 Returns a list of two integers, which corresponds to the row and column
-of the item described by [arg itemDesc].
+of the item described by [arg itemDesc]. The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options. If the item is not displayed, this command returns an empty string.
 
 [call [arg pathName] [cmd {item sort}] [arg itemDesc] [opt [arg {option ...}]]]
 Sorts the children of the item described by [arg itemDesc],
@@ -1266,30 +1264,32 @@ The following forms of the command are supported:
 
 [call [arg pathName] [cmd {item state forcolumn}] [arg itemDesc] [arg column] \
      [opt [arg stateDescList]]]
-Just like [cmd {item state set}] but manipulates user-defined states for a single
-item column, not the item as a whole.
+Just like [cmd {item state set}] but manipulates dynamic states for a single
+item column, not the item as a whole. If [arg stateDescList] is unspecified,
+this command returns a list containing the names of all the dynamic states
+which are switched on in [arg column].
 
 [call [arg pathName] [cmd {item state get}] [arg itemDesc] \
      [opt [arg {stateName}]]]
 If no [arg stateName] is specified, returns a list containing
-the names of all (predefined and user defined) states
+the names of all (static and dynamic) states
 which are currently switched on for the item described by [arg itemDesc].
 If a [arg stateName] is specified,
 1 is returned if the specified state is currently switched on for the item,
 0 otherwise.
 
 [call [arg pathName] [cmd {item state set}] [arg itemDesc] \
-     [opt [arg lastItem]] [opt [arg stateDescList]]]
+     [opt [arg lastItem]] [arg stateDescList]]
 Every element of [arg stateDescList]
-must describe a user defined state (see [sectref STATES] below),
-with the particularity that the state name may have also a leading [const ~].
+must be the name of a dynamic state (see [sectref STATES] below),
+optionally preceded by a [const ~] or [const !] character.
 Every state with a leading [const !] will be switched off for the
 item described by [arg itemDesc],
 every state with a leading [const ~] will be toggled, and
 every state without leading [const !] or [const ~] will be switched on.
 If [arg lastItem] is specified, the state changes will be made for all items
 in the range betwen [arg itemDesc] and [arg lastItem].
-[arg ItemDesc] may be the string [const all],
+If [arg ItemDesc] is the string [const all],
 then the state changes are made for all items of the treectrl widget.
 
 [list_end]
@@ -1303,9 +1303,10 @@ The following forms of the command are supported:
 
 [list_begin definitions]
 [call [arg pathName] [cmd {item style elements}] [arg itemDesc] [arg column]]
-A list is returned
-containing the currently defined elements of the style,
-which is set for the item described by [arg itemDesc] in [arg column].
+This command returns a list containing the names of elements which were
+configured by the [cmd {item element configure}] command for the item
+described by [arg itemDesc] in [arg column]. If there is no style assigned
+to [arg column] an error is returned.
 
 [call [arg pathName] [cmd {item style map}] [arg itemDesc] [arg column] \
      [arg style] [arg map]]
@@ -1628,17 +1629,17 @@ Deprecated. Use the [cmd {column count}] command instead.
 Deprecated. Use the [cmd {item count}] command instead.
 
 [call [arg pathName] [cmd orphans]]
-Returns a list containing the numerical ids of all items
-which has no parent item.
-An item is created without having a parent,
-and can later become an orphan again
-by means of the [cmd {item remove}] widget command.
+Returns a list containing the item ids of all items
+which have no parent.
+When an item is created, it has no parent by default,
+and can later become an orphan
+by means of the [cmd {item remove}] widget command. The root item is not returned.
 
 [call [arg pathName] [cmd range] [arg first] [arg last]]
 Deprecated. Use the [cmd {item range}] command instead.
 
 [call [arg pathName] [cmd state] [arg option] [opt [arg stateName]]]
-This command is used to manipulate the list of user defined states,
+This command is used to manipulate the list of user-defined states,
 see section [sectref STATES] below.
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd state] argument.
@@ -1647,20 +1648,20 @@ The following forms of the command are supported:
 [list_begin definitions]
 [call [arg pathName] [cmd {state define}] [arg stateName]]
 Defines a new state with the name [arg stateName],
-which must not be the name of a predefined or already user defined state.
+which must not be the name of an existing state.
 
 [call [arg pathName] [cmd {state linkage}] [arg stateName]]
 Returns a string indicating
-whether the specified state is user defined
+whether the specified state is user-defined
 by means of the [cmd {state define}] widget command ([const dynamic])
 or predefined by the treectrl widget itself ([const static]).
 
 [call [arg pathName] [cmd {state names}]]
-Returns a list containing the names of all user defined states.
+Returns a list containing the names of all user-defined states.
 
 [call [arg pathName] [cmd {state undefine}] [opt [arg {stateName ...}]]]
-Every [arg stateName] must be the name of a user defined state.
-Removes this state from the list of user defined states.
+Every [arg stateName] must be the name of a user-defined state.
+Removes this state from the list of user-defined states.
 [list_end]
 
 [call [arg pathName] [cmd see] [arg itemDesc]]
@@ -1678,13 +1679,14 @@ It has several forms, depending on [arg option]:
 [list_begin definitions]
 [call [arg pathName] [cmd {selection add}] [arg first] [opt [arg last]]]
 [arg First] and [arg last] (if specified)
-must be the string [const all] or an [arg itemDesc].
-Selects all of the items in the range between
-[arg first] and [arg last], inclusive,
+must be the string [const all] or a valid [sectref {ITEM DESCRIPTION} {item description}].
+Adds every unselected item in the range between
+[arg first] and [arg last], inclusive, to the selection
 without affecting the selection state of items outside that range.
 If one of the arguments is the string [const all],
-all items of the treectrl widget are added to the selection instead.
-A [const <Selection>] event is generated.
+every unselected item in the treectrl widget is added to the selection.
+A [const <Selection>] event is generated if any items were added to the
+selection.
 
 [call [arg pathName] [cmd {selection anchor}] [opt [arg itemDesc]]]
 If [arg itemDesc] is specified,
@@ -1698,45 +1700,43 @@ Returns the numerical id of the selection anchor item.
 [call [arg pathName] [cmd {selection clear}] \
      [opt [arg first]] [opt [arg last]]]
 [arg First] and [arg last] (if specified)
-must be the string [const all] or an [arg itemDesc].
+must be the string [const all] or a valid [sectref {ITEM DESCRIPTION} {item description}].
 If any of the items between [arg first] and [arg last]
 (inclusive) are selected, they are deselected.
 The selection state is not changed for items outside this range.
-If no additional arguments is given
-or one of the arguments is the string [const all],
-the selection is completely cleared instead.
-A [const <Selection>] event is generated.
+If no additional arguments are given,
+or if one of the arguments is the string [const all],
+then all items are removed from the selection.
+A [const <Selection>] event is generated if any items were removed from the
+selection.
 
 [call [arg pathName] [cmd {selection count}]]
 Returns an integer indicating the number
 of items in the treectrl that are currently selected.
 
 [call [arg pathName] [cmd {selection get}]]
-Returns a list containing the numerical ids of
+Returns a list containing the item ids of
 all of the items in the treectrl that are currently selected.
 If there are no items selected in the treectrl then an empty
 string is returned.
 
 [call [arg pathName] [cmd {selection includes}] [arg itemDesc]]
-Returns 1 if the item indicated by [arg itemDesc] is currently
+Returns 1 if the item described by [arg itemDesc] is currently
 selected, 0 if it isn't.
 
 [call [arg pathName] [cmd {selection modify}] [arg select] [arg deselect]]
 Both arguments [arg select] and [arg deselect] must be
-the string [const all] or a possibly empty list of [arg itemDesc]s.
-Selects all of the items described by [arg select],
-then deselects all items described by [arg deselect],
-without affecting the selection state of any item
-not mentioned in both arguments.
-If one item is described in both arguments [arg select] and [arg deselect],
-it is added to the selection.
-A [const <Selection>] event is generated.
+the string [const all] or a possibly-empty list of [sectref {ITEM DESCRIPTION} {item descriptions}].
+Any unselected items in [arg select] are added to the selection,
+and any selected items in [arg deselect] are removed from the selection (except
+for those items which are also in [arg select]).
+A [const <Selection>] event is generated if any items were selected or deselected.
 [list_end]
 
 [call [arg pathName] [cmd style] [arg option] [opt [arg element]] \
      [opt [arg {arg arg ...}]]]
-This command is used to manipulate styles, which could be considered
-as a geometry manager for the elements of one item.
+This command is used to manipulate styles, which can be thought of
+as a geometry manager for elements.
 The exact behavior of the command depends on the [arg option] argument
 that follows the [cmd style] argument.
 The following forms of the command are supported:
@@ -2027,8 +2027,7 @@ The following options are supported for columns:
 
 [list_begin opt]
 [opt_def [option -arrow] [arg direction]]
-Indicates whether or not an arrow should be drawn in the column header
-to the right of the column title.
+Indicates whether or not an arrow should be drawn in the column header.
 [arg Direction] must have one of the values
 [const none] (the default), [const up], or [const down].
 
@@ -2042,7 +2041,7 @@ use to draw the arrow if this column's -arrow option is not [const none].
 If an image is specified for a certain state, it overrides the -arrowbitmap option.
 
 [opt_def [option -arrowside] [arg side]]
-Indicates on which side an arrow should be drawn, if at all.
+Indicates on which side of the bitmap/image/text the arrow should be drawn.
 [arg Side] must be either [const left] or [const right] (the default).
 
 [opt_def [option -arrowgravity] [arg side]]
@@ -2052,7 +2051,7 @@ if there is more space available for drawing the arrow then needed.
 
 [opt_def [option -arrowpadx] [arg amount]]
 [arg Amount] specifies how much padding to
-leave on the left and right side of the arrow.
+leave on the left and right of the arrow.
 [arg Amount] may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2098,21 +2097,21 @@ This option overrides the [option -bitmap] column option.
 
 [opt_def [option -imagepadx] [arg amount]]
 [arg Amount] specifies how much padding to
-leave on the left and right side of the image.
+leave on the left and right of the image (or bitmap).
 [arg Amount] may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
 
 [opt_def [option -imagepady] [arg amount]]
 [arg Amount] specifies how much padding to
-leave on the top and bottom of the image.
+leave on the top and bottom of the image (or bitmap).
 [arg Amount] may be a list
 of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 [opt_def [option -itembackground] [arg colorList]]
-Specifies a list of colors, which should be used as
-alternating background color for the items of this column.
+Specifies a list of zero or more colors, which are used as
+alternating background colors for items in this column.
 See also the [option -backgroundmode] widget option for more on this.
 
 [opt_def [option -justify] [arg justification]]
@@ -2154,7 +2153,7 @@ Defines a unique name for the column which can be used
 whenever a column must be specified.
 
 [opt_def [option -text] [arg text]]
-Specifies a text to be displayed inside the column title.
+Specifies a text string to be displayed as the column title.
 
 [opt_def [option -textcolor] [arg color]]
 Specifies a color, which should be used as foreground color
@@ -2171,7 +2170,7 @@ of text.
 
 [opt_def [option -textpadx] [arg amount]]
 [arg Amount] specifies how much padding to
-leave on the left and right side of the text.
+leave on the left and right of the text.
 [arg Amount] may be a list
 of two values to specify padding for left and right separately;
 it defaults to 6.
@@ -2261,17 +2260,16 @@ is true.
 [list_end]
 
 [section STATES]
-A state consists basically of just a string: its [arg stateName].
-For every item a set of these states is managed,
-which means that every item can have every state switched on or off.
+For every item a set of boolean states is managed. These states play an
+integral role in the appearance of each item.
 The following states are predefined for every item:
 
 [list_begin definitions]
 [lst_item [const active]]
-At every time this state is set for exactly one item,
-which therefore is called the active item.
+At all times this state is set for exactly one item. The active item is
+used with keyboard navigation.
 When the treectrl widget is created or when the active item is deleted,
-the root item will become the active element.
+the root item will become the active item.
 This state can be modified by means of the widget command [cmd activate].
 
 [lst_item [const enabled]]
@@ -2280,9 +2278,9 @@ It cannot be modified.
 
 [lst_item [const focus]]
 This state is set for every item,
-if the treectrl widget has currently the focus.
+if the treectrl widget currently has the focus.
 It cannot be modified by means of a widget command,
-but is maintained as reaction of a <FocusIn> or <FocusOut> event.
+but is maintained in reaction to the <FocusIn> and <FocusOut> events.
 
 [lst_item [const open]]
 If this state is switched on,
@@ -2291,32 +2289,18 @@ the descendants of the item are displayed
 If this state is switched off,
 the descendants of the item are not displayed
 - the item is collapsed.
-For a new item this state is switched on.
-It can be modified by means of the widget commands
+For a new item this state is switched on by default.
+This state can be modified by means of the widget commands
 [cmd {item expand}], [cmd {item collapse}], or [cmd {item toggle}].
 
 [lst_item [const selected]]
-This state is set for every item, which is included in the selection.
+This state is set for every item included in the selection.
 It can be modified by means of the widget command [cmd selection].
 [list_end]
 
 [para]
 By means of the [cmd {state define}] widget command
-up to 27 additional [arg stateName]s can be defined.
-
-[para]
-Some widget commands expect a [arg stateDesc] argument,
-which is a [arg stateName]
-optionally preceded by an exclamation mark ([const !]).
-If the [arg stateName] has no leading [const !]
-it describes a currently switched on state,
-if it has a leading [const !] it describes a currently switched off state.
-
-[para]
-Some widget commands expect a [arg statePattern] argument,
-which should be a non empty list of [arg stateDesc]s.
-The pattern matches, if for every element of the list
-the [arg stateDesc] describes the same state as the item currently has.
+up to 27 additional states can be defined.
 
 [section {PER-STATE OPTIONS}]
 
@@ -2684,6 +2668,9 @@ Indicates the item nearest to the point given by [arg x] and [arg y].
 
 [lst_item "[const rnc] [arg {row column}]"]
 Indicates the item in the given [arg row] and [arg column].
+The row and column corresponds to
+the on-screen arrangement of items as determined by the -orient and -wrap
+options.
 You can memorize [const rnc] as abbreviation of "row 'n' column".
 
 [lst_item [const root]]
