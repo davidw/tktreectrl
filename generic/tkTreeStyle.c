@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.41 2005/07/23 00:38:11 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.42 2005/08/10 16:53:39 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1449,9 +1449,11 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[],
 		eLink2->layoutHeight = layout->useHeight;
 	}
 
-	neededV ?
-		Style_DoLayoutNeededV(drawArgs, layouts) :
-		Style_DoLayoutV(drawArgs, layouts);
+	if (neededV) {
+	    Style_DoLayoutNeededV(drawArgs, layouts);
+	} else {
+	    Style_DoLayoutV(drawArgs, layouts);
+	}
 }
 
 /* Arrange Elements to determine the needed height and width of the Style */

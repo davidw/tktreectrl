@@ -1,3 +1,10 @@
+2005-08-09  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeStyle.c (Style_DoLayout): use if instead of
+	tertiary ?: operator for funcs with different return types.
+
+	*** other mods by Tim Baker (treectrl) to this point ***
+
 2005-05-02  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeTheme.c: correct headers to build on unix and use
