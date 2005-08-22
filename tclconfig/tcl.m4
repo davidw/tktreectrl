@@ -9,7 +9,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: tcl.m4,v 1.4 2005/03/25 20:22:20 hobbs2 Exp $
+# RCS: @(#) $Id: tcl.m4,v 1.5 2005/08/22 21:24:08 hobbs2 Exp $
 
 AC_PREREQ(2.50)
 
@@ -356,6 +356,21 @@ AC_DEFUN(TEA_LOAD_TKCONFIG, [
         TK_STUB_LIB_PATH=${TK_BUILD_STUB_LIB_PATH}
     fi
 
+    # Ensure windowingsystem is defined
+    if test "${TEA_PLATFORM}" = "unix" ; then
+	case ${TK_DEFS} in
+	    *MAC_OSX_TK*)
+		AC_DEFINE(MAC_OSX_TK, 1, [Are we building against Mac OS X TkAqua?])
+		TEA_WINDOWINGSYSTEM="aqua"
+		;;
+	    *)
+		TEA_WINDOWINGSYSTEM="x11"
+		;;
+	esac
+    elif test "${TEA_PLATFORM}" = "windows" ; then
+	TEA_WINDOWINGSYSTEM="windows"
+    fi
+
     #
     # eval is required to do the TK_DBGX substitution
     #
@@ -424,7 +439,7 @@ AC_DEFUN(TEA_ENABLE_SHARED, [
     else
 	AC_MSG_RESULT([static])
 	SHARED_BUILD=0
-	AC_DEFINE(STATIC_BUILD)
+	AC_DEFINE(STATIC_BUILD, 1, [Is this a static build?])
     fi
     AC_SUBST(SHARED_BUILD)
 ])
@@ -464,9 +479,10 @@ AC_DEFUN(TEA_ENABLE_THREADS, [
 
 	if test "${TEA_PLATFORM}" != "windows" ; then
 	    # We are always OK on Windows, so check what this platform wants.
-	    AC_DEFINE(USE_THREAD_ALLOC)
-	    AC_DEFINE(_REENTRANT)
-	    AC_DEFINE(_THREAD_SAFE)
+            AC_DEFINE(USE_THREAD_ALLOC, 1,
+                [Do we want to use the threaded memory allocator?])
+	    AC_DEFINE(_REENTRANT, 1, [Do we want the reentrant OS API?])
+	    AC_DEFINE(_THREAD_SAFE, 1, [Do we want the thread-safe OS API?])
 	    AC_CHECK_LIB(pthread,pthread_mutex_init,tcl_ok=yes,tcl_ok=no)
 	    if test "$tcl_ok" = "no"; then
 		# Check a little harder for __pthread_mutex_init in the
@@ -520,7 +536,7 @@ AC_DEFUN(TEA_ENABLE_THREADS, [
     # Do checking message here to not mess up interleaved configure output
     AC_MSG_CHECKING([for building with threads])
     if test "${TCL_THREADS}" = "1"; then
-	AC_DEFINE(TCL_THREADS)
+	AC_DEFINE(TCL_THREADS, 1, [Are we building with threads enabled?])
 	#LIBS="$LIBS $THREADS_LIBS"
 	AC_MSG_RESULT([yes])
     else
@@ -605,7 +621,7 @@ AC_DEFUN(TEA_ENABLE_SYMBOLS, [
     AC_SUBST(LDFLAGS_DEFAULT)
 
     if test "$tcl_ok" = "mem" -o "$tcl_ok" = "all"; then
-	AC_DEFINE(TCL_MEM_DEBUG)
+	AC_DEFINE(TCL_MEM_DEBUG, 1, [Is memory debugging enabled?])
     fi
 
     if test "$tcl_ok" != "yes" -a "$tcl_ok" != "no"; then
@@ -656,7 +672,7 @@ AC_DEFUN(TEA_ENABLE_LANGINFO, [
 	    langinfo_ok="no (could not compile with nl_langinfo)";
 	fi
 	if test "$langinfo_ok" = "yes"; then
-	    AC_DEFINE(HAVE_LANGINFO)
+	    AC_DEFINE(HAVE_LANGINFO, 1, [Do we have nl_langinfo()?])
 	fi
     fi
     AC_MSG_RESULT([$langinfo_ok])
@@ -952,10 +968,10 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 		    	defs="${defs} _DLL"
 		    fi
 		    for i in $defs ; do
-			AC_DEFINE_UNQUOTED($i)
+			AC_DEFINE_UNQUOTED($i, 1, [WinCE def ]$i)
 		    done
-		    AC_DEFINE_UNQUOTED(_WIN32_WCE, $CEVERSION)
-		    AC_DEFINE_UNQUOTED(UNDER_CE, $CEVERSION)
+		    AC_DEFINE_UNQUOTED(_WIN32_WCE, $CEVERSION, [_WIN32_WCE version])
+		    AC_DEFINE_UNQUOTED(UNDER_CE, $CEVERSION, [UNDER_CE version])
 		    CFLAGS_DEBUG="-nologo -Zi -Od"
 		    CFLAGS_OPTIMIZE="-nologo -Ox"
 		    lversion=`echo ${CEVERSION} | sed -e 's/\(.\)\(..\)/\1\.\2/'`
@@ -1083,7 +1099,7 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    AC_CHECK_LIB(bsd, gettimeofday, libbsd=yes, libbsd=no)
 	    if test $libbsd = yes; then
 	    	MATH_LIBS="$MATH_LIBS -lbsd"
-	    	AC_DEFINE(USE_DELTA_FOR_TZ)
+	    	AC_DEFINE(USE_DELTA_FOR_TZ, 1, [Do we need a special AIX hack for timezones?])
 	    fi
 	    ;;
 	BeOS*)
@@ -1124,7 +1140,7 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    ;;
 	HP-UX-*.11.*)
 	    # Use updated header definitions where possible
-	    AC_DEFINE(_XOPEN_SOURCE_EXTENDED)
+	    AC_DEFINE(_XOPEN_SOURCE_EXTENDED, 1, [Do we want to use the XOPEN network library?])
 
 	    SHLIB_SUFFIX=".sl"
 	    AC_CHECK_LIB(dld, shl_load, tcl_ok=yes, tcl_ok=no)
@@ -1418,16 +1434,32 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    esac
 	    ;;
 	Darwin-*)
+	    CFLAGS_OPTIMIZE="-Os"
 	    SHLIB_CFLAGS="-fno-common"
 	    SHLIB_LD="cc -dynamiclib \${LDFLAGS}"
+	    AC_CACHE_CHECK([if ld accepts -single_module flag], tcl_cv_ld_single_module, [
+	        hold_ldflags=$LDFLAGS
+	        LDFLAGS="$LDFLAGS -dynamiclib -Wl,-single_module"
+	        AC_TRY_LINK(, [int i;], tcl_cv_ld_single_module=yes, tcl_cv_ld_single_module=no)
+	        LDFLAGS=$hold_ldflags])
+	    if test $tcl_cv_ld_single_module = yes; then
+	        SHLIB_LD="${SHLIB_LD} -Wl,-single_module"
+	    fi
 	    SHLIB_LD_LIBS='${LIBS}'
 	    SHLIB_SUFFIX=".dylib"
 	    DL_OBJS="tclLoadDyld.o"
 	    DL_LIBS=""
-	    LDFLAGS="$LDFLAGS -prebind -Wl,-search_paths_first"
+	    LDFLAGS="$LDFLAGS -prebind"
+	    AC_CACHE_CHECK([if ld accepts -search_paths_first flag], tcl_cv_ld_search_paths_first, [
+	        hold_ldflags=$LDFLAGS
+	        LDFLAGS="$LDFLAGS -Wl,-search_paths_first"
+	        AC_TRY_LINK(, [int i;], tcl_cv_ld_search_paths_first=yes, tcl_cv_ld_search_paths_first=no)
+	        LDFLAGS=$hold_ldflags])
+	    if test $tcl_cv_ld_search_paths_first = yes; then
+	        LDFLAGS="$LDFLAGS -Wl,-search_paths_first"
+	    fi
 	    LD_SEARCH_FLAGS=""
 	    LD_LIBRARY_PATH_VAR="DYLD_LIBRARY_PATH"
-	    CFLAGS_OPTIMIZE="-Os"
 	    ;;
 	NEXTSTEP-*)
 	    SHLIB_CFLAGS=""
@@ -1439,8 +1471,9 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    LD_SEARCH_FLAGS=""
 	    ;;
 	OS/390-*)
-	    CFLAGS_OPTIMIZE=""      # Optimizer is buggy
-	    AC_DEFINE(_OE_SOCKETS)  # needed in sys/socket.h
+	    CFLAGS_OPTIMIZE=""		# Optimizer is buggy
+	    AC_DEFINE(_OE_SOCKETS, 1,	# needed in sys/socket.h
+		[Should OS/390 do the right thing with sockets?])
 	    ;;      
 	OSF1-1.0|OSF1-1.1|OSF1-1.2)
 	    # OSF/1 1.[012] from OSF, and derivatives, including Paragon OSF/1
@@ -1571,8 +1604,9 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    # Note: If _REENTRANT isn't defined, then Solaris
 	    # won't define thread-safe library routines.
 
-	    AC_DEFINE(_REENTRANT)
-	    AC_DEFINE(_POSIX_PTHREAD_SEMANTICS)
+	    AC_DEFINE(_REENTRANT, 1, [Do we want the reentrant OS API?])
+	    AC_DEFINE(_POSIX_PTHREAD_SEMANTICS, 1,
+		[Do we really want to follow the standard? Yes we do!])
 
 	    SHLIB_CFLAGS="-KPIC"
 
@@ -1596,8 +1630,9 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    # Note: If _REENTRANT isn't defined, then Solaris
 	    # won't define thread-safe library routines.
 
-	    AC_DEFINE(_REENTRANT)
-	    AC_DEFINE(_POSIX_PTHREAD_SEMANTICS)
+	    AC_DEFINE(_REENTRANT, 1, [Do we want the reentrant OS API?])
+	    AC_DEFINE(_POSIX_PTHREAD_SEMANTICS, 1,
+		[Do we really want to follow the standard? Yes we do!])
 
 	    SHLIB_CFLAGS="-KPIC"
     
@@ -1726,7 +1761,8 @@ dnl AC_CHECK_TOOL(AR, ar, :)
     ], tcl_ok=usable, tcl_ok=unusable)
 	AC_MSG_RESULT([$tcl_ok])
 	if test $tcl_ok = usable; then
-	    AC_DEFINE(USE_SYS_EXEC_H)
+	    AC_DEFINE(USE_SYS_EXEC_H, 1,
+		[Should we use <sys/exec.h> when doing dynamic loading?])
 	else
 	    AC_MSG_CHECKING([a.out.h])
 	    AC_TRY_COMPILE([#include <a.out.h>],[
@@ -1743,7 +1779,8 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 	    ], tcl_ok=usable, tcl_ok=unusable)
 	    AC_MSG_RESULT([$tcl_ok])
 	    if test $tcl_ok = usable; then
-		AC_DEFINE(USE_A_OUT_H)
+		AC_DEFINE(USE_A_OUT_H, 1,
+		    [Should we use <a.out.h> when doing dynamic loading?])
 	    else
 		AC_MSG_CHECKING([sys/exec_aout.h])
 		AC_TRY_COMPILE([#include <sys/exec_aout.h>],[
@@ -1760,7 +1797,8 @@ dnl AC_CHECK_TOOL(AR, ar, :)
 		], tcl_ok=usable, tcl_ok=unusable)
 		AC_MSG_RESULT([$tcl_ok])
 		if test $tcl_ok = usable; then
-		    AC_DEFINE(USE_SYS_EXEC_AOUT_H)
+		    AC_DEFINE(USE_SYS_EXEC_AOUT_H, 1,
+			[Should we use <sys/exec_aout.h> when doing dynamic loading?])
 		else
 		    DL_OBJS=""
 		fi
@@ -1962,9 +2000,9 @@ int main() {
 }], tcl_cv_api_serial=sgtty, tcl_cv_api_serial=none, tcl_cv_api_serial=none)
     fi])
     case $tcl_cv_api_serial in
-	termios) AC_DEFINE(USE_TERMIOS);;
-	termio)  AC_DEFINE(USE_TERMIO);;
-	sgtty)   AC_DEFINE(USE_SGTTY);;
+	termios) AC_DEFINE(USE_TERMIOS, 1, [Use the termios API for serial lines]);;
+	termio)  AC_DEFINE(USE_TERMIO, 1, [Use the termio API for serial lines]);;
+	sgtty)   AC_DEFINE(USE_SGTTY, 1, [Use the sgtty API for serial lines]);;
     esac
     AC_MSG_RESULT([$tcl_cv_api_serial])
 ])
@@ -2003,6 +2041,7 @@ int main() {
 
 AC_DEFUN(TEA_MISSING_POSIX_HEADERS, [
     AC_MSG_CHECKING([dirent.h])
+    AC_CACHE_VAL(tcl_cv_dirent_h,
     AC_TRY_LINK([#include <sys/types.h>
 #include <dirent.h>], [
 #ifndef _POSIX_SOURCE
@@ -2022,24 +2061,25 @@ d = opendir("foobar");
 entryPtr = readdir(d);
 p = entryPtr->d_name;
 closedir(d);
-], tcl_ok=yes, tcl_ok=no)
+], tcl_cv_dirent_h=yes, tcl_cv_dirent_h=no))
 
-    if test $tcl_ok = no; then
-	AC_DEFINE(NO_DIRENT_H)
+    if test $tcl_cv_dirent_h = no; then
+	AC_DEFINE(NO_DIRENT_H, 1, [Do we have <dirent.h>?])
     fi
 
     AC_MSG_RESULT([$tcl_ok])
-    AC_CHECK_HEADER(errno.h, , [AC_DEFINE(NO_ERRNO_H)])
-    AC_CHECK_HEADER(float.h, , [AC_DEFINE(NO_FLOAT_H)])
-    AC_CHECK_HEADER(values.h, , [AC_DEFINE(NO_VALUES_H)])
+    AC_CHECK_HEADER(errno.h, , [AC_DEFINE(NO_ERRNO_H, 1, [Do we have <errno.h>?])])
+    AC_CHECK_HEADER(float.h, , [AC_DEFINE(NO_FLOAT_H, 1, [Do we have <float.h>?])])
+    AC_CHECK_HEADER(values.h, , [AC_DEFINE(NO_VALUES_H, 1, [Do we have <values.h>?])])
     AC_CHECK_HEADER(limits.h,
-	[AC_DEFINE(HAVE_LIMITS_H)], [AC_DEFINE(NO_LIMITS_H)])
+	[AC_DEFINE(HAVE_LIMITS_H, 1, [Do we have <limits.h>?])],
+	[AC_DEFINE(NO_LIMITS_H, 1, [Do we have <limits.h>?])])
     AC_CHECK_HEADER(stdlib.h, tcl_ok=1, tcl_ok=0)
     AC_EGREP_HEADER(strtol, stdlib.h, , tcl_ok=0)
     AC_EGREP_HEADER(strtoul, stdlib.h, , tcl_ok=0)
     AC_EGREP_HEADER(strtod, stdlib.h, , tcl_ok=0)
     if test $tcl_ok = 0; then
-	AC_DEFINE(NO_STDLIB_H)
+	AC_DEFINE(NO_STDLIB_H, 1, [Do we have <stdlib.h>?])
     fi
     AC_CHECK_HEADER(string.h, tcl_ok=1, tcl_ok=0)
     AC_EGREP_HEADER(strstr, string.h, , tcl_ok=0)
@@ -2049,11 +2089,11 @@ closedir(d);
     # set and why.
 
     if test $tcl_ok = 0; then
-	AC_DEFINE(NO_STRING_H)
+	AC_DEFINE(NO_STRING_H, 1, [Do we have <string.h>?])
     fi
 
-    AC_CHECK_HEADER(sys/wait.h, , [AC_DEFINE(NO_SYS_WAIT_H)])
-    AC_CHECK_HEADER(dlfcn.h, , [AC_DEFINE(NO_DLFCN_H)])
+    AC_CHECK_HEADER(sys/wait.h, , [AC_DEFINE(NO_SYS_WAIT_H, 1, [Do we have <sys/wait.h>?])])
+    AC_CHECK_HEADER(dlfcn.h, , [AC_DEFINE(NO_DLFCN_H, 1, [Do we have <dlfcn.h>?])])
 
     # OS/390 lacks sys/param.h (and doesn't need it, by chance).
     AC_HAVE_HEADERS(sys/param.h)
@@ -2088,18 +2128,7 @@ closedir(d);
 
 AC_DEFUN(TEA_PATH_X, [
     if test "${TEA_PLATFORM}" = "unix" ; then
-	case ${TK_DEFS} in
-	    *MAC_OSX_TK*)
-		AC_DEFINE(MAC_OSX_TK)
-		TEA_WINDOWINGSYSTEM="aqua"
-		;;
-	    *)
-		TEA_PATH_UNIX_X
-		TEA_WINDOWINGSYSTEM="x11"
-		;;
-	esac
-    elif test "${TEA_PLATFORM}" = "windows" ; then
-	TEA_WINDOWINGSYSTEM="windows"
+	TEA_PATH_UNIX_X
     fi
 ])
 
@@ -2222,15 +2251,15 @@ AC_DEFUN(TEA_BLOCKING_STYLE, [
 	# code (JO, 5/31/97).
 
 	OSF*)
-	    AC_DEFINE(USE_FIONBIO)
+	    AC_DEFINE(USE_FIONBIO, 1, [Should we use FIONBIO?])
 	    AC_MSG_RESULT([FIONBIO])
 	    ;;
 	SunOS-4*)
-	    AC_DEFINE(USE_FIONBIO)
+	    AC_DEFINE(USE_FIONBIO, 1, [Should we use FIONBIO?])
 	    AC_MSG_RESULT([FIONBIO])
 	    ;;
 	ULTRIX-4.*)
-	    AC_DEFINE(USE_FIONBIO)
+	    AC_DEFINE(USE_FIONBIO, 1, [Should we use FIONBIO?])
 	    AC_MSG_RESULT([FIONBIO])
 	    ;;
 	*)
@@ -2271,7 +2300,7 @@ AC_DEFUN(TEA_TIME_HANDLER, [
 	    tcl_cv_member_tm_tzadj=yes, tcl_cv_member_tm_tzadj=no))
     AC_MSG_RESULT([$tcl_cv_member_tm_tzadj])
     if test $tcl_cv_member_tm_tzadj = yes ; then
-	AC_DEFINE(HAVE_TM_TZADJ)
+	AC_DEFINE(HAVE_TM_TZADJ, 1, [Should we use the tm_tzadj field of struct tm?])
     fi
 
     AC_MSG_CHECKING([tm_gmtoff in struct tm])
@@ -2280,7 +2309,7 @@ AC_DEFUN(TEA_TIME_HANDLER, [
 	    tcl_cv_member_tm_gmtoff=yes, tcl_cv_member_tm_gmtoff=no))
     AC_MSG_RESULT([$tcl_cv_member_tm_gmtoff])
     if test $tcl_cv_member_tm_gmtoff = yes ; then
-	AC_DEFINE(HAVE_TM_GMTOFF)
+	AC_DEFINE(HAVE_TM_GMTOFF, 1, [Should we use the tm_gmtoff field of struct tm?])
     fi
 
     #
@@ -2296,7 +2325,7 @@ AC_DEFUN(TEA_TIME_HANDLER, [
 	    tcl_cv_timezone_long=yes, tcl_cv_timezone_long=no))
     AC_MSG_RESULT([$tcl_cv_timezone_long])
     if test $tcl_cv_timezone_long = yes ; then
-	AC_DEFINE(HAVE_TIMEZONE_VAR)
+	AC_DEFINE(HAVE_TIMEZONE_VAR, 1, [Should we use the global timezone variable?])
     else
 	#
 	# On some systems (eg IRIX 6.2), timezone is a time_t and not a long.
@@ -2310,7 +2339,7 @@ AC_DEFUN(TEA_TIME_HANDLER, [
 		tcl_cv_timezone_time=yes, tcl_cv_timezone_time=no))
 	AC_MSG_RESULT([$tcl_cv_timezone_time])
 	if test $tcl_cv_timezone_time = yes ; then
-	    AC_DEFINE(HAVE_TIMEZONE_VAR)
+	    AC_DEFINE(HAVE_TIMEZONE_VAR, 1, [Should we use the global timezone variable?])
 	fi
     fi
 ])
@@ -2339,6 +2368,7 @@ AC_DEFUN(TEA_BUGGY_STRTOD, [
     AC_CHECK_FUNC(strtod, tcl_strtod=1, tcl_strtod=0)
     if test "$tcl_strtod" = 1; then
 	AC_MSG_CHECKING([for Solaris2.4/Tru64 strtod bugs])
+	AC_CACHE_VAL(tcl_cv_strtod_buggy,[
 	AC_TRY_RUN([
 	    extern double strtod();
 	    int main()
@@ -2355,15 +2385,15 @@ AC_DEFUN(TEA_BUGGY_STRTOD, [
 		    exit(1);
 		}
 		exit(0);
-	    }], tcl_ok=1, tcl_ok=0, tcl_ok=0)
-	if test "$tcl_ok" = 1; then
+	    }], tcl_cv_strtod_buggy=1, tcl_cv_strtod_buggy=0, tcl_cv_strtod_buggy=0)])
+	if test "$tcl_cv_strtod_buggy" = 1; then
 	    AC_MSG_RESULT([ok])
 	else
 	    AC_MSG_RESULT([buggy])
 	    #LIBOBJS="$LIBOBJS fixstrtod.o"
 	    AC_LIBOBJ([fixstrtod])
 	    USE_COMPAT=1
-	    AC_DEFINE(strtod, fixstrtod)
+	    AC_DEFINE(strtod, fixstrtod, [Do we want to use the strtod() in compat?])
 	fi
     fi
 ])
@@ -2412,7 +2442,8 @@ AC_DEFUN(TEA_TCL_LINK_LIBS, [
     #--------------------------------------------------------------------
 
     AC_CHECK_LIB(inet, main, [LIBS="$LIBS -linet"])
-    AC_CHECK_HEADER(net/errno.h, AC_DEFINE(HAVE_NET_ERRNO_H))
+    AC_CHECK_HEADER(net/errno.h, [
+	AC_DEFINE(HAVE_NET_ERRNO_H, 1, [Do we have <net/errno.h>?])])
 
     #--------------------------------------------------------------------
     #	Check for the existence of the -lsocket and -lnsl libraries.
@@ -2479,7 +2510,7 @@ AC_DEFUN(TEA_TCL_EARLY_FLAG,[
 		[tcl_cv_flag_]translit($1,[A-Z],[a-z])=yes,
 		[tcl_cv_flag_]translit($1,[A-Z],[a-z])=no)))
     if test ["x${tcl_cv_flag_]translit($1,[A-Z],[a-z])[}" = "xyes"] ; then
-	AC_DEFINE($1)
+	AC_DEFINE($1, 1, [Add the ]$1[ flag when building])
 	tcl_flags="$tcl_flags $1"
     fi
 ])
@@ -2531,7 +2562,7 @@ AC_DEFUN(TEA_TCL_64BIT_FLAGS, [
             case 1: case (sizeof(]${tcl_type_64bit}[)==sizeof(long)): ; 
         }],tcl_cv_type_64bit=${tcl_type_64bit})])
     if test "${tcl_cv_type_64bit}" = none ; then
-	AC_DEFINE(TCL_WIDE_INT_IS_LONG)
+	AC_DEFINE(TCL_WIDE_INT_IS_LONG, 1, [Are wide integers to be implemented with C 'long's?])
 	AC_MSG_RESULT([using long])
     elif test "${tcl_cv_type_64bit}" = "__int64" \
 		-a "${TEA_PLATFORM}" = "windows" ; then
@@ -2539,7 +2570,8 @@ AC_DEFUN(TEA_TCL_64BIT_FLAGS, [
 	# case to handle both TCL_WIDE_INT_TYPE and TCL_LL_MODIFIER*
 	AC_MSG_RESULT([using Tcl header defaults])
     else
-	AC_DEFINE_UNQUOTED(TCL_WIDE_INT_TYPE,${tcl_cv_type_64bit})
+	AC_DEFINE_UNQUOTED(TCL_WIDE_INT_TYPE,${tcl_cv_type_64bit},
+	    [What type should be used to define wide integers?])
 	AC_MSG_RESULT([${tcl_cv_type_64bit}])
 
 	# Now check for auxiliary declarations
@@ -2549,7 +2581,7 @@ AC_DEFUN(TEA_TCL_64BIT_FLAGS, [
 #include <sys/dirent.h>],[struct dirent64 p;],
 		tcl_cv_struct_dirent64=yes,tcl_cv_struct_dirent64=no)])
 	if test "x${tcl_cv_struct_dirent64}" = "xyes" ; then
-	    AC_DEFINE(HAVE_STRUCT_DIRENT64)
+	    AC_DEFINE(HAVE_STRUCT_DIRENT64, 1, [Is 'struct dirent64' in <sys/types.h>?])
 	fi
 	AC_MSG_RESULT([${tcl_cv_struct_dirent64}])
 
@@ -2559,7 +2591,7 @@ AC_DEFUN(TEA_TCL_64BIT_FLAGS, [
 ],
 		tcl_cv_struct_stat64=yes,tcl_cv_struct_stat64=no)])
 	if test "x${tcl_cv_struct_stat64}" = "xyes" ; then
-	    AC_DEFINE(HAVE_STRUCT_STAT64)
+	    AC_DEFINE(HAVE_STRUCT_STAT64, 1, [Is 'struct stat64' in <sys/stat.h>?])
 	fi
 	AC_MSG_RESULT([${tcl_cv_struct_stat64}])
 
@@ -2569,7 +2601,7 @@ AC_DEFUN(TEA_TCL_64BIT_FLAGS, [
 ],
 		tcl_cv_type_off64_t=yes,tcl_cv_type_off64_t=no)])
 	if test "x${tcl_cv_type_off64_t}" = "xyes" ; then
-	    AC_DEFINE(HAVE_TYPE_OFF64_T)
+	    AC_DEFINE(HAVE_TYPE_OFF64_T, 1, [Is off64_t in <sys/types.h>?])
 	fi
 	AC_MSG_RESULT([${tcl_cv_type_off64_t}])
     fi
@@ -3201,31 +3233,23 @@ AC_DEFUN(TEA_LIB_SPEC, [
 AC_DEFUN(TEA_PRIVATE_TCL_HEADERS, [
     AC_MSG_CHECKING([for Tcl private include files])
 
+    TCL_SRC_DIR_NATIVE=`${CYGPATH} ${TCL_SRC_DIR}`
+    TCL_TOP_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}\"
+    TCL_GENERIC_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/generic\"
+    TCL_UNIX_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/unix\"
+    TCL_WIN_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/win\"
+    TCL_BMAP_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/bitmaps\"
+    TCL_TOOL_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/tools\"
+    TCL_COMPAT_DIR_NATIVE=\"${TCL_SRC_DIR_NATIVE}/compat\"
+
     if test "${TEA_PLATFORM}" = "windows"; then
-	TCL_TOP_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}`\"
-	TCL_GENERIC_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/generic`\"
-	TCL_UNIX_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/unix`\"
-	TCL_WIN_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/win`\"
-	TCL_BMAP_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/bitmaps`\"
-	TCL_TOOL_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/tools`\"
-	TCL_COMPAT_DIR_NATIVE=\"`${CYGPATH} ${TCL_SRC_DIR}/compat`\"
 	TCL_PLATFORM_DIR_NATIVE=${TCL_WIN_DIR_NATIVE}
-
-	TCL_INCLUDES="-I${TCL_GENERIC_DIR_NATIVE} -I${TCL_PLATFORM_DIR_NATIVE}"
     else
-	TCL_TOP_DIR_NATIVE='$(TCL_SRC_DIR)'
-	TCL_GENERIC_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/generic'
-	TCL_UNIX_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/unix'
-	TCL_WIN_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/win'
-	TCL_BMAP_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/bitmaps'
-	TCL_TOOL_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/tools'
-	TCL_COMPAT_DIR_NATIVE='${TCL_TOP_DIR_NATIVE}/compat'
 	TCL_PLATFORM_DIR_NATIVE=${TCL_UNIX_DIR_NATIVE}
-
-	# substitute these in "relaxed" so that TCL_INCLUDES still works
-	# without requiring the other vars to be defined in the Makefile
-	eval "TCL_INCLUDES=\"-I${TCL_GENERIC_DIR_NATIVE} -I${TCL_PLATFORM_DIR_NATIVE}\""
     fi
+    # We want to ensure these are substitured so as not to require
+    # any *_NATIVE vars be defined in the Makefile
+    TCL_INCLUDES="-I${TCL_GENERIC_DIR_NATIVE} -I${TCL_PLATFORM_DIR_NATIVE}"
 
     AC_SUBST(TCL_TOP_DIR_NATIVE)
     AC_SUBST(TCL_GENERIC_DIR_NATIVE)
@@ -3332,25 +3356,26 @@ AC_DEFUN(TEA_PUBLIC_TCL_HEADERS, [
 AC_DEFUN(TEA_PRIVATE_TK_HEADERS, [
     AC_MSG_CHECKING([for Tk private include files])
 
+    TK_SRC_DIR_NATIVE=`${CYGPATH} ${TK_SRC_DIR}`
+    TK_TOP_DIR_NATIVE=\"${TK_SRC_DIR_NATIVE}\"
+    TK_UNIX_DIR_NATIVE=\"${TK_SRC_DIR_NATIVE}/unix\"
+    TK_WIN_DIR_NATIVE=\"${TK_SRC_DIR_NATIVE}/win\"
+    TK_GENERIC_DIR_NATIVE=\"${TK_SRC_DIR_NATIVE}/generic\"
+    TK_XLIB_DIR_NATIVE=\"${TK_SRC_DIR_NATIVE}/xlib\"
     if test "${TEA_PLATFORM}" = "windows"; then
-	TK_TOP_DIR_NATIVE=\"`${CYGPATH} ${TK_SRC_DIR}`\"
-	TK_UNIX_DIR_NATIVE=\"`${CYGPATH} ${TK_SRC_DIR}/unix`\"
-	TK_WIN_DIR_NATIVE=\"`${CYGPATH} ${TK_SRC_DIR}/win`\"
-	TK_GENERIC_DIR_NATIVE=\"`${CYGPATH} ${TK_SRC_DIR}/generic`\"
-	TK_XLIB_DIR_NATIVE=\"`${CYGPATH} ${TK_SRC_DIR}/xlib`\"
 	TK_PLATFORM_DIR_NATIVE=${TK_WIN_DIR_NATIVE}
-
-	TK_INCLUDES="-I${TK_GENERIC_DIR_NATIVE} -I${TK_PLATFORM_DIR_NATIVE} -I${TK_XLIB_DIR_NATIVE}"
     else
-	TK_TOP_DIR_NATIVE='${TK_SRC_DIR}'
-	TK_GENERIC_DIR_NATIVE='${TK_TOP_DIR_NATIVE}/generic'
-	TK_UNIX_DIR_NATIVE='${TK_TOP_DIR_NATIVE}/unix'
-	TK_WIN_DIR_NATIVE='${TK_TOP_DIR_NATIVE}/win'
 	TK_PLATFORM_DIR_NATIVE=${TK_UNIX_DIR_NATIVE}
-
-	# substitute these in "relaxed" so that TK_INCLUDES still works
-	# without requiring the other vars to be defined in the Makefile
-	eval "TK_INCLUDES=\"-I${TK_GENERIC_DIR_NATIVE} -I${TK_PLATFORM_DIR_NATIVE}\""
+    fi
+    # We want to ensure these are substitured so as not to require
+    # any *_NATIVE vars be defined in the Makefile
+    TK_INCLUDES="-I${TK_GENERIC_DIR_NATIVE} -I${TK_PLATFORM_DIR_NATIVE}"
+    if test "${TEA_WINDOWINGSYSTEM}" = "windows" \
+	-o "${TEA_WINDOWINGSYSTEM}" = "aqua"; then
+	TK_INCLUDES="${TK_INCLUDES} -I${TK_XLIB_DIR_NATIVE}"
+    fi
+    if test "${TEA_WINDOWINGSYSTEM}" = "aqua"; then
+	TK_INCLUDES="${TK_INCLUDES} -I${TK_SRC_DIR_NATIVE}/macosx"
     fi
 
     AC_SUBST(TK_TOP_DIR_NATIVE)
@@ -3437,7 +3462,8 @@ AC_DEFUN(TEA_PUBLIC_TK_HEADERS, [
 
     AC_SUBST(TK_INCLUDES)
 
-    if test "${TEA_PLATFORM}" = "windows" ; then
+    if test "${TEA_WINDOWINGSYSTEM}" = "windows" \
+	-o "${TEA_WINDOWINGSYSTEM}" = "aqua"; then
 	# On Windows, we need the X compat headers
 	AC_MSG_CHECKING([for X11 header files])
 	if test ! -r "${INCLUDE_DIR_NATIVE}/X11/Xlib.h"; then

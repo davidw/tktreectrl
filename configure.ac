@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.11 2005/07/23 00:31:28 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.12 2005/08/22 21:24:08 hobbs2 Exp $
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.
@@ -122,7 +122,6 @@ else
     CLEANFILES="pkgIndex.tcl"
 fi
 if test "${TEA_WINDOWINGSYSTEM}" = "aqua"; then
-    TK_INCLUDES="${TK_INCLUDES} -I${TK_TOP_DIR_NATIVE}/macosx"
     TEA_ADD_LIBS([-framework Carbon])
 fi
 AC_SUBST(CLEANFILES)
