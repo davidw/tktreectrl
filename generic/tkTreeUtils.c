@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.32 2005/09/07 20:35:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.33 2005/09/07 22:25:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2410,31 +2410,64 @@ void PSTRestore(
 
 #ifdef ALLOC_HAX
 
+/*
+ * The following AllocHax_xxx calls implement a mini memory allocator that
+ * allocates blocks of same-sized chunks, and hold on to those chunks when
+ * they are freed so they can be reused quickly. If you don't want to use it
+ * just comment out #define ALLOC_HAX in tkTreeCtrl.h.
+ */
+
 typedef struct AllocElem AllocElem;
 typedef struct AllocList AllocList;
 typedef struct AllocData AllocData;
+
+/*
+ * One of the following structures exists for each client block of memory.
+ */
 
 struct AllocElem
 {
 	AllocElem *next;
 	int free;
-	char d[1];
+	char body[1];	/* First byte of client's space.  Actual
+					 * size of this field will be larger than
+					 * one. */
 };
+
+/*
+ * One of the following structures maintains a list of blocks of AllocElems
+ * of the same size.
+ */
 
 struct AllocList
 {
-	int size;
+	int size;			/* Size of every AllocElem.body[] */
 	AllocElem *head;
-	AllocList *next;
-	AllocElem **blocks;
-	int blockCount;
-	int blockSize;
+	AllocList *next;	/* Points to an AllocList with a different .size */
+	AllocElem **blocks;	/* Array of pointers to allocated blocks. The blocks
+						 * may contain a different number of elements. */
+	int blockCount;		/* Number of array elements in .blocks */
+	int blockSize;		/* The number of AllocElems per block to allocate.
+						 * Starts at 16 and gets double up to 1024. */
 };
+
+/*
+ * A pointer to one of the following structures is stored in each TreeCtrl.
+ */
 
 struct AllocData
 {
 	AllocList *freeLists;
 };
+
+/*
+ * The following macro computes the offset of the "body" field within
+ * AllocElem.  It is used to get back to the header pointer from the
+ * body pointer that's used by clients.
+ */
+
+#define BODY_OFFSET \
+	((unsigned long) (&((AllocElem *) 0)->body))
 
 char *AllocHax_Alloc(ClientData data, int size)
 {
@@ -2465,15 +2498,18 @@ char *AllocHax_Alloc(ClientData data, int size)
 	} else {
 		AllocElem *block;
 		freeList->blockCount += 1;
-		freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks, sizeof(AllocElem *) * freeList->blockCount);
-		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) * freeList->blockSize);
+		freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks,
+			sizeof(AllocElem *) * freeList->blockCount);
+		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) *
+			freeList->blockSize);
 		freeList->blocks[freeList->blockCount - 1] = block;
 /* dbwin("AllocHax_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
 		freeList->head = block;
 		elem = freeList->head;
 		for (i = 1; i < freeList->blockSize - 1; i++) {
 			elem->free = 1;
-			elem->next = (AllocElem *) (((char *) freeList->head) + (sizeof(AllocElem) - 1 + size) * i);
+			elem->next = (AllocElem *) (((char *) freeList->head) +
+				(sizeof(AllocElem) - 1 + size) * i);
 			elem = elem->next;
 		}
 		elem->next = NULL;
@@ -2488,21 +2524,31 @@ char *AllocHax_Alloc(ClientData data, int size)
 		panic("AllocHax_Alloc: element not marked free");
 
 	result->free = 0;
-	return result->d;
+	return result->body;
 }
 
 void AllocHax_Free(ClientData data, char *ptr, int size)
 {
 	AllocList *freeLists = ((AllocData *) data)->freeLists;
 	AllocList *freeList = freeLists;
-	AllocElem *elem = (AllocElem *) (ptr - sizeof(AllocElem) + sizeof(int));
+	AllocElem *elem;
+
+	/*
+	* See comment from Tcl_DbCkfree before you change the following
+	* line.
+	*/
+
+	elem = (AllocElem *) (((unsigned long) ptr) - BODY_OFFSET);
 
 	if (elem->free)
 		panic("AllocHax_Free: element already marked free");
 
 	while (freeList != NULL && freeList->size != size)
 		freeList = freeList->next;
-	WIPE(ptr, size);
+	if (freeList == NULL)
+		panic("AllocHax_Free: can't find free list for size %d", size);
+
+	WIPE(elem->body, size);
 	elem->next = freeList->head;
 	elem->free = 1;
 	freeList->head = elem;
