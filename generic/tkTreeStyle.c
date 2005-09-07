@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.42 2005/08/10 16:53:39 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.43 2005/09/07 20:33:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -354,7 +354,7 @@ static int Style_DoExpandV(struct Layout *layout, int bottom)
 	return spaceUsed;
 }
 
-static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
+static void Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
@@ -856,11 +856,9 @@ static int Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->useWidth += iPadX[PAD_TOP_LEFT] + iPadX[PAD_BOTTOM_RIGHT];
 		iPadX[PAD_TOP_LEFT] = iPadX[PAD_BOTTOM_RIGHT] = 0;
 	}
-
-	return eLinkCount;
 }
 
-static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
+static void Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
@@ -1251,8 +1249,6 @@ static int Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 		layout->useHeight += iPadY[PAD_TOP_LEFT] + iPadY[PAD_BOTTOM_RIGHT];
 		iPadY[PAD_TOP_LEFT] = iPadY[PAD_BOTTOM_RIGHT] = 0;
 	}
-
-	return eLinkCount;
 }
 
 /* Calculate the height and width of all the Elements */
@@ -2044,7 +2040,7 @@ static void ElementLink_FreeResources(TreeCtrl *tree, ElementLink *eLink)
 	if (eLink->elem->master != NULL)
 		Element_FreeResources(tree, eLink->elem);
 	if (eLink->onion != NULL)
-		wipefree((char *) eLink->onion, sizeof(int) * eLink->onionCount);
+		WCFREE(eLink->onion, int, eLink->onionCount);
 }
 
 void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
@@ -2065,8 +2061,7 @@ void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
 #ifdef ALLOC_HAX
 		AllocHax_CFree(tree->allocData, (char *) style->elements, sizeof(ElementLink), style->numElements, 5);
 #else
-		wipefree((char *) style->elements, sizeof(ElementLink) *
-			style->numElements);
+		WCFREE(style->elements, ElementLink, style->numElements);
 #endif
 	}
 #ifdef ALLOC_HAX
@@ -2407,8 +2402,7 @@ static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Ele
 #ifdef ALLOC_HAX
 		AllocHax_CFree(tree->allocData, (char *) style->elements, sizeof(ElementLink), style->numElements, 5);
 #else
-		wipefree((char *) style->elements, sizeof(ElementLink) *
-			style->numElements);
+		WCFREE(style->elements, ElementLink, style->numElements);
 #endif
 	}
 
@@ -2477,7 +2471,7 @@ static void Style_ChangeElements(TreeCtrl *tree, Style *masterStyle, int count, 
 
 		if (onionCnt != eLink->onionCount)
 		{
-			wipefree((char *) eLink->onion, sizeof(int) * eLink->onionCount);
+			WCFREE(eLink->onion, int, eLink->onionCount);
 			eLink->onion = onion;
 			eLink->onionCount = onionCnt;
 		}
@@ -3823,8 +3817,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					if (eLink->onion != NULL)
 					{
 						if (eLink->onion != saved.onion)
-							wipefree((char *) eLink->onion,
-								sizeof(int) * eLink->onionCount);
+							WCFREE(eLink->onion, int, eLink->onionCount);
 						eLink->onionCount = 0;
 						eLink->onion = NULL;
 					}
@@ -3870,8 +3863,7 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 					onion[count++] = n;
 				}
 				if ((eLink->onion != NULL) && (eLink->onion != saved.onion))
-					wipefree((char *) eLink->onion,
-						sizeof(int) * eLink->onionCount);
+					WCFREE(eLink->onion, int, eLink->onionCount);
 				if (count == objc1)
 					eLink->onion = onion;
 				else
@@ -4022,13 +4014,13 @@ static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		}
 	}
 	if (saved.onion && (eLink->onion != saved.onion))
-		wipefree((char *) saved.onion, sizeof(int) * saved.onionCount);
+		WCFREE(saved.onion, int, saved.onionCount);
 	Style_Changed(tree, style);
 	return TCL_OK;
 
 badConfig:
 	if (eLink->onion && (eLink->onion != saved.onion))
-		wipefree((char *) eLink->onion, sizeof(int) * eLink->onionCount);
+		WCFREE(eLink->onion, int, eLink->onionCount);
 	*eLink = saved;
 	return TCL_ERROR;
 }
@@ -4515,8 +4507,7 @@ int TreeStyle_Remap(TreeCtrl *tree, TreeStyle styleFrom_, TreeStyle styleTo_, in
 			sizeof(ElementLink), styleTo->numElements, 5);
 #else
 		if (styleFrom->numElements > 0)
-			wipefree((char *) styleFrom->elements, sizeof(ElementLink) *
-			styleFrom->numElements);
+			WCFREE(styleFrom->elements, ElementLink, styleFrom->numElements);
 		styleFrom->elements = (ElementLink *) ckalloc(sizeof(ElementLink) *
 			styleTo->numElements);
 #endif
