@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.39 2005/07/16 18:02:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.40 2005/09/07 20:27:20 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -433,7 +433,7 @@ extern void TreeItemColumn_ForgetStyle(TreeCtrl *tree, TreeItemColumn column_);
 extern int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_);
 extern TreeItemColumn TreeItem_FindColumn(TreeCtrl *tree, TreeItem item, int columnIndex);
 extern int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItemColumn *columnPtr, int *indexPtr);
-extern void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_);
+extern void TreeItem_RemoveColumns(TreeCtrl *tree, TreeItem item_, int first, int last);
 extern void TreeItem_RemoveAllColumns(TreeCtrl *tree, TreeItem item_);
 extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex, int beforeIndex);
 
@@ -643,9 +643,16 @@ extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, 
 extern int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr);
 
 /* tkTreeUtils.c */
-extern void wipefree(char *memPtr, int size);
-#define WFREE(p,t) \
-	wipefree((char *) p, sizeof(t))
+#ifdef TREECTRL_WIPE_MEM /* Optionally define this when debugging */
+#define WIPE(p,s) memset((char *) p, 0xAA, s)
+#else
+#define WIPE(p,s)
+#endif
+#define CWIPE(p,t,c) WIPE(p, sizeof(t) * (c))
+#define WIPEFREE(p,s) { WIPE(p, s); ckfree((char *) p); }
+#define WFREE(p,t) WIPEFREE(p, sizeof(t))
+#define WCFREE(p,t,c) WIPEFREE(p, sizeof(t) * (c))
+
 extern int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force);
 extern void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2);
 extern void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2);
@@ -769,7 +776,7 @@ extern void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int 
     if (C > STATIC_SIZE) \
 	P = (T *) ckalloc(sizeof(T) * (C))
 #define STATIC_FREE(P,T,C) \
-    memset((char *) P, 0xAA, sizeof(T) * (C)); \
+    CWIPE(P, T, C); \
     if (C > STATIC_SIZE) \
 	ckfree((char *) P)
 #define STATIC_FREE2(P,P2) \
