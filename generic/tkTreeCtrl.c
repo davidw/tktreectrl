@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.49 2005/07/12 03:37:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.50 2005/09/07 20:27:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2965,7 +2965,7 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 	return TCL_ERROR;
     }
 
-    /* See TkPoscriptImage */
+    /* See TkPostscriptImage */
 
     ncolors = visual->map_entries;
     xcolors = (XColor *) ckalloc(sizeof(XColor) * ncolors);
