@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.50 2005/07/23 00:37:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.51 2005/09/07 20:31:11 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1293,27 +1293,28 @@ void TreeItem_RemoveFromParent(TreeCtrl *tree, TreeItem item_)
     RemoveFromParentAux(tree, self, &index);
 }
 
-void TreeItem_RemoveColumn(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_)
+void TreeItem_RemoveColumns(TreeCtrl *tree, TreeItem item_, int first, int last)
 {
     Item *self = (Item *) item_;
-    Column *column, *prev;
+    Column *column = self->columns;
+    Column *prev = NULL, *next = NULL;
+    int i = 0;
 
-    column = self->columns;
-    prev = NULL;
     while (column != NULL) {
-	if (column == (Column *) column_) {
-	    if (prev != NULL)
-		prev->next = column->next;
-	    else
-		self->columns = column->next;
+	next = column->next;
+	if (i == first - 1)
+	    prev = column;
+	else if (i >= first)
 	    Column_FreeResources(tree, column);
+	if (i == last)
 	    break;
-	}
-	prev = column;
-	column = column->next;
+	++i;
+	column = next;
     }
-    if (column == NULL)
-	panic("TreeItem_RemoveColumn: can't find column");
+    if (prev != NULL)
+	prev->next = next;
+    else
+	self->columns = next;
 }
 
 void TreeItem_RemoveAllColumns(TreeCtrl *tree, TreeItem item_)
