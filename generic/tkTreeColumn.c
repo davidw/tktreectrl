@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.36 2005/07/23 00:36:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.37 2005/09/07 20:29:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -724,7 +724,7 @@ static void Column_FreeColors(XColor **colors, int count)
 	    Tk_FreeColor(colors[i]);
 	}
     }
-    wipefree((char *) colors, sizeof(XColor *) * count);
+    WCFREE(colors, XColor *, count);
 }
 
 static int ColumnStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
@@ -1958,25 +1958,31 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 
 	case COMMAND_DELETE:
 	{
-	    int columnIndex;
+	    int firstIndex, lastIndex;
 	    TreeColumn _column;
-	    Column *column, *prev;
+	    Column *column, *first, *last = NULL, *prev = NULL, *next = NULL;
 	    TreeItem item;
-	    TreeItemColumn itemColumn;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 
-	    if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "column");
+	    if (objc < 4 || objc > 5) {
+		Tcl_WrongNumArgs(interp, 3, objv, "first ?last?");
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
-	    column = (Column *) _column;
+	    first = last = (Column *) _column;
+	    if (objc == 5) {
+		if (TreeColumn_FromObj(tree, objv[4], &_column,
+			    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+		    return TCL_ERROR;
+		last = (Column *) _column;
+	    }
 
 	    /* T column delete "all" */
-	    if (column == (Column *) COLUMN_ALL) {
+	    if (first == (Column *) COLUMN_ALL ||
+		    last == (Column *) COLUMN_ALL) {
 		column = (Column *) tree->columns;
 		while (column != NULL) {
 		    Column *next = column->next;
@@ -2000,40 +2006,56 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 		Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 		break;
 	    }
-	    columnIndex = column->index;
-	    if (columnIndex > 0) {
-		prev = (Column *) Tree_FindColumn(tree, columnIndex - 1);
-		prev->next = column->next;
-	    } else {
-		tree->columns = (TreeColumn) column->next;
+
+	    /* Swap first and last if needed */
+	    if (last->index < first->index) {
+		column = first;
+		first = last;
+		last = column;
 	    }
-	    Column_Free(column);
 
-	    if (column == (Column *) tree->columnTree)
-		tree->columnTree = NULL;
-	    if (column == (Column *) tree->columnDrag.column)
-		tree->columnDrag.column = NULL;
-	    if (column == (Column *) tree->columnDrag.indColumn)
-		tree->columnDrag.indColumn = NULL;
+	    firstIndex = first->index;
+	    lastIndex = last->index;
 
-	    /* Delete all TreeItemColumns */
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+		next = column->next;
+		if (next == first)
+		    prev = column;
+		else if (column->index >= firstIndex) {
+		    if (column == (Column *) tree->columnTree)
+			tree->columnTree = NULL;
+		    if (column == (Column *) tree->columnDrag.column)
+			tree->columnDrag.column = NULL;
+		    if (column == (Column *) tree->columnDrag.indColumn)
+			tree->columnDrag.indColumn = NULL;
+		    Column_Free(column);
+		}
+		if (column == last)
+		    break;
+		column = next;
+	    }
+
+	    if (prev != NULL)
+		prev->next = next;
+	    else
+		tree->columns = (TreeColumn) next;
+
+	    /* Delete all TreeItemColumns in the range */
 	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 	    while (hPtr != NULL) {
 		item = (TreeItem) Tcl_GetHashValue(hPtr);
-		itemColumn = TreeItem_FindColumn(tree, item, columnIndex);
-		if (itemColumn != NULL)
-		    TreeItem_RemoveColumn(tree, item, itemColumn);
+		TreeItem_RemoveColumns(tree, item, firstIndex, lastIndex);
 		hPtr = Tcl_NextHashEntry(&search);
 	    }
 
-	    /* Renumber columns */
-	    column = (Column *) tree->columns;
-	    columnIndex = 0;
+	    /* Renumber trailing columns */
+	    column = next;
 	    while (column != NULL) {
-		column->index = columnIndex++;
+		column->index = firstIndex++;
 		column = column->next;
 	    }
-	    ((Column *) tree->columnTail)->index--;
+	    ((Column *) tree->columnTail)->index = firstIndex;
 
 	    tree->widthOfColumns = tree->headerHeight = -1;
 	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
