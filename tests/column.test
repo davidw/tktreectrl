@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.9 2005/07/15 01:40:52 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.10 2005/09/07 20:39:07 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -346,7 +346,7 @@ test column-4.5 {column cget: specify tail by its tag} -body {
 
 test column-5.1 {column delete: missing args} -body {
     .t column delete
-} -returnCodes error -result {wrong # args: should be ".t column delete column"}
+} -returnCodes error -result {wrong # args: should be ".t column delete first ?last?"}
 
 test column-5.2 {column delete: column tail} -body {
     .t column delete tail
@@ -359,6 +359,25 @@ test column-5.3 {column delete: first column} -body {
 test column-5.4 {deleted column doesn't exist} -body {
     .t column cget 0 -tag
 } -returnCodes error -result {column "0" doesn't exist}
+
+test column-5.5 {column delete: all} -body {
+    .t column delete all
+    .t column list
+} -result {}
+
+test column-5.6 {column delete: range of 1} -body {
+    .t column create -tag column1
+    .t column create -tag column2
+    .t column create -tag column3
+    .t column create -tag column4    
+    .t column delete column1 column1
+    .t column list
+} -result {1 2 3}
+
+test column-5.7 {column delete: range of 2, reverse order} -body {
+    .t column delete column4 column3
+    .t column list
+} -result {1}
 
 test column-6.1 {column id: missing args} -body {
     .t column id
