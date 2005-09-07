@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.38 2005/07/23 00:32:34 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.39 2005/09/07 20:43:35 treectrl Exp $
 
 set VERSION 2.1
 
@@ -9,6 +9,13 @@ package require Tk 8.4
 set thisPlatform $::tcl_platform(platform)
 if {$thisPlatform eq "unix" && [tk windowingsystem] eq "aqua"} {
     set thisPlatform "macosx"
+}
+
+switch -- [tk windowingsystem] {
+    aqua { set thisPlatform "macosx" }
+    classic { set thisPlatform "macintosh" }
+    win32 { set thisPlatform "windows" }
+    x11 { set thisPlatform "unix" }
 }
 
 # Get full pathname to this file
@@ -166,11 +173,17 @@ set SystemHighlight [$w cget -selectbackground]
 set SystemHighlightText [$w cget -selectforeground]
 destroy $w
 
+if {$thisPlatform == "unix"} {
+    # I hate that gray selection color
+    set SystemHighlight #316ac5
+    set SystemHighlightText White
+}
+
 proc MakeMenuBar {} {
     set m [menu .menubar]
     . configure -menu $m
     set m2 [menu $m.mFile -tearoff no]
-    if {$::tcl_platform(platform) ne "unix"} {
+    if {$::thisPlatform ne "unix"} {
 	console eval {
 	    wm title . "TkTreeCtrl Console"
 	    .console configure -font {Courier 9} -height 8
@@ -494,7 +507,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
 	    set font {{Lucida Grande} 11}
 	}
 	unix {
-	    set font {Helvetica 12}
+	    set font {Helvetica -12}
 	}
 	default {
 	    # There is a bug on my Win98 box with Tk_MeasureChars() and
