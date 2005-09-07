@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.47 2005/07/23 00:35:21 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.48 2005/09/07 20:38:05 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1 treectrl "Tk Commands"
 .BS
@@ -29,11 +29,11 @@ package require \fBtreectrl  2.1\fR
 .sp
 \fIpathName\fR \fBcolumn\fR \fIoption\fR \fIcolumn\fR ?\fIarg ...\fR?
 .sp
-\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn bbox\fR \fIcolumnDesc\fR
 .sp
-\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR
+\fIpathName\fR \fBcolumn cget\fR \fIcolumnDesc\fR \fIoption\fR
 .sp
-\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+\fIpathName\fR \fBcolumn configure\fR \fIcolumnDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
 \fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR
 .sp
@@ -41,25 +41,25 @@ package require \fBtreectrl  2.1\fR
 .sp
 \fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn delete\fR \fIfirst\fR ?\fIlast\fR?
 .sp
 \fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR
 .sp
 \fIpathName\fR \fBcolumn dragconfigure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn index\fR \fIcolumnDesc\fR
 .sp
-\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn id\fR \fIcolumnDesc\fR
 .sp
 \fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?
 .sp
-\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR
+\fIpathName\fR \fBcolumn move\fR \fIcolumnDesc\fR \fIbeforeDesc\fR
 .sp
-\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumnDesc\fR
 .sp
-\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?
+\fIpathName\fR \fBcolumn order\fR \fIcolumnDesc\fR ?\fI-visible\fR?
 .sp
-\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn width\fR \fIcolumnDesc\fR
 .sp
 \fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
 .sp
@@ -982,42 +982,46 @@ that follows the \fBcolumn\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBcolumn bbox\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn bbox\fR \fIcolumnDesc\fR
 Returns a list with four elements giving the bounding box
-for the column header specified by \fIcolumn\fR.
+of the header of the column specified by the
+\fBcolumn description\fR \fIcolumnDesc\fR.
 If the treectrl is configured not to display the column headers
 by means of the \fB-showheader\fR option, then
 an empty list is returned instead.
 .TP
-\fIpathName\fR \fBcolumn cget\fR \fIcolumn\fR \fIoption\fR
+\fIpathName\fR \fBcolumn cget\fR \fIcolumnDesc\fR \fIoption\fR
 This command returns the current value of the option named \fIoption\fR
-for the column specified by \fIcolumn\fR,
-\fIColumn\fR may also be the string \fBtail\fR to specify the tail column.
+for the column specified by the
+\fBcolumn description\fR \fIcolumnDesc\fR,
+\fIColumnDesc\fR may also be the string \fBtail\fR to specify the tail column.
 \fIOption\fR may have any of the values accepted by the
 \fBcolumn configure\fR widget command.
 .TP
-\fIpathName\fR \fBcolumn configure\fR \fIcolumn\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+\fIpathName\fR \fBcolumn configure\fR \fIcolumnDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
-that it modifies options associated with the column specified by \fIcolumn\fR
+that it modifies options associated with the column specified by the
+\fBcolumn description\fR \fIcolumnDesc\fR
 instead of modifying options for the overall treectrl widget.
-\fIColumn\fR may be the string \fBtail\fR to specify the tail column.
-If \fIcolumn\fR is the string \fBall\fR, at least one option-value pair
+\fIColumnDesc\fR may be the string \fBtail\fR to specify the tail column.
+If \fIcolumnDesc\fR is the string \fBall\fR, at least one option-value pair
 must be given; in this case all the columns are configured.
 If no \fIoption\fR is specified, the command returns a list describing
-all of the available options for \fIcolumn\fR (see \fBTk_ConfigureInfo\fR
+all of the available options for \fIcolumnDesc\fR (see \fBTk_ConfigureInfo\fR
 for information on the format of this list).
 If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
 a list describing the one named option (this list will be identical to
 the corresponding sublist of the value returned if no \fIoption\fR
 is specified).
 If one or more \fIoption\fR-\fIvalue\fR pairs are specified, then the command
-modifies the given option(s) to have the given value(s) for \fIcolumn\fR;
+modifies the given option(s) to have the given value(s) for \fIcolumnDesc\fR;
 in this case the command returns an empty string.
 .sp
 See \fBCOLUMNS\fR below for details on the options available for columns.
 .TP
 \fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR
-From both \fIcolumn\fRs the index is retrieved
+For both \fBcolumn descriptions\fR \fIcolumn1\fR
+and \fIcolumn2\fR the index is retrieved
 (as returned from the \fBcolumn order\fR widget command).
 Then these indexes are compared using the operator \fIop\fR, which must
 be either \fB<\fR,  \fB<=\fR,  \fB==\fR, \fB>=\fR, \fB>\fR,
@@ -1038,9 +1042,13 @@ placed to the right of all other columns (except the \fBtail\fR column). Any
 \fBcolumn configure\fR command. The return value is the unique identifier
 of the new column.
 .TP
-\fIpathName\fR \fBcolumn delete\fR \fIcolumn\fR
-Deletes the specified \fIcolumn\fR from the treectrl widget. If \fIcolumn\fR
-is the string \fBall\fR, all columns except the tail column are deleted.
+\fIpathName\fR \fBcolumn delete\fR \fIfirst\fR ?\fIlast\fR?
+Deletes the specified column(s). \fIFirst\fR and \fIlast\fR must be valid
+\fBcolumn descriptions\fR. If either \fIfirst\fR
+or \fIlast\fR is specified as \fBall\fR, then all columns are deleted.
+The \fBtail\fR column cannot be deleted and it is an error to specify it.
+The order of \fIfirst\fR and \fIlast\fR doesn't matter, and \fIfirst\fR may
+be equal to \fIlast\fR.
 .TP
 \fIpathName\fR \fBcolumn dragcget\fR \fIoption\fR
 .TP
@@ -1083,13 +1091,13 @@ starting position.
 The 2-pixel-thick line will be drawn over the left edge of \fIcolumn\fR.
 .RE
 .TP
-\fIpathName\fR \fBcolumn index\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn index\fR \fIcolumnDesc\fR
 Deprecated. Use \fBcolumn id\fR instead.
 .TP
-\fIpathName\fR \fBcolumn id\fR \fIcolumn\fR
-This command resolves the column description \fIcolumn\fR into a unique column
-identifier (see \fBCOLUMN DESCRIPTION\fR below).
-If the column described by \fIcolumn\fR doesn't exist, this command returns
+\fIpathName\fR \fBcolumn id\fR \fIcolumnDesc\fR
+This command resolves the \fBcolumn description\fR
+\fIcolumnDesc\fR into a unique column identifier.
+If the column described by \fIcolumnDesc\fR doesn't exist, this command returns
 an empty string.
 .TP
 \fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?
@@ -1097,28 +1105,33 @@ This command returns a list of identifiers for every column (except the tail)
 from left to right. If \fI-visible\fR is given, only columns whose -visible
 option is true are returned.
 .TP
-\fIpathName\fR \fBcolumn move\fR \fIcolumn\fR \fIbefore\fR
-Moves the specified \fIcolumn\fR to the left of the column
-specified by \fIbefore\fR.
-If \fIbefore\fR is the string \fBtail\fR,
-the column \fIcolumn\fR will become the last column.
+\fIpathName\fR \fBcolumn move\fR \fIcolumnDesc\fR \fIbeforeDesc\fR
+Moves the column specified by \fIcolumnDesc\fR to the left of the column
+specified by \fIbeforeDesc\fR. Both \fIcolumnDesc\fR and \fIbeforeDesc\fR
+must be valid \fBcolumn descriptions\fR.
+If \fIbeforeDesc\fR is the string \fBtail\fR,
+the column \fIcolumnDesc\fR will become the last column.
 .TP
-\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn neededwidth\fR \fIcolumnDesc\fR
 This command returns a decimal string giving the needed width
-of the column specified by \fIcolumn\fR.
+of the column specified by the \fBcolumn description\fR
+\fIcolumnDesc\fR.
 The needed width is the maximum of the width of the column header
-and the width of the \fIwidest\fR currently visible item.
+and the width of the widest style in any visible item.
 .TP
-\fIpathName\fR \fBcolumn order\fR \fIcolumn\fR ?\fI-visible\fR?
-This command returns a decimal string giving the position of \fIcolumn\fR
+\fIpathName\fR \fBcolumn order\fR \fIcolumnDesc\fR ?\fI-visible\fR?
+This command returns a decimal string giving the position of the column
+specified by the \fBcolumn description\fR
+\fIcolumnDesc\fR
 in the list of columns starting from zero for the leftmost column.
 If \fI-visible\fR is given, only columns whose -visible
-option is true are considered, and -1 is returned if \fIcolumn\fR's -visible
+option is true are considered, and -1 is returned if \fIcolumnDesc\fR's -visible
 option is false.
 .TP
-\fIpathName\fR \fBcolumn width\fR \fIcolumn\fR
+\fIpathName\fR \fBcolumn width\fR \fIcolumnDesc\fR
 This command returns a decimal string giving the width in pixels
-of the column specified by \fIcolumn\fR,
+of the column specified by the \fBcolumn description\fR
+\fIcolumnDesc\fR,
 even if the treectrl is configured to not display the column headers
 by means of the \fB-showheader\fR option.
 .RE
@@ -1542,14 +1555,15 @@ and b) each ancestor's \fB-visible\fR option is true
 .TP
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?
 Deletes the specified item(s).
-\fIFirst\fR and \fIlast\fR must be the string \fBall\fR or a valid
-\fBitem description\fR.
+\fIFirst\fR and \fIlast\fR must be valid
+\fBitem descriptions\fR.
 If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, then all items are
 deleted. If \fIfirst\fR is specified and \fIlast\fR isn't
 specified, the item described by \fIfirst\fR is deleted.
 If both \fIfirst\fR and \fIlast\fR are specified,
 they must decribe items with a common ancestor;
 then the range of items between \fIfirst\fR and \fIlast\fR is deleted.
+The order of \fIfirst\fR and \fIlast\fR doesn't matter.
 .sp
 Deleting an item deletes any child items of the deleted item recursively.
 If the current \fBactive\fR item is deleted, the root item becomes the new active item.

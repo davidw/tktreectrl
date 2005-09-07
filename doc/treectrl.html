@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.30 2005/07/23 00:35:20 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.31 2005/09/07 20:38:04 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.30 2005/07/23 00:35:20 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.31 2005/09/07 20:38:04 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -51,22 +51,22 @@ package require <b>treectrl 2.1</b><br>
 <tr valign=top ><td ><a href="#5"><i class='arg'>pathName</i> <b class='cmd'>cget</b> <i class='arg'>option</i></a></td></tr>
 <tr valign=top ><td ><a href="#6"><i class='arg'>pathName</i> <b class='cmd'>collapse</b> ?<strong>-recurse</strong>? ?<i class='arg'>itemDesc ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#7"><i class='arg'>pathName</i> <b class='cmd'>column</b> <i class='arg'>option</i> <i class='arg'>column</i> ?<i class='arg'>arg ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#8"><i class='arg'>pathName</i> <b class='cmd'>column bbox</b> <i class='arg'>column</i></a></td></tr>
-<tr valign=top ><td ><a href="#9"><i class='arg'>pathName</i> <b class='cmd'>column cget</b> <i class='arg'>column</i> <i class='arg'>option</i></a></td></tr>
-<tr valign=top ><td ><a href="#10"><i class='arg'>pathName</i> <b class='cmd'>column configure</b> <i class='arg'>column</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#8"><i class='arg'>pathName</i> <b class='cmd'>column bbox</b> <i class='arg'>columnDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#9"><i class='arg'>pathName</i> <b class='cmd'>column cget</b> <i class='arg'>columnDesc</i> <i class='arg'>option</i></a></td></tr>
+<tr valign=top ><td ><a href="#10"><i class='arg'>pathName</i> <b class='cmd'>column configure</b> <i class='arg'>columnDesc</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#11"><i class='arg'>pathName</i> <b class='cmd'>column compare</b> <i class='arg'>column1</i> <i class='arg'>op</i> <i class='arg'>column2</i></a></td></tr>
 <tr valign=top ><td ><a href="#12"><i class='arg'>pathName</i> <b class='cmd'>column count</b></a></td></tr>
 <tr valign=top ><td ><a href="#13"><i class='arg'>pathName</i> <b class='cmd'>column create</b> ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#14"><i class='arg'>pathName</i> <b class='cmd'>column delete</b> <i class='arg'>column</i></a></td></tr>
+<tr valign=top ><td ><a href="#14"><i class='arg'>pathName</i> <b class='cmd'>column delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#15"><i class='arg'>pathName</i> <b class='cmd'>column dragcget</b> <i class='arg'>option</i></a></td></tr>
 <tr valign=top ><td ><a href="#16"><i class='arg'>pathName</i> <b class='cmd'>column dragconfigure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#17"><i class='arg'>pathName</i> <b class='cmd'>column index</b> <i class='arg'>column</i></a></td></tr>
-<tr valign=top ><td ><a href="#18"><i class='arg'>pathName</i> <b class='cmd'>column id</b> <i class='arg'>column</i></a></td></tr>
+<tr valign=top ><td ><a href="#17"><i class='arg'>pathName</i> <b class='cmd'>column index</b> <i class='arg'>columnDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#18"><i class='arg'>pathName</i> <b class='cmd'>column id</b> <i class='arg'>columnDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#19"><i class='arg'>pathName</i> <b class='cmd'>column list</b> ?<i class='arg'>-visible</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#20"><i class='arg'>pathName</i> <b class='cmd'>column move</b> <i class='arg'>column</i> <i class='arg'>before</i></a></td></tr>
-<tr valign=top ><td ><a href="#21"><i class='arg'>pathName</i> <b class='cmd'>column neededwidth</b> <i class='arg'>column</i></a></td></tr>
-<tr valign=top ><td ><a href="#22"><i class='arg'>pathName</i> <b class='cmd'>column order</b> <i class='arg'>column</i> ?<i class='arg'>-visible</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#23"><i class='arg'>pathName</i> <b class='cmd'>column width</b> <i class='arg'>column</i></a></td></tr>
+<tr valign=top ><td ><a href="#20"><i class='arg'>pathName</i> <b class='cmd'>column move</b> <i class='arg'>columnDesc</i> <i class='arg'>beforeDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#21"><i class='arg'>pathName</i> <b class='cmd'>column neededwidth</b> <i class='arg'>columnDesc</i></a></td></tr>
+<tr valign=top ><td ><a href="#22"><i class='arg'>pathName</i> <b class='cmd'>column order</b> <i class='arg'>columnDesc</i> ?<i class='arg'>-visible</i>?</a></td></tr>
+<tr valign=top ><td ><a href="#23"><i class='arg'>pathName</i> <b class='cmd'>column width</b> <i class='arg'>columnDesc</i></a></td></tr>
 <tr valign=top ><td ><a href="#24"><i class='arg'>pathName</i> <b class='cmd'>compare</b> <i class='arg'>itemDesc1</i> <i class='arg'>op</i> <i class='arg'>itemDesc2</i></a></td></tr>
 <tr valign=top ><td ><a href="#25"><i class='arg'>pathName</i> <b class='cmd'>configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value option value ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#26"><i class='arg'>pathName</i> <b class='cmd'>contentbox</b></a></td></tr>
@@ -765,41 +765,44 @@ The following forms of the command are supported:
 
 <br><br>
 <dl>
-<dt><a name="8"><i class='arg'>pathName</i> <b class='cmd'>column bbox</b> <i class='arg'>column</i></a><dd>
+<dt><a name="8"><i class='arg'>pathName</i> <b class='cmd'>column bbox</b> <i class='arg'>columnDesc</i></a><dd>
 
 Returns a list with four elements giving the bounding box
-for the column header specified by <i class='arg'>column</i>.
+of the header of the column specified by the
+<a href="#column_description">column description</a> <i class='arg'>columnDesc</i>.
 If the treectrl is configured not to display the column headers
 by means of the <strong>-showheader</strong> option, then
 an empty list is returned instead.
 
 <br><br>
-<dt><a name="9"><i class='arg'>pathName</i> <b class='cmd'>column cget</b> <i class='arg'>column</i> <i class='arg'>option</i></a><dd>
+<dt><a name="9"><i class='arg'>pathName</i> <b class='cmd'>column cget</b> <i class='arg'>columnDesc</i> <i class='arg'>option</i></a><dd>
 
 This command returns the current value of the option named <i class='arg'>option</i>
-for the column specified by <i class='arg'>column</i>,
-<i class='arg'>Column</i> may also be the string <strong>tail</strong> to specify the tail column.
+for the column specified by the
+<a href="#column_description">column description</a> <i class='arg'>columnDesc</i>,
+<i class='arg'>ColumnDesc</i> may also be the string <strong>tail</strong> to specify the tail column.
 <i class='arg'>Option</i> may have any of the values accepted by the
 <b class='cmd'>column configure</b> widget command.
 
 <br><br>
-<dt><a name="10"><i class='arg'>pathName</i> <b class='cmd'>column configure</b> <i class='arg'>column</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
+<dt><a name="10"><i class='arg'>pathName</i> <b class='cmd'>column configure</b> <i class='arg'>columnDesc</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a><dd>
 
 This command is similar to the <b class='cmd'>configure</b> widget command except
-that it modifies options associated with the column specified by <i class='arg'>column</i>
+that it modifies options associated with the column specified by the
+<a href="#column_description">column description</a> <i class='arg'>columnDesc</i>
 instead of modifying options for the overall treectrl widget.
-<i class='arg'>Column</i> may be the string <strong>tail</strong> to specify the tail column.
-If <i class='arg'>column</i> is the string <strong>all</strong>, at least one option-value pair
+<i class='arg'>ColumnDesc</i> may be the string <strong>tail</strong> to specify the tail column.
+If <i class='arg'>columnDesc</i> is the string <strong>all</strong>, at least one option-value pair
 must be given; in this case all the columns are configured.
 If no <i class='arg'>option</i> is specified, the command returns a list describing
-all of the available options for <i class='arg'>column</i> (see <strong>Tk_ConfigureInfo</strong>
+all of the available options for <i class='arg'>columnDesc</i> (see <strong>Tk_ConfigureInfo</strong>
 for information on the format of this list).
 If <i class='arg'>option</i> is specified with no <i class='arg'>value</i>, then the command returns
 a list describing the one named option (this list will be identical to
 the corresponding sublist of the value returned if no <i class='arg'>option</i>
 is specified).
 If one or more <i class='arg'>option</i>-<i class='arg'>value</i> pairs are specified, then the command
-modifies the given option(s) to have the given value(s) for <i class='arg'>column</i>;
+modifies the given option(s) to have the given value(s) for <i class='arg'>columnDesc</i>;
 in this case the command returns an empty string.
 <br><br>
 
@@ -808,7 +811,8 @@ See <a href="#columns">COLUMNS</a> below for details on the options available fo
 <br><br>
 <dt><a name="11"><i class='arg'>pathName</i> <b class='cmd'>column compare</b> <i class='arg'>column1</i> <i class='arg'>op</i> <i class='arg'>column2</i></a><dd>
 
-From both <i class='arg'>column</i>s the index is retrieved
+For both <a href="#column_description">column descriptions</a> <i class='arg'>column1</i>
+and <i class='arg'>column2</i> the index is retrieved
 (as returned from the <b class='cmd'>column order</b> widget command).
 Then these indexes are compared using the operator <i class='arg'>op</i>, which must
 be either <strong>&lt;</strong>,  <strong>&lt;=</strong>,  <strong>==</strong>, <strong>&gt;=</strong>, <strong>&gt;</strong>,
@@ -834,10 +838,14 @@ placed to the right of all other columns (except the <strong>tail</strong> colum
 of the new column.
 
 <br><br>
-<dt><a name="14"><i class='arg'>pathName</i> <b class='cmd'>column delete</b> <i class='arg'>column</i></a><dd>
+<dt><a name="14"><i class='arg'>pathName</i> <b class='cmd'>column delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
-Deletes the specified <i class='arg'>column</i> from the treectrl widget. If <i class='arg'>column</i>
-is the string <strong>all</strong>, all columns except the tail column are deleted.
+Deletes the specified column(s). <i class='arg'>First</i> and <i class='arg'>last</i> must be valid
+<a href="#column_description">column descriptions</a>. If either <i class='arg'>first</i>
+or <i class='arg'>last</i> is specified as <strong>all</strong>, then all columns are deleted.
+The <strong>tail</strong> column cannot be deleted and it is an error to specify it.
+The order of <i class='arg'>first</i> and <i class='arg'>last</i> doesn't matter, and <i class='arg'>first</i> may
+be equal to <i class='arg'>last</i>.
 
 <br><br>
 <dt><a name="15"><i class='arg'>pathName</i> <b class='cmd'>column dragcget</b> <i class='arg'>option</i></a><dd>
@@ -891,16 +899,16 @@ The 2-pixel-thick line will be drawn over the left edge of <i class='arg'>column
 
 </dl>
 
-<dt><a name="17"><i class='arg'>pathName</i> <b class='cmd'>column index</b> <i class='arg'>column</i></a><dd>
+<dt><a name="17"><i class='arg'>pathName</i> <b class='cmd'>column index</b> <i class='arg'>columnDesc</i></a><dd>
 
 Deprecated. Use <b class='cmd'>column id</b> instead.
 
 <br><br>
-<dt><a name="18"><i class='arg'>pathName</i> <b class='cmd'>column id</b> <i class='arg'>column</i></a><dd>
+<dt><a name="18"><i class='arg'>pathName</i> <b class='cmd'>column id</b> <i class='arg'>columnDesc</i></a><dd>
 
-This command resolves the column description <i class='arg'>column</i> into a unique column
-identifier (see <a href="#column_description">COLUMN DESCRIPTION</a> below).
-If the column described by <i class='arg'>column</i> doesn't exist, this command returns
+This command resolves the <a href="#column_description">column description</a>
+<i class='arg'>columnDesc</i> into a unique column identifier.
+If the column described by <i class='arg'>columnDesc</i> doesn't exist, this command returns
 an empty string.
 
 <br><br>
@@ -911,35 +919,40 @@ from left to right. If <i class='arg'>-visible</i> is given, only columns whose 
 option is true are returned.
 
 <br><br>
-<dt><a name="20"><i class='arg'>pathName</i> <b class='cmd'>column move</b> <i class='arg'>column</i> <i class='arg'>before</i></a><dd>
+<dt><a name="20"><i class='arg'>pathName</i> <b class='cmd'>column move</b> <i class='arg'>columnDesc</i> <i class='arg'>beforeDesc</i></a><dd>
 
-Moves the specified <i class='arg'>column</i> to the left of the column
-specified by <i class='arg'>before</i>.
-If <i class='arg'>before</i> is the string <strong>tail</strong>,
-the column <i class='arg'>column</i> will become the last column.
+Moves the column specified by <i class='arg'>columnDesc</i> to the left of the column
+specified by <i class='arg'>beforeDesc</i>. Both <i class='arg'>columnDesc</i> and <i class='arg'>beforeDesc</i>
+must be valid <a href="#column_description">column descriptions</a>.
+If <i class='arg'>beforeDesc</i> is the string <strong>tail</strong>,
+the column <i class='arg'>columnDesc</i> will become the last column.
 
 <br><br>
-<dt><a name="21"><i class='arg'>pathName</i> <b class='cmd'>column neededwidth</b> <i class='arg'>column</i></a><dd>
+<dt><a name="21"><i class='arg'>pathName</i> <b class='cmd'>column neededwidth</b> <i class='arg'>columnDesc</i></a><dd>
 
 This command returns a decimal string giving the needed width
-of the column specified by <i class='arg'>column</i>.
+of the column specified by the <a href="#column_description">column description</a>
+<i class='arg'>columnDesc</i>.
 The needed width is the maximum of the width of the column header
-and the width of the <em>widest</em> currently visible item.
+and the width of the widest style in any visible item.
 
 <br><br>
-<dt><a name="22"><i class='arg'>pathName</i> <b class='cmd'>column order</b> <i class='arg'>column</i> ?<i class='arg'>-visible</i>?</a><dd>
+<dt><a name="22"><i class='arg'>pathName</i> <b class='cmd'>column order</b> <i class='arg'>columnDesc</i> ?<i class='arg'>-visible</i>?</a><dd>
 
-This command returns a decimal string giving the position of <i class='arg'>column</i>
+This command returns a decimal string giving the position of the column
+specified by the <a href="#column_description">column description</a>
+<i class='arg'>columnDesc</i>
 in the list of columns starting from zero for the leftmost column.
 If <i class='arg'>-visible</i> is given, only columns whose -visible
-option is true are considered, and -1 is returned if <i class='arg'>column</i>'s -visible
+option is true are considered, and -1 is returned if <i class='arg'>columnDesc</i>'s -visible
 option is false.
 
 <br><br>
-<dt><a name="23"><i class='arg'>pathName</i> <b class='cmd'>column width</b> <i class='arg'>column</i></a><dd>
+<dt><a name="23"><i class='arg'>pathName</i> <b class='cmd'>column width</b> <i class='arg'>columnDesc</i></a><dd>
 
 This command returns a decimal string giving the width in pixels
-of the column specified by <i class='arg'>column</i>,
+of the column specified by the <a href="#column_description">column description</a>
+<i class='arg'>columnDesc</i>,
 even if the treectrl is configured to not display the column headers
 by means of the <strong>-showheader</strong> option.
 </dl>
@@ -1451,14 +1464,15 @@ and b) each ancestor's <strong>-visible</strong> option is true
 <dt><a name="61"><i class='arg'>pathName</i> <b class='cmd'>item delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
 Deletes the specified item(s).
-<i class='arg'>First</i> and <i class='arg'>last</i> must be the string <strong>all</strong> or a valid
-<a href="#item_description">item description</a>.
+<i class='arg'>First</i> and <i class='arg'>last</i> must be valid
+<a href="#item_description">item descriptions</a>.
 If either <i class='arg'>first</i> or <i class='arg'>last</i> is specified as <strong>all</strong>, then all items are
 deleted. If <i class='arg'>first</i> is specified and <i class='arg'>last</i> isn't
 specified, the item described by <i class='arg'>first</i> is deleted.
 If both <i class='arg'>first</i> and <i class='arg'>last</i> are specified,
 they must decribe items with a common ancestor;
 then the range of items between <i class='arg'>first</i> and <i class='arg'>last</i> is deleted.
+The order of <i class='arg'>first</i> and <i class='arg'>last</i> doesn't matter.
 <br><br>
 Deleting an item deletes any child items of the deleted item recursively.
 If the current <strong>active</strong> item is deleted, the root item becomes the new active item.

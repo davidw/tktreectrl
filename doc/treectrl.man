@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.31 2005/07/23 00:35:20 treectrl Exp $}
+  $Id: treectrl.man,v 1.32 2005/09/07 20:38:04 treectrl Exp $}
 ][manpage_begin treectrl n 2.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -408,44 +408,48 @@ that follows the [cmd column] argument.
 The following forms of the command are supported:
 
 [list_begin definitions]
-[call [arg pathName] [cmd {column bbox}] [arg column]]
+[call [arg pathName] [cmd {column bbox}] [arg columnDesc]]
 Returns a list with four elements giving the bounding box
-for the column header specified by [arg column].
+of the header of the column specified by the
+[sectref {COLUMN DESCRIPTION} {column description}] [arg columnDesc].
 If the treectrl is configured not to display the column headers
 by means of the [option -showheader] option, then
 an empty list is returned instead.
 
-[call [arg pathName] [cmd {column cget}] [arg column] [arg option]]
+[call [arg pathName] [cmd {column cget}] [arg columnDesc] [arg option]]
 This command returns the current value of the option named [arg option]
-for the column specified by [arg column],
-[arg Column] may also be the string [const tail] to specify the tail column.
+for the column specified by the
+[sectref {COLUMN DESCRIPTION} {column description}] [arg columnDesc],
+[arg ColumnDesc] may also be the string [const tail] to specify the tail column.
 [arg Option] may have any of the values accepted by the
 [cmd {column configure}] widget command.
 
-[call [arg pathName] [cmd {column configure}] [arg column] \
+[call [arg pathName] [cmd {column configure}] [arg columnDesc] \
      [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
-that it modifies options associated with the column specified by [arg column]
+that it modifies options associated with the column specified by the
+[sectref {COLUMN DESCRIPTION} {column description}] [arg columnDesc]
 instead of modifying options for the overall treectrl widget.
-[arg Column] may be the string [const tail] to specify the tail column.
-If [arg column] is the string [const all], at least one option-value pair
+[arg ColumnDesc] may be the string [const tail] to specify the tail column.
+If [arg columnDesc] is the string [const all], at least one option-value pair
 must be given; in this case all the columns are configured.
 If no [arg option] is specified, the command returns a list describing
-all of the available options for [arg column] (see [fun Tk_ConfigureInfo]
+all of the available options for [arg columnDesc] (see [fun Tk_ConfigureInfo]
 for information on the format of this list).
 If [arg option] is specified with no [arg value], then the command returns
 a list describing the one named option (this list will be identical to
 the corresponding sublist of the value returned if no [arg option]
 is specified).
 If one or more [arg option]-[arg value] pairs are specified, then the command
-modifies the given option(s) to have the given value(s) for [arg column];
+modifies the given option(s) to have the given value(s) for [arg columnDesc];
 in this case the command returns an empty string.
 [nl]
 
 See [sectref COLUMNS] below for details on the options available for columns.
 
 [call [arg pathName] [cmd {column compare}] [arg column1] [arg op] [arg column2]]
-From both [arg column]s the index is retrieved
+For both [sectref {COLUMN DESCRIPTION} {column descriptions}] [arg column1]
+and [arg column2] the index is retrieved
 (as returned from the [cmd {column order}] widget command).
 Then these indexes are compared using the operator [arg op], which must
 be either [const <],  [const <=],  [const ==], [const >=], [const >],
@@ -466,9 +470,13 @@ placed to the right of all other columns (except the [const tail] column). Any
 [cmd "column configure"] command. The return value is the unique identifier
 of the new column.
 
-[call [arg pathName] [cmd {column delete}] [arg column]]
-Deletes the specified [arg column] from the treectrl widget. If [arg column]
-is the string [const all], all columns except the tail column are deleted.
+[call [arg pathName] [cmd {column delete}] [arg first] [opt [arg last]]]
+Deletes the specified column(s). [arg First] and [arg last] must be valid
+[sectref {COLUMN DESCRIPTION} {column descriptions}]. If either [arg first]
+or [arg last] is specified as [const all], then all columns are deleted.
+The [const tail] column cannot be deleted and it is an error to specify it.
+The order of [arg first] and [arg last] doesn't matter, and [arg first] may
+be equal to [arg last].
 
 [call [arg pathName] [cmd {column dragcget}] [arg option]]
 [call [arg pathName] [cmd {column dragconfigure}] \
@@ -513,13 +521,13 @@ The 2-pixel-thick line will be drawn over the left edge of [arg column].
 
 [list_end]
 
-[call [arg pathName] [cmd {column index}] [arg column]]
+[call [arg pathName] [cmd {column index}] [arg columnDesc]]
 Deprecated. Use [cmd {column id}] instead.
 
-[call [arg pathName] [cmd {column id}] [arg column]]
-This command resolves the column description [arg column] into a unique column
-identifier (see [sectref {COLUMN DESCRIPTION}] below).
-If the column described by [arg column] doesn't exist, this command returns
+[call [arg pathName] [cmd {column id}] [arg columnDesc]]
+This command resolves the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc] into a unique column identifier.
+If the column described by [arg columnDesc] doesn't exist, this command returns
 an empty string.
 
 [call [arg pathName] [cmd {column list}] [opt [arg -visible]]]
@@ -527,28 +535,33 @@ This command returns a list of identifiers for every column (except the tail)
 from left to right. If [arg -visible] is given, only columns whose -visible
 option is true are returned.
 
-[call [arg pathName] [cmd {column move}] [arg column] [arg before]]
-Moves the specified [arg column] to the left of the column
-specified by [arg before].
-If [arg before] is the string [const tail],
-the column [arg column] will become the last column.
+[call [arg pathName] [cmd {column move}] [arg columnDesc] [arg beforeDesc]]
+Moves the column specified by [arg columnDesc] to the left of the column
+specified by [arg beforeDesc]. Both [arg columnDesc] and [arg beforeDesc]
+must be valid [sectref {COLUMN DESCRIPTION} {column descriptions}].
+If [arg beforeDesc] is the string [const tail],
+the column [arg columnDesc] will become the last column.
 
-[call [arg pathName] [cmd {column neededwidth}] [arg column]]
+[call [arg pathName] [cmd {column neededwidth}] [arg columnDesc]]
 This command returns a decimal string giving the needed width
-of the column specified by [arg column].
+of the column specified by the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc].
 The needed width is the maximum of the width of the column header
-and the width of the [emph widest] currently visible item.
+and the width of the widest style in any visible item.
 
-[call [arg pathName] [cmd {column order}] [arg column] [opt [arg -visible]]]
-This command returns a decimal string giving the position of [arg column]
+[call [arg pathName] [cmd {column order}] [arg columnDesc] [opt [arg -visible]]]
+This command returns a decimal string giving the position of the column
+specified by the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc]
 in the list of columns starting from zero for the leftmost column.
 If [arg -visible] is given, only columns whose -visible
-option is true are considered, and -1 is returned if [arg column]'s -visible
+option is true are considered, and -1 is returned if [arg columnDesc]'s -visible
 option is false.
 
-[call [arg pathName] [cmd {column width}] [arg column]]
+[call [arg pathName] [cmd {column width}] [arg columnDesc]]
 This command returns a decimal string giving the width in pixels
-of the column specified by [arg column],
+of the column specified by the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc],
 even if the treectrl is configured to not display the column headers
 by means of the [option -showheader] option.
 [list_end]
@@ -985,14 +998,15 @@ and b) each ancestor's [option -visible] option is true
 
 [call [arg pathName] [cmd {item delete}] [arg first] [opt [arg last]]]
 Deletes the specified item(s).
-[arg First] and [arg last] must be the string [const all] or a valid
-[sectref {ITEM DESCRIPTION} {item description}].
+[arg First] and [arg last] must be valid
+[sectref {ITEM DESCRIPTION} {item descriptions}].
 If either [arg first] or [arg last] is specified as [const all], then all items are
 deleted. If [arg first] is specified and [arg last] isn't
 specified, the item described by [arg first] is deleted.
 If both [arg first] and [arg last] are specified,
 they must decribe items with a common ancestor;
 then the range of items between [arg first] and [arg last] is deleted.
+The order of [arg first] and [arg last] doesn't matter.
 [nl]
 Deleting an item deletes any child items of the deleted item recursively.
 If the current [const active] item is deleted, the root item becomes the new active item.
