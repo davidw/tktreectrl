@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.33 2005/09/07 22:25:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.34 2005/09/09 19:40:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2412,7 +2412,7 @@ void PSTRestore(
 
 /*
  * The following AllocHax_xxx calls implement a mini memory allocator that
- * allocates blocks of same-sized chunks, and hold on to those chunks when
+ * allocates blocks of same-sized chunks, and holds on to those chunks when
  * they are freed so they can be reused quickly. If you don't want to use it
  * just comment out #define ALLOC_HAX in tkTreeCtrl.h.
  */
@@ -2497,11 +2497,11 @@ char *AllocHax_Alloc(ClientData data, int size)
 		result = elem;
 	} else {
 		AllocElem *block;
+		unsigned elemSize = TCL_ALIGN(sizeof(AllocElem) + size);
 		freeList->blockCount += 1;
 		freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks,
 			sizeof(AllocElem *) * freeList->blockCount);
-		block = (AllocElem *) ckalloc((sizeof(AllocElem) - 1 + size) *
-			freeList->blockSize);
+		block = (AllocElem *) ckalloc(elemSize * freeList->blockSize);
 		freeList->blocks[freeList->blockCount - 1] = block;
 /* dbwin("AllocHax_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
 		freeList->head = block;
@@ -2509,7 +2509,7 @@ char *AllocHax_Alloc(ClientData data, int size)
 		for (i = 1; i < freeList->blockSize - 1; i++) {
 			elem->free = 1;
 			elem->next = (AllocElem *) (((char *) freeList->head) +
-				(sizeof(AllocElem) - 1 + size) * i);
+				elemSize * i);
 			elem = elem->next;
 		}
 		elem->next = NULL;
