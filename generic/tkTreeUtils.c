@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.34 2005/09/09 19:40:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.35 2005/09/14 21:38:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -17,6 +17,7 @@
 #if defined(MAC_OSX_TK)
 #include <Carbon/Carbon.h>
 #include "tkMacOSXInt.h"
+#include "tclInt.h"
 static PixPatHandle gPenPat = NULL;
 #endif
 
