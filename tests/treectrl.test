@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.27 2005/07/15 01:43:39 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.28 2005/09/15 04:39:23 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -707,7 +707,7 @@ test treectrl-8.12 {selection modify: to be or not to be?} -body {
 
 test treectrl-8.13 {selection includes: missing args} -body {
     .t selection includes
-} -returnCodes error -result {wrong # args: should be ".t selection includes index"}
+} -returnCodes error -result {wrong # args: should be ".t selection includes item"}
 
 test treectrl-8.14 {selection includes: invalid item} -body {
     .t selection includes {foo bar}
