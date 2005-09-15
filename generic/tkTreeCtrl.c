@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.50 2005/09/07 20:27:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.51 2005/09/15 04:38:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -745,44 +745,9 @@ static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 			sprintf(buf + strlen(buf), " line %s%d", tree->itemPrefix,
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
-#if 1
 	    } else {
 		TreeItem_Identify(tree, item, x, y, buf);
 	    }
-#else
-	    } else if (tree->columnCountVis == 1) {
-		char *elem;
-
-		sprintf(buf + strlen(buf), " column %s%d",
-			tree->columnPrefix, TreeColumn_GetID(tree->columnVis));
-		elem = TreeItem_Identify(tree, item, x, y);
-		if (elem != NULL)
-		    sprintf(buf + strlen(buf), " elem %s", elem);
-	    } else {
-		/* Point is in a TreeItemColumn */
-		int left = 0;
-		TreeColumn treeColumn;
-		TreeItemColumn itemColumn;
-
-		treeColumn = tree->columns;
-		itemColumn = TreeItem_GetFirstColumn(tree, item);
-		while (itemColumn != NULL) {
-		    int width = TreeColumn_UseWidth(treeColumn);
-		    if ((x >= left) && (x < left + width)) {
-			char *elem;
-			sprintf(buf + strlen(buf), " column %s%d",
-				tree->columnPrefix, TreeColumn_GetID(treeColumn));
-			elem = TreeItem_Identify(tree, item, x, y);
-			if (elem != NULL)
-			    sprintf(buf + strlen(buf), " elem %s", elem);
-			break;
-		    }
-		    left += width;
-		    treeColumn = TreeColumn_Next(treeColumn);
-		    itemColumn = TreeItemColumn_GetNext(tree, itemColumn);
-		}
-	    }
-#endif
 	    Tcl_SetResult(interp, buf, TCL_VOLATILE);
 	    break;
 	}
@@ -1986,7 +1951,7 @@ doneADD:
 	case COMMAND_ANCHOR:
 	{
 	    if (objc != 3 && objc != 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "?index?");
+		Tcl_WrongNumArgs(interp, 3, objv, "?item?");
 		return TCL_ERROR;
 	    }
 	    if (objc == 4) {
@@ -2128,7 +2093,7 @@ doneCLEAR:
 	case COMMAND_INCLUDES:
 	{
 	    if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "index");
+		Tcl_WrongNumArgs(interp, 3, objv, "item");
 		return TCL_ERROR;
 	    }
 	    if (TreeItem_FromObj(tree, objv[3], &item, 0) != TCL_OK)
