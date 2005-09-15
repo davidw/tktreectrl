@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.19 2005/09/15 04:40:15 treectrl Exp $
+
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
     TreeCtrl::DoubleButton1 %W %x %y

@@ -1,3 +1,5 @@
+# RCS: @(#) $Id: treectrl.tcl,v 1.20 2005/09/15 04:40:15 treectrl Exp $
+
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
     TreeCtrl::MotionInHeader %W %x %y
