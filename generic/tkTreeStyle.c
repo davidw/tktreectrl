@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.43 2005/09/07 20:33:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.44 2005/09/15 04:34:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -16,6 +16,12 @@ typedef struct ElementLink ElementLink;
 
 #define NEEDEDHAX
 
+/*
+ * A data structure of the following type is kept for each master style
+ * and each instance style. Master styles are created by the [style create]
+ * widget command. Instance styles are created when a style is assigned to
+ * an item-column.
+ */
 struct Style
 {
 	Tk_OptionTable optionTable;
@@ -68,13 +74,16 @@ struct Style
 #define ELF_EXPAND_S (ELF_eEXPAND_S | ELF_iEXPAND_S)
 #define ELF_STICKY (ELF_STICKY_W | ELF_STICKY_N | ELF_STICKY_E | ELF_STICKY_S)
 
+/*
+ * An array of these is kept for each style, one per element. Most of the
+ * fields are valid only for a master style and are set by the [style layout]
+ * widget command.
+ */
 struct ElementLink
 {
 	Element *elem;
-	int neededWidth;
-	int neededHeight;
-	int layoutWidth;
-	int layoutHeight;
+
+    /* The following fields are valid for master styles only */
 	int ePadX[2]; /* external horizontal padding */
 	int ePadY[2]; /* external vertical padding */
 	int iPadX[2]; /* internal horizontal padding */
@@ -83,6 +92,12 @@ struct ElementLink
 	int *onion, onionCount; /* -union option info */
 	int minWidth, fixedWidth, maxWidth;
 	int minHeight, fixedHeight, maxHeight;
+
+    /* The following fields are valid for instance styles only */
+	int neededWidth;
+	int neededHeight;
+	int layoutWidth;
+	int layoutHeight;
 };
 
 static char *orientStringTable[] = { "horizontal", "vertical", (char *) NULL };
@@ -95,6 +110,10 @@ static Tk_OptionSpec styleOptionSpecs[] = {
 		(char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
+/*
+ * The following structure is used to hold layout information about a
+ * single element. This information is not cached anywhere.
+ */
 struct Layout
 {
 	ElementLink *eLink;
@@ -116,7 +135,31 @@ struct Layout
 	int temp;
 };
 
-static int Style_DoExpandH(struct Layout *layout, int right)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoExpandH --
+ *
+ *	Add extra horizontal space to an element. The space is
+ *	distributed from right to left until all available space
+ *	is used or expansion is not possible.
+ *
+ * Results:
+ *	Layout.ePadX, Layout.iPadX, and Layout.useWidth may be
+ *	updated. The amount of available space that was used is
+ *	returned.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Style_DoExpandH(
+	struct Layout *layout, 	/* Layout to be adjusted. */
+	int right				/* Limit of expansion. */
+	)
 {
 	ElementLink *eLink1 = layout->master;
 	int flags = eLink1->flags;
@@ -235,7 +278,31 @@ static int Style_DoExpandH(struct Layout *layout, int right)
 	return spaceUsed;
 }
 
-static int Style_DoExpandV(struct Layout *layout, int bottom)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoExpandV --
+ *
+ *	Add extra vertical space to an element. The space is
+ *	distributed from bottom to top until all available space
+ *	is used or expansion is not possible.
+ *
+ * Results:
+ *	Layout.ePadY, Layout.iPadY, and Layout.useHeight may be
+ *	updated. The amount of available space that was used is
+ *	returned.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Style_DoExpandV(
+	struct Layout *layout,	/* Layout to be adjusted. */
+	int bottom				/* Limit of expansion. */
+	)
 {
 	ElementLink *eLink1 = layout->master;
 	int flags = eLink1->flags;
@@ -354,7 +421,31 @@ static int Style_DoExpandV(struct Layout *layout, int bottom)
 	return spaceUsed;
 }
 
-static void Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoLayoutH --
+ *
+ *	Calculate the horizontal size and position of each element.
+ *	This gets called if the style -orient option is horizontal or
+ *	vertical.
+ *
+ * Results:
+ *	layouts[] is updated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_DoLayoutH(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	struct Layout layouts[]		/* Array of layout records to be
+								 * filled in, one per element. Should be
+								 * uninitialized.. */
+    )
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
@@ -858,7 +949,32 @@ static void Style_DoLayoutH(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	}
 }
 
-static void Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoLayoutV --
+ *
+ *	Calculate the vertical size and position of each element.
+ *	This gets called if the style -orient option is horizontal or
+ *	vertical.
+ *
+ * Results:
+ *	layouts[] is updated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_DoLayoutV(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	struct Layout layouts[]		/* Array of layout records to be filled
+								 * in, one per element. Should be
+								 * initialized by a call to Style_DoLayoutH().
+								 */
+	)
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
@@ -1251,8 +1367,32 @@ static void Style_DoLayoutV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	}
 }
 
-/* Calculate the height and width of all the Elements */
-static void Layout_Size(int vertical, int numLayouts, struct Layout layouts[], int *widthPtr, int *heightPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Layout_Size --
+ *
+ *	Calculate the height and width of a style after all the
+ *	elements have been arranged.
+ *
+ * Results:
+ *	The height and width of the style.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Layout_Size(
+	int vertical,				/* TRUE if elements are arranged from top
+								 * to bottom. */
+	int numLayouts,				/* Number of elements. */
+	struct Layout layouts[],	/* Initialized layout records. */
+	int *widthPtr,				/* Returned width. */
+	int *heightPtr				/* Returned height. */
+	)
 {
 	int i, W, N, E, S;
 	int width = 0, height = 0;
@@ -1296,8 +1436,32 @@ static void Layout_Size(int vertical, int numLayouts, struct Layout layouts[], i
 	(*heightPtr) = height;
 }
 
-/* */
-void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoLayoutNeededV --
+ *
+ *	Calculate the vertical size and position of each element.
+ *	This is similar to Style_DoLayoutV but without expansion or
+ *	squeezing. Also, the size and position of -union elements
+ *	is not calculated.
+ *
+ * Results:
+ *	layouts[] is updated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_DoLayoutNeededV(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	struct Layout layouts[]	/* Array of layout records to be filled
+				* in, one per element. Should be
+				* uninitialized. */
+	)
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *masterStyle = style->master;
@@ -1364,9 +1528,31 @@ void Style_DoLayoutNeededV(StyleDrawArgs *drawArgs, struct Layout layouts[])
 	}
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_DoLayout --
+ *
+ *	Calculate the size and position of each element.
+ *
+ * Results:
+ *	layouts[] is updated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 /* Arrange all the Elements considering drawArgs.width and maybe drawArgs.height */
-static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[],
-	int neededV, char *file, int line)
+static void
+Style_DoLayout(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	struct Layout layouts[],	/* Uninitialized records to be filled in. */
+	int neededV,				/* TRUE if drawArgs.height should be ignored. */
+	char *file,					/* debug */
+	int line					/* debug */
+	)
 {
 	TreeCtrl *tree = drawArgs->tree;
 	Style *style = (Style *) drawArgs->style;
@@ -1452,9 +1638,34 @@ static void Style_DoLayout(StyleDrawArgs *drawArgs, struct Layout layouts[],
 	}
 }
 
-/* Arrange Elements to determine the needed height and width of the Style */
-static int Style_NeededSize(TreeCtrl *tree, Style *style, int state,
-	int *widthPtr, int *heightPtr, int squeeze)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_NeededSize --
+ *
+ *	Calculate the total width and height of a style based only on
+ *	the requested size of each element.
+ *
+ * Results:
+ *	The width and height. Return TRUE if any elements can be
+ *	squeezed.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Style_NeededSize(
+	TreeCtrl *tree,		/* Widget info. */
+	Style *style,		/* Style to calculate size of. */
+	int state,			/* STATE_xxx flags. */
+	int *widthPtr,		/* Returned width. */
+	int *heightPtr,		/* Returned height. */
+	int squeeze			/* If TRUE, all elements with -squeeze
+						 * layout are given minimum width. */
+	)
 {
 	Style *masterStyle = style->master;
 	ElementLink *eLinks1, *eLinks2, *eLink1, *eLink2;
@@ -1712,7 +1923,30 @@ static int Style_NeededSize(TreeCtrl *tree, Style *style, int state,
 	return hasSqueeze;
 }
 
-static void Style_CheckNeededSize(TreeCtrl *tree, Style *style, int state)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_CheckNeededSize --
+ *
+ *	If the style's requested size is out-of-date then recalculate
+ *	Style.neededWidth, Style.neededHeight, Style.minWidth, and
+ *	Style.minHeight.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_CheckNeededSize(
+	TreeCtrl *tree,		/* Widget info. */
+	Style *style,		/* Style info. */
+	int state			/* STATE_xxx flags. */
+	)
 {
 	if (style->neededWidth == -1)
 	{
@@ -1740,7 +1974,29 @@ static void Style_CheckNeededSize(TreeCtrl *tree, Style *style, int state)
 #endif
 }
 
-int TreeStyle_NeededWidth(TreeCtrl *tree, TreeStyle style_, int state)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_NeededWidth --
+ *
+ *	Return the requested width of a style.
+ *
+ * Results:
+ *	The requested width. If the requested size is out-of-date
+ *	then it is recalculated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_NeededWidth(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* Style token. */
+	int state				/* STATE_xxx flags. */
+	)
 {
 	Style *style = (Style *) style_;
 
@@ -1748,7 +2004,28 @@ int TreeStyle_NeededWidth(TreeCtrl *tree, TreeStyle style_, int state)
 	return style->neededWidth;
 }
 
-int TreeStyle_NeededHeight(TreeCtrl *tree, TreeStyle style_, int state)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_NeededHeight --
+ *
+ *	Return the requested height of a style.
+ *
+ * Results:
+ *	The requested height. If the requested size is out-of-date
+ *	then it is recalculated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_NeededHeight(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* Style token. */
+	int state)				/* STATE_xxx flags. */
 {
 	Style *style = (Style *) style_;
 
@@ -1756,8 +2033,27 @@ int TreeStyle_NeededHeight(TreeCtrl *tree, TreeStyle style_, int state)
 	return style->neededHeight;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_UseHeight --
+ *
+ *	Return the height of a style for a given state and width.
+ *
+ * Results:
+ *	The height of the style.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 /* Calculate height of Style considering drawArgs.width */
-int TreeStyle_UseHeight(StyleDrawArgs *drawArgs)
+int
+TreeStyle_UseHeight(
+	StyleDrawArgs *drawArgs		/* Various args. */
+	)
 {
 	TreeCtrl *tree = drawArgs->tree;
 	Style *style = (Style *) drawArgs->style;
@@ -1807,7 +2103,25 @@ int TreeStyle_UseHeight(StyleDrawArgs *drawArgs)
 	return height;
 }
 
-void TreeStyle_Draw(StyleDrawArgs *drawArgs)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Draw --
+ *
+ *	Draw all the elements in a style.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void TreeStyle_Draw(
+	StyleDrawArgs *drawArgs		/* Various args. */
+	)
 {
 	Style *style = (Style *) drawArgs->style;
 	TreeCtrl *tree = drawArgs->tree;
@@ -1935,13 +2249,37 @@ void TreeStyle_Draw(StyleDrawArgs *drawArgs)
 	STATIC_FREE(layouts, struct Layout, style->numElements);
 }
 
-void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_UpdateWindowPositions --
+ *
+ *	Call the displayProc on each window element so it can update
+ *	its geometry. This is needed if an item was scrolled and its
+ *	displayProc wasn't otherwise called.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Possible window geometry changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_UpdateWindowPositions(
+	StyleDrawArgs *drawArgs		/* Various args. */
+	)
 {
 	Style *style = (Style *) drawArgs->style;
 	TreeCtrl *tree = drawArgs->tree;
 	ElementArgs args;
 	int i;
 	struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
+
+	/* FIXME: Perhaps remember whether this style has any window
+	 * elements */
 
 	if (drawArgs->width < style->minWidth + drawArgs->indent)
 		drawArgs->width = style->minWidth + drawArgs->indent;
@@ -1980,7 +2318,30 @@ void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs)
 	STATIC_FREE(layouts, struct Layout, style->numElements);
 }
 
-void TreeStyle_OnScreen(TreeCtrl *tree, TreeStyle style_, int onScreen)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_OnScreen --
+ *
+ *	Call the onScreenProc (if non-NULL) on each element so it can
+ *	update its visibility when an item's visibility changes.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Possible window visibility changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_OnScreen(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* Style token. */
+	int onScreen			/* Boolean indicating whether the item
+							 * using the style is on screen anymore. */
+	)
 {
 	Style *style = (Style *) style_;
 	ElementArgs args;
@@ -2001,7 +2362,27 @@ void TreeStyle_OnScreen(TreeCtrl *tree, TreeStyle style_, int onScreen)
 	}
 }
 
-static void Element_FreeResources(TreeCtrl *tree, Element *elem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_FreeResources --
+ *
+ *	Free memory etc associated with an Element.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Element_FreeResources(
+	TreeCtrl *tree,			/* Widget info. */
+	Element *elem			/* Record to free. */
+	)
 {
 	ElementArgs args;
 	Tcl_HashEntry *hPtr;
@@ -2024,7 +2405,27 @@ static void Element_FreeResources(TreeCtrl *tree, Element *elem)
 #endif
 }
 
-static ElementLink *ElementLink_Init(ElementLink *eLink, Element *elem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ElementLink_Init --
+ *
+ *	Initialize (don't allocate) an ElementLink.
+ *
+ * Results:
+ *	eLink is filled with default values.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static ElementLink *
+ElementLink_Init(
+	ElementLink *eLink,		/* Existing record to initialize. */
+	Element *elem			/* Existing element to point to. */
+	)
 {
 	memset(eLink, '\0', sizeof(ElementLink));
 	eLink->elem = elem;
@@ -2035,7 +2436,27 @@ static ElementLink *ElementLink_Init(ElementLink *eLink, Element *elem)
 	return eLink;
 }
 
-static void ElementLink_FreeResources(TreeCtrl *tree, ElementLink *eLink)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ElementLink_FreeResources --
+ *
+ *	Free memory etc associated with an ElementLink.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+ElementLink_FreeResources(
+	TreeCtrl *tree,			/* Widget info. */
+	ElementLink *eLink		/* Record to free. */
+	)
 {
 	if (eLink->elem->master != NULL)
 		Element_FreeResources(tree, eLink->elem);
@@ -2043,7 +2464,27 @@ static void ElementLink_FreeResources(TreeCtrl *tree, ElementLink *eLink)
 		WCFREE(eLink->onion, int, eLink->onionCount);
 }
 
-void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_FreeResources --
+ *
+ *	Free memory etc associated with a Style.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_FreeResources(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_		/* Token of record to free. */
+	)
 {
 	Style *style = (Style *) style_;
 	int i;
@@ -2071,7 +2512,31 @@ void TreeStyle_FreeResources(TreeCtrl *tree, TreeStyle style_)
 #endif
 }
 
-static ElementLink *Style_FindElem(TreeCtrl *tree, Style *style, Element *master, int *index)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_FindElem --
+ *
+ *	Find an ElementLink in a style.
+ *
+ * Results:
+ *	If found, a pointer to the ElementLink and index in the
+ *	style's array of ElementLinks is returned; otherwise NULL
+ *	is returned.
+ *
+ * Side effects:
+ *	World peace.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static ElementLink *
+Style_FindElem(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *style,			/* Style to search. */
+	Element *master,		/* Master element to find. */
+	int *index				/* Returned index, may be NULL. */
+	)
 {
 	int i;
 
@@ -2087,7 +2552,31 @@ static ElementLink *Style_FindElem(TreeCtrl *tree, Style *style, Element *master
 	return NULL;
 }
 
-int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_FindElement --
+ *
+ *	Find an ElementLink in a style.
+ *
+ * Results:
+ *	If found, the index in the style's array of ElementLinks is
+ *	returned with TCL_OK. Otherwise TCL_ERROR is returned and an
+ *	error message is placed in the interpreter result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_FindElement(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* Token of style to search. */
+	TreeElement elem_,		/* Master element to find. */
+	int *index				/* Returned index, may be NULL. */
+	)
 {
 	if (Style_FindElem(tree, (Style *) style_, (Element *) elem_, index) == NULL)
 	{
@@ -2098,9 +2587,40 @@ int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, i
 	return TCL_OK;
 }
 
-static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, Element *masterElem, ElementType *type,
-	CONST char *name, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_CreateAndConfig --
+ *
+ *	Allocate and initialize a new Element (master or instance).
+ *
+ * Results:
+ *	An Element is allocated, its createProc is called, default
+ *	configuration options are set, then the configProc and changeProc
+ *	are called to handle any given configurations options. If an
+ *	error occurs NULL is returned.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Element *
+Element_CreateAndConfig(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeItem item,				/* Item containing the element. Should
+								 * be NULL for a master element. */
+	TreeItemColumn column,		/* Item-column containing the element.
+								 * Should be NULL for a master element. */
+	Element *masterElem,		/* Master element if creating an instance. */
+	ElementType *type,			/* Element type. Should be NULL when
+								 * creating an instance. */
+	CONST char *name,			/* Name of master element, NULL for an
+								 * instance. */
+	int objc,					/* Array of intialial configuration. */
+	Tcl_Obj *CONST objv[]		/* options. */
+	)
 {
 	Element *elem;
 	ElementArgs args;
@@ -2170,9 +2690,44 @@ static Element *Element_CreateAndConfig(TreeCtrl *tree, TreeItem item,
 	return elem;
 }
 
-/* Create an instance Element if it doesn't exist in this Style */
-static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, Style *style, Element *masterElem, int *isNew)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_CreateElem --
+ *
+ *	Allocate and initialize a new Element in a style (if it doesn't
+ *	already exist) and return its associated ElementLink.
+ *
+ * Results:
+ *	If the given style is a master style and the element is found,
+ *	then a pointer to an existing ElementLink is returned. 
+ *	If the given style is a master style and the element is not
+ *	found, then NULL is returned (this is considered an error).
+ *
+ *	Otherwise the given style is an instance style.
+ *	If the style already has a matching instance element, then a
+ *	pointer to an existing ElementLink is returned.
+ *	If the style does not already have a matching instance element,
+ *	then a new one is created and then a pointer to an existing
+ *	ElementLink is returned.
+ *	If an error occurs creating the new element the result is
+ *	NULL.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static ElementLink *
+Style_CreateElem(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeItem item,			/* Item containing the element. */
+	TreeItemColumn column,	/* Item-column containing the element. */
+	Style *style,			/* Style to search/add the element to. */
+	Element *masterElem,	/* Element to find or create and instance of. */
+	int *isNew)				/* If non-NULL, set to TRUE if a new instance
+							 * element was created. */
 {
 	ElementLink *eLink = NULL;
 	Element *elem;
@@ -2215,7 +2770,29 @@ static ElementLink *Style_CreateElem(TreeCtrl *tree, TreeItem item,
 	return eLink;
 }
 
-TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_NewInstance --
+ *
+ *	Create and initialize a new instance of a master style.
+ *
+ * Results:
+ *	A new instance Style. The new array of ElementLinks is
+ *	initialized to contain pointers to master elements; instance
+ *	elements are created the first time they are configured.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeStyle
+TreeStyle_NewInstance(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_		/* Master style to create instance of. */
+	)
 {
 	Style *style = (Style *) style_;
 	Style *copy;
@@ -2255,7 +2832,28 @@ TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle style_)
 	return (TreeStyle) copy;
 }
 
-static int Element_FromObj(TreeCtrl *tree, Tcl_Obj *obj, Element **elemPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_FromObj --
+ *
+ *	Convert a Tcl_Obj to a master element.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Element_FromObj(
+	TreeCtrl *tree,			/* Widget info. */
+	Tcl_Obj *obj,			/* Object to convert from. */
+	Element **elemPtr		/* Returned record. */
+	)
 {
 	char *name;
 	Tcl_HashEntry *hPtr;
@@ -2272,17 +2870,80 @@ static int Element_FromObj(TreeCtrl *tree, Tcl_Obj *obj, Element **elemPtr)
 	return TCL_OK;
 }
 
-int TreeElement_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeElement *elemPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeElement_FromObj --
+ *
+ *	Convert a Tcl_Obj to a master element.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeElement_FromObj(
+	TreeCtrl *tree,			/* Widget info. */
+	Tcl_Obj *obj,			/* Object to convert from. */
+	TreeElement *elemPtr	/* Returned master element token. */
+	)
 {
 	return Element_FromObj(tree, obj, (Element **) elemPtr);
 }
 
-int TreeElement_IsType(TreeCtrl *tree, TreeElement elem_, CONST char *type)
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeElement_IsType --
+ *
+ *	Determine if an element is of a certain type.
+ *
+ * Results:
+ *	TRUE if the type matches, otherwise FALSE.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeElement_IsType(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeElement elem_,		/* Element to check. */
+	CONST char *type		/* NULL-terminated element type name. */
+	)
 {
 	return strcmp(((Element *) elem_)->typePtr->name, type) == 0;
 }
 
-int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_FromObj --
+ *
+ *	Convert a Tcl_Obj to a master style.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_FromObj(
+	TreeCtrl *tree,			/* Widget info. */
+	Tcl_Obj *obj,			/* Object to convert from. */
+	TreeStyle *stylePtr)	/* Returned master style token. */
 {
 	char *name;
 	Tcl_HashEntry *hPtr;
@@ -2299,19 +2960,79 @@ int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr)
 	return TCL_OK;
 }
 
-static Tcl_Obj *Element_ToObj(Element *elem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_ToObj --
+ *
+ *	Create a new Tcl_Obj representing an element.
+ *
+ * Results:
+ *	A Tcl_Obj.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Tcl_Obj *
+Element_ToObj(
+	Element *elem		/* Element to create Tcl_Obj from. */
+	)
 {
 	return Tcl_NewStringObj(elem->name, -1);
 }
 
-Tcl_Obj *TreeStyle_ToObj(TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ToObj --
+ *
+ *	Create a new Tcl_Obj representing a style.
+ *
+ * Results:
+ *	A Tcl_Obj.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+TreeStyle_ToObj(
+	TreeStyle style_		/* Style token to create Tcl_Obj from. */
+	)
 {
 	Style *style = (Style *) style_;
 
 	return Tcl_NewStringObj(style->name, -1);
 }
 
-static void Style_Changed(TreeCtrl *tree, Style *masterStyle)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_Changed --
+ *
+ *	Called when a master style is configured or the layout of one
+ *	of its elements changes.
+ *
+ * Results:
+ *	For each item-column using an instance of the given master
+ *	style, size and display info is marked out-of-date.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_Changed(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *masterStyle		/* Style that changed. */
+	)
 {
 	TreeItem item;
 	TreeItemColumn column;
@@ -2359,7 +3080,33 @@ static void Style_Changed(TreeCtrl *tree, Style *masterStyle)
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 }
 
-static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Element **elemList, int *map)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_ChangeElementsAux --
+ *
+ *	Update the list of elements used by a style. Elements
+ *	may be inserted or deleted.
+ *
+ * Results:
+ *	The list of elements in the style is updated.
+ *
+ * Side effects:
+ *	Memory may be allocated/deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_ChangeElementsAux(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *style,			/* Master/instance style to be updated. */
+	int count,				/* The number of elements in the style after
+							 * this routine finishes. */
+	Element **elemList,		/* List of master elements the style uses. */
+	int *map				/* Array of indexes into the list of elements
+							 * currently used by the style. */
+	)
 {
 	ElementLink *eLink, *eLinks = NULL;
 	int i, staticKeep[STATIC_SIZE], *keep = staticKeep;
@@ -2412,7 +3159,35 @@ static void Style_ChangeElementsAux(TreeCtrl *tree, Style *style, int count, Ele
 	style->numElements = count;
 }
 
-static void Style_ChangeElements(TreeCtrl *tree, Style *masterStyle, int count, Element **elemList, int *map)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_ChangeElements --
+ *
+ *	Update the list of elements used by a style. Elements
+ *	may be inserted or deleted.
+ *
+ * Results:
+ *	The list of elements in the master style is updated. For
+ *	each item-column using an instance of the master style,
+ *	the list of elements is updated.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_ChangeElements(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *masterStyle,		/* Master style to be updated. */
+	int count,				/* The number of elements in the style after
+							 * this routine finishes. */
+	Element **elemList,		/* List of master elements the style uses. */
+	int *map				/* Array of indexes into the list of elements
+							 * currently used by the style. */
+	)
 {
 	TreeItem item;
 	TreeItemColumn column;
@@ -2512,8 +3287,36 @@ static void Style_ChangeElements(TreeCtrl *tree, Style *masterStyle, int count, 
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 }
 
-static void Style_ElemChanged(TreeCtrl *tree, Style *masterStyle,
-	Element *masterElem, int flagM, int flagT, int csM)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_ElemChanged --
+ *
+ *	Called when a master element or TreeCtrl is configured.
+ *
+ * Results:
+ *	A check is made on each item-column to see if it is using
+ *	the element. The size of any element/column/item affected
+ *	is marked out-of-date.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_ElemChanged(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *masterStyle,		/* Master style that uses the element. */
+	Element *masterElem,	/* Master element affected by the change. */
+	int flagM,				/* Flags returned by ElementType.configProc()
+							 * if the master element was configured. */
+	int flagT,				/* TREE_CONF_xxx flags if the TreeCtrl was
+							 * configured. */
+	int csM					/* CS_xxx flags returned by
+							 * ElementType.changeProc(). */
+	)
 {
 	TreeItem item;
 	TreeItemColumn column;
@@ -2587,7 +3390,27 @@ static void Style_ElemChanged(TreeCtrl *tree, Style *masterStyle,
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 }
 
-TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_GetMaster --
+ *
+ *	Return the master style for an instance style.
+ *
+ * Results:
+ *	Token for the master style.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeStyle
+TreeStyle_GetMaster(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_		/* Instance style token. */
+	)
 {
 	return (TreeStyle) ((Style *) style_)->master;
 }
@@ -2595,8 +3418,33 @@ TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_)
 static Tcl_Obj *confImageObj = NULL;
 static Tcl_Obj *confTextObj = NULL;
 
-static Tcl_Obj *Style_GetImageOrText(TreeCtrl *tree, Style *style,
-	ElementType *typePtr, CONST char *optionName, Tcl_Obj **optionNameObj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_GetImageOrText --
+ *
+ *	Return the value of a configuration option for an element.
+ *
+ * Results:
+ *	The result of Tk_GetOptionValue for an option of the first
+ *	element of the proper type (if any), otherwise NULL.
+ *
+ * Side effects:
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Tcl_Obj *
+Style_GetImageOrText(
+	TreeCtrl *tree,				/* Widget info. */
+	Style *style,				/* Style. */
+	ElementType *typePtr,		/* Type of element to look for. */
+	CONST char *optionName,		/* Name of config option to query. */
+	Tcl_Obj **optionNameObj		/* Pointer to a Tcl_Obj to hold the
+								 * option name. Initialized
+								 * on the first call. */
+	)
 {
 	ElementLink *eLink;
 	int i;
@@ -2623,21 +3471,93 @@ static Tcl_Obj *Style_GetImageOrText(TreeCtrl *tree, Style *style,
 	return NULL;
 }
 
-Tcl_Obj *TreeStyle_GetImage(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_GetImage --
+ *
+ *	Return the value of the -image option for the first
+ *	image element in a style (if any).
+ *
+ * Results:
+ *	The result of Tk_GetOptionValue if the element was found,
+ *	otherwise NULL.
+ *
+ * Side effects:
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+TreeStyle_GetImage(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeStyle style_			/* Token for style to examine. */
+	)
 {
 	return Style_GetImageOrText(tree, (Style *) style_, &elemTypeImage,
 		"-image", &confImageObj);
 }
 
-Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_GetText --
+ *
+ *	Return the value of the -text option for the first
+ *	text element in a style (if any).
+ *
+ * Results:
+ *	The result of Tk_GetOptionValue if the element was found,
+ *	otherwise NULL.
+ *
+ * Side effects:
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+TreeStyle_GetText(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeStyle style_			/* Token for style to examine. */
+	)
 {
 	return Style_GetImageOrText(tree, (Style *) style_, &elemTypeText,
 		"-text", &confTextObj);
 }
 
-static int Style_SetImageOrText(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, Style *style, ElementType *typePtr,
-	CONST char *optionName, Tcl_Obj **optionNameObj, Tcl_Obj *valueObj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_SetImageOrText --
+ *
+ *	Set the value of a configuration option for the first
+ *	element of the proper type in a style (if any).
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Size of the element and style will be marked out-of-date.
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Style_SetImageOrText(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeItem item,				/* Item containing the style. Needed if
+								 * a new instance Element is created. */
+	TreeItemColumn column,		/* Item-column containing the style */
+	Style *style,				/* The style */
+	ElementType *typePtr,		/* Element type to look for. */
+	CONST char *optionName,		/* NULL-terminated config option name. */
+	Tcl_Obj **optionNameObj,	/* Pointer to Tcl_Obj to hold the option
+								 * name; initialized on the first call. */
+	Tcl_Obj *valueObj			/* New value for the config option. */
+	)
 {
 	Style *masterStyle = style->master;
 	ElementLink *eLink;
@@ -2684,21 +3604,92 @@ static int Style_SetImageOrText(TreeCtrl *tree, TreeItem item,
 	return TCL_OK;
 }
 
-int TreeStyle_SetImage(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
-	TreeStyle style_, Tcl_Obj *valueObj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_SetImage --
+ *
+ *	Set the value of the -image option for the first image
+ *	element in a style (if any).
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Size of the element and style will be marked out-of-date.
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_SetImage(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeItem item,				/* Item containing the style. */
+	TreeItemColumn column,		/* Item-column containing the style. */
+	TreeStyle style_,			/* The instance style. */
+	Tcl_Obj *valueObj			/* New value for -image option. */
+	)
 {
 	return Style_SetImageOrText(tree, item, column, (Style *) style_,
 		&elemTypeImage, "-image", &confImageObj, valueObj);
 }
 
-int TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column,
-	TreeStyle style_, Tcl_Obj *valueObj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_SetText --
+ *
+ *	Set the value of the -text option for the first text
+ *	element in a style (if any).
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Size of the element and style will be marked out-of-date.
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_SetText(
+	TreeCtrl *tree,				/* Widget info. */
+	TreeItem item,				/* Item containing the style. */
+	TreeItemColumn column,		/* Item-column containing the style. */
+	TreeStyle style_,			/* The instance style. */
+	Tcl_Obj *valueObj			/* New value for -text option. */
+	)
 {
 	return Style_SetImageOrText(tree, item, column, (Style *) style_,
 		&elemTypeText, "-text", &confTextObj, valueObj);
 }
 
-static void Style_Deleted(TreeCtrl *tree, Style *masterStyle)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_Deleted --
+ *
+ *	Called when a master style is about to be deleted. Any
+ *	item-columns using an instance of the style have their style
+ *	freed.
+ *
+ * Results:
+ *	The TreeCtrl -defaultstyle option is updated if the deleted
+ *	style was specified in the value of the option.
+ *
+ * Side effects:
+ *	Display changes. Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Style_Deleted(
+	TreeCtrl *tree,				/* Widget info. */
+	Style *masterStyle			/* The master style being deleted. */
+	)
 {
 	TreeItem item;
 	Tcl_HashEntry *hPtr;
@@ -2754,7 +3745,33 @@ static void Style_Deleted(TreeCtrl *tree, Style *masterStyle)
 	}
 }
 
-static void Element_Changed(TreeCtrl *tree, Element *masterElem, int flagM, int flagT, int csM)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_Changed --
+ *
+ *	Called when a master element or TreeCtrl has been configured.
+ *
+ * Results:
+ *	Every master and instance style using the element is updated.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Element_Changed(
+	TreeCtrl *tree,			/* Widget info. */
+	Element *masterElem,	/* Master element that may have changed. */
+	int flagM,				/* Flags returned by ElementType.configProc()
+							 * if the master element was configured. */
+	int flagT,				/* TREE_CONF_xxx flags if the TreeCtrl was
+							 * configured. */
+	int csM					/* CS_xxx flags returned by
+							 * ElementType.changeProc(). */
+	)
 {
 	Tcl_HashEntry *hPtr;
 	Tcl_HashSearch search;
@@ -2779,7 +3796,28 @@ static void Element_Changed(TreeCtrl *tree, Element *masterElem, int flagM, int 
 	}
 }
 
-static void Element_Deleted(TreeCtrl *tree, Element *masterElem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Element_Deleted --
+ *
+ *	Called when a master element is about to be deleted.
+ *
+ * Results:
+ *	The list of elements in any master styles using the element is
+ *	updated. Ditto for instance styles.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Element_Deleted(
+	TreeCtrl *tree,			/* Widget info. */
+	Element *masterElem		/* Master element being deleted. */
+	)
 {
 	Tcl_HashEntry *hPtr;
 	Tcl_HashSearch search;
@@ -2821,7 +3859,28 @@ static void Element_Deleted(TreeCtrl *tree, Element *masterElem)
 	}
 }
 
-void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_RedrawElement --
+ *
+ *	A STUB export. Schedules a redraw of the given item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_RedrawElement(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeItem item,			/* Item containing the element. */
+	Element *elem			/* The element that changed. */
+	)
 {
 	/* Master element */
 	if (elem->master == NULL)
@@ -2913,10 +3972,36 @@ TreeIterate Tree_ElementIterateNext(TreeIterate iter_)
 	return NULL;
 }
 
-void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, Element *elem, int mask)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_ElementChangedItself --
+ *
+ *	Called when an element has reconfigured itself outside of
+ *	any API calls. For example, when a window associated with a
+ *	window element is destroyed or lost to another geometry
+ *	manager.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_ElementChangedItself(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeItem item,			/* Item containing the element. */
+	TreeItemColumn column,	/* Item-column containing the element. */
+	Element *elem,			/* The element that changed. */
+	int csM					/* CS_xxx flags detailing the effects of
+							 * the change. */
+	)
 {
-	if (mask & CS_LAYOUT)
+	if (csM & CS_LAYOUT)
 	{
 		Style *style = (Style *) TreeItemColumn_GetStyle(tree, column);
 		int i;
@@ -2957,7 +4042,7 @@ void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
 		Tree_FreeItemDInfo(tree, item, NULL);
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	}
-	if (mask & CS_DISPLAY)
+	if (csM & CS_DISPLAY)
 		Tree_InvalidateItemDInfo(tree, item, NULL);
 }
 
@@ -2986,7 +4071,29 @@ Element *Tree_ElementIterateGet(TreeIterate iter_)
 	return iter->eLink->elem;
 }
 
-void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_TreeChanged --
+ *
+ *	Called when a TreeCtrl is configured. This handles changes to
+ *	the -font option affecting text elements for example.
+ *
+ * Results:
+ *	Calls the changeProc on every master element. Any elements
+ *	affected by the change are eventually redisplayed.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_TreeChanged(
+	TreeCtrl *tree,			/* Widget info. */
+	int flagT				/* TREE_CONF_xxx flags. */
+	)
 {
 	Tcl_HashEntry *hPtr;
 	Tcl_HashSearch search;
@@ -3013,8 +4120,33 @@ void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT)
 	}
 }
 
-int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ElementCget --
+ *
+ *	This procedure is invoked to process the [item element cget]
+ *	widget command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_ElementCget(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeItem item,			/* Item containing the element. */
+	TreeItemColumn column,	/* Item-column containing the element. */
+	TreeStyle style_,		/* Style containing the element. */
+	Tcl_Obj *elemObj,		/* Name of the element. */
+	Tcl_Obj *optionNameObj	/* Name of the config option. */
+	)
 {
 	Style *style = (Style *) style_;
 	Tcl_Obj *resultObjPtr = NULL;
@@ -3044,16 +4176,42 @@ int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item,
 	}
 
 	resultObjPtr = Tk_GetOptionValue(tree->interp, (char *) eLink->elem,
-		eLink->elem->typePtr->optionTable, obj, tree->tkwin);
+		eLink->elem->typePtr->optionTable, optionNameObj, tree->tkwin);
 	if (resultObjPtr == NULL)
 		return TCL_ERROR;
 	Tcl_SetObjResult(tree->interp, resultObjPtr);
 	return TCL_OK;
 }
 
-int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item,
-	TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj,
-	int objc, Tcl_Obj **objv, int *eMask)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ElementCget --
+ *
+ *	This procedure is invoked to process the [item element configure]
+ *	widget command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_ElementConfigure(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeItem item,			/* Item containing the element. */
+	TreeItemColumn column,	/* Item-column containing the element. */
+	TreeStyle style_,		/* Style containing the element. */
+	Tcl_Obj *elemObj,		/* Name of the element. */
+	int objc,				/* Configuration options. */
+	Tcl_Obj **objv,
+	int *eMask				/* Returned CS_xxx flags. */
+	)
 {
 	Style *style = (Style *) style_;
 	Element *elem;
@@ -3140,7 +4298,32 @@ int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item,
 	return TCL_OK;
 }
 
-int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ElementActual --
+ *
+ *	This procedure is invoked to process the [item element perstate]
+ *	widget command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_ElementActual(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* The style. */
+	int state,				/* STATE_xxx flags. */
+	Tcl_Obj *elemObj,		/* Name of the element. */
+	Tcl_Obj *optionNameObj	/* Name of the config option. */
+	)
 {
 	Style *style = (Style *) style_;
 	Element *masterElem;
@@ -3161,12 +4344,35 @@ int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj
 	args.tree = tree;
 	args.elem = eLink->elem;
 	args.state = state;
-	args.actual.obj = obj;
+	args.actual.obj = optionNameObj;
 	return (*masterElem->typePtr->actualProc)(&args);
 }
 
-int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeElementCmd --
+ *
+ *	This procedure is invoked to process the [element]
+ *	widget command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeElementCmd(
+	ClientData clientData,		/* Widget info. */
+	Tcl_Interp *interp,			/* Current interpreter. */
+	int objc,					/* Number of arguments. */
+	Tcl_Obj *CONST objv[]		/* Argument values. */
+	)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	static CONST char *commandNames[] = {
@@ -3385,7 +4591,29 @@ int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	return TCL_OK;
 }
 
-static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Style_CreateAndConfig --
+ *
+ *	Allocate and initialize a master style.
+ *
+ * Results:
+ *	Pointer to the new Style, or NULL if an error occurs.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Style *
+Style_CreateAndConfig(
+	TreeCtrl *tree,			/* Widget info. */
+	char *name,				/* Name of new style. */
+	int objc,				/* Number of config-option arg-value pairs. */
+	Tcl_Obj *CONST objv[]	/* Config-option arg-value pairs. */
+	)
 {
 	Style *style;
 
@@ -3425,7 +4653,30 @@ static Style *Style_CreateAndConfig(TreeCtrl *tree, char *name, int objc, Tcl_Ob
 	return style;
 }
 
-void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ListElements --
+ *
+ *	Creates a Tcl list with the names of elements in a style.
+ *
+ * Results:
+ *	If the style is a master style, the interpreter result holds
+ *	a list of each element in the style. If the style is an
+ *	instance style, the interpreter result holds a list of those
+ *	elements configured for the style (i.e., instance elements).
+ *
+ * Side effects:
+ *	Memory is allocated, interpreter result changed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_ListElements(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_		/* The style. */
+	)
 {
 	Style *style = (Style *) style_;
 	Tcl_Obj *listObj;
@@ -3455,7 +4706,30 @@ enum {
 	OPTION_WIDTH
 };
 
-static Tcl_Obj *LayoutOptionToObj(TreeCtrl *tree, Style *style, ElementLink *eLink, int option)
+/*
+ *----------------------------------------------------------------------
+ *
+ * LayoutOptionToObj --
+ *
+ *	Return a Tcl_Obj holding the value of a style layout option
+ *	for an element.
+ *
+ * Results:
+ *	Pointer to a new Tcl_Obj or NULL if the option has no value.
+ *
+ * Side effects:
+ *	A Tcl_Obj may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Tcl_Obj *
+LayoutOptionToObj(
+	TreeCtrl *tree,			/* Widget info. */
+	Style *style,			/* Master style using the element. */
+	ElementLink *eLink,		/* Layout info for the element. */
+	int option				/* OPTION_xxx constant. */
+	)
 {
 	Tcl_Interp *interp = tree->interp;
 
@@ -3578,8 +4852,31 @@ static Tcl_Obj *LayoutOptionToObj(TreeCtrl *tree, Style *style, ElementLink *eLi
 	return NULL;
 }
 
-static int StyleLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * StyleLayoutCmd --
+ *
+ *	This procedure is invoked to process the [style layout]
+ *	widget command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+StyleLayoutCmd(
+	ClientData clientData,		/* Widget info. */
+	Tcl_Interp *interp,			/* The current interpreter. */
+	int objc,					/* Number of arguments. */
+	Tcl_Obj *CONST objv[]		/* Argument values. */
+	)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	TreeStyle _style;
@@ -4025,8 +5322,31 @@ badConfig:
 	return TCL_ERROR;
 }
 
-int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyleCmd --
+ *
+ *	This procedure is invoked to process the [style] widget
+ *	command.  See the user documentation for details on what it
+ *	does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyleCmd(
+	ClientData clientData,		/* Widget info. */
+	Tcl_Interp *interp,			/* Current interpreter. */
+	int objc,					/* Number of arguments. */
+	Tcl_Obj *CONST objv[]		/* Argument values. */
+	)
 {
 	TreeCtrl *tree = (TreeCtrl *) clientData;
 	static CONST char *commandNames[] = {
@@ -4262,7 +5582,28 @@ int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 	return TCL_OK;
 }
 
-int ButtonMaxWidth(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ButtonMaxWidth --
+ *
+ *	Return the maximum possible size of a button in any state. This
+ *	includes the size of the -buttonimage and -buttonbitmap options,
+ *	as well as the theme button and default +/- button.
+ *
+ * Results:
+ *	Pixel size >= 0.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+ButtonMaxWidth(
+	TreeCtrl *tree		/* Widget info. */
+	)
 {
 	int w, h, width = 0;
 
@@ -4285,7 +5626,27 @@ int ButtonMaxWidth(TreeCtrl *tree)
 	return MAX(width, tree->buttonSize);
 }
 
-int ButtonHeight(TreeCtrl *tree, int state)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ButtonHeight --
+ *
+ *	Return the size of a button for a certain state.
+ *
+ * Results:
+ *	Pixel size >= 0.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+ButtonHeight(
+	TreeCtrl *tree,		/* Widget info. */
+	int state			/* STATE_xxx flags. */
+	)
 {
 	Tk_Image image;
 	Pixmap bitmap;
@@ -4311,7 +5672,28 @@ int ButtonHeight(TreeCtrl *tree, int state)
 	return tree->buttonSize;
 }
 
-char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Identify --
+ *
+ *	Perform hit-testing on a style.
+ *
+ * Results:
+ *	The name of the element containing the given point, or NULL.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+char *
+TreeStyle_Identify(
+	StyleDrawArgs *drawArgs,		/* Various args. */
+	int x,							/* Window x-coord. */
+	int y							/* Window y-coord. */
+	)
 {
 	TreeCtrl *tree = drawArgs->tree;
 	Style *style = (Style *) drawArgs->style;
@@ -4351,8 +5733,30 @@ done:
 	return NULL;
 }
 
-void TreeStyle_Identify2(StyleDrawArgs *drawArgs,
-	int x1, int y1, int x2, int y2, Tcl_Obj *listObj)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Identify2 --
+ *
+ *	Return a list of elements overlapping the given area.
+ *
+ * Results:
+ *	The names of any elements overlapping the given area are
+ *	appended to the supplied list.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_Identify2(
+	StyleDrawArgs *drawArgs,		/* Various args. */
+	int x1, int y1, int x2, int y2,	/* Area to hit-test. */
+	Tcl_Obj *listObj				/* Initialized list object to hold
+									 * the result. */
+	)
 {
 	TreeCtrl *tree = drawArgs->tree;
 	Style *style = (Style *) drawArgs->style;
@@ -4389,7 +5793,32 @@ void TreeStyle_Identify2(StyleDrawArgs *drawArgs,
 	STATIC_FREE(layouts, struct Layout, style->numElements);
 }
 
-int TreeStyle_Remap(TreeCtrl *tree, TreeStyle styleFrom_, TreeStyle styleTo_, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Remap --
+ *
+ *	The guts of the [item style map] command.  See the user
+ *	documentation for details on what it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_Remap(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle styleFrom_,	/* Current instance style. */
+	TreeStyle styleTo_,		/* Master style to "convert" the current
+							 * style to. */
+	int objc,				/* Must be even number. */
+	Tcl_Obj *CONST objv[]	/* Array of old-new element names. */
+	)
 {
 	Style *styleFrom = (Style *) styleFrom_;
 	Style *styleTo = (Style *) styleTo_;
@@ -4536,7 +5965,34 @@ done:
 	return result;
 }
 
-int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int type, long *lv, double *dv, char **sv)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_GetSortData --
+ *
+ *	Called by the [item sort] code. Returns a long, double or
+ *	string value from a text element.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_GetSortData(
+	TreeCtrl *tree,		/* Widget info. */
+	TreeStyle style_,	/* The style. */
+	int elemIndex,		/* Index of a text element, or -1 to use the first
+						 * text element. */
+	int type,			/* SORT_xxx constant. */
+	long *lv,			/* Returned for SORT_LONG. */
+	double *dv,			/* Returned for SORT_DOUBLE. */
+	char **sv			/* Returned for SORT_ASCII or SORT_DICT. */
+	)
 {
 	Style *style = (Style *) style_;
 	ElementLink *eLink = style->elements;
@@ -4565,7 +6021,29 @@ int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int t
 	return TCL_ERROR;
 }
 
-int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ValidateElements --
+ *
+ *	Verify that each object in an objv[] array refers to a
+ *	master element.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_ValidateElements(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	int objc,					/* Number of element names. */
+	Tcl_Obj *CONST objv[]		/* Array of element names. */
+	)
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *master = style->master ? style->master : style;
@@ -4590,8 +6068,30 @@ int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST
 	return TCL_OK;
 }
 
-int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc,
-	Tcl_Obj *CONST objv[], XRectangle rects[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_GetElemRects --
+ *
+ *	Return a list of rectangles for specified elements in a style.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_GetElemRects(
+	StyleDrawArgs *drawArgs,	/* Various args. */
+	int objc,					/* Number of element names. */
+	Tcl_Obj *CONST objv[],		/* Array of element names. */
+	XRectangle rects[]			/* Returned rectangles. */
+	)
+	
 {
 	Style *style = (Style *) drawArgs->style;
 	Style *master = style->master ? style->master : style;
@@ -4666,7 +6166,29 @@ done:
 	return count;
 }
 
-int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, int state2)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_ChangeState --
+ *
+ *	Called when the state of an item or item-column changes.
+ *
+ * Results:
+ *	A bitmask of CS_DISPLAY and CS_LAYOUT values.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_ChangeState(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_,		/* This instance style. */
+	int state1,				/* The previous state. */
+	int state2				/* The current state. */
+	)
 {
 	Style *style = (Style *) style_;
 	ElementLink *eLink;
@@ -4704,7 +6226,30 @@ int TreeStyle_ChangeState(TreeCtrl *tree, TreeStyle style_, int state1, int stat
 	return mask;
 }
 
-void Tree_UndefineState(TreeCtrl *tree, int state)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_UndefineState --
+ *
+ *	The guts of the [state undefine] widget command.
+ *
+ * Results:
+ *	The undefProc of every element is called to respond to the
+ *	undefined state flag. The size of every element/column/item is
+ *	marked out-of-date regardless of whether the state change
+ *	affected the element.
+ *
+ * Side effects:
+ *	Display changes.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_UndefineState(
+	TreeCtrl *tree,			/* Widget info. */
+	int state				/* STATE_xxx flag. */
+	)
 {
 	TreeItem item;
 	TreeItemColumn column;
@@ -4761,17 +6306,75 @@ void Tree_UndefineState(TreeCtrl *tree, int state)
 	}
 }
 
-int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_NumElements --
+ *
+ *	Return the number of elements in a style.
+ *
+ * Results:
+ *	The number of... oh nevermind.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_NumElements(
+	TreeCtrl *tree,			/* Widget info. */
+	TreeStyle style_		/* The style. */
+	)
 {
 	return ((Style *) style_)->numElements;
 }
 
-int TreeStyle_Init(Tcl_Interp *interp)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Init --
+ *
+ *	Style-related package initialization.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeStyle_Init(
+	Tcl_Interp *interp		/* The current interpreter. */
+	)
 {
 	return TCL_OK;
 }
 
-void TreeStyle_Free(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeStyle_Free --
+ *
+ *	Free style-related resources for a deleted TreeCtrl.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeStyle_Free(
+	TreeCtrl *tree			/* Widget info. */
+	)
 {
 	Tcl_HashEntry *hPtr;
 	Tcl_HashSearch search;
