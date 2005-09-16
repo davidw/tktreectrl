@@ -7,13 +7,17 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.37 2005/09/07 20:29:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.38 2005/09/16 23:23:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
 typedef struct Column Column;
 
+/*
+ * The following structure holds information about a single
+ * column in a TreeCtrl.
+ */
 struct Column
 {
     Tcl_Obj *textObj;		/* -text */
@@ -237,17 +241,39 @@ static Tk_OptionSpec columnSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
-/* BEGIN custom "column" option */
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnOptionSet --
+ *
+ *	Tk_ObjCustomOption.setProc(). Converts a Tcl_Obj holding a
+ *	column description into a pointer to a Column.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	May store a TreeColumn pointer into the internal representation
+ *	pointer.  May change the pointer to the Tcl_Obj to NULL to indicate
+ *	that the specified string was empty and that is acceptable.
+ *
+ *----------------------------------------------------------------------
+ */
 
-static int ColumnOptionSet(
-    ClientData clientData,
-    Tcl_Interp *interp,
-    Tk_Window tkwin,
-    Tcl_Obj **value,
-    char *recordPtr,
-    int internalOffset,
-    char *saveInternalPtr,
-    int flags)
+static int
+ColumnOptionSet(
+    ClientData clientData,	/* CFO_xxx flags to control the conversion. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    Tk_Window tkwin,		/* Window for which option is being set. */
+    Tcl_Obj **value,		/* Pointer to the pointer to the value object.
+				 * We use a pointer to the pointer because
+				 * we may need to return a value (NULL). */
+    char *recordPtr,		/* Pointer to storage for the widget record. */
+    int internalOffset,		/* Offset within *recordPtr at which the
+				 * internal value is to be stored. */
+    char *saveInternalPtr,	/* Pointer to storage for the old value. */
+    int flags			/* Flags for the option, set Tk_SetOptions. */
+    )
 {
     int cfoFlags = (int) clientData;
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
@@ -277,11 +303,32 @@ static int ColumnOptionSet(
     return TCL_OK;
 }
 
-static Tcl_Obj *ColumnOptionGet(
-    ClientData clientData,
-    Tk_Window tkwin,
-    char *recordPtr,
-    int internalOffset)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnOptionGet --
+ *
+ *	Tk_ObjCustomOption.getProc(). Converts a TreeColumn into a
+ *	Tcl_Obj string representation.
+ *
+ * Results:
+ *	Tcl_Obj containing the string representation of the column.
+ *	Returns NULL if the TreeColumn is NULL.
+ *
+ * Side effects:
+ *	May create a new Tcl_Obj.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Tcl_Obj *
+ColumnOptionGet(
+    ClientData clientData,	/* Not used. */
+    Tk_Window tkwin,		/* Window for which option is being set. */
+    char *recordPtr,		/* Pointer to widget record. */
+    int internalOffset		/* Offset within *recordPtr containing the
+				 * sticky value. */
+    )
 {
     TreeColumn value = *(TreeColumn *) (recordPtr + internalOffset);
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
@@ -292,15 +339,38 @@ static Tcl_Obj *ColumnOptionGet(
     return TreeColumn_ToObj(tree, value);
 }
 
-static void ColumnOptionRestore(
-    ClientData clientData,
-    Tk_Window tkwin,
-    char *internalPtr,
-    char *saveInternalPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnOptionRestore --
+ *
+ *	Tk_ObjCustomOption.restoreProc(). Restores a TreeColumn value
+ *	from a saved value.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Restores the old value.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+ColumnOptionRestore(
+    ClientData clientData,	/* Not used. */
+    Tk_Window tkwin,		/* Not used. */
+    char *internalPtr,		/* Where to store old value. */
+    char *saveInternalPtr)	/* Pointer to old value. */
 {
     *(TreeColumn *) internalPtr = *(TreeColumn *) saveInternalPtr;
 }
 
+/*
+ * The following structure contains pointers to functions used for processing
+ * a custom config option that handles Tcl_Obj<->TreeColumn conversion.
+ * A column description must refer to a valid column. "all" is not allowed.
+ */
 Tk_ObjCustomOption columnCustomOption =
 {
     "column",
@@ -311,6 +381,12 @@ Tk_ObjCustomOption columnCustomOption =
     (ClientData) (CFO_NOT_ALL | CFO_NOT_NULL)
 };
 
+/*
+ * The following structure contains pointers to functions used for processing
+ * a custom config option that handles Tcl_Obj<->TreeColumn conversion.
+ * A column description must refer to a valid column. "all" is not allowed.
+ * "tail" is not allowed.
+ */
 Tk_ObjCustomOption columnCustomOption_NOT_TAIL =
 {
     "column",
@@ -320,8 +396,6 @@ Tk_ObjCustomOption columnCustomOption_NOT_TAIL =
     NULL,
     (ClientData) (CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL)
 };
-
-/* END custom "column" option */
 
 static Tk_OptionSpec dragSpecs[] = {
     {TK_OPTION_BOOLEAN, "-enable", (char *) NULL, (char *) NULL,
@@ -349,20 +423,69 @@ static Tk_OptionSpec dragSpecs[] = {
      (char *) NULL, 0, -1, 0, 0, 0}
 };
 
-/* Called when Tk_Image is deleted or modified */
-static void ImageChangedProc(
-    ClientData clientData,
-    int x, int y,
-    int width, int height,
-    int imageWidth, int imageHeight)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ImageChangedProc --
+ *
+ *	This procedure is invoked by the image code whenever the manager
+ *	for an image does something that affects the size or contents
+ *	of an image displayed in a column header.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Invalidates the size of the column and schedules a redisplay.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+ImageChangedProc(
+    ClientData clientData,		/* Pointer to Column record. */
+    int x, int y,			/* Upper left pixel (within image)
+					 * that must be redisplayed. */
+    int width, int height,		/* Dimensions of area to redisplay
+					 * (may be <= 0). */
+    int imageWidth, int imageHeight	/* New dimensions of image. */
+    )
 {
     /* I would like to know the image was deleted... */
     Column *column = (Column *) clientData;
+    TreeCtrl *tree = column->tree;
 
-    Tree_DInfoChanged(column->tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
+    /* Duplicate the effects of configuring the -image option. */
+    column->neededWidth = -1;
+    column->neededHeight = -1;
+    tree->headerHeight = -1;
+    tree->widthOfColumns = -1;
+    Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
 }
 
-int Tree_FindColumnByTag(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, int flags)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_FindColumnByTag --
+ *
+ *	Find a column with a matching -tag option.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_FindColumnByTag(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *obj,		/* Tag name. */
+    TreeColumn *columnPtr,	/* Returned column. */
+    int flags			/* CFO_NOT_TAIL or 0. */
+    )
 {
     Column *walk = (Column *) tree->columns;
     char *string = Tcl_GetString(obj);
@@ -388,8 +511,30 @@ int Tree_FindColumnByTag(TreeCtrl *tree, Tcl_Obj *obj, TreeColumn *columnPtr, in
     return TCL_ERROR;
 }
 
-static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv,
-	CONST char **indexNames)
+/*
+ *----------------------------------------------------------------------
+ *
+ * IndexFromList --
+ *
+ *	Utility wrapper around Tcl_GetIndexFromObj().
+ *
+ * Results:
+ *	The result of Tcl_GetIndexFromObj() or -1.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+IndexFromList(
+    int listIndex,		/* Index of objv[] to pass to
+				 * Tcl_GetIndexFromObj */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj **objv,		/* Arguments. */
+    CONST char **indexNames	/* NULL-terminated list of names. */
+    )
 {
     Tcl_Obj *elemPtr;
     int index;
@@ -404,17 +549,38 @@ static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv,
 }
 
 /*
-  %W index "ID MODIFIERS"
-  %W index "TAG MODIFIERS"
-  %W index all
-  %W index "first ?visible? MODIFIERS"
-  %W index "last ?visible? MODIFIERS"
-  %W index "order N ?visible? MODIFIERS"
-  MODIFIERS:
-  next ?visible?
-  prev ?visible?
-*/
-int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, int flags)
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_FromObj --
+ *
+ *	Convert a Tcl_Obj column description to a column.
+ *
+ * ID MODIFIERS
+ * TAG MODIFIERS
+ * all
+ * first ?visible? MODIFIERS
+ * end|last ?visible? MODIFIERS
+ * order N ?visible? MODIFIERS
+ * MODIFIERS:
+ * next ?visible?
+ * prev ?visible?
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_FromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *objPtr,		/* Column description. */
+    TreeColumn *columnPtr,	/* Returned column. */
+    int flags			/* CFO_xxx flags. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int objc;
@@ -669,7 +835,27 @@ int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, i
     return TCL_ERROR;
 }
 
-Tcl_Obj *TreeColumn_ToObj(TreeCtrl *tree, TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_ToObj --
+ *
+ *	Return a Tcl_Obj representing a column.
+ *
+ * Results:
+ *	A Tcl_Obj.
+ *
+ * Side effects:
+ *	Allocates a Tcl_Obj.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+TreeColumn_ToObj(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeColumn column_		/* Column token to get Tcl_Obj for. */
+    )
 {
     if (column_ == tree->columnTail)
 	return Tcl_NewStringObj("tail", -1);
@@ -681,7 +867,27 @@ Tcl_Obj *TreeColumn_ToObj(TreeCtrl *tree, TreeColumn column_)
     return Tcl_NewIntObj(((Column *) column_)->id);
 }
 
-TreeColumn Tree_FindColumn(TreeCtrl *tree, int columnIndex)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_FindColumn --
+ *
+ *	Get the N'th column in a TreeCtrl.
+ *
+ * Results:
+ *	Token for the N'th column.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumn
+Tree_FindColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    int columnIndex		/* 0-based index of the column to return. */
+    )
 {
     Column *column = (Column *) tree->columns;
 
@@ -693,12 +899,51 @@ TreeColumn Tree_FindColumn(TreeCtrl *tree, int columnIndex)
     return (TreeColumn) column;
 }
 
-TreeColumn TreeColumn_Next(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Next --
+ *
+ *	Return the column to the right of the given one.
+ *
+ * Results:
+ *	Token for the next column.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumn
+TreeColumn_Next(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return (TreeColumn) ((Column *) column_)->next;
 }
 
-static int Column_MakeState(Column *column)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_MakeState --
+ *
+ *	Return a bit mask suitable for passing to the PerState_xxx
+ *	functions.
+ *
+ * Results:
+ *	State flags for the column's current state.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Column_MakeState(
+    Column *column		/* Column record. */
+    )
 {
     int state = 0;
     if (column->state == COLUMN_STATE_NORMAL)
@@ -712,7 +957,28 @@ static int Column_MakeState(Column *column)
     return state;
 }
 
-static void Column_FreeColors(XColor **colors, int count)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_FreeColors --
+ *
+ *	Frees an array of XColors. This is used to free the -itembackground
+ *	array of colors.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated, colors are freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_FreeColors(
+    XColor **colors,		/* Array of colors. May be NULL. */
+    int count			/* Number of colors. */
+    )
 {
     int i;
 
@@ -727,7 +993,33 @@ static void Column_FreeColors(XColor **colors, int count)
     WCFREE(colors, XColor *, count);
 }
 
-static int ColumnStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnStateFromObj --
+ *
+ *	Parses a string object containing "state" or "!state" to a
+ *	state bit flag.
+ *	This function is passed to PerStateInfo_FromObj().
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ColumnStateFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *obj,		/* String object to parse. */
+    int *stateOff,		/* OR'd with state bit if "!state" is
+				 * specified. Caller must initialize. */
+    int *stateOn		/* OR'd with state bit if "state" is
+				 * specified. Caller must initialize. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int i, op = STATE_OP_ON, op2, op3, length, state = 0;
@@ -790,7 +1082,33 @@ unknown:
     return TCL_ERROR;
 }
 
-static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[], int createFlag)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_Config --
+ *
+ *	This procedure is called to process an objc/objv list to set
+ *	configuration options for a Column.
+ *
+ * Results:
+ *	The return value is a standard Tcl result.  If TCL_ERROR is
+ *	returned, then an error message is left in interp's result.
+ *
+ * Side effects:
+ *	Configuration information, such as text string, colors, font,
+ *	etc. get set for column;  old resources get freed, if there
+ *	were any.  Display changes may occur.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Column_Config(
+    Column *column,		/* Column record. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[],	/* Argument values. */
+    int createFlag		/* TRUE if the Column is being created. */
+    )
 {
     TreeCtrl *tree = column->tree;
     Column saved, *walk;
@@ -1067,7 +1385,26 @@ static int Column_Config(Column *column, int objc, Tcl_Obj *CONST objv[], int cr
     return TCL_OK;
 }
 
-static Column *Column_Alloc(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_Alloc --
+ *
+ *	Allocate and initialize a new Column record.
+ *
+ * Results:
+ *	Pointer to the new Column, or NULL if errors occurred.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Column *
+Column_Alloc(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column;
 
@@ -1096,7 +1433,27 @@ static Column *Column_Alloc(TreeCtrl *tree)
     return column;
 }
 
-static Column *Column_Free(Column *column)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_Free --
+ *
+ *	Free a Column.
+ *
+ * Results:
+ *	Pointer to the next column.
+ *
+ * Side effects:
+ *	Memory is deallocated. If this is the last column being
+ *	deleted, the TreeCtrl.nextColumnId field is reset to zero.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Column *
+Column_Free(
+    Column *column		/* Column record. */
+    )
 {
     TreeCtrl *tree = column->tree;
     Column *next = column->next;
@@ -1119,27 +1476,132 @@ static Column *Column_Free(Column *column)
     return next;
 }
 
-int TreeColumn_FixedWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_FixedWidth --
+ *
+ *	Return the value of the -width option.
+ *
+ * Results:
+ *	The pixel width or -1 if the -width option is unspecified.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_FixedWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
-    return ((Column *) column_)->widthObj ? ((Column *) column_)->width : -1;
+    Column *column = (Column *) column_;
+    return column->widthObj ? column->width : -1;
 }
 
-int TreeColumn_MinWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_MinWidth --
+ *
+ *	Return the value of the -minwidth option.
+ *
+ * Results:
+ *	The pixel width or -1 if the -minwidth option is unspecified.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_MinWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
-    return ((Column *) column_)->minWidthObj ? ((Column *) column_)->minWidth : -1;
+    Column *column = (Column *) column_;
+    return column->minWidthObj ? column->minWidth : -1;
 }
 
-int TreeColumn_MaxWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_MaxWidth --
+ *
+ *	Return the value of the -maxwidth option.
+ *
+ * Results:
+ *	The pixel width or -1 if the -maxwidth option is unspecified.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_MaxWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
-    return ((Column *) column_)->maxWidthObj ? ((Column *) column_)->maxWidth : -1;
+    Column *column = (Column *) column_;
+    return column->maxWidthObj ? column->maxWidth : -1;
 }
 
-int TreeColumn_StepWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_StepWidth --
+ *
+ *	Return the value of the -stepwidth option.
+ *	NOTE: -stepwidth is deprecated.
+ *
+ * Results:
+ *	The pixel width or -1 if the -stepwidth option is unspecified.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_StepWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
-    return ((Column *) column_)->stepWidthObj ? ((Column *) column_)->stepWidth : -1;
+    Column *column = (Column *) column_;
+    return column->stepWidthObj ? column->stepWidth : -1;
 }
 
-static void Column_UpdateTextLayout(Column *column, int width)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_UpdateTextLayout --
+ *
+ *	Recalculate the TextLayout for the text displayed in the
+ *	column header. The old TextLayout (if any) is freed. If
+ *	there is no text or if it is only one line then no TextLayout
+ *	is created.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be allocated/deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_UpdateTextLayout(
+    Column *column,		/* Column record. */
+    int width			/* Maximum line length. Zero means there
+				 * is no limit. */
+    )
 {
     Tk_Font tkfont;
     char *text = column->text;
@@ -1184,7 +1646,29 @@ static void Column_UpdateTextLayout(Column *column, int width)
 	    Tcl_NumUtfChars(text, textLen), width, justify, maxLines, flags);
 }
 
-static void Column_GetArrowSize(Column *column, int *widthPtr, int *heightPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_GetArrowSize --
+ *
+ *	Return the size of the sort arrow displayed in the column header
+ *	for the column's current state.
+ *
+ * Results:
+ *	Height and width of the arrow.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_GetArrowSize(
+    Column *column,		/* Column record. */
+    int *widthPtr,		/* Returned width. */
+    int *heightPtr		/* Returned height. */
+    )
 {
     TreeCtrl *tree = column->tree;
     int state = Column_MakeState(column);
@@ -1224,6 +1708,10 @@ static void Column_GetArrowSize(Column *column, int *widthPtr, int *heightPtr)
     (*heightPtr) = arrowHeight;
 }
 
+/*
+ * The following structure holds size/position info for all the graphical
+ * elements of a column header.
+ */
 struct Layout
 {
     Tk_Font tkfont;
@@ -1240,6 +1728,11 @@ struct Layout
     int arrowHeight;
 };
 
+/*
+ * The following structure is used by the Column_DoLayout() procedure to
+ * hold size/position info for each graphical element displayed in the
+ * header.
+ */
 struct LayoutPart
 {
     int padX[2];
@@ -1250,7 +1743,28 @@ struct LayoutPart
     int top;
 };
 
-static void Column_DoLayoutH(Column *column, struct Layout *layout)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_DoLayout --
+ *
+ *	Arrange all the graphical elements making up a column header.
+ *
+ * Results:
+ *	Layout info is returned.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_DoLayout(
+    Column *column,		/* Column record. */
+    struct Layout *layout	/* Returned layout info. The width and
+				 * height fields must be initialized. */
+    )
 {
 #if defined(MAC_OSX_TK)
     TreeCtrl *tree = column->tree;
@@ -1557,7 +2071,29 @@ finish:
 #endif
 }
 
-int TreeColumn_NeededWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_NeededWidth --
+ *
+ *	Return the total width requested by all the graphical elements
+ *	that make up a column header.  The width is recalculated if it
+ *	is marked out-of-date.
+ *
+ * Results:
+ *	The width needed by the current arrangement of the
+ *	bitmap/image/text/arrow.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_NeededWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
     Column *column = (Column *) column_;
     TreeCtrl *tree = column->tree;
@@ -1643,7 +2179,29 @@ int TreeColumn_NeededWidth(TreeColumn column_)
     return column->neededWidth;
 }
 
-int TreeColumn_NeededHeight(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_NeededHeight --
+ *
+ *	Return the total height requested by all the graphical elements
+ *	that make up a column header.  The height is recalculated if it
+ *	is marked out-of-date.
+ *
+ * Results:
+ *	The height needed by the current arrangement of the
+ *	bitmap/image/text/arrow.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_NeededHeight(
+    TreeColumn column_		/* Column token. */
+    )
 {
     Column *column = (Column *) column_;
     TreeCtrl *tree = column->tree;
@@ -1682,7 +2240,7 @@ int TreeColumn_NeededHeight(TreeColumn column_)
 	struct Layout layout;
 	layout.width = TreeColumn_UseWidth(column_);
 	layout.height = -1;
-	Column_DoLayoutH(column, &layout);
+	Column_DoLayout(column, &layout);
 	if (column->textLayout != NULL) {
 	    int height;
 	    TextLayout_Size(column->textLayout, NULL, &height);
@@ -1716,7 +2274,28 @@ int TreeColumn_NeededHeight(TreeColumn column_)
     return column->neededHeight;
 }
 
-int TreeColumn_UseWidth(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_UseWidth --
+ *
+ *	Return the actual display width of a column.
+ *
+ * Results:
+ *	Pixel width.
+ *
+ * Side effects:
+ *	The size of any column that is marked out-of-date is
+ *	recalculated. This could involve recalculating the size of
+ *	every element and style in the column in all items.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_UseWidth(
+    TreeColumn column_		/* Column token. */
+    )
 {
     /* Update layout if needed */
     (void) Tree_WidthOfColumns(((Column *) column_)->tree);
@@ -1724,27 +2303,104 @@ int TreeColumn_UseWidth(TreeColumn column_)
     return ((Column *) column_)->useWidth;
 }
 
-void TreeColumn_SetUseWidth(TreeColumn column_, int width)
-{
-    ((Column *) column_)->useWidth = width;
-}
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Justify --
+ *
+ *	Return the value of the -justify config option for a column.
+ *
+ * Results:
+ *	TK_JUSTIFY_xxx constant.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
 
-Tk_Justify TreeColumn_Justify(TreeColumn column_)
+Tk_Justify
+TreeColumn_Justify(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->justify;
 }
 
-int TreeColumn_WidthHack(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_WidthHack --
+ *
+ *	Return the value of the -widthhack config option for a column.
+ *	NOTE: -widthhack is deprecated.
+ *
+ * Results:
+ *	Boolean value.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_WidthHack(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->widthHack;
 }
 
-int TreeColumn_Squeeze(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Squeeze --
+ *
+ *	Return the value of the -squeeze config option for a column.
+ *
+ * Results:
+ *	Boolean value.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_Squeeze(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->squeeze;
 }
 
-GC TreeColumn_BackgroundGC(TreeColumn column_, int index)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_BackgroundGC --
+ *
+ *	Return a graphics context for one color of the -itembackground
+ *	config option for a column.
+ *
+ * Results:
+ *	A graphics context, or None.
+ *
+ * Side effects:
+ *	Might allocate a new graphics context? But the GC is freed
+ *	when the last reference to the color is lost, so the caller
+ *	need not worry about it.
+ *
+ *----------------------------------------------------------------------
+ */
+
+GC
+TreeColumn_BackgroundGC(
+    TreeColumn column_,		/* Column token. */
+    int index			/* This number is determined by the display
+				 * code. */
+    )
 {
     Column *column = (Column *) column_;
     XColor *color;
@@ -1757,23 +2413,102 @@ GC TreeColumn_BackgroundGC(TreeColumn column_, int index)
     return Tk_GCForColor(color, Tk_WindowId(column->tree->tkwin));
 }
 
-int TreeColumn_Visible(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Visible --
+ *
+ *	Return the value of the -visible config option for a column.
+ *
+ * Results:
+ *	Boolean value.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_Visible(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->visible;
 }
 
-int TreeColumn_GetID(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_GetID --
+ *
+ *	Return the unique identifier for a column.
+ *
+ * Results:
+ *	Unique integer id.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int TreeColumn_GetID(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->id;
 }
 
-int TreeColumn_Index(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Index --
+ *
+ *	Return the 0-based index for a column.
+ *
+ * Results:
+ *	Position of the column in the list of columns.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_Index(
+    TreeColumn column_		/* Column token. */
+    )
 {
     return ((Column *) column_)->index;
 }
 
-int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumnCmd --
+ *
+ *	This procedure is invoked to process the [column] widget
+ *	command.  See the user documentation for details on what it
+ *	does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumnCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = {
@@ -2417,8 +3152,29 @@ int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc,
     return TCL_OK;
 }
 
-static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
-    struct Layout layout)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_DrawArrow --
+ *
+ *	Draw the sort arrow for a column.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in a drawable.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_DrawArrow(
+    Column *column,		/* Column record. */
+    Drawable drawable,		/* Where to draw. */
+    int x, int y,		/* Top-left corner of the column's header. */
+    struct Layout layout	/* Size/position info. */
+    )
 {
     TreeCtrl *tree = column->tree;
     int height = tree->headerHeight;
@@ -2519,7 +3275,30 @@ static void Column_DrawArrow(Column *column, Drawable drawable, int x, int y,
     }
 }
 
-static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dragImage)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_Draw --
+ *
+ *	Draw the header for a column.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in a drawable.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Column_Draw(
+    Column *column,		/* Column record. */
+    Drawable drawable,		/* Where to draw. */
+    int x, int y,		/* Top-left corner of the column's header. */
+    int dragImage		/* TRUE if we are creating a transparent
+				 * drag image for this header. */
+    )
 {
     TreeCtrl *tree = column->tree;
     int height = tree->headerHeight;
@@ -2532,7 +3311,7 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dra
 
     layout.width = width;
     layout.height = height;
-    Column_DoLayoutH(column, &layout);
+    Column_DoLayout(column, &layout);
 
     border = PerStateBorder_ForState(tree, &column->border,
 	Column_MakeState(column), NULL);
@@ -2645,7 +3424,32 @@ static void Column_Draw(Column *column, Drawable drawable, int x, int y, int dra
 		x, y, width, height, column->borderWidth, relief);
 }
 
-Tk_Image SetImageForColumn(TreeCtrl *tree, Column *column)
+/*
+ *----------------------------------------------------------------------
+ *
+ * SetImageForColumn --
+ *
+ *	Set a photo image containing a simplified picture of the header
+ *	of a column. This image is used when dragging and dropping a column
+ *	header.
+ *
+ * Results:
+ *	Token for a photo image, or NULL if the image could not be
+ *	created.
+ *
+ * Side effects:
+ *	A photo image called "TreeCtrlColumnImage" will be created if
+ *	it doesn't exist. The image is set to contain a picture of the
+ *	column header.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Tk_Image
+SetImageForColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    Column *column		/* Column record. */
+    )
 {
     Tk_PhotoHandle photoH;
     Pixmap pixmap;
@@ -2682,7 +3486,28 @@ Tk_Image SetImageForColumn(TreeCtrl *tree, Column *column)
 	NULL, (ClientData) NULL);
 }
 
-void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_DrawHeader --
+ *
+ *	Draw the header of every column.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in a drawable.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_DrawHeader(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    int x, int y		/* Top-left corner of the header. */
+    )
 {
     Column *column = (Column *) tree->columns;
     Tk_Window tkwin = tree->tkwin;
@@ -2795,8 +3620,29 @@ void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y)
     }
 }
 
-/* Calculate the maximum needed width of all ReallyVisible TreeItemColumns */
-int TreeColumn_WidthOfItems(TreeColumn column_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_WidthOfItems --
+ *
+ *	Calculate the maximum needed width of the styles in every
+ *	ReallyVisible() item for a particular column. The width will
+ *	only be recalculated if it is marked out-of-date.
+ *
+ * Results:
+ *	Pixel width.
+ *
+ * Side effects:
+ *	The size of elements and styles will be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_WidthOfItems(
+    TreeColumn column_		/* Column token. */
+    )
 {
     Column *column = (Column *) column_;
     TreeCtrl *tree = column->tree;
@@ -2825,8 +3671,27 @@ int TreeColumn_WidthOfItems(TreeColumn column_)
     return column->widthOfItems;
 }
 
-/* Set useWidth for all columns */
-void Tree_LayoutColumns(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_LayoutColumns --
+ *
+ *	Calculates the display width of every column.
+ *
+ * Results:
+ *	The useWidth field of every column is updated.
+ *
+ * Side effects:
+ *	The size of elements and styles will be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_LayoutColumns(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column = (Column *) tree->columns;
     int width, visWidth, totalWidth = 0;
@@ -2908,7 +3773,30 @@ void Tree_LayoutColumns(TreeCtrl *tree)
     }
 }
 
-void Tree_InvalidateColumnWidth(TreeCtrl *tree, int columnIndex)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_InvalidateColumnWidth --
+ *
+ *	Marks the width of zero or more columns as out-of-date.
+ *	Schedules a redisplay to check the widths of columns which
+ *	will perform any relayout necessary.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Idle task may be scheduled.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_InvalidateColumnWidth(
+    TreeCtrl *tree,		/* Widget info. */
+    int columnIndex		/* Index of the column to modify. -1 means
+				 * modify every column. */
+    )
 {
     Column *column;
 
@@ -2927,7 +3815,28 @@ void Tree_InvalidateColumnWidth(TreeCtrl *tree, int columnIndex)
     Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH);
 }
 
-void Tree_InvalidateColumnHeight(TreeCtrl *tree, int columnIndex)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_InvalidateColumnHeight --
+ *
+ *	Marks the height of zero or more column headers as out-of-date.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_InvalidateColumnHeight(
+    TreeCtrl *tree,		/* Widget info. */
+    int columnIndex		/* Index of the column to modify. -1 means
+				 * modify every column. */
+    )
 {
     Column *column;
 
@@ -2945,7 +3854,28 @@ void Tree_InvalidateColumnHeight(TreeCtrl *tree, int columnIndex)
     tree->headerHeight = -1;
 }
 
-void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_TreeChanged --
+ *
+ *	Called when a TreeCtrl is configured. Performs any relayout
+ *	necessary on column headers.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeColumn_TreeChanged(
+    TreeCtrl *tree,		/* Widget info. */
+    int flagT			/* TREE_CONF_xxx flags. */
+    )
 {
     Column *column;
 
@@ -2954,7 +3884,8 @@ void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT)
 	column = (Column *) tree->columns;
 	while (column != NULL) {
 	    if ((column->tkfont == NULL) && (column->textLen > 0)) {
-		column->textWidth = Tk_TextWidth(tree->tkfont, column->text, column->textLen);
+		column->textWidth = Tk_TextWidth(tree->tkfont, column->text,
+		    column->textLen);
 		column->neededWidth = column->neededHeight = -1;
 		column->textLayoutInvalid = TRUE;
 	    }
@@ -2964,7 +3895,27 @@ void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT)
     }
 }
 
-int Tree_HeaderHeight(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_HeaderHeight --
+ *
+ *	Return the total height of the column header area. The height
+ *	is only recalculated if it is marked out-of-date.
+ *
+ * Results:
+ *	Pixel height. Will be zero if the -showheader option is FALSE.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_HeaderHeight(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column;
     int height;
@@ -2985,7 +3936,30 @@ int Tree_HeaderHeight(TreeCtrl *tree)
     return tree->headerHeight = height;
 }
 
-int Tree_WidthOfColumns(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_WidthOfColumns --
+ *
+ *	Return the total display width of all columns (except the tail).
+ *	The width is only recalculated if it is marked out-of-date.
+ *	Other fields of the TreeCtrl are updated to reflect the current
+ *	arrangement of columns.
+ *
+ * Results:
+ *	Pixel width.
+ *
+ * Side effects:
+ *	The size of elements and styles may be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_WidthOfColumns(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column;
     int width;
@@ -3018,7 +3992,27 @@ int Tree_WidthOfColumns(TreeCtrl *tree)
     return tree->widthOfColumns = width;
 }
 
-void Tree_InitColumns(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_InitColumns --
+ *
+ *	Perform column-related initialization when a new TreeCtrl is
+ *	created.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_InitColumns(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column;
 
@@ -3036,7 +4030,25 @@ void Tree_InitColumns(TreeCtrl *tree)
 	    tree->columnDrag.optionTable, tree->tkwin);
 }
 
-void Tree_FreeColumns(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_FreeColumns --
+ *
+ *	Free column-related resources for a deleted TreeCtrl.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void Tree_FreeColumns(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Column *column = (Column *) tree->columns;
 
