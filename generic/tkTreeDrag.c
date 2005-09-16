@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.14 2005/09/16 23:24:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.15 2005/09/16 23:43:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -13,12 +13,20 @@
 typedef struct DragElem DragElem;
 typedef struct DragImage DragImage;
 
+/*
+ * The following structure holds info about a single element of the drag
+ * image.
+ */
 struct DragElem
 {
     int x, y, width, height;
     DragElem *next;
 };
 
+/*
+ * The following structure holds info about the drag image. There is one of
+ * these per TreeCtrl.
+ */
 struct DragImage
 {
     TreeCtrl *tree;
@@ -41,7 +49,27 @@ static Tk_OptionSpec optionSpecs[] = {
 	(char *) NULL, 0, -1, 0, 0, 0}
 };
 
-static DragElem *DragElem_Alloc(DragImage *dragImage)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DragElem_Alloc --
+ *
+ *	Allocate and initialize a new DragElem record. Add the record
+ *	to the list of records for the drag image.
+ *
+ * Results:
+ *	Pointer to allocated DragElem.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static DragElem *
+DragElem_Alloc(
+    DragImage *dragImage	/* Drag image record. */
+    )
 {
     DragElem *elem = (DragElem *) ckalloc(sizeof(DragElem));
     DragElem *walk = dragImage->elem;
@@ -57,14 +85,54 @@ static DragElem *DragElem_Alloc(DragImage *dragImage)
     return elem;
 }
 
-static DragElem *DragElem_Free(DragImage *dragImage, DragElem *elem)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DragElem_Free --
+ *
+ *	Free a DragElem.
+ *
+ * Results:
+ *	Pointer to the next DragElem.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static DragElem *
+DragElem_Free(
+    DragImage *dragImage,	/* Drag image record. */
+    DragElem *elem		/* Drag element to free. */
+    )
 {
     DragElem *next = elem->next;
     WFREE(elem, DragElem);
     return next;
 }
 
-int TreeDragImage_Init(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDragImage_Init --
+ *
+ *	Perform drag-image-related initialization when a new TreeCtrl is
+ *	created.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeDragImage_Init(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DragImage *dragImage;
 
@@ -82,7 +150,26 @@ int TreeDragImage_Init(TreeCtrl *tree)
     return TCL_OK;
 }
 
-void TreeDragImage_Free(TreeDragImage dragImage_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDragImage_Free --
+ *
+ *	Free drag-image-related resources when a TreeCtrl is deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeDragImage_Free(
+    TreeDragImage dragImage_	/* Drag image token. */
+    )
 {
     DragImage *dragImage = (DragImage *) dragImage_;
     DragElem *elem = dragImage->elem;
@@ -94,7 +181,27 @@ void TreeDragImage_Free(TreeDragImage dragImage_)
     WFREE(dragImage, DragImage);
 }
 
-void TreeDragImage_Display(TreeDragImage dragImage_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDragImage_Display --
+ *
+ *	Draw the drag image if it is not already displayed and if
+ *	it's -visible option is TRUE.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeDragImage_Display(
+    TreeDragImage dragImage_	/* Drag image token. */
+    )
 {
     DragImage *dragImage = (DragImage *) dragImage_;
     TreeCtrl *tree = dragImage->tree;
@@ -108,7 +215,26 @@ void TreeDragImage_Display(TreeDragImage dragImage_)
     }
 }
 
-void TreeDragImage_Undisplay(TreeDragImage dragImage_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDragImage_Undisplay --
+ *
+ *	Erase the drag image if it is displayed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeDragImage_Undisplay(
+    TreeDragImage dragImage_	/* Drag image token. */
+    )
 {
     DragImage *dragImage = (DragImage *) dragImage_;
     TreeCtrl *tree = dragImage->tree;
@@ -120,7 +246,32 @@ void TreeDragImage_Undisplay(TreeDragImage dragImage_)
     }
 }
 
-static int DragImage_Config(DragImage *dragImage, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * DragImage_Config --
+ *
+ *	This procedure is called to process an objc/objv list to set
+ *	configuration options for a DragImage.
+ *
+ * Results:
+ *	The return value is a standard Tcl result.  If TCL_ERROR is
+ *	returned, then an error message is left in interp's result.
+ *
+ * Side effects:
+ *	Configuration information, such as text string, colors, font,
+ *	etc. get set for dragImage;  old resources get freed, if there
+ *	were any.  Display changes may occur.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+DragImage_Config(
+    DragImage *dragImage,	/* Drag image record. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = dragImage->tree;
     Tk_SavedOptions savedOptions;
@@ -167,6 +318,22 @@ static int DragImage_Config(DragImage *dragImage, int objc, Tcl_Obj *CONST objv[
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDragImage_Draw --
+ *
+ *	Draw (or erase) the elements that make up the drag image.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn (or erased, since this is XOR drawing).
+ *
+ *----------------------------------------------------------------------
+ */
+
 void TreeDragImage_Draw(TreeDragImage dragImage_, Drawable drawable, int x, int y)
 {
     DragImage *dragImage = (DragImage *) dragImage_;
@@ -193,8 +360,31 @@ void TreeDragImage_Draw(TreeDragImage dragImage_, Drawable drawable, int x, int 
     DotRect_Restore(&dotState);
 }
 
-int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * DragImageCmd --
+ *
+ *	This procedure is invoked to process the [dragimage] widget
+ *	command.  See the user documentation for details on what it
+ *	does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+DragImageCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     DragImage *dragImage = (DragImage *) tree->dragImage;
