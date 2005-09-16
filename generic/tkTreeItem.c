@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.52 2005/09/15 04:34:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.53 2005/09/16 00:05:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -99,7 +99,10 @@ static Tk_OptionSpec itemOptionSpecs[] = {
  *----------------------------------------------------------------------
  */
 
-static Column *Column_Alloc(TreeCtrl *tree)
+static Column *
+Column_Alloc(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
 #ifdef ALLOC_HAX
     Column *column = (Column *) AllocHax_Alloc(tree->allocData, sizeof(Column));
@@ -131,7 +134,11 @@ static Column *Column_Alloc(TreeCtrl *tree)
  *----------------------------------------------------------------------
  */
 
-void TreeItemColumn_InvalidateSize(TreeCtrl *tree, TreeItemColumn column_)
+void
+TreeItemColumn_InvalidateSize(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemColumn column_	/* Column token. */
+    )
 {
     Column *column = (Column *) column_;
 
@@ -155,8 +162,12 @@ void TreeItemColumn_InvalidateSize(TreeCtrl *tree, TreeItemColumn column_)
  *----------------------------------------------------------------------
  */
 
-int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_,
-	TreeItemColumn column_)
+int
+TreeItemColumn_NeededWidth(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    TreeItemColumn column_	/* Column token. */
+    )
 {
     Item *item = (Item *) item_;
     Column *self = (Column *) column_;
@@ -183,7 +194,11 @@ int TreeItemColumn_NeededWidth(TreeCtrl *tree, TreeItem item_,
  *----------------------------------------------------------------------
  */
 
-TreeStyle TreeItemColumn_GetStyle(TreeCtrl *tree, TreeItemColumn column)
+TreeStyle
+TreeItemColumn_GetStyle(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemColumn column	/* Column token. */
+    )
 {
     return ((Column *) column)->style;
 }
@@ -205,7 +220,12 @@ TreeStyle TreeItemColumn_GetStyle(TreeCtrl *tree, TreeItemColumn column)
  *----------------------------------------------------------------------
  */
 
-int TreeItemColumn_Index(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_)
+int
+TreeItemColumn_Index(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    TreeItemColumn column_	/* Column token. */
+    )
 {
     Item *item = (Item *) item_;
     Column *column;
@@ -237,7 +257,11 @@ int TreeItemColumn_Index(TreeCtrl *tree, TreeItem item_, TreeItemColumn column_)
  *----------------------------------------------------------------------
  */
 
-void TreeItemColumn_ForgetStyle(TreeCtrl *tree, TreeItemColumn column_)
+void
+TreeItemColumn_ForgetStyle(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemColumn column_	/* Column token. */
+    )
 {
     Column *self = (Column *) column_;
 
@@ -264,7 +288,11 @@ void TreeItemColumn_ForgetStyle(TreeCtrl *tree, TreeItemColumn column_)
  *----------------------------------------------------------------------
  */
 
-TreeItemColumn TreeItemColumn_GetNext(TreeCtrl *tree, TreeItemColumn column)
+TreeItemColumn
+TreeItemColumn_GetNext(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemColumn column	/* Column token. */
+    )
 {
     return (TreeItemColumn) ((Column *) column)->next;
 }
@@ -285,7 +313,11 @@ TreeItemColumn TreeItemColumn_GetNext(TreeCtrl *tree, TreeItemColumn column)
  *----------------------------------------------------------------------
  */
 
-Column *Column_FreeResources(TreeCtrl *tree, Column *self)
+Column *
+Column_FreeResources(
+    TreeCtrl *tree,		/* Widget info. */
+    Column *self		/* Column to free. */
+    )
 {
     Column *next = self->next;
 
@@ -317,8 +349,16 @@ Column *Column_FreeResources(TreeCtrl *tree, Column *self)
  *----------------------------------------------------------------------
  */
 
-static void Item_UpdateIndex(TreeCtrl *tree, Item *item, int *index,
-	int *indexVis)
+static void
+Item_UpdateIndex(TreeCtrl *tree,
+    Item *item,			/* Item to update. */
+    int *index,			/* New Item.index value for the item.
+				 * Value is incremented. */
+    int *indexVis		/* New Item.indexVis value for the item if
+				 * the item is ReallyVisible().
+				 * Value is incremented if the item is
+				 * ReallyVisible(). */
+    )
 {
     Item *child;
     int parentVis, parentOpen;
@@ -372,7 +412,10 @@ static void Item_UpdateIndex(TreeCtrl *tree, Item *item, int *index,
  *----------------------------------------------------------------------
  */
 
-void Tree_UpdateItemIndex(TreeCtrl *tree)
+void
+Tree_UpdateItemIndex(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Item *item = (Item *) tree->root;
     int index = 1, indexVis = 0;
@@ -412,7 +455,10 @@ void Tree_UpdateItemIndex(TreeCtrl *tree)
  *----------------------------------------------------------------------
  */
 
-static Item *Item_Alloc(TreeCtrl *tree)
+static Item *
+Item_Alloc(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
 #ifdef ALLOC_HAX
     Item *item = (Item *) AllocHax_Alloc(tree->allocData, sizeof(Item));
@@ -449,7 +495,10 @@ static Item *Item_Alloc(TreeCtrl *tree)
  *----------------------------------------------------------------------
  */
 
-static Item *Item_AllocRoot(TreeCtrl *tree)
+static Item *
+Item_AllocRoot(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Item *item;
 
@@ -475,7 +524,11 @@ static Item *Item_AllocRoot(TreeCtrl *tree)
  *----------------------------------------------------------------------
  */
 
-TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item)
+TreeItemColumn
+TreeItem_GetFirstColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item token. */
+    )
 {
     return (TreeItemColumn) ((Item *) item)->columns;
 }
@@ -496,7 +549,11 @@ TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_GetState(TreeCtrl *tree, TreeItem item_)
+int
+TreeItem_GetState(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     return ((Item *) item_)->state;
 }
@@ -519,8 +576,15 @@ int TreeItem_GetState(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static int Column_ChangeState(TreeCtrl *tree, Item *item, Column *column,
-	int columnIndex, int stateOff, int stateOn)
+static int
+Column_ChangeState(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item containing the column. */
+    Column *column,		/* Column to modify the state of. */
+    int columnIndex,		/* 0-based column index. */
+    int stateOff,		/* STATE_xxx flags to turn off. */
+    int stateOn			/* STATE_xxx flags to turn on. */
+    )
 {
     int cstate, state;
     int sMask, iMask = 0;
@@ -580,8 +644,13 @@ static int Column_ChangeState(TreeCtrl *tree, Item *item, Column *column,
  *----------------------------------------------------------------------
  */
 
-int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
-	int stateOn)
+int
+TreeItem_ChangeState(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int stateOff,		/* STATE_xxx flags to turn off. */
+    int stateOn			/* STATE_xxx flags to turn on. */
+    )
 {
     Item *item = (Item *) item_;
     Column *column;
@@ -711,9 +780,9 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
  *
  * TreeItem_UndefineState --
  *
- *	Clear zero or more STATE_xxx flags in an Item and its
- *	Columns. This is called when a user-defined state is
- *	undefined via [state undefine].
+ *	Clear a STATE_xxx flag in an Item and its Columns. This is
+ *	called when a user-defined state is undefined via the
+ *	[state undefine] widget command.
  *
  * Results:
  *	None.
@@ -724,7 +793,12 @@ int TreeItem_ChangeState(TreeCtrl *tree, TreeItem item_, int stateOff,
  *----------------------------------------------------------------------
  */
 
-void TreeItem_UndefineState(TreeCtrl *tree, TreeItem item_, int state)
+void
+TreeItem_UndefineState(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int state			/* STATE_xxx flag that is undefined. */
+    )
 {
     Item *item = (Item *) item_;
     Column *column = item->columns;
@@ -755,7 +829,11 @@ void TreeItem_UndefineState(TreeCtrl *tree, TreeItem item_, int state)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_GetButton(TreeCtrl *tree, TreeItem item_)
+int
+TreeItem_GetButton(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return item->hasButton;
@@ -777,7 +855,11 @@ int TreeItem_GetButton(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_GetDepth(TreeCtrl *tree, TreeItem item_)
+int
+TreeItem_GetDepth(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
 #if 0
@@ -803,7 +885,11 @@ int TreeItem_GetDepth(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_GetID(TreeCtrl *tree, TreeItem item_)
+int
+TreeItem_GetID(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return item->id;
@@ -814,7 +900,8 @@ int TreeItem_GetID(TreeCtrl *tree, TreeItem item_)
  *
  * TreeItem_SetID --
  *
- *	Set the unique ID of an Item.
+ *	Set the unique ID of an Item. This is called when the item
+ *	is created.
  *
  * Results:
  *	The given ID.
@@ -825,7 +912,12 @@ int TreeItem_GetID(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_SetID(TreeCtrl *tree, TreeItem item_, int id)
+int
+TreeItem_SetID(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int id			/* Unique ID for the item. */
+    )
 {
     Item *item = (Item *) item_;
     return item->id = id;
@@ -847,7 +939,11 @@ int TreeItem_SetID(TreeCtrl *tree, TreeItem item_, int id)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_GetSelected(TreeCtrl *tree, TreeItem item_)
+int
+TreeItem_GetSelected(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return (item->state & STATE_SELECTED) != 0;
@@ -869,7 +965,11 @@ int TreeItem_GetSelected(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_GetParent(TreeCtrl *tree, TreeItem item_)
+TreeItem
+TreeItem_GetParent(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return (TreeItem) item->parent;
@@ -891,7 +991,11 @@ TreeItem TreeItem_GetParent(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_GetNextSibling(TreeCtrl *tree, TreeItem item_)
+TreeItem
+TreeItem_GetNextSibling(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return (TreeItem) item->nextSibling;
@@ -913,7 +1017,11 @@ TreeItem TreeItem_GetNextSibling(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_NextSiblingVisible(TreeCtrl *tree, TreeItem item)
+TreeItem
+TreeItem_NextSiblingVisible(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item token. */
+    )
 {
     item = TreeItem_GetNextSibling(tree, item);
     while (item != NULL) {
@@ -941,7 +1049,12 @@ TreeItem TreeItem_NextSiblingVisible(TreeCtrl *tree, TreeItem item)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_SetDInfo(TreeCtrl *tree, TreeItem item_, TreeItemDInfo dInfo)
+void
+TreeItem_SetDInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    TreeItemDInfo dInfo		/* Display-info token. */
+    )
 {
     Item *item = (Item *) item_;
     item->dInfo = dInfo;
@@ -964,7 +1077,11 @@ void TreeItem_SetDInfo(TreeCtrl *tree, TreeItem item_, TreeItemDInfo dInfo)
  *----------------------------------------------------------------------
  */
 
-TreeItemDInfo TreeItem_GetDInfo(TreeCtrl *tree, TreeItem item_)
+TreeItemDInfo
+TreeItem_GetDInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return item->dInfo;
@@ -987,7 +1104,12 @@ TreeItemDInfo TreeItem_GetDInfo(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_SetRInfo(TreeCtrl *tree, TreeItem item_, TreeItemRInfo rInfo)
+void
+TreeItem_SetRInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    TreeItemRInfo rInfo		/* Range-info token */
+    )
 {
     Item *item = (Item *) item_;
     item->rInfo = rInfo;
@@ -1010,7 +1132,11 @@ void TreeItem_SetRInfo(TreeCtrl *tree, TreeItem item_, TreeItemRInfo rInfo)
  *----------------------------------------------------------------------
  */
 
-TreeItemRInfo TreeItem_GetRInfo(TreeCtrl *tree, TreeItem item_)
+TreeItemRInfo
+TreeItem_GetRInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     return item->rInfo;
@@ -1036,7 +1162,11 @@ TreeItemRInfo TreeItem_GetRInfo(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item_)
+TreeItem
+TreeItem_Next(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
 
@@ -1063,9 +1193,9 @@ TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item_)
  *
  * Results:
  *	Result will be:
- *	  a) the first child, or
- *	  b) the next sibling, or
- *	  c) the next sibling of an ancestor, or
+ *	  a) the first ReallyVisible() child, or
+ *	  b) the next ReallyVisible() sibling, or
+ *	  c) the next ReallyVisible() sibling of an ancestor, or
  *	  d) NULL if no ReallyVisible() item follows this one
  *
  * Side effects:
@@ -1074,7 +1204,11 @@ TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_NextVisible(TreeCtrl *tree, TreeItem item)
+TreeItem
+TreeItem_NextVisible(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item token. */
+    )
 {
     item = TreeItem_Next(tree, item);
     while (item != NULL) {
@@ -1104,7 +1238,11 @@ TreeItem TreeItem_NextVisible(TreeCtrl *tree, TreeItem item)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_Prev(TreeCtrl *tree, TreeItem item_)
+TreeItem
+TreeItem_Prev(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     Item *walk;
@@ -1139,7 +1277,11 @@ TreeItem TreeItem_Prev(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item)
+TreeItem
+TreeItem_PrevVisible(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item token. */
+    )
 {
     item = TreeItem_Prev(tree, item);
     while (item != NULL) {
@@ -1166,8 +1308,13 @@ TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_ToIndex(TreeCtrl *tree, TreeItem item_, int *index,
-	int *indexVis)
+void
+TreeItem_ToIndex(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int *index,			/* Returned Item.index, may be NULL */
+    int *indexVis		/* Returned Item.indexVis, may be NULL */
+    )
 {
     Item *item = (Item *) item_;
 
@@ -1193,8 +1340,14 @@ void TreeItem_ToIndex(TreeCtrl *tree, TreeItem item_, int *index,
  *----------------------------------------------------------------------
  */
 
-static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv,
-	CONST char **indexNames)
+static int
+IndexFromList(
+    int listIndex,		/* Index of objv[] to pass to
+				 * Tcl_GetIndexFromObj */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj **objv,		/* Arguments. */
+    CONST char **indexNames	/* NULL-terminated list of names. */
+    )
 {
     Tcl_Obj *elemPtr;
     int index;
@@ -1259,8 +1412,13 @@ static int IndexFromList(int listIndex, int objc, Tcl_Obj **objv,
  *----------------------------------------------------------------------
  */
 
-int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
-	int flags)
+int
+TreeItem_FromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *objPtr,		/* Object to convert to TreeItem. */
+    TreeItem *itemPtr,		/* Returned item token */
+    int flags			/* IFO_xxx flags */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int objc;
@@ -1643,7 +1801,13 @@ int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr,
  *----------------------------------------------------------------------
  */
 
-static void Item_ToggleOpen(TreeCtrl *tree, Item *item, int stateOff, int stateOn)
+static void
+Item_ToggleOpen(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item record. */
+    int stateOff,		/* STATE_OPEN or 0 */
+    int stateOn			/* STATE_OPEN or 0 */
+    )
 {
     int mask;
 
@@ -1692,7 +1856,16 @@ static void Item_ToggleOpen(TreeCtrl *tree, Item *item, int stateOff, int stateO
  *----------------------------------------------------------------------
  */
 
-void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item_, int mode, int recurse)
+void
+TreeItem_OpenClose(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int mode,			/* -1: toggle
+				 * 0: close
+				 * 1: open */
+    int recurse			/* TRUE to perform same op on descendants,
+				 * FALSE to only affect given item. */
+    )
 {
     Item *item = (Item *) item_;
     Item *child;
@@ -1738,7 +1911,11 @@ void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item_, int mode, int recurse)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_Delete(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_Delete(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
 
@@ -1779,7 +1956,11 @@ void TreeItem_Delete(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_UpdateDepth(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_UpdateDepth(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     Item *child;
@@ -1813,7 +1994,11 @@ void TreeItem_UpdateDepth(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_AddToParent(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_AddToParent(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     Item *last;
@@ -1861,7 +2046,12 @@ void TreeItem_AddToParent(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static void RemoveFromParentAux(TreeCtrl *tree, Item *self, int *index)
+static void
+RemoveFromParentAux(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *self,			/* Item being removed. */
+    int *index			/* New value of Item.index. Is incremented. */
+    )
 {
     Item *child;
 
@@ -1900,7 +2090,11 @@ static void RemoveFromParentAux(TreeCtrl *tree, Item *self, int *index)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_RemoveFromParent(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_RemoveFromParent(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     Item *parent = self->parent;
@@ -1969,7 +2163,15 @@ void TreeItem_RemoveFromParent(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_RemoveColumns(TreeCtrl *tree, TreeItem item_, int first, int last)
+void
+TreeItem_RemoveColumns(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int first,			/* 0-based column index at start of
+				 * the range. Must be <= last */
+    int last			/* 0-based column index at end of
+				 * the range. Must be >= first */
+    )
 {
     Item *self = (Item *) item_;
     Column *column = self->columns;
@@ -2009,7 +2211,10 @@ void TreeItem_RemoveColumns(TreeCtrl *tree, TreeItem item_, int first, int last)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_RemoveAllColumns(TreeCtrl *tree, TreeItem item_)
+void TreeItem_RemoveAllColumns(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     Column *column = self->columns;
@@ -2040,7 +2245,14 @@ void TreeItem_RemoveAllColumns(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static Column *Item_CreateColumn(TreeCtrl *tree, Item *self, int columnIndex, int *isNew)
+static Column *
+Item_CreateColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *self,			/* Item to contain the column. */
+    int columnIndex,		/* 0-based index of new column. */
+    int *isNew			/* May be NULL. Set to TRUE if the
+				 * column record was created. */
+    )
 {
     Column *column;
     int i;
@@ -2080,12 +2292,19 @@ static Column *Item_CreateColumn(TreeCtrl *tree, Item *self, int columnIndex, in
  *	Column records are allocated.
  *
  * Side effects:
- *	Memory is allocated.
+ *	Memory may be allocated.
  *
  *----------------------------------------------------------------------
  */
 
-void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int beforeIndex)
+void
+TreeItem_MoveColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item token. */
+    int columnIndex,		/* 0-based index of the column to move. */
+    int beforeIndex		/* 0-based index of the second column to move
+				 * the first column to the left of. */
+    )
 {
     Item *self = (Item *) item;
     Column *before = NULL, *move = NULL;
@@ -2153,7 +2372,11 @@ void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item, int columnIndex, int bef
  *----------------------------------------------------------------------
  */
 
-void TreeItem_FreeResources(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_FreeResources(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     Column *column;
@@ -2188,9 +2411,12 @@ void TreeItem_FreeResources(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static int Item_UseHeight(TreeCtrl *tree, TreeItem item_)
+static int
+Item_HeightOfStyles(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item			/* Item record. */
+    )
 {
-    Item *item = (Item *) item_;
     Column *column = item->columns;
     TreeColumn treeColumn = tree->columns;
     StyleDrawArgs drawArgs;
@@ -2203,7 +2429,7 @@ static int Item_UseHeight(TreeCtrl *tree, TreeItem item_)
 	    drawArgs.state = item->state | column->cstate;
 	    drawArgs.style = column->style;
 	    drawArgs.indent = (treeColumn == tree->columnTree) ?
-		TreeItem_Indent(tree, item_) : 0;
+		TreeItem_Indent(tree, (TreeItem) item) : 0;
 	    if ((TreeColumn_FixedWidth(treeColumn) != -1) ||
 		    TreeColumn_Squeeze(treeColumn)) {
 		drawArgs.width = TreeColumn_UseWidth(treeColumn);
@@ -2242,7 +2468,10 @@ static int Item_UseHeight(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_Height(TreeCtrl *tree, TreeItem item_)
+int TreeItem_Height(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     int buttonHeight = 0;
@@ -2251,8 +2480,8 @@ int TreeItem_Height(TreeCtrl *tree, TreeItem item_)
     if (!self->isVisible || (ISROOT(self) && !tree->showRoot))
 	return 0;
 
-    /* Update column + style + element sizes */
-    useHeight = Item_UseHeight(tree, item_);
+    /* Get requested height of the style in each column */
+    useHeight = Item_HeightOfStyles(tree, self);
 
     /* Can't have less height than our button */
     if (tree->showButtons && self->hasButton && (!ISROOT(self) || tree->showRootButton)) {
@@ -2292,7 +2521,11 @@ int TreeItem_Height(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem item_)
+void
+TreeItem_InvalidateHeight(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
 
@@ -2317,7 +2550,12 @@ void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static Column *Item_FindColumn(TreeCtrl *tree, Item *self, int columnIndex)
+static Column *
+Item_FindColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *self,			/* Item record. */
+    int columnIndex		/* 0-based index of column to find. */
+    )
 {
     Column *column;
     int i = 0;
@@ -2348,8 +2586,15 @@ static Column *Item_FindColumn(TreeCtrl *tree, Item *self, int columnIndex)
  *----------------------------------------------------------------------
  */
 
-static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
-	Column **columnPtr, int *indexPtr)
+static int
+Item_FindColumnFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item record. */
+    Tcl_Obj *obj,		/* Column description. */
+    Column **columnPtr,		/* Returned column, or NULL. */
+    int *indexPtr		/* May be NULL. Returned 0-based index of
+				 * the column. */
+    )
 {
     TreeColumn treeColumn;
     int columnIndex;
@@ -2379,7 +2624,12 @@ static int Item_FindColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj,
  *----------------------------------------------------------------------
  */
 
-TreeItemColumn TreeItem_FindColumn(TreeCtrl *tree, TreeItem item, int columnIndex)
+TreeItemColumn
+TreeItem_FindColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item token. */
+    int columnIndex		/* 0-based index of column to find. */
+    )
 {
     return (TreeItemColumn) Item_FindColumn(tree, (Item *) item, columnIndex);
 }
@@ -2400,7 +2650,15 @@ TreeItemColumn TreeItem_FindColumn(TreeCtrl *tree, TreeItem item, int columnInde
  *----------------------------------------------------------------------
  */
 
-int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItemColumn *columnPtr, int *indexPtr)
+int
+TreeItem_ColumnFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item token. */
+    Tcl_Obj *obj,		/* Column description. */
+    TreeItemColumn *columnPtr,	/* Returned column, or NULL. */
+    int *indexPtr		/* May be NULL. Returned 0-based index of
+				 * the column. */
+    )
 {
     return Item_FindColumnFromObj(tree, (Item *) item, obj, (Column **) columnPtr, indexPtr);
 }
@@ -2422,7 +2680,17 @@ int TreeItem_ColumnFromObj(TreeCtrl *tree, TreeItem item, Tcl_Obj *obj, TreeItem
  *----------------------------------------------------------------------
  */
 
-static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Column **column, int *indexPtr, int *isNew)
+static int
+Item_CreateColumnFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item record. */
+    Tcl_Obj *obj,		/* Column description. */
+    Column **column,		/* Returned column. */
+    int *indexPtr,		/* May be NULL. Returned 0-based index of
+				 * the column. */
+    int *isNew			/* May be NULL. Set to TRUE if the
+				 * column record was created. */
+    )
 {
     TreeColumn treeColumn;
     int columnIndex;
@@ -2453,7 +2721,10 @@ static int Item_CreateColumnFromObj(TreeCtrl *tree, Item *item, Tcl_Obj *obj, Co
  *----------------------------------------------------------------------
  */
 
-int TreeItem_Indent(TreeCtrl *tree, TreeItem item_)
+int TreeItem_Indent(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
     int indent;
@@ -2495,9 +2766,18 @@ int TreeItem_Indent(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
-	Item *item, Column *column, Drawable drawable, int x, int y, int width,
-	int height, int index)
+static void
+ItemDrawBackground(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeColumn treeColumn,	/* Tree-column token. */
+    Item *item,			/* Item record. */
+    Column *column,		/* First column. */
+    Drawable drawable,		/* Where to draw. */
+    int x, int y,		/* Area of the item to draw. */
+    int width, int height,	/* ^ */
+    int index			/* Used to select a color from the
+				 * tree-column's -itembackground option. */
+    )
 {
     GC gc = None;
 
@@ -2523,10 +2803,10 @@ static void ItemDrawBackground(TreeCtrl *tree, TreeColumn treeColumn,
  * is displayed at a given tree column.
  */
 typedef struct SpanInfo {
-    TreeColumn treeColumn;	/* always non-null */
-    TreeItemColumn itemColumn;	/* may be null */
-    int itemColumnIndex;	/* actual Column displayed here */
-    int width;
+    TreeColumn treeColumn;	/* Always non-null. */
+    TreeItemColumn itemColumn;	/* May be null. */
+    int itemColumnIndex;	/* Actual Column displayed here. */
+    int width;			/* Width of the tree column. */
 } SpanInfo;
 
 /*
@@ -2546,7 +2826,12 @@ typedef struct SpanInfo {
  *----------------------------------------------------------------------
  */
 
-static void Item_GetSpans(TreeCtrl *tree, TreeItem item_, SpanInfo spans[])
+static void
+Item_GetSpans(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    SpanInfo spans[]		/* Returned span records. */
+    )
 {
     Item *self = (Item *) item_;
     TreeColumn treeColumn = tree->columns;
@@ -2588,8 +2873,17 @@ static void Item_GetSpans(TreeCtrl *tree, TreeItem item_, SpanInfo spans[])
  *----------------------------------------------------------------------
  */
 
-void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
-	int width, int height, Drawable drawable, int minX, int maxX, int index)
+void
+TreeItem_Draw(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Drawable coordinates of the item. */
+    int width, int height,	/* Total size of the item. */
+    Drawable drawable,		/* Where to draw. */
+    int minX, int maxX,		/* Left/right edge that needs to be drawn. */
+    int index			/* Used to select a color from a
+				 * tree-column's -itembackground option. */
+    )
 {
     Item *self = (Item *) item_;
     int indent, columnWidth, totalWidth;
@@ -2758,7 +3052,14 @@ void TreeItem_Draw(TreeCtrl *tree, TreeItem item_, int x, int y,
  *----------------------------------------------------------------------
  */
 
-void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width, int height, Drawable drawable)
+void
+TreeItem_DrawLines(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Drawable coordinates of the item. */
+    int width, int height,	/* Total size of the item. */
+    Drawable drawable		/* Where to draw. */
+    )
 {
     Item *self = (Item *) item_;
     Item *item, *parent;
@@ -2890,7 +3191,14 @@ void TreeItem_DrawLines(TreeCtrl *tree, TreeItem item_, int x, int y, int width,
  *----------------------------------------------------------------------
  */
 
-void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width, int height, Drawable drawable)
+void
+TreeItem_DrawButton(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Drawable coordinates of the item. */
+    int width, int height,	/* Total size of the item. */
+    Drawable drawable		/* Where to draw. */
+    )
 {
     Item *self = (Item *) item_;
     int indent, left, lineLeft, lineTop;
@@ -3011,8 +3319,13 @@ void TreeItem_DrawButton(TreeCtrl *tree, TreeItem item_, int x, int y, int width
  *----------------------------------------------------------------------
  */
 
-void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
-    int x, int y, int width, int height)
+void
+TreeItem_UpdateWindowPositions(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Window coordinates of the item. */
+    int width, int height	/* Total size of the item. */
+    )
 {
     Item *self = (Item *) item_;
     int indent, columnWidth, totalWidth;
@@ -3073,7 +3386,12 @@ void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
  *----------------------------------------------------------------------
  */
 
-void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen)
+void
+TreeItem_OnScreen(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int onScreen		/* TRUE if item is displayed. */
+    )
 {
     Item *self = (Item *) item_;
     Column *column = self->columns;
@@ -3103,7 +3421,10 @@ void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem item_)
+int TreeItem_ReallyVisible(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *self = (Item *) item_;
 #if 0
@@ -3148,7 +3469,10 @@ int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-TreeItem TreeItem_RootAncestor(TreeCtrl *tree, TreeItem item_)
+TreeItem TreeItem_RootAncestor(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
 
@@ -3173,7 +3497,12 @@ TreeItem TreeItem_RootAncestor(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-int TreeItem_IsAncestor(TreeCtrl *tree, TreeItem item1, TreeItem item2)
+int
+TreeItem_IsAncestor(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item1,		/* Possible ancestor. */
+    TreeItem item2		/* Item to check ancestry of. */
+    )
 {
     if (item1 == item2)
 	return 0;
@@ -3198,7 +3527,10 @@ int TreeItem_IsAncestor(TreeCtrl *tree, TreeItem item1, TreeItem item2)
  *----------------------------------------------------------------------
  */
 
-Tcl_Obj *TreeItem_ToObj(TreeCtrl *tree, TreeItem item_)
+Tcl_Obj *TreeItem_ToObj(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     if (tree->itemPrefixLen) {
 	char buf[100 + TCL_INTEGER_SPACE];
@@ -3222,14 +3554,18 @@ Tcl_Obj *TreeItem_ToObj(TreeCtrl *tree, TreeItem item_)
  *	returned, then the interp's result contains an error message.
  *
  * Side effects:
- *	Configuration information get set for item;  old resources get freed,
- *	if there were any.
+ *	Configuration information gets set for item;  old resources get
+ *	freed, if there were any.
  *
  *----------------------------------------------------------------------
  */
 
-static int Item_Configure(TreeCtrl *tree, Item *item, int objc,
-	Tcl_Obj *CONST objv[])
+static int Item_Configure(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item to configure. */
+    int objc,			/* Number of arguments */
+    Tcl_Obj *CONST objv[]	/* Array of arguments */
+    )
 {
     Tk_SavedOptions savedOptions;
     int error;
@@ -3316,8 +3652,13 @@ static int Item_Configure(TreeCtrl *tree, Item *item, int objc,
  *----------------------------------------------------------------------
  */
 
-static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+static int
+ItemCreateCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *optionNames[] = { "-button", "-count", "-height",
@@ -3513,7 +3854,13 @@ static int ItemCreateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
  *----------------------------------------------------------------------
  */
 
-static void NoStyleMsg(TreeCtrl *tree, Item *item, int columnIndex)
+static void
+NoStyleMsg(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* Item record. */
+    int columnIndex		/* 0-based index of the column that
+				 * has no style. */
+    )
 {
     FormatResult(tree->interp,
 	    "item %s%d column %s%d has no style",
@@ -3540,8 +3887,13 @@ static void NoStyleMsg(TreeCtrl *tree, Item *item, int columnIndex)
  *----------------------------------------------------------------------
  */
 
-static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+static int
+ItemElementCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = { "actual", "cget", "configure",
@@ -3756,8 +4108,13 @@ static int ItemElementCmd(ClientData clientData, Tcl_Interp *interp, int objc,
  *----------------------------------------------------------------------
  */
 
-static int ItemStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+static int
+ItemStyleCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = { "elements", "map", "set", (char *) NULL };
@@ -4323,8 +4680,13 @@ static void quicksort(SortData *sortData, struct SortItem *left, struct SortItem
  *----------------------------------------------------------------------
  */
 
-int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+static int
+ItemSortCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     TreeItem _item;
@@ -4766,8 +5128,13 @@ int ItemSortCmd(ClientData clientData, Tcl_Interp *interp, int objc,
  *----------------------------------------------------------------------
  */
 
-static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+static int
+ItemStateCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = {
@@ -4981,7 +5348,13 @@ static int ItemStateCmd(ClientData clientData, Tcl_Interp *interp, int objc,
  *----------------------------------------------------------------------
  */
 
-static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
+static void
+ItemDeleteDeselect(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem itemFirst,		/* First item in range. May be ITEM_ALL. */
+    TreeItem itemLast		/* Last item in range. May be ITEM_ALL.
+				 * Must be >= itemFirst. */
+    )
 {
     int i, indexFirst, indexLast, count;
     TreeItem staticItems[STATIC_SIZE], *items = staticItems;
@@ -5041,7 +5414,7 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
 /*
  *----------------------------------------------------------------------
  *
- * ItemDeleteDeselect --
+ * ItemDeleteNotify --
  *
  *	Generate a <ItemDelete> event for any Items that are about to
  *	be deleted.
@@ -5055,7 +5428,13 @@ static void ItemDeleteDeselect(TreeCtrl *tree, TreeItem itemFirst, TreeItem item
  *----------------------------------------------------------------------
  */
 
-static void ItemDeleteNotify(TreeCtrl *tree, TreeItem itemFirst, TreeItem itemLast)
+static void
+ItemDeleteNotify(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem itemFirst,		/* First item in range. May be ITEM_ALL. */
+    TreeItem itemLast		/* Last item in range. May be ITEM_ALL.
+				 * Must be >= itemFirst. */
+    )
 {
     int staticItemIds[256], *itemIds = staticItemIds;
     int itemIdCnt = 0;
@@ -5130,7 +5509,10 @@ doNotify:
  */
 
 /* FIXME: optimize all calls to this routine */
-void Tree_DeselectHidden(TreeCtrl *tree)
+void
+Tree_DeselectHidden(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     TreeItem staticItems[STATIC_SIZE], *items = staticItems;
     Tcl_HashEntry *hPtr;
@@ -5164,6 +5546,7 @@ void Tree_DeselectHidden(TreeCtrl *tree)
     }
     STATIC_FREE2(items, staticItems);
 }
+
 #endif /* SELECTION_VISIBLE */
 
 /*
@@ -5184,8 +5567,13 @@ void Tree_DeselectHidden(TreeCtrl *tree)
  *----------------------------------------------------------------------
  */
 
-int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+int
+TreeItemCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = {
@@ -6204,7 +6592,10 @@ int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc,
  *----------------------------------------------------------------------
  */
 
-int TreeItem_Debug(TreeCtrl *tree, TreeItem item_)
+int TreeItem_Debug(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
 {
     Item *item = (Item *) item_;
     Item *child;
@@ -6388,7 +6779,14 @@ int TreeItem_Debug(TreeCtrl *tree, TreeItem item_)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf)
+void
+TreeItem_Identify(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Window coords to hit-test with. */
+    char *buf			/* NULL-terminated string which may be
+				 * appended. */
+    )
 {
     Item *self = (Item *) item_;
     int left, top, width, height;
@@ -6467,7 +6865,7 @@ void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf)
  * Results:
  *	If the Item is not ReallyVisible() or no columns are visible
  *	then listObj is untouched. Otherwise the list is appended
- *	with {C {E ...}}.
+ *	with C {E ...} C {E...}.
  *
  * Side effects:
  *	None.
@@ -6475,8 +6873,14 @@ void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf)
  *----------------------------------------------------------------------
  */
 
-void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
-	int x1, int y1, int x2, int y2, Tcl_Obj *listObj)
+void
+TreeItem_Identify2(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x1, int y1,		/* Top-left of area to hit-test. */
+    int x2, int y2,		/* Bottom-right of area to hit-test. */
+    Tcl_Obj *listObj		/* Initialized list object. */
+    )
 {
     Item *self = (Item *) item_;
     int indent, columnWidth, totalWidth;
@@ -6673,7 +7077,10 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
  *----------------------------------------------------------------------
  */
 
-int TreeItem_Init(TreeCtrl *tree)
+int
+TreeItem_Init(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     tree->itemOptionTable = Tk_CreateOptionTable(tree->interp, itemOptionSpecs);
 
