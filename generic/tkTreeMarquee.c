@@ -1,25 +1,31 @@
 /* 
  * tkTreeMarquee.c --
  *
- *	This module implements the selection marquee for treectrl widgets.
+ *	This module implements the selection rectangle for treectrl widgets.
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.6 2005/09/16 23:24:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.7 2005/09/17 00:05:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
 typedef struct Marquee Marquee;
 
+/*
+ * The following structure holds info about the selection rectangle.
+ * There is one of these per TreeCtrl.
+ */
 struct Marquee
 {
     TreeCtrl *tree;
     Tk_OptionTable optionTable;
-    int visible;
-    int x1, y1, x2, y2;
-    int onScreen;
-    int sx, sy;
+    int visible;			/* -visible option. */
+    int x1, y1, x2, y2;			/* Opposing corners. */
+    int onScreen;			/* TRUE if it was drawn. */
+    int sx, sy;				/* Offset of canvas from top-left
+					 * corner of the window when we
+					 * were drawn. */
 };
 
 #define MARQ_CONF_VISIBLE		0x0001
@@ -32,7 +38,27 @@ static Tk_OptionSpec optionSpecs[] = {
 	(char *) NULL, 0, -1, 0, 0, 0}
 };
 
-int TreeMarquee_Init(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarquee_Init --
+ *
+ *	Perform marquee-related initialization when a new TreeCtrl is
+ *	created.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeMarquee_Init(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Marquee *marquee;
 
@@ -50,7 +76,26 @@ int TreeMarquee_Init(TreeCtrl *tree)
     return TCL_OK;
 }
 
-void TreeMarquee_Free(TreeMarquee marquee_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarquee_Free --
+ *
+ *	Free marquee-related resources when a TreeCtrl is deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeMarquee_Free(
+    TreeMarquee marquee_	/* Marquee token. */
+    )
 {
     Marquee *marquee = (Marquee *) marquee_;
 
@@ -59,7 +104,27 @@ void TreeMarquee_Free(TreeMarquee marquee_)
     WFREE(marquee, Marquee);
 }
 
-void TreeMarquee_Display(TreeMarquee marquee_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarquee_Display --
+ *
+ *	Draw the selection rectangle if it is not already displayed and if
+ *	it's -visible option is TRUE.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeMarquee_Display(
+    TreeMarquee marquee_	/* Marquee token. */
+    )
 {
     Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
@@ -73,7 +138,26 @@ void TreeMarquee_Display(TreeMarquee marquee_)
     }
 }
 
-void TreeMarquee_Undisplay(TreeMarquee marquee_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarquee_Undisplay --
+ *
+ *	Erase the selection rectangle if it is displayed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeMarquee_Undisplay(
+    TreeMarquee marquee_	/* Marquee token. */
+    )
 {
     Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
@@ -85,15 +169,34 @@ void TreeMarquee_Undisplay(TreeMarquee marquee_)
     }
 }
 
-void TreeMarquee_Draw(TreeMarquee marquee_, Drawable drawable, int x1, int y1)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarquee_Draw --
+ *
+ *	Draw (or erase) the selection rectangle.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn (or erased, since this is XOR drawing).
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeMarquee_Draw(
+    TreeMarquee marquee_,	/* Marquee token. */
+    Drawable drawable,		/* Where to draw. */
+    int x1, int y1		/* Offset of canvas from top-left corner
+				 * of the window. */
+    )
 {
     Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
     int x, y, w, h;
     DotState dotState;
-
-/*	if (!marquee->visible)
-	return; */
 
     x = MIN(marquee->x1, marquee->x2);
     w = abs(marquee->x1 - marquee->x2) + 1;
@@ -105,7 +208,32 @@ void TreeMarquee_Draw(TreeMarquee marquee_, Drawable drawable, int x1, int y1)
     DotRect_Restore(&dotState);
 }
 
-static int Marquee_Config(Marquee *marquee, int objc, Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * Marquee_Config --
+ *
+ *	This procedure is called to process an objc/objv list to set
+ *	configuration options for a Marquee.
+ *
+ * Results:
+ *	The return value is a standard Tcl result.  If TCL_ERROR is
+ *	returned, then an error message is left in interp's result.
+ *
+ * Side effects:
+ *	Configuration information, such as text string, colors, font,
+ *	etc. get set for marquee;  old resources get freed, if there
+ *	were any.  Display changes may occur.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Marquee_Config(
+    Marquee *marquee,		/* Marquee record. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = marquee->tree;
     Tk_SavedOptions savedOptions;
@@ -152,8 +280,31 @@ static int Marquee_Config(Marquee *marquee, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
-int TreeMarqueeCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeMarqueeCmd --
+ *
+ *	This procedure is invoked to process the [marquee] widget
+ *	command.  See the user documentation for details on what it
+ *	does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeMarqueeCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     Marquee *marquee = (Marquee *) tree->marquee;
