@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.36 2005/09/16 23:25:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.37 2005/09/19 20:38:43 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -52,7 +52,27 @@ Tk_ObjCustomOption PadAmountOption = {
     PadAmountOptionFree
 };
 
-void FormatResult(Tcl_Interp *interp, char *fmt, ...)
+/*
+ *----------------------------------------------------------------------
+ *
+ * FormatResult --
+ *
+ *	Set the interpreter's result to a formatted string.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Interpreter's result is modified.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+FormatResult(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    char *fmt, ...		/* Format string and varargs. */
+    )
 {
     va_list ap;
     char buf[256];
@@ -63,7 +83,41 @@ void FormatResult(Tcl_Interp *interp, char *fmt, ...)
     Tcl_SetResult(interp, buf, TCL_VOLATILE);
 }
 
-int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Ellipsis --
+ *
+ *	Determine the number of bytes from the string that will fit
+ *	in the given horizontal span. If the entire string does not
+ *	fit then determine the largest number of bytes of a substring
+ *	with an ellipsis "..." appended that will fit.
+ *
+ * Results:
+ *	When the return value is positive the caller should add the
+ *	ellipsis to the string (unless the entire string fits).
+ *	When the return value is negative the caller should not add
+ *	the ellipsis because only a few characters fit.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Ellipsis(
+    Tk_Font tkfont,		/* The font used to display the string. */
+    char *string,		/* UTF-8 string, need not be NULL-terminated. */
+    int numBytes,		/* Number of bytes to consider. */
+    int *maxPixels,		/* In: maximum line length allowed.
+				 * Out: length of string that fits (with
+				 * ellipsis added if needed). */
+    char *ellipsis,		/* NULL-terminated "..." */
+    int force			/* TRUE if ellipsis should always be added
+				 * even if the whole string fits in
+				 * maxPixels. */
+    )
 {
     char staticStr[256], *tmpStr = staticStr;
     int pixels, pixelsTest, bytesThatFit, bytesTest;
@@ -117,8 +171,29 @@ int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *e
     return -bytesThatFit;
 }
 
-/* Draws a horizontal 1-pixel tall dotted line */
-void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2)
+/*
+ *----------------------------------------------------------------------
+ *
+ * HDotLine --
+ *
+ *	Draws a horizontal 1-pixel-tall dotted line.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+HDotLine(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    GC gc,			/* Graphics context. */
+    int x1, int y1, int x2	/* Left, top and right coordinates. */
+    )
 {
 #ifdef WIN32
     TkWinDCState state;
@@ -158,8 +233,28 @@ void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2)
 #endif
 }
 
-/* Draws a vertical 1-pixel wide dotted line */
-void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2)
+/*
+ *----------------------------------------------------------------------
+ *
+ * VDotLine --
+ *
+ *	Draws a vertical 1-pixel-wide dotted line.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+VDotLine(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    GC gc,			/* Graphics context. */
+    int x1, int y1, int y2)	/* Left, top, and bottom coordinates. */
 {
 #ifdef WIN32
     TkWinDCState state;
@@ -199,8 +294,36 @@ void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2)
 #endif
 }
 
-/* Draws 0 or more sides of a rectangle, dot-on dot-off, XOR style */
-void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height, int open)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DrawActiveOutline --
+ *
+ *	Draws 0 or more sides of a rectangle, dot-on dot-off, XOR style.
+ *	This is used by rectangle Elements to indicate the "active"
+ *	item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DrawActiveOutline(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    int x, int y,		/* Left and top coordinates. */
+    int width, int height,	/* Size of rectangle. */
+    int open			/* Bitmask of edges not to draw:
+				 * 0x01: left
+				 * 0x02: top
+				 * 0x04: right
+				 * 0x08: bottom */
+    )
 {
 #ifdef WIN32
     int wx = x + tree->drawableXOrigin;
@@ -317,11 +440,10 @@ void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int widt
 #endif
 }
 
-void DotRect(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height)
-{
-    DrawActiveOutline(tree, drawable, x, y, width, height, 0);
-}
-
+/*
+ * The following structure is used when drawing a number of dotted XOR
+ * rectangles.
+ */
 struct DotStatePriv
 {
     TreeCtrl *tree;
@@ -339,7 +461,31 @@ struct DotStatePriv
 #endif
 };
 
-void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DotRect_Setup --
+ *
+ *	Prepare a drawable for drawing a series of dotted XOR rectangles.
+ *
+ * Results:
+ *	State info is returned to be used by the other DotRect_xxx()
+ *	procedures.
+ *
+ * Side effects:
+ *	On Win32 and OSX the device context/graphics port is altered
+ *	in preparation for drawing. On X11 a new graphics context is
+ *	created.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DotRect_Setup(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    DotState *p			/* Where to save state info. */
+    )
 {
     struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
@@ -403,7 +549,28 @@ void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *p)
 #endif
 }
 
-void DotRect_Draw(DotState *p, int x, int y, int width, int height)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DotRect_Draw --
+ *
+ *	Draw a dotted XOR rectangle.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DotRect_Draw(
+    DotState *p,		/* Info returned by DotRect_Setup(). */
+    int x, int y,		/* Left and top coordinates. */
+    int width, int height	/* Size of rectangle. */
+    )
 {
     struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
@@ -491,7 +658,27 @@ void DotRect_Draw(DotState *p, int x, int y, int width, int height)
 #endif
 }
 
-void DotRect_Restore(DotState *p)
+/*
+ *----------------------------------------------------------------------
+ *
+ * DotRect_Restore --
+ *
+ *	Restore the drawing environment.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	On Win32 and OSX the device context/graphics port is restored.
+ *	On X11 a new graphics context is freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DotRect_Restore(
+    DotState *p			/* Info returned by DotRect_Setup(). */
+    )
 {
     struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
@@ -509,8 +696,31 @@ void DotRect_Restore(DotState *p)
 }
 
 #ifdef MAC_OSX_TK
-void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
-    int x2, int y2)
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * DrawXORLine --
+ *
+ *	Draw a 1-pixel thick XOR line (not dotted). This is used
+ *	to draw the vertical column proxy when resizing columns.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DrawXORLine(
+    Display *display,		/* Display. */
+    Drawable drawable,		/* Where to draw. */
+    int x1, int y1,		/* Left, top. */
+    int x2, int y2		/* Bottom, right. */
+    )
 {
     MacDrawable *macWin = (MacDrawable *) drawable;
     CGrafPtr saveWorld;
@@ -534,9 +744,32 @@ void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
     HidePen();
     SetGWorld(saveWorld, saveDevice);
 }
-#endif
 
-void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
+#endif /* MAC_OSX_TK */
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tk_FillRegion --
+ *
+ *	Paint a region with the foreground color of a graphics context.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tk_FillRegion(
+    Display *display,		/* Display. */
+    Drawable drawable,		/* Where to draw. */
+    GC gc,			/* Foreground color. */
+    TkRegion rgn		/* Region to paint. */
+    )
 {
 #ifdef WIN32
     HDC dc;
@@ -582,7 +815,27 @@ void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn)
 #endif
 }
 
-void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tk_OffsetRegion --
+ *
+ *	Offset a region.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tk_OffsetRegion(
+    TkRegion region,		/* Region to modify. */
+    int xOffset, int yOffset	/* Horizontal and vertical offsets. */
+    )
 {
 #ifdef WIN32
     OffsetRgn((HRGN) region, xOffset, yOffset);
@@ -593,8 +846,32 @@ void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset)
 #endif
 }
 
-int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
-    int width, int height, int dx, int dy, TkRegion damageRgn)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_ScrollWindow --
+ *
+ *	Wrapper around TkScrollWindow() to fix an apparent bug with the
+ *	Mac/OSX versions.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is scrolled in a drawable.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_ScrollWindow(
+    TreeCtrl *tree,		/* Widget info. */
+    GC gc,			/* Arg to TkScrollWindow(). */
+    int x, int y,		/* Arg to TkScrollWindow(). */
+    int width, int height,	/* Arg to TkScrollWindow(). */
+    int dx, int dy,		/* Arg to TkScrollWindow(). */
+    TkRegion damageRgn		/* Arg to TkScrollWindow(). */
+    )
 {
     int result = TkScrollWindow(tree->tkwin, gc, x, y, width, height, dx, dy,
 	damageRgn);
@@ -608,7 +885,29 @@ int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
     return result;
 }
 
-void UnsetClipMask(TreeCtrl *tree, Drawable drawable, GC gc)
+/*
+ *----------------------------------------------------------------------
+ *
+ * UnsetClipMask --
+ *
+ *	Wrapper around XSetClipMask(). On Win32 Tk_DrawChars() does
+ *	not clear the clipping region.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+UnsetClipMask(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    GC gc			/* Graphics context to modify. */
+    )
 {
     XSetClipMask(tree->display, gc, None);
 #ifdef WIN32
@@ -624,8 +923,34 @@ void UnsetClipMask(TreeCtrl *tree, Drawable drawable, GC gc)
 #endif
 }
 
-void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
-    GC gc, int src_x, int src_y, int width, int height, int dest_x, int dest_y)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_DrawBitmapWithGC --
+ *
+ *	Draw part of a bitmap.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_DrawBitmapWithGC(
+    TreeCtrl *tree,		/* Widget info. */
+    Pixmap bitmap,		/* Bitmap to draw. */
+    Drawable drawable,		/* Where to draw. */
+    GC gc,			/* Graphics context. */
+    int src_x, int src_y,	/* Left and top of part of bitmap to copy. */
+    int width, int height,	/* Width and height of part of bitmap to
+				 * copy. */
+    int dest_x, int dest_y	/* Left and top coordinates to copy part of
+				 * the bitmap to. */
+    )
 {
 #ifdef WIN32
     TkpClipMask *clipPtr = (TkpClipMask *) gc->clip_mask;
@@ -658,9 +983,35 @@ void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
     XSetClipOrigin(tree->display, gc, 0, 0);
 }
 
-void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
-    XColor *fg, XColor *bg,
-    int src_x, int src_y, int width, int height, int dest_x, int dest_y)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_DrawBitmap --
+ *
+ *	Draw part of a bitmap.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_DrawBitmap(
+    TreeCtrl *tree,		/* Widget info. */
+    Pixmap bitmap,		/* Bitmap to draw. */
+    Drawable drawable,		/* Where to draw. */
+    XColor *fg, XColor *bg,	/* Foreground and background colors.
+				 * May be NULL. */
+    int src_x, int src_y,	/* Left and top of part of bitmap to copy. */
+    int width, int height,	/* Width and height of part of bitmap to
+				 * copy. */
+    int dest_x, int dest_y	/* Left and top coordinates to copy part of
+				 * the bitmap to. */
+    )
 {
     XGCValues gcValues;
     GC gc;
@@ -701,8 +1052,32 @@ void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
 #define TK_PHOTOPUTZOOMEDBLOCK	Tk_PhotoPutZoomedBlock
 #endif
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * XImage2Photo --
+ *
+ *	Copy pixels from an XImage to a Tk photo image.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The given photo image is blanked and all the pixels from the
+ *	XImage are put into the photo image.
+ *
+ *----------------------------------------------------------------------
+ */
+
 #if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
-void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha)
+
+void
+XImage2Photo(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    Tk_PhotoHandle photoH,	/* Existing photo image. */
+    XImage *ximage,		/* XImage to copy pixels from. */
+    int alpha			/* Desired transparency of photo image.*/
+    )
 {
     Tk_PhotoImageBlock photoBlock;
     unsigned char *pixelPtr;
@@ -765,8 +1140,16 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
 
     Tcl_Free((char *) pixelPtr);
 }
-#else /* X11 */
-void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha)
+
+#else /* not X11 */
+
+void
+XImage2Photo(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    Tk_PhotoHandle photoH,	/* Existing photo image. */
+    XImage *ximage,		/* XImage to copy pixels from. */
+    int alpha			/* Desired transparency of photo image.*/
+    )
 {
     Tk_Window tkwin = Tk_MainWindow(interp);
     Display *display = Tk_Display(tkwin);
@@ -852,7 +1235,8 @@ void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int
     Tcl_Free((char *) pixelPtr);
     ckfree((char *) xcolors);
 }
-#endif
+
+#endif /* X11 */
 
 /*
  * Replacement for Tk_TextLayout stuff. Allows the caller to break lines
@@ -1655,9 +2039,28 @@ PadAmountOptionFree(clientData, tkwin, internalPtr)
     }
 }
 
-/*****/
+/*
+ *----------------------------------------------------------------------
+ *
+ * ObjectIsEmpty --
+ *
+ *	This procedure tests whether the string value of an object is
+ *	empty.
+ *
+ * Results:
+ *	The return value is 1 if the string value of objPtr has length
+ *	zero, and 0 otherwise.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
 
-int ObjectIsEmpty(Tcl_Obj *obj)
+int
+ObjectIsEmpty(
+    Tcl_Obj *obj		/* Object to test.  May be NULL. */
+    )
 {
     int length;
 
@@ -1669,10 +2072,29 @@ int ObjectIsEmpty(Tcl_Obj *obj)
     return (length == 0);
 }
 
-void PerStateInfo_Free(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo)
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_Free --
+ *
+ *	Frees memory and resources associated with a single per-state
+ *	option. pInfo is set to an empty state ready to be used again.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated. Colors, etc are freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+PerStateInfo_Free(
+    TreeCtrl *tree,		/* Widget info. */
+    PerStateType *typePtr,	/* Type-specific functions and values. */
+    PerStateInfo *pInfo		/* Per-state info to free. */
+    )
 {
     PerStateData *pData = pInfo->data;
     int i;
@@ -1698,11 +2120,33 @@ void PerStateInfo_Free(
     pInfo->count = 0;
 }
 
-int PerStateInfo_FromObj(
-    TreeCtrl *tree,
-    StateFromObjProc proc,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo)
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_FromObj --
+ *
+ *	Parse a Tcl_Obj to an array of PerStateData. The current data
+ *	is freed (if any). If the Tcl_Obj is NULL then pInfo is left in
+ *	an empty state ready to be used again.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated/deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+PerStateInfo_FromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    StateFromObjProc proc,	/* Procedure used to turn a Tcl_Obj into
+				 * a state bit-flag. */
+    PerStateType *typePtr,	/* Type-specific functions and values. */
+    PerStateInfo *pInfo		/* Per-state info to return. pInfo->obj
+				 * must be NULL or point to a valid Tcl_Obj. */
+    )
 {
     int i, j;
     int objc, objc2;
@@ -1793,12 +2237,32 @@ freeIt:
     return TCL_ERROR;
 }
 
-PerStateData *PerStateInfo_ForState(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_ForState --
+ *
+ *	Return the best-matching PerStateData for a given state.
+ *
+ * Results:
+ *	The return value is a pointer to the best-matching PerStateData.
+ *	*match is set to a MATCH_xxx constant. NULL is returned if
+ *	no appropriate PerStateData was found.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+PerStateData *
+PerStateInfo_ForState(
+    TreeCtrl *tree,		/* Widget info. */
+    PerStateType *typePtr,	/* Type-specific functions and values. */
+    PerStateInfo *pInfo,	/* Per-state info to search. */
+    int state,			/* State bit-flags to compare. */
+    int *match			/* Returned MATCH_xxx constant. */
+    )
 {
     PerStateData *pData = pInfo->data;
     int stateOff = ~state, stateOn = state;
@@ -1839,12 +2303,35 @@ PerStateData *PerStateInfo_ForState(
     return NULL;
 }
 
-Tcl_Obj *PerStateInfo_ObjForState(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state,
-    int *match)
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_ObjForState --
+ *
+ *	Return a Tcl_Obj from the list object that was parsed by
+ *	PerStateInfo_FromObj(). pInfo is searched for the best-matching
+ *	PerStateData for the given state and the object used to
+ *	create that PerStateData is returned.
+ *
+ * Results:
+ *	*match is set to a MATCH_xxx constant. NULL is returned if
+ *	no appropriate PerStateData was found. The object should not
+ *	be modified by the caller.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tcl_Obj *
+PerStateInfo_ObjForState(
+    TreeCtrl *tree,		/* Widget info. */
+    PerStateType *typePtr,	/* Type-specific functions and values. */
+    PerStateInfo *pInfo,	/* Per-state info to search. */
+    int state,			/* State bit-flags to compare. */
+    int *match			/* Returned MATCH_xxx constant. */
+    )
 {
     PerStateData *pData;
     Tcl_Obj *obj;
@@ -1866,11 +2353,32 @@ Tcl_Obj *PerStateInfo_ObjForState(
     return NULL;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_Undefine --
+ *
+ *	Called when a user-defined state flag is undefined. The state
+ *	flag is cleared from every PerStateData using that flag. The
+ *	list object that was parsed by PerStateInfo_FromObj() is modified
+ *	by removing any reference to the undefined state.
+ *
+ * Results:
+ *	The return value is a boolean indicating whether or not pInfo
+ *	was modified.
+ *
+ * Side effects:
+ *	The list object pointed to by pInfo->obj may be recreated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int PerStateInfo_Undefine(
-    TreeCtrl *tree,
-    PerStateType *typePtr,
-    PerStateInfo *pInfo,
-    int state)
+    TreeCtrl *tree,		/* Widget info. */
+    PerStateType *typePtr,	/* Type-specific functions and values. */
+    PerStateInfo *pInfo,	/* Per-state info to modify. */
+    int state			/* State bit-flag that was undefined. */
+    )
 {
     PerStateData *pData = pInfo->data;
     int i, j, numStates, stateOff, stateOn;
@@ -1910,8 +2418,8 @@ int PerStateInfo_Undefine(
 		    j++;
 	    }
 	    /* Given {bitmap {state1 state2 state3}}, we just invalidated
-	     * the string rep of the sublist {state1 ...}, but not
-	     * the parent list */
+	     * the string rep of the sublist {state1 state2 state3}, but not
+	     * the parent list. */
 	    Tcl_InvalidateStringRep(configObj);
 	    modified = 1;
 	}
@@ -2423,7 +2931,8 @@ typedef struct AllocList AllocList;
 typedef struct AllocData AllocData;
 
 /*
- * One of the following structures exists for each client block of memory.
+ * One of the following structures exists for each client piece of memory.
+ * These structures are allocated in arrays (blocks).
  */
 
 struct AllocElem
@@ -2431,25 +2940,25 @@ struct AllocElem
     AllocElem *next;
     int free;
     char body[1];	/* First byte of client's space.  Actual
-		     * size of this field will be larger than
-		     * one. */
+			 * size of this field will be larger than
+			 * one. */
 };
 
 /*
- * One of the following structures maintains a list of blocks of AllocElems
+ * One of the following structures maintains an array of blocks of AllocElems
  * of the same size.
  */
 
 struct AllocList
 {
-    int size;			/* Size of every AllocElem.body[] */
-    AllocElem *head;
-    AllocList *next;	/* Points to an AllocList with a different .size */
+    int size;		/* Size of every AllocElem.body[] */
+    AllocElem *head;	/* Top of stack of unused pieces of memory. */
     AllocElem **blocks;	/* Array of pointers to allocated blocks. The blocks
 			 * may contain a different number of elements. */
-    int blockCount;		/* Number of array elements in .blocks */
-    int blockSize;		/* The number of AllocElems per block to allocate.
-			 * Starts at 16 and gets double up to 1024. */
+    int blockCount;	/* Number of array elements in .blocks */
+    int blockSize;	/* The number of AllocElems per block to allocate.
+			 * Starts at 16 and gets doubled up to 1024. */
+    AllocList *next;	/* Points to an AllocList with a different .size */
 };
 
 /*
@@ -2458,7 +2967,7 @@ struct AllocList
 
 struct AllocData
 {
-    AllocList *freeLists;
+    AllocList *freeLists;	/* Linked list. */
 };
 
 /*
@@ -2470,7 +2979,29 @@ struct AllocData
 #define BODY_OFFSET \
     ((unsigned long) (&((AllocElem *) 0)->body))
 
-char *AllocHax_Alloc(ClientData data, int size)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_Alloc --
+ *
+ *	Return storage for a piece of data of the given size.
+ *
+ * Results:
+ *	The return value is a pointer to memory for the caller's
+ *	use.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+char *
+AllocHax_Alloc(
+    ClientData data,		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    int size			/* Number of bytes needed. */
+    )
 {
     AllocList *freeLists = ((AllocData *) data)->freeLists;
     AllocList *freeList = freeLists;
@@ -2528,7 +3059,32 @@ char *AllocHax_Alloc(ClientData data, int size)
     return result->body;
 }
 
-void AllocHax_Free(ClientData data, char *ptr, int size)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_Free --
+ *
+ *	Mark a piece of memory as free for reuse.
+ *
+ * Results:
+ *	The piece of memory is added to a list of free pieces of the
+ *	same size.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+AllocHax_Free(
+    ClientData data,		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    char *ptr,			/* Memory to mark for reuse. Must have
+				 * been allocated by AllocHax_Alloc(). */
+    int size			/* Number of bytes. Must match the size
+				 * passed to AllocHax_CAlloc(). */
+    )
 {
     AllocList *freeLists = ((AllocData *) data)->freeLists;
     AllocList *freeList = freeLists;
@@ -2555,26 +3111,115 @@ void AllocHax_Free(ClientData data, char *ptr, int size)
     freeList->head = elem;
 }
 
-char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_CAlloc --
+ *
+ *	Return storage for an array of pieces of memory.
+ *
+ * Results:
+ *	Pointer to the available memory.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+char *
+AllocHax_CAlloc(
+    ClientData data,		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    int size,			/* Number of bytes needed for each piece
+				 * of memory. */
+    int count,			/* Number of pieces of memory needed. */
+    int roundUp			/* Positive number used to reduce the number
+				 * of lists of memory pieces of different
+				 * size. */
+    )
 {
     int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
     return AllocHax_Alloc(data, size * n);
 }
 
-void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_CFree --
+ *
+ *	Mark a piece of memory as free for reuse.
+ *
+ * Results:
+ *	The piece of memory is added to a list of free pieces of the
+ *	same size.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+AllocHax_CFree(
+    ClientData data,		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    char *ptr,			/* Memory to mark for reuse. Must have
+				 * been allocated by AllocHax_CAlloc(). */
+    int size,			/* Same arg to AllocHax_CAlloc(). */
+    int count,			/* Same arg to AllocHax_CAlloc(). */
+    int roundUp			/* Same arg to AllocHax_CAlloc(). */
+    )
 {
     int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
     AllocHax_Free(data, ptr, size * n);
 }
 
-ClientData AllocHax_Init(void)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_Init --
+ *
+ *	Allocate and initialize a new memory-manager record.
+ *
+ * Results:
+ *	Pointer to memory-manager record.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+ClientData
+AllocHax_Init(void)
 {
     AllocData *data = (AllocData *) ckalloc(sizeof(AllocData));
     data->freeLists = NULL;
     return data;
 }
 
-void AllocHax_Finalize(ClientData data)
+/*
+ *----------------------------------------------------------------------
+ *
+ * AllocHax_Finalize --
+ *
+ *	Free all the memory associated with a memory-manager record.
+ *
+ * Results:
+ *	Pointer to memory-manager record.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+AllocHax_Finalize(
+    ClientData data		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    )
 {
     AllocList *freeList = ((AllocData *) data)->freeLists;
     int i;
