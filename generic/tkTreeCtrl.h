@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.41 2005/09/15 04:35:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.42 2005/09/21 22:40:27 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -520,7 +520,6 @@ extern int TreeColumn_MaxWidth(TreeColumn column_);
 extern int TreeColumn_StepWidth(TreeColumn column_);
 extern int TreeColumn_NeededWidth(TreeColumn column_);
 extern int TreeColumn_UseWidth(TreeColumn column_);
-extern void TreeColumn_SetUseWidth(TreeColumn column_, int width);
 extern Tk_Justify TreeColumn_Justify(TreeColumn column_);
 extern int TreeColumn_WidthHack(TreeColumn column_);
 extern int TreeColumn_Visible(TreeColumn column_);
@@ -590,9 +589,7 @@ extern void TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item);
 extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region);
-extern void Tree_InvalidateWindow(TreeCtrl *tree);
 extern void Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
-extern void Tree_RedrawItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
 extern void Tree_Activate(TreeCtrl *tree, int isActive);
 extern TreeItem *Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY);
