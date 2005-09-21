@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.33 2005/07/23 00:40:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.34 2005/09/21 00:04:36 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -15,54 +15,55 @@ typedef struct Range Range;
 typedef struct DItem DItem;
 typedef struct DInfo DInfo;
 
-void Range_RedoIfNeeded(TreeCtrl *tree);
-int Range_TotalWidth(TreeCtrl *tree, Range *range_);
-int Range_TotalHeight(TreeCtrl *tree, Range *range_);
-void Range_Redo(TreeCtrl *tree);
-Range *Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest);
-RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_);
+static void Range_RedoIfNeeded(TreeCtrl *tree);
+static int Range_TotalWidth(TreeCtrl *tree, Range *range_);
+static int Range_TotalHeight(TreeCtrl *tree, Range *range_);
+static void Range_Redo(TreeCtrl *tree);
+static Range *Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest);
+static RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_);
 
-/* One of these per TreeItem */
+/* One of these per TreeItem. */
 struct RItem
 {
-    TreeItem item; /* The item */
-    Range *range; /* Range the item is in */
-    int size; /* height or width consumed in Range */
-    int offset; /* vertical or horizontal offset in Range */
-    int index; /* 0-based index in Range */
+    TreeItem item;		/* The item. */
+    Range *range;		/* Range the item is in. */
+    int size;			/* Height or width consumed in Range. */
+    int offset;			/* Vertical or horizontal offset in Range. */
+    int index;			/* 0-based index in Range. */
 };
 
-/* A collection of visible TreeItems */
+/* A collection of visible TreeItems. */
 struct Range
 {
     RItem *first;
     RItem *last;
     int totalWidth;
     int totalHeight;
-    int index; /* 0-based index in list of Ranges */
-    int offset; /* vertical/horizontal offset from canvas top/left */
+    int index;			/* 0-based index in list of Ranges. */
+    int offset;			/* vertical/horizontal offset from canvas
+				 * top/left. */
     Range *prev;
     Range *next;
 };
 
-/* Display information for a TreeItem */
+/* Display information for a TreeItem. */
 struct DItem
 {
-    char magic[4]; /* debug */
+    char magic[4];	/* debug */
     TreeItem item;
-    int x, y; /* Where it should be drawn, window coords */
-    int oldX, oldY; /* Where it was last drawn, window coords */
-    int width, height; /* Current width and height */
-    int dirty[4]; /* Dirty area in item coords */
-    Range *range; /* Range the TreeItem is in */
-    int index; /* Used for alternating background colors */
+    int x, y;			/* Where it should be drawn, window coords. */
+    int oldX, oldY;		/* Where it was last drawn, window coords. */
+    int width, height;		/* Current width and height. */
+    int dirty[4];		/* Dirty area in item coords. */
+    Range *range;		/* Range the TreeItem is in. */
+    int index;			/* Used for alternating background colors. */
 #define DITEM_DIRTY 0x0001
 #define DITEM_ALL_DIRTY 0x0002
     int flags;
     DItem *next;
 };
 
-/* Display information for a TreeCtrl */
+/* Display information for a TreeCtrl. */
 struct DInfo
 {
     GC scrollGC;
@@ -73,7 +74,7 @@ struct DInfo
     int *columnWidth;		/* Last seen column widths */
     int columnWidthSize;	/* Num elements in columnWidth */
     int headerHeight;		/* Last seen TreeCtrl.headerHeight */
-    DItem *dItem;		/* Head of list for each visible item */
+    DItem *dItem;		/* Head of list for each displayed item */
     DItem *dItemLast;		/* Temp for UpdateDInfo() */
     Range *rangeFirst;		/* Head of Ranges */
     Range *rangeLast;		/* Tail of Ranges */
@@ -90,13 +91,13 @@ struct DInfo
     int yScrollIncrement;	/* Last seen TreeCtr.yScrollIncrement */
     int *xScrollIncrements;	/* When tree->xScrollIncrement is zero */
     int *yScrollIncrements;	/* When tree->yScrollIncrement is zero */
-    int xScrollIncrementCount;
-    int yScrollIncrementCount;
+    int xScrollIncrementCount;	/* Size of xScrollIncrements. */
+    int yScrollIncrementCount;	/* Size of yScrollIncrements. */
     int incrementTop;		/* yScrollIncrement[] index of item at top */
     int incrementLeft;		/* xScrollIncrement[] index of item at left */
-    TkRegion wsRgn;		/* region containing whitespace */
-    Tcl_HashTable itemVisHash;	/* table of visible items */
-    DItem *dItemFree;		/* list of unused DItems */
+    TkRegion wsRgn;		/* Region containing whitespace */
+    Tcl_HashTable itemVisHash;	/* Table of visible items */
+    DItem *dItemFree;		/* List of unused DItems */
 };
 
 /*========*/
@@ -116,11 +117,27 @@ Range_Free(TreeCtrl *tree, Range *range)
 }
 
 /*
- * This routine puts all ReallyVisible() TreeItems into a list of Ranges.
- * If tree->wrapMode is TREE_WRAP_NONE there will only be a single Range.
+ *----------------------------------------------------------------------
+ *
+ * Range_Redo --
+ *
+ *	This procedure puts all ReallyVisible() TreeItems into a list of
+ *	Ranges. If tree->wrapMode is TREE_WRAP_NONE there will only be a
+ *	single Range.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
  */
-void
-Range_Redo(TreeCtrl *tree)
+
+static void
+Range_Redo(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *rangeList = dInfo->rangeFirst;
@@ -314,8 +331,28 @@ Range_Redo(TreeCtrl *tree)
 	rangeList = Range_Free(tree, rangeList);
 }
 
-int
-Range_TotalWidth(TreeCtrl *tree, Range *range)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Range_TotalWidth --
+ *
+ *	Return the width of a Range. The width is only calculated if
+ *	it hasn't been done yet by Range_Redo().
+ *
+ * Results:
+ *	Pixel width of the Range.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Range_TotalWidth(
+    TreeCtrl *tree,		/* Widget info. */
+    Range *range		/* Range to return the width of. */
+    )
 {
     TreeItem item;
     TreeItemColumn itemColumn;
@@ -465,8 +502,28 @@ Range_TotalWidth(TreeCtrl *tree, Range *range)
     }
 }
 
-int
-Range_TotalHeight(TreeCtrl *tree, Range *range)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Range_TotalHeight --
+ *
+ *	Return the height of a Range. The height is only calculated if
+ *	it hasn't been done yet by Range_Redo().
+ *
+ * Results:
+ *	Pixel height of the Range.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Range_TotalHeight(
+    TreeCtrl *tree,		/* Widget info. */
+    Range *range		/* Range to return the height of. */
+    )
 {
     TreeItem item;
     RItem *rItem;
@@ -496,11 +553,30 @@ Range_TotalHeight(TreeCtrl *tree, Range *range)
     return range->totalHeight;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_TotalWidth --
+ *
+ *	Return the width needed by all the Ranges. The width is only
+ *	recalculated if it was marked out-of-date.
+ *
+ * Results:
+ *	Pixel width of the "canvas".
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int
-Tree_TotalWidth(TreeCtrl *tree)
+Tree_TotalWidth(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    Range *range = dInfo->rangeFirst;
+    Range *range;
     int rangeWidth;
 
     Range_RedoIfNeeded(tree);
@@ -509,6 +585,7 @@ Tree_TotalWidth(TreeCtrl *tree)
 	return tree->totalWidth;
 
     tree->totalWidth = 0;
+    range = dInfo->rangeFirst;
     while (range != NULL) {
 	rangeWidth = Range_TotalWidth(tree, range);
 	if (tree->vertical) {
@@ -524,11 +601,30 @@ Tree_TotalWidth(TreeCtrl *tree)
     return tree->totalWidth;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_TotalHeight --
+ *
+ *	Return the height needed by all the Ranges. The height is only
+ *	recalculated if it was marked out-of-date.
+ *
+ * Results:
+ *	Pixel height of the "canvas".
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int
-Tree_TotalHeight(TreeCtrl *tree)
+Tree_TotalHeight(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    Range *range = dInfo->rangeFirst;
+    Range *range;
     int rangeHeight;
 
     Range_RedoIfNeeded(tree);
@@ -537,6 +633,7 @@ Tree_TotalHeight(TreeCtrl *tree)
 	return tree->totalHeight;
 
     tree->totalHeight = 0;
+    range = dInfo->rangeFirst;
     while (range != NULL) {
 	rangeHeight = Range_TotalHeight(tree, range);
 	if (tree->vertical) {
@@ -552,8 +649,35 @@ Tree_TotalHeight(TreeCtrl *tree)
     return tree->totalHeight;
 }
 
-Range *
-Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Range_UnderPoint --
+ *
+ *	Return the Range containing the given coordinates.
+ *
+ * Results:
+ *	Range containing the coordinates or NULL if the point is
+ *	outside any Range.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static Range *
+Range_UnderPoint(
+    TreeCtrl *tree,		/* Widget info. */
+    int *x_,			/* In: window x coordinate.
+				 * Out: x coordinate relative to the top-left
+				 * of the Range. */
+    int *y_,			/* In: window y coordinate.
+				 * Out: y coordinate relative to the top-left
+				 * of the Range. */
+    int nearest			/* TRUE if the Range nearest the coordinates
+				 * should be returned. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
@@ -640,8 +764,37 @@ Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
     }
 }
 
-RItem *
-Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Range_ItemUnderPoint --
+ *
+ *	Return the RItem containing the given x and/or y coordinates.
+ *
+ * Results:
+ *	RItem containing the coordinates. Panics() if no RItem is found.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static RItem *
+Range_ItemUnderPoint(
+    TreeCtrl *tree,		/* Widget info. */
+    Range *range,		/* Range to search. */
+    int *x_,			/* In: x coordinate relative to top-left of
+				 * the Range.
+				 * Out: x coordinate relative to top-left of
+				 * the returned RItem.
+				 * May be NULL if y_ is not NULL. */
+    int *y_			/* In: y coordinate relative to top-left of
+				 * the Range.
+				 * Out: y coordinate relative to top-left of
+				 * the returned RItem.
+				 * May be NULL if x_ is not NULL. */
+    )
 {
     RItem *rItem;
     int x = -666, y = -666;
@@ -703,8 +856,29 @@ Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_)
     return NULL;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Increment_AddX --
+ *
+ *	Appends one or more values to the list of horizontal scroll
+ *	increments.
+ *
+ * Results:
+ *	New size of DInfo.xScrollIncrements.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static int
-Increment_AddX(TreeCtrl *tree, int offset, int size)
+Increment_AddX(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset,			/* Offset to add. */
+    int size			/* Current size of DInfo.xScrollIncrements. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
@@ -725,8 +899,29 @@ Increment_AddX(TreeCtrl *tree, int offset, int size)
     return size;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Increment_AddY --
+ *
+ *	Appends one or more values to the list of vertical scroll
+ *	increments.
+ *
+ * Results:
+ *	New size of DInfo.yScrollIncrements.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static int
-Increment_AddY(TreeCtrl *tree, int offset, int size)
+Increment_AddY(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset,			/* Offset to add. */
+    int size			/* Current size of DInfo.yScrollIncrements. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int topInset = tree->inset + Tree_HeaderHeight(tree);
@@ -748,8 +943,28 @@ Increment_AddY(TreeCtrl *tree, int offset, int size)
     return size;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * RItemsToIncrementsX --
+ *
+ *	Recalculate the list of horizontal scroll increments. This gets
+ *	called when the TreeCtrl -orient option is "horizontal" and
+ *	-xscrollincrement option is "".
+ *
+ * Results:
+ *	DInfo.xScrollIncrements is updated if the canvas width is > 0.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-Increment_RedoX(TreeCtrl *tree)
+RItemsToIncrementsX(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
@@ -795,8 +1010,28 @@ Increment_RedoX(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * RItemsToIncrementsY --
+ *
+ *	Recalculate the list of vertical scroll increments. This gets
+ *	called when the TreeCtrl -orient option is "vertical" and
+ *	-yscrollincrement option is "".
+ *
+ * Results:
+ *	DInfo.yScrollIncrements is updated if the canvas height is > 0.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-Increment_RedoY(TreeCtrl *tree)
+RItemsToIncrementsY(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
@@ -843,8 +1078,28 @@ Increment_RedoY(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * RangesToIncrementsX --
+ *
+ *	Recalculate the list of horizontal scroll increments. This gets
+ *	called when the TreeCtrl -orient option is "vertical" and
+ *	-xscrollincrement option is "".
+ *
+ * Results:
+ *	DInfo.xScrollIncrements is updated if there are any Ranges.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-RangesToIncrementsX(TreeCtrl *tree)
+RangesToIncrementsX(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
@@ -873,8 +1128,28 @@ RangesToIncrementsX(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * RangesToIncrementsY --
+ *
+ *	Recalculate the list of vertical scroll increments. This gets
+ *	called when the TreeCtrl -orient option is "horizontal" and
+ *	-yscrollincrement option is "".
+ *
+ * Results:
+ *	DInfo.yScrollIncrements is updated if there are any Ranges.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-RangesToIncrementsY(TreeCtrl *tree)
+RangesToIncrementsY(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
@@ -904,8 +1179,27 @@ RangesToIncrementsY(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Increment_Redo --
+ *
+ *	Recalculate the lists of scroll increments.
+ *
+ * Results:
+ *	DInfo.xScrollIncrements and DInfo.xScrollIncrements are updated.
+ *	Either may be set to NULL. The old values are freed, if any.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-Increment_Redo(TreeCtrl *tree)
+Increment_Redo(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -928,12 +1222,12 @@ Increment_Redo(TreeCtrl *tree)
 
 	/* No yScrollIncrement is given. Snap to top edge of a TreeItem */
 	if (tree->yScrollIncrement <= 0)
-	    Increment_RedoY(tree);
+	    RItemsToIncrementsY(tree);
     }
     else {
 	/* No xScrollIncrement is given. Snap to left edge of a TreeItem */
 	if (tree->xScrollIncrement <= 0)
-	    Increment_RedoX(tree);
+	    RItemsToIncrementsX(tree);
 
 	/* No yScrollIncrement is given. Snap to top edge of a Range */
 	if (tree->yScrollIncrement <= 0)
@@ -941,8 +1235,28 @@ Increment_Redo(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Increment_RedoIfNeeded --
+ *
+ *	Recalculate the lists of scroll increments if needed.
+ *
+ * Results:
+ *	DInfo.xScrollIncrements and DInfo.xScrollIncrements may be
+ *	updated.
+ *
+ * Side effects:
+ *	Memory may be allocated. The list of Ranges will be recalculated
+ *	if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static void
-Increment_RedoIfNeeded(TreeCtrl *tree)
+Increment_RedoIfNeeded(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -961,8 +1275,30 @@ Increment_RedoIfNeeded(TreeCtrl *tree)
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * B_IncrementFind --
+ *
+ *	Search a list of increments and return one nearest to the
+ *	given offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *	Panic() if no appropriate offset if found.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static int
-B_IncrementFind(int *increments, int count, int offset)
+B_IncrementFind(
+    int *increments,		/* DInfo.x|yScrollIncrements. */
+    int count,			/* Length of increments[]. */
+    int offset			/* Offset to search with. */
+    )
 {
     int i, l, u, v;
 
@@ -986,8 +1322,29 @@ B_IncrementFind(int *increments, int count, int offset)
     return -1;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * B_IncrementFindX --
+ *
+ *	Search DInfo.xScrollIncrements and return one nearest to the
+ *	given offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *	Panic() if no appropriate offset if found.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int
-B_IncrementFindX(TreeCtrl *tree, int offset)
+B_IncrementFindX(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Offset to search with. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -997,8 +1354,29 @@ B_IncrementFindX(TreeCtrl *tree, int offset)
 	offset);
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * B_IncrementFindY --
+ *
+ *	Search DInfo.yScrollIncrements and return one nearest to the
+ *	given offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *	Panic() if no appropriate offset if found.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int
-B_IncrementFindY(TreeCtrl *tree, int offset)
+B_IncrementFindY(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Offset to search with. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -1008,8 +1386,33 @@ B_IncrementFindY(TreeCtrl *tree, int offset)
 	offset);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * B_XviewCmd --
+ *
+ *	This procedure is invoked to process the "xview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ *	NOTE: This procedure is called when the -xscrollincrement option
+ *	is unspecified.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-B_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+B_XviewCmd(
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     DInfo *dInfo = (DInfo *) tree->dInfo;
@@ -1090,8 +1493,33 @@ B_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * B_YviewCmd --
+ *
+ *	This procedure is invoked to process the "yview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ *	NOTE: This procedure is called when the -yscrollincrement option
+ *	is unspecified.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+B_YviewCmd(
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     DInfo *dInfo = (DInfo *) tree->dInfo;
@@ -1173,8 +1601,31 @@ B_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemUnderPoint --
+ *
+ *	Return a TreeItem containing the given coordinates.
+ *
+ * Results:
+ *	TreeItem token or NULL if no item contains the point.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 TreeItem
-Tree_ItemUnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
+Tree_ItemUnderPoint(
+    TreeCtrl *tree,		/* Widget info. */
+    int *x_, int *y_,		/* In: window coordinates.
+				 * Out: coordinates relative to top-left
+				 * corner of the returned item. */
+    int nearest			/* TRUE if the item nearest the coordinates
+				 * should be returned. */
+    )
 {
     Range *range;
     RItem *rItem;
@@ -1188,8 +1639,32 @@ Tree_ItemUnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest)
     return NULL;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemBbox --
+ *
+ *	Return the bounding box for an item.
+ *
+ * Results:
+ *	Return value is -1 if the item is not ReallyVisible()
+ *	or if there are no visible columns. The coordinates
+ *	are relative to the top-left corner of the canvas.
+ *
+ * Side effects:
+ *	Column layout will be updated if needed.
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h)
+Tree_ItemBbox(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item whose bbox is needed. */
+    int *x, int *y,		/* Returned left and top. */
+    int *w, int *h		/* Returned width and height. */
+    )
 {
     Range *range;
     RItem *rItem;
@@ -1217,8 +1692,32 @@ Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h)
     return 0;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemLARB --
+ *
+ *	Return an adjacent item above, below, to the left or to the
+ *	right of the given item.
+ *
+ * Results:
+ *	An adjacent item or NULL if there is no such item.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 TreeItem
-Tree_ItemLARB(TreeCtrl *tree, TreeItem item, int vertical, int prev)
+Tree_ItemLARB(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item to use as a reference. */
+    int vertical,		/* TRUE if items are arranged
+				 * from top-to-bottom in each Range. */
+    int prev			/* TRUE for above/left,
+				 * FALSE for below/right. */
+    )
 {
     RItem *rItem, *rItem2;
     Range *range;
@@ -1289,8 +1788,32 @@ Tree_ItemBelow(TreeCtrl *tree, TreeItem item)
     return Tree_ItemLARB(tree, item, tree->vertical, FALSE);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemFL --
+ *
+ *	Return the first or last item in the same row or column
+ *	as the given item.
+ *
+ * Results:
+ *	First/last item or NULL if there is no such item.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 TreeItem
-Tree_ItemFL(TreeCtrl *tree, TreeItem item, int vertical, int first)
+Tree_ItemFL(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item to use as a reference. */
+    int vertical,		/* TRUE if items are arranged
+				 * from top-to-bottom in each Range. */
+    int first			/* TRUE for top/left,
+				 * FALSE for bottom/right. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     RItem *rItem, *rItem2;
@@ -1358,8 +1881,28 @@ Tree_ItemRightMost(TreeCtrl *tree, TreeItem item)
     return Tree_ItemFL(tree, item, !tree->vertical, FALSE);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemToRNC --
+ *
+ *	Return the row and column for the given item.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Tree_ItemToRNC(TreeCtrl *tree, TreeItem item, int *row, int *col)
+Tree_ItemToRNC(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item,		/* Item to get row n' column of. */
+    int *row, int *col		/* Returned row and column. */
+    )
 {
     RItem *rItem;
 
@@ -1378,8 +1921,29 @@ Tree_ItemToRNC(TreeCtrl *tree, TreeItem item, int *row, int *col)
     return TCL_OK;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RNCToItem --
+ *
+ *	Return the item at a given row and column.
+ *
+ * Results:
+ *	Token for the item. Never returns NULL unless there are no
+ *	Ranges.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
 TreeItem
-Tree_RNCToItem(TreeCtrl *tree, int row, int col)
+Tree_RNCToItem(
+    TreeCtrl *tree,		/* Widget info. */
+    int row, int col		/* Row and column. These values are
+				 * clipped to valid values. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
@@ -1456,8 +2020,29 @@ DisplayDelay(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * DItem_Alloc --
+ *
+ *	Allocate and initialize a new DItem, and store a pointer to it
+ *	in the given item.
+ *
+ * Results:
+ *	Pointer to the DItem which may come from an existing pool of
+ *	unused DItems.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 static DItem *
-DItem_Alloc(TreeCtrl *tree, RItem *rItem)
+DItem_Alloc(
+    TreeCtrl *tree,		/* Widget info. */
+    RItem *rItem		/* Range info for the item. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -1483,8 +2068,27 @@ DItem_Alloc(TreeCtrl *tree, RItem *rItem)
     return dItem;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * DItem_Unlink --
+ *
+ *	Remove a DItem from a linked list of DItems.
+ *
+ * Results:
+ *	Pointer to the given list of DItems.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static DItem *
-DItem_Unlink(DItem *head, DItem *dItem)
+DItem_Unlink(
+    DItem *head,		/* First in linked list. */
+    DItem *dItem		/* DItem to remove from list. */
+    )
 {
     DItem *prev;
 
@@ -1502,8 +2106,29 @@ DItem_Unlink(DItem *head, DItem *dItem)
     return head;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * DItem_Free --
+ *
+ *	Add a DItem to the pool of unused DItems. If the DItem belongs
+ *	to a TreeItem the pointer to the DItem is set to NULL in that
+ *	TreeItem.
+ *
+ * Results:
+ *	Pointer to the next DItem.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static DItem *
-DItem_Free(TreeCtrl *tree, DItem *dItem)
+DItem_Free(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItem		/* DItem to free. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *next = dItem->next;
@@ -1517,8 +2142,31 @@ DItem_Free(TreeCtrl *tree, DItem *dItem)
     return next;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * FreeDItems --
+ *
+ *	Add a list of DItems to the pool of unused DItems,
+ *	optionally removing the DItems from the DInfo.dItem list.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-FreeDItems(TreeCtrl *tree, DItem *first, DItem *last, int unlink)
+FreeDItems(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *first,		/* First DItem to free. */
+    DItem *last,		/* DItem after the last one to free. */
+    int unlink			/* TRUE if the DItems should be removed
+				 * from the DInfo.dItem list. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *prev;
@@ -1539,8 +2187,32 @@ FreeDItems(TreeCtrl *tree, DItem *first, DItem *last, int unlink)
 	first = DItem_Free(tree, first);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ItemsInArea --
+ *
+ *	Return a list of items overlapping the given area.
+ *
+ * Results:
+ *	Pointer to an allocated array of TreeItems which the caller
+ *	must free. NULL is returned if no items overlap.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed. Memory may
+ *	be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 TreeItem *
-Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY)
+Tree_ItemsInArea(
+    TreeCtrl *tree,		/* Widget info. */
+    int minX, int minY,		/* Left, top in canvas coordinates. */
+    int maxX, int maxY		/* Right, bottom in canvas coordinates.
+				 * Points on the right/bottom edge are not
+				 * included in the area. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int x, y, rx = 0, ry = 0, ix, iy, dx, dy;
@@ -1646,9 +2318,33 @@ Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY)
     return items;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * UpdateDInfoForRange --
+ *
+ *	Allocates or updates a DItem for every on-screen item in a Range.
+ *	If an item already has a DItem (because the item was previously
+ *	displayed), then the DItem may be marked dirty if there were
+ *	changes to the item's on-screen size or position.
+ *
+ * Results:
+ *	The return value is the possibly-updated dItemHead.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 static DItem *
-UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
-	Range *range, RItem *rItem, int x, int y)
+UpdateDInfoForRange(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItemHead,		/* Linked list of used DItems. */
+    Range *range,		/* Range to update DItems for. */
+    RItem *rItem,		/* First item in the Range we care about. */
+    int x, int y		/* Left & top window coordinates of rItem. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -1874,8 +2570,28 @@ UpdateDInfoForRange(TreeCtrl *tree, DItem *dItemHead,
     return dItemHead;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_UpdateDInfo --
+ *
+ *	At the finish of this procedure every on-screen item will have
+ *	a DItem associated with it and no off-screen item will have
+ *	a DItem.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_UpdateDInfo(TreeCtrl *tree)
+Tree_UpdateDInfo(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItemHead = dInfo->dItem;
@@ -1977,30 +2693,74 @@ Tree_UpdateDInfo(TreeCtrl *tree)
     dInfo->flags &= ~DINFO_INVALIDATE;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * InvalidateDItemX --
+ *
+ *	Mark a horizontal span of a DItem as dirty (needing to be
+ *	redrawn). The caller must set the DITEM_DIRTY flag afterwards.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-InvalidateDItemX(DItem *dItem, int itemX, int dirtyX, int dirtyWidth)
+InvalidateDItemX(
+    DItem *dItem,		/* Item to mark dirty. */
+    int itemX,			/* x-coordinate of item. */
+    int dirtyX,			/* Left edge of area to mark as dirty. */
+    int dirtyWidth		/* Width of area to mark as dirty. */
+    )
 {
     int x1, x2;
 
     if (dirtyX <= itemX)
 	dItem->dirty[LEFT] = 0;
     else {
-	    x1 = dirtyX - itemX;
-	    if (!(dItem->flags & DITEM_DIRTY) || (x1 < dItem->dirty[LEFT]))
-		dItem->dirty[LEFT] = x1;
-	}
+	x1 = dirtyX - itemX;
+	if (!(dItem->flags & DITEM_DIRTY) || (x1 < dItem->dirty[LEFT]))
+	    dItem->dirty[LEFT] = x1;
+    }
 
     if (dirtyX + dirtyWidth >= itemX + dItem->width)
 	dItem->dirty[RIGHT] = dItem->width;
     else {
-	    x2 = dirtyX + dirtyWidth - itemX;
-	    if (!(dItem->flags & DITEM_DIRTY) || (x2 > dItem->dirty[RIGHT]))
-		dItem->dirty[RIGHT] = x2;
-	}
+	x2 = dirtyX + dirtyWidth - itemX;
+	if (!(dItem->flags & DITEM_DIRTY) || (x2 > dItem->dirty[RIGHT]))
+	    dItem->dirty[RIGHT] = x2;
+    }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * InvalidateDItemY --
+ *
+ *	Mark a vertical span of a DItem as dirty (needing to be
+ *	redrawn). The caller must set the DITEM_DIRTY flag afterwards.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-InvalidateDItemY(DItem *dItem, int itemY, int dirtyY, int dirtyHeight)
+InvalidateDItemY(
+    DItem *dItem,		/* Item to mark dirty. */
+    int itemY,			/* y-coordinate of item. */
+    int dirtyY,			/* Top edge of area to mark as dirty. */
+    int dirtyHeight		/* Height of area to mark as dirty. */
+    )
 {
     int y1, y2;
 
@@ -2021,8 +2781,28 @@ InvalidateDItemY(DItem *dItem, int itemY, int dirtyY, int dirtyHeight)
     }
 }
 
-void
-Range_RedoIfNeeded(TreeCtrl *tree)
+/*
+ *--------------------------------------------------------------
+ *
+ * Range_RedoIfNeeded --
+ *
+ *	Recalculate the list of Ranges if they are marked out-of-date.
+ *	Also calculate the height and width of the canvas based on the
+ *	list of Ranges.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
+static void
+Range_RedoIfNeeded(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -2040,8 +2820,29 @@ Range_RedoIfNeeded(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * ScrollVerticalComplex --
+ *
+ *	Perform scrolling by copying the pixels of items from the
+ *	previous display position to the current position. Any areas
+ *	of items copied over by the moved items are marked dirty.
+ *
+ * Results:
+ *	The number of items whose pixels were copied.
+ *
+ * Side effects:
+ *	Pixels are copied in the TreeCtrl window or in the
+ *	offscreen pixmap (if double-buffering is used).
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
-ScrollVerticalComplex(TreeCtrl *tree)
+ScrollVerticalComplex(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem, *dItem2;
@@ -2182,8 +2983,28 @@ ScrollVerticalComplex(TreeCtrl *tree)
     return numCopy;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * ScrollHorizontalSimple --
+ *
+ *	Perform scrolling by shifting the pixels in the content area of
+ *	the list to the left or right.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is copied/scrolled in the TreeCtrl window or in the
+ *	offscreen pixmap (if double-buffering is used).
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-ScrollHorizontalSimple(TreeCtrl *tree)
+ScrollHorizontalSimple(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -2274,8 +3095,28 @@ ScrollHorizontalSimple(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * ScrollVerticalSimple --
+ *
+ *	Perform scrolling by shifting the pixels in the content area of
+ *	the list up or down.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is copied/scrolled in the TreeCtrl window or in the
+ *	offscreen pixmap (if double-buffering is used).
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-ScrollVerticalSimple(TreeCtrl *tree)
+ScrollVerticalSimple(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -2366,8 +3207,29 @@ ScrollVerticalSimple(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * ScrollHorizontalComplex --
+ *
+ *	Perform scrolling by copying the pixels of items from the
+ *	previous display position to the current position. Any areas
+ *	of items copied over by the moved items are marked dirty.
+ *
+ * Results:
+ *	The number of items whose pixels were copied.
+ *
+ * Side effects:
+ *	Pixels are copied in the TreeCtrl window or in the
+ *	offscreen pixmap (if double-buffering is used).
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
-ScrollHorizontalComplex(TreeCtrl *tree)
+ScrollHorizontalComplex(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem, *dItem2;
@@ -2508,8 +3370,28 @@ ScrollHorizontalComplex(TreeCtrl *tree)
     return numCopy;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeColumnProxy_Draw --
+ *
+ *	Draw (or erase) the visual indicator used when the user is
+ *	resizing a column (and -columnresizemode is "proxy").
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in the TreeCtrl window (or erased, since this
+ *	is XOR drawing).
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-TreeColumnProxy_Draw(TreeCtrl *tree)
+TreeColumnProxy_Draw(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
 #if defined(MAC_OSX_TK)
     DrawXORLine(tree->display, Tk_WindowId(tree->tkwin),
@@ -2550,8 +3432,27 @@ TreeColumnProxy_Draw(TreeCtrl *tree)
 #endif
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeColumnProxy_Undisplay --
+ *
+ *	Hide the visual indicator used when the user is
+ *	resizing a column (if it is displayed).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is erased in the TreeCtrl window.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-TreeColumnProxy_Undisplay(TreeCtrl *tree)
+TreeColumnProxy_Undisplay(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     if (tree->columnProxy.onScreen) {
 	TreeColumnProxy_Draw(tree);
@@ -2559,8 +3460,28 @@ TreeColumnProxy_Undisplay(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeColumnProxy_Display --
+ *
+ *	Display the visual indicator used when the user is
+ *	resizing a column (if it isn't displayed and should be
+ *	displayed).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in the TreeCtrl window.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-TreeColumnProxy_Display(TreeCtrl *tree)
+TreeColumnProxy_Display(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     if (!tree->columnProxy.onScreen && (tree->columnProxy.xObj != NULL)) {
 	tree->columnProxy.sx = tree->columnProxy.x;
@@ -2569,8 +3490,28 @@ TreeColumnProxy_Display(TreeCtrl *tree)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * CalcWhiteSpaceRegion --
+ *
+ *	Create a new region containing all the whitespace of the list
+ *	The whitespace is the area inside the borders/header where items
+ *	are not displayed.
+ *
+ * Results:
+ *	The new whitespace region, which may be empty.
+ *
+ * Side effects:
+ *	A new region is allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 static TkRegion
-CalcWhiteSpaceRegion(TreeCtrl *tree)
+CalcWhiteSpaceRegion(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int x, y, minX, minY, maxX, maxY;
@@ -2654,20 +3595,28 @@ CalcWhiteSpaceRegion(TreeCtrl *tree)
  *
  * Tree_DrawTiledImage --
  *
- *  This procedure draws a tiled image in the indicated box.
+ *	This procedure draws a tiled image in the indicated box.
  *
  * Results:
- *  None.
+ *	None.
  *
  * Side effects:
- *  None.
+ *	Stuff is drawn.
  *
  *----------------------------------------------------------------------
  */
 
 void
-Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image,
-	int x1, int y1, int x2, int y2, int xOffset, int yOffset)
+Tree_DrawTiledImage(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    Tk_Image image,		/* The image to draw. */
+    int x1, int y1,		/* Left & top of area to fill with the image. */
+    int x2, int y2,		/* Right & bottom, of area to fill with the
+				 * image. */
+    int xOffset, int yOffset	/* Used to keep the image aligned with an
+				 * origin. */
+    )
 {
     int imgWidth, imgHeight;
     int srcX, srcY;
@@ -2703,8 +3652,28 @@ Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image,
     };
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_Display --
+ *
+ *	This procedure is called at idle time when something has happened
+ *	that might require the list to be redisplayed. An effort is made
+ *	to only redraw what is needed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in the TreeCtrl window.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_Display(ClientData clientData)
+Tree_Display(
+    ClientData clientData	/* Widget info. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     DInfo *dInfo = (DInfo *) tree->dInfo;
@@ -3235,8 +4204,28 @@ Tree_Display(ClientData clientData)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * A_IncrementFindX --
+ *
+ *	Return a horizontal scroll position nearest to the given
+ *	offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
-A_IncrementFindX(TreeCtrl *tree, int offset)
+A_IncrementFindX(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Canvas x-coordinate. */
+    )
 {
     int totWidth = Tree_TotalWidth(tree);
     int xIncr = tree->xScrollIncrement;
@@ -3253,8 +4242,28 @@ A_IncrementFindX(TreeCtrl *tree, int offset)
     return index;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * A_IncrementFindY --
+ *
+ *	Return a vertical scroll position nearest to the given
+ *	offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
-A_IncrementFindY(TreeCtrl *tree, int offset)
+A_IncrementFindY(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Canvas y-coordinate. */
+    )
 {
     int totHeight = Tree_TotalHeight(tree);
     int yIncr = tree->yScrollIncrement;
@@ -3271,8 +4280,28 @@ A_IncrementFindY(TreeCtrl *tree, int offset)
     return index;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Increment_FindX --
+ *
+ *	Return a horizontal scroll position nearest to the given
+ *	offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Increment_FindX(TreeCtrl *tree, int offset)
+Increment_FindX(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Canvas x-coordinate. */
+    )
 {
     if (tree->xScrollIncrement <= 0) {
 	Increment_RedoIfNeeded(tree);
@@ -3281,8 +4310,28 @@ Increment_FindX(TreeCtrl *tree, int offset)
     return A_IncrementFindX(tree, offset);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Increment_FindY --
+ *
+ *	Return a vertical scroll position nearest to the given
+ *	offset.
+ *
+ * Results:
+ *	Index of the nearest increment <= the given offset.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Increment_FindY(TreeCtrl *tree, int offset)
+Increment_FindY(
+    TreeCtrl *tree,		/* Widget info. */
+    int offset			/* Canvas y-coordinate. */
+    )
 {
     if (tree->yScrollIncrement <= 0) {
 	Increment_RedoIfNeeded(tree);
@@ -3291,8 +4340,27 @@ Increment_FindY(TreeCtrl *tree, int offset)
     return A_IncrementFindY(tree, offset);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Increment_ToOffsetX --
+ *
+ *	Return the canvas coordinate for a scroll position.
+ *
+ * Results:
+ *	Pixel distance.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Increment_ToOffsetX(TreeCtrl *tree, int index)
+Increment_ToOffsetX(
+    TreeCtrl *tree,		/* Widget info. */
+    int index			/* Index of the increment. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3305,8 +4373,27 @@ Increment_ToOffsetX(TreeCtrl *tree, int index)
     return index * tree->xScrollIncrement;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Increment_ToOffsetY --
+ *
+ *	Return the canvas coordinate for a scroll position.
+ *
+ * Results:
+ *	Pixel distance.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 int
-Increment_ToOffsetY(TreeCtrl *tree, int index)
+Increment_ToOffsetY(
+    TreeCtrl *tree,		/* Widget info. */
+    int index			/* Index of the increment. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3321,9 +4408,32 @@ Increment_ToOffsetY(TreeCtrl *tree, int index)
     return index * tree->yScrollIncrement;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * GetScrollFractions --
+ *
+ *	Return the fractions that may be passed to a scrollbar "set"
+ *	command.
+ *
+ * Results:
+ *	Two fractions from 0.0 to 1.0.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-GetScrollFractions(int screen1, int screen2, int object1,
-	int object2, double fractions[2])
+GetScrollFractions(
+    int screen1, int screen2,	/* Min/max coordinates that are visible in
+				 * the window. */
+    int object1, int object2,	/* Min/max coordinates of the scrollable
+				 * content (usually 0 to N where N is the
+				 * total width or height of the canvas). */
+    double fractions[2]		/* Returned values. */
+    )
 {
     double range, f1, f2;
 
@@ -3347,8 +4457,28 @@ GetScrollFractions(int screen1, int screen2, int object1,
     fractions[1] = f2;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_GetScrollFractionsX --
+ *
+ *	Return the fractions that may be passed to a scrollbar "set"
+ *	command for a horizontal scrollbar.
+ *
+ * Results:
+ *	Two fractions from 0 to 1.0.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_GetScrollFractionsX(TreeCtrl *tree, double fractions[2])
+Tree_GetScrollFractionsX(
+    TreeCtrl *tree,		/* Widget info. */
+    double fractions[2]		/* Returned values. */
+    )
 {
     int left = tree->xOrigin + tree->inset;
     int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
@@ -3384,8 +4514,28 @@ Tree_GetScrollFractionsX(TreeCtrl *tree, double fractions[2])
     GetScrollFractions(left, left + visWidth, 0, totWidth, fractions);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_GetScrollFractionsY --
+ *
+ *	Return the fractions that may be passed to a scrollbar "set"
+ *	command for a vertical scrollbar.
+ *
+ * Results:
+ *	Two fractions from 0 to 1.0.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_GetScrollFractionsY(TreeCtrl *tree, double fractions[2])
+Tree_GetScrollFractionsY(
+    TreeCtrl *tree,		/* Widget info. */
+    double fractions[2]		/* Returned values. */
+    )
 {
     int topInset = tree->inset + Tree_HeaderHeight(tree);
     int top = topInset + tree->yOrigin; /* canvas coords */
@@ -3422,8 +4572,31 @@ Tree_GetScrollFractionsY(TreeCtrl *tree, double fractions[2])
     GetScrollFractions(top, top + visHeight, 0, totHeight, fractions);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_SetOriginX --
+ *
+ *	Change the horizontal scroll position.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	If the horizontal scroll position changes, then the widget is
+ *	redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_SetOriginX(TreeCtrl *tree, int xOrigin)
+Tree_SetOriginX(
+    TreeCtrl *tree,		/* Widget info. */
+    int xOrigin			/* The desired offset from the left edge
+				 * of the window to the left edge of the
+				 * canvas. The actual value will be clipped
+				 * to the nearest scroll increment. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int totWidth = Tree_TotalWidth(tree);
@@ -3482,8 +4655,31 @@ Tree_SetOriginX(TreeCtrl *tree, int xOrigin)
     Tree_EventuallyRedraw(tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_SetOriginY --
+ *
+ *	Change the vertical scroll position.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	If the vertical scroll position changes, then the widget is
+ *	redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_SetOriginY(TreeCtrl *tree, int yOrigin)
+Tree_SetOriginY(
+    TreeCtrl *tree,		/* Widget info. */
+    int yOrigin			/* The desired offset from the top edge
+				 * of the window to the top edge of the
+				 * canvas. The actual value will be clipped
+				 * to the nearest scroll increment. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int topInset = tree->inset + Tree_HeaderHeight(tree);
@@ -3542,8 +4738,28 @@ Tree_SetOriginY(TreeCtrl *tree, int yOrigin)
     Tree_EventuallyRedraw(tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_EventuallyRedraw --
+ *
+ *	Schedule an idle task to redisplay the widget, if one is not
+ *	already scheduled and the widget is mapped and the widget
+ *	hasn't been deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget may be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_EventuallyRedraw(TreeCtrl *tree)
+Tree_EventuallyRedraw(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3556,8 +4772,28 @@ Tree_EventuallyRedraw(TreeCtrl *tree)
     Tcl_DoWhenIdle(Tree_Display, (ClientData) tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RelayoutWindow --
+ *
+ *	Invalidate all the layout info for the widget and schedule a
+ *	redisplay at idle time. This gets called when certain config
+ *	options change and when the size of the widget changes.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_RelayoutWindow(TreeCtrl *tree)
+Tree_RelayoutWindow(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3608,8 +4844,32 @@ Tree_RelayoutWindow(TreeCtrl *tree)
     Tree_EventuallyRedraw(tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_FocusChanged --
+ *
+ *	This procedure handles the widget gaining or losing the input
+ *	focus. The state of every item has STATE_FOCUS toggled on or
+ *	off.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget may be redisplayed at idle time if -highlightthickness
+ *	is > 0, or if any Elements change appearance because of the
+ *	state change.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_FocusChanged(TreeCtrl *tree, int gotFocus)
+Tree_FocusChanged(
+    TreeCtrl *tree,		/* Widget info. */
+    int gotFocus		/* TRUE if the widget has the focus,
+				 * otherwise FALSE. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int redraw = FALSE;
@@ -3641,8 +4901,31 @@ Tree_FocusChanged(TreeCtrl *tree, int gotFocus)
 	Tree_EventuallyRedraw(tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_Activate --
+ *
+ *	This procedure handles the widget's toplevel being the "active"
+ *	foreground window (on Macintosh and Windows). Currently it just
+ *	redraws the header if -usetheme is TRUE and the header is
+ *	visible.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget may be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_Activate(TreeCtrl *tree, int isActive)
+Tree_Activate(
+    TreeCtrl *tree,		/* Widget info. */
+    int isActive		/* TRUE if the widget's toplevel is the
+				 * active window, otherwise FALSE. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3660,8 +4943,30 @@ Tree_Activate(TreeCtrl *tree, int isActive)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_FreeItemDInfo --
+ *
+ *	Free any DItem associated with each item in a range of items.
+ *	This is called when the size of an item changed or an item is
+ *	deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
+Tree_FreeItemDInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item1,		/* First item in the range. */
+    TreeItem item2		/* Last item in the range, or NULL. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -3687,8 +4992,31 @@ Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_InvalidateItemDInfo --
+ *
+ *	Mark as dirty any DItem associated with each item in a range
+ *	of items. This is called when the appearance of an item changed
+ *	(but not its size).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time if any of the items
+ *	had a DItem.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
+Tree_InvalidateItemDInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item1,		/* First item in the range. */
+    TreeItem item2		/* Last item in the range, or NULL. */
+    )
 {
     /* DInfo *dInfo = (DInfo *) tree->dInfo; */
     DItem *dItem;
@@ -3711,8 +5039,27 @@ Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDisplay_ItemDeleted --
+ *
+ *	Removes an item from the hash table of on-screen items.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item)
+TreeDisplay_ItemDeleted(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item to remove. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Tcl_HashEntry *hPtr;
@@ -3723,8 +5070,27 @@ TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item)
 	Tcl_DeleteHashEntry(hPtr);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_DInfoChanged --
+ *
+ *	Set some DINFO_xxx flags and schedule a redisplay.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_DInfoChanged(TreeCtrl *tree, int flags)
+Tree_DInfoChanged(
+    TreeCtrl *tree,		/* Widget info. */
+    int flags			/* DINFO_xxx flags. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3732,8 +5098,32 @@ Tree_DInfoChanged(TreeCtrl *tree, int flags)
     Tree_EventuallyRedraw(tree);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_InvalidateArea --
+ *
+ *	Mark as dirty parts of any DItems in the given area. If the given
+ *	area overlaps the borders they are marked as needing to be
+ *	redrawn.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
+Tree_InvalidateArea(
+    TreeCtrl *tree,		/* Widget info. */
+    int x1, int y1,		/* Left & top of dirty area in window
+				 * coordinates. */
+    int x2, int y2		/* Right & bottom of dirty area in window
+				 * coordinates. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
@@ -3776,18 +5166,67 @@ Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_InvalidateRegion --
+ *
+ *	Mark as dirty parts of any DItems in the given area. If the given
+ *	area overlaps the borders they are marked as needing to be
+ *	redrawn.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region)
+Tree_InvalidateRegion(
+    TreeCtrl *tree,		/* Widget info. */
+    TkRegion region		/* Region to mark as dirty, in window
+				 * coordinates. */
+    )
 {
     XRectangle rect;
 
+    /* FIXME: It would be more efficient in some cases to only mark as dirty
+     * those items that overlap the given region, in case the region
+     * contains multiple disjoint rectangles. */
     TkClipBox(region, &rect);
     Tree_InvalidateArea(tree, rect.x, rect.y, rect.x + rect.width,
 	    rect.y + rect.height);
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_InvalidateItemArea --
+ *
+ *	Mark as dirty parts of any DItems in the given area. This is
+ *	like Tree_InvalidateArea() but the given area is clipped inside
+ *	the borders/header.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
+Tree_InvalidateItemArea(
+    TreeCtrl *tree,		/* Widget info. */
+    int x1, int y1,		/* Left & top of dirty area in window
+				 * coordinates. */
+    int x2, int y2		/* Right & bottom of dirty area in window
+				 * coordinates. */
+    )
 {
     if (x1 < tree->inset)
 	x1 = tree->inset;
@@ -3800,16 +5239,33 @@ Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
     Tree_InvalidateArea(tree, x1, y1, x2, y2);
 }
 
-void
-Tree_InvalidateWindow(TreeCtrl *tree)
-{
-    Tree_InvalidateArea(tree, 0, 0,
-	    Tk_Width(tree->tkwin),
-	    Tk_Height(tree->tkwin));
-}
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RedrawArea --
+ *
+ *	Mark as dirty parts of any DItems in the given area. If the given
+ *	area overlaps the borders they are marked as needing to be
+ *	redrawn. The given area is subtracted from the whitespace region
+ *	so that that part of the whitespace region will be redrawn.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
 
 void
-Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
+Tree_RedrawArea(
+    TreeCtrl *tree,		/* Widget info. */
+    int x1, int y1,		/* Left & top of dirty area in window
+				 * coordinates. */
+    int x2, int y2		/* Right & bottom of dirty area in window
+				 * coordinates. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
@@ -3830,15 +5286,27 @@ Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
     Tree_EventuallyRedraw(tree);
 }
 
-void
-Tree_RedrawItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2)
-{
-    Tree_InvalidateItemArea(tree, x1, y1, x2, y2);
-    Tree_EventuallyRedraw(tree);
-}
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDInfo_Init --
+ *
+ *	Perform display-related initialization when a new TreeCtrl is
+ *	created.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *--------------------------------------------------------------
+ */
 
 void
-TreeDInfo_Init(TreeCtrl *tree)
+TreeDInfo_Init(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo;
     XGCValues gcValues;
@@ -3855,8 +5323,26 @@ TreeDInfo_Init(TreeCtrl *tree)
     tree->dInfo = (TreeDInfo) dInfo;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDInfo_Free --
+ *
+ *	Free display-related resources for a deleted TreeCtrl.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 void
-TreeDInfo_Free(TreeCtrl *tree)
+TreeDInfo_Free(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
@@ -3890,7 +5376,9 @@ TreeDInfo_Free(TreeCtrl *tree)
 }
 
 void
-DumpDInfo(TreeCtrl *tree)
+DumpDInfo(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
