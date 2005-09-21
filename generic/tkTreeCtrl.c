@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.51 2005/09/15 04:38:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.52 2005/09/21 22:39:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -286,8 +286,31 @@ static Tk_ClassProcs treectrlClass = {
     NULL			/* modalProc. */
 };
 
-static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
-	int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeObjCmd --
+ *
+ *	This procedure is invoked to process the [treectrl] Tcl
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeObjCmd(
+    ClientData clientData,	/* Not used. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree;
     Tk_Window tkwin;
@@ -384,8 +407,30 @@ static int TreeObjCmd(ClientData clientData, Tcl_Interp *interp,
 #define C2Wy(y) ((y) - tree->yOrigin)
 #define C2Oy(y) ((y) - tree->inset - Tree_HeaderHeight(tree))
 
-static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeWidgetCmd --
+ *
+ *	This procedure is invoked to process the Tcl command
+ *	that corresponds to a widget managed by this module.
+ *	See the user documentation for details on what it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int TreeWidgetCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     int result = TCL_OK;
@@ -1031,8 +1076,35 @@ error:
     return TCL_ERROR;
 }
 
-static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
-	Tcl_Obj *CONST objv[], int createFlag)
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeConfigure --
+ *
+ *	This procedure is called to process an argv/argc list, plus
+ *	the Tk option database, in order to configure (or reconfigure)
+ *	a treectrl widget.
+ *
+ * Results:
+ *	The return value is a standard Tcl result.  If TCL_ERROR is
+ *	returned, then the interp's result contains an error message.
+ *
+ * Side effects:
+ *	Configuration information, such as colors, border width,
+ *	etc. get set for tree;  old resources get freed,
+ *	if there were any.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeConfigure(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[],	/* Argument values. */
+    int createFlag		/* TRUE if the widget is being created. */
+    )
 {
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -1333,7 +1405,28 @@ badWrap:
     return TCL_OK;
 }
 
-static void TreeWorldChanged(ClientData instanceData)
+/*
+ *---------------------------------------------------------------------------
+ *
+ * TreeWorldChanged --
+ *
+ *	This procedure is called when the world has changed in some
+ *	way and the widget needs to recompute all its graphics contexts
+ *	and determine its new geometry.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Widget will be relayed out and redisplayed.
+ *
+ *---------------------------------------------------------------------------
+ */
+
+static void
+TreeWorldChanged(
+    ClientData instanceData	/* Widget info. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) instanceData;
     XGCValues gcValues;
@@ -1355,7 +1448,29 @@ static void TreeWorldChanged(ClientData instanceData)
     Tree_RelayoutWindow(tree);
 }
 
-static void TreeEventProc(ClientData clientData, XEvent *eventPtr)
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeEventProc --
+ *
+ *	This procedure is invoked by the Tk dispatcher for various
+ *	events on the widget.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	When the window gets deleted, internal structures get
+ *	cleaned up.  When it gets exposed, it is redisplayed.
+ *
+ *--------------------------------------------------------------
+ */
+
+static void
+TreeEventProc(
+    ClientData clientData,	/* Widget info. */
+    XEvent *eventPtr		/* Event info. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
 
@@ -1414,7 +1529,28 @@ static void TreeEventProc(ClientData clientData, XEvent *eventPtr)
     }
 }
 
-static void TreeCmdDeletedProc(ClientData clientData)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeCmdDeletedProc --
+ *
+ *	This procedure is invoked when a widget command is deleted.  If
+ *	the widget isn't already in the process of being destroyed,
+ *	this command destroys it.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget is destroyed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+TreeCmdDeletedProc(
+    ClientData clientData	/* Widget info. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
 
@@ -1423,7 +1559,28 @@ static void TreeCmdDeletedProc(ClientData clientData)
     }
 }
 
-static void TreeDestroy(char *memPtr)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeDestroy --
+ *
+ *	This procedure is invoked by Tcl_EventuallyFree or Tcl_Release
+ *	to clean up the internal structure of a widget at a safe time
+ *	(when no-one is using it anymore).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Everything associated with the widget is freed up.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+TreeDestroy(
+    char *memPtr		/* Widget info. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) memPtr;
     TreeItem item;
@@ -1488,7 +1645,33 @@ static void TreeDestroy(char *memPtr)
     WFREE(tree, TreeCtrl);
 }
 
-void Tree_UpdateScrollbarX(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_UpdateScrollbarX --
+ *
+ *	This procedure is invoked whenever information has changed in
+ *	a widget in a way that would invalidate a scrollbar display.
+ *
+ *	A <Scroll-x> event is generated.
+ *
+ *	If there is an associated scrollbar, then this procedure updates
+ *	it by invoking a Tcl command.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	A Tcl command is invoked, and an additional command may be
+ *	invoked to process errors in the command.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_UpdateScrollbarX(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int result;
@@ -1518,7 +1701,33 @@ void Tree_UpdateScrollbarX(TreeCtrl *tree)
     Tcl_Release((ClientData) interp);
 }
 
-void Tree_UpdateScrollbarY(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_UpdateScrollbarY --
+ *
+ *	This procedure is invoked whenever information has changed in
+ *	a widget in a way that would invalidate a scrollbar display.
+ *
+ *	A <Scroll-y> event is generated.
+ *
+ *	If there is an associated scrollbar, then this procedure updates
+ *	it by invoking a Tcl command.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	A Tcl command is invoked, and an additional command may be
+ *	invoked to process errors in the command.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_UpdateScrollbarY(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int result;
@@ -1548,14 +1757,56 @@ void Tree_UpdateScrollbarY(TreeCtrl *tree)
     Tcl_Release((ClientData) interp);
 }
 
-static void TreeComputeGeometry(TreeCtrl *tree)
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeComputeGeometry --
+ *
+ *	This procedure is invoked to compute the requested size for the
+ *	window.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Tk_GeometryRequest is called to register the desired dimensions
+ *	for the window.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+TreeComputeGeometry(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     Tk_SetInternalBorder(tree->tkwin, tree->inset);
     Tk_GeometryRequest(tree->tkwin, tree->width + tree->inset * 2,
 	    tree->height + tree->inset * 2);
 }
 
-void Tree_AddItem(TreeCtrl *tree, TreeItem item)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_AddItem --
+ *
+ *	Add an item to the hash table of items. Also set the unique item
+ *	id and increment the number of items.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_AddItem(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item that was created. */
+    )
 {
     Tcl_HashEntry *hPtr;
     int id, isNew;
@@ -1566,7 +1817,30 @@ void Tree_AddItem(TreeCtrl *tree, TreeItem item)
     tree->itemCount++;
 }
 
-void Tree_RemoveItem(TreeCtrl *tree, TreeItem item)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_RemoveItem --
+ *
+ *	Remove an item from the selection, if selected.
+ *	Remove an item from the hash table of items.
+ *	Decrement the number of items.
+ *	Reset the unique item id allocator if the last item is removed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_RemoveItem(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item		/* Item to remove. */
+    )
 {
     Tcl_HashEntry *hPtr;
 
@@ -1581,20 +1855,76 @@ void Tree_RemoveItem(TreeCtrl *tree, TreeItem item)
 	tree->nextItemId = TreeItem_GetID(tree, tree->root) + 1;
 }
 
-/* Called when Tk_Image is deleted or modified */
-static void ImageChangedProc(
-    ClientData clientData,
-    int x, int y,
-    int width, int height,
-    int imageWidth, int imageHeight)
+/*
+ *----------------------------------------------------------------------
+ *
+ * ImageChangedProc --
+ *
+ *	This procedure is invoked by the image code whenever the manager
+ *	for an image does something that affects the image's size or
+ *	how it is displayed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Arranges for the widget to get redisplayed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+ImageChangedProc(
+    ClientData clientData,		/* Widget info. */
+    int x, int y,			/* Upper left pixel (within image)
+					 * that must be redisplayed. */
+    int width, int height,		/* Dimensions of area to redisplay
+					 * (may be <= 0). */
+    int imageWidth, int imageHeight	/* New dimensions of image. */
+    )
 {
     /* I would like to know the image was deleted... */
     TreeCtrl *tree = (TreeCtrl *) clientData;
 
+    /* FIXME: any image elements need to have their size invalidated
+     * and items relayout'd accordingly. */
+
+    /* FIXME: this is used for the background image, but whitespace
+     * is not redrawn if the background image is modified. */
+
     Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
 }
 
-Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_GetImage --
+ *
+ *	Wrapper around Tk_GetImage(). If the requested image does not yet
+ *	exist it is created. Otherwise an existing instance is returned.
+ *
+ *	The purpose of this procedure is to save memory. We may expect
+ *	the same image to be used hundreds of times (a folder image for
+ *	example) and want to avoid allocating an instance for every usage.
+ *
+ *	Any image instances created by this procedure are not freed until
+ *	the widget is destroyed.
+ *
+ * Results:
+ *	Token for the image instance. If an error occurs the result is
+ *	NULL and a message is left in the interpreter's result.
+ *
+ * Side effects:
+ *	A new image instance may be created.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tk_Image
+Tree_GetImage(
+    TreeCtrl *tree,		/* Widget info. */
+    char *imageName		/* Name of an existing image. */
+    )
 {
     Tcl_HashEntry *hPtr;
     Tk_Image image;
@@ -1613,7 +1943,39 @@ Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName)
     return (Tk_Image) Tcl_GetHashValue(hPtr);
 }
 
-int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags)
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_StateFromObj --
+ *
+ *	Parse a Tcl_Obj containing a state name (with optional modifers)
+ *	into a STATE_xxx flag, and modify an existing array of state
+ *	flags accordingly.
+ *
+ *	If the object contains "foo", then the state "foo" is set on.
+ *	If the object contains "!foo", then the state "foo" is set off.
+ *	If the object contains "^foo", then the state "foo" is toggled.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_StateFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *obj,		/* String rep of the state. */
+    int states[3],		/* Initialized state flags, indexed by the
+				 * STATE_OP_xxx contants. A single flag
+				 * may be turned on or off in each value. */
+    int *indexPtr,		/* Returned index of the STATE_xxx flag.
+				 * May be NULL. */
+    int flags			/* SFO_xxx flags. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     int i, op = STATE_OP_ON, op2, op3, length, state = 0;
@@ -1682,7 +2044,30 @@ unknown:
     return TCL_ERROR;
 }
 
-static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeStateCmd --
+ *
+ *	This procedure is invoked to process the [state] widget
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeStateCmd(
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
     static CONST char *commandName[] = {
@@ -1796,7 +2181,28 @@ static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
-void Tree_AddToSelection(TreeCtrl *tree, TreeItem item)
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_AddToSelection --
+ *
+ *	Add an item to the hash table of selected items. Turn on the
+ *	STATE_SELECTED state for the item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget may be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+Tree_AddToSelection(
+    TreeCtrl *tree,		/* Widget info */
+    TreeItem item		/* Item to add to the selection. */
+    )
 {
     Tcl_HashEntry *hPtr;
     int isNew;
@@ -1817,7 +2223,28 @@ void Tree_AddToSelection(TreeCtrl *tree, TreeItem item)
     tree->selectCount++;
 }
 
-void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item)
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RemoveFromSelection --
+ *
+ *	Remove an item from the hash table of selected items. Turn off the
+ *	STATE_SELECTED state for the item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget may be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+Tree_RemoveFromSelection(
+    TreeCtrl *tree,		/* Widget info */
+    TreeItem item		/* Item to remove from the selection. */
+    )
 {
     Tcl_HashEntry *hPtr;
 
@@ -1833,8 +2260,31 @@ void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item)
     tree->selectCount--;
 }
 
-static int TreeSelectionCmd(Tcl_Interp *interp,
-	TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeSelectionCmd --
+ *
+ *	This procedure is invoked to process the [selection] widget
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeSelectionCmd(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     static CONST char *commandName[] = {
 	"add", "anchor", "clear", "count", "get", "includes", "modify", NULL
@@ -2384,7 +2834,33 @@ doneCLEAR:
     return TCL_OK;
 }
 
-static int A_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * A_XviewCmd --
+ *
+ *	This procedure is invoked to process the "xview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ *	NOTE: This procedure is called when the -xscrollincrement option
+ *	is specified.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+A_XviewCmd(
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
 
@@ -2464,7 +2940,33 @@ static int A_XviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
-static int A_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * A_YviewCmd --
+ *
+ *	This procedure is invoked to process the "yview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ *	NOTE: This procedure is called when the -yscrollincrement option
+ *	is specified.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+A_YviewCmd(
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tcl_Interp *interp = tree->interp;
 
@@ -2545,21 +3047,71 @@ static int A_YviewCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
     return TCL_OK;
 }
 
-static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeXviewCmd --
+ *
+ *	This procedure is invoked to process the "xview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeXviewCmd(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     if (tree->xScrollIncrement <= 0)
 	return B_XviewCmd(tree, objc, objv);
     return A_XviewCmd(tree, objc, objv);
 }
 
-static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeYviewCmd --
+ *
+ *	This procedure is invoked to process the "yview" option for
+ *	the widget command for a TreeCtrl. See the user documentation
+ *	for details on what it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeYviewCmd(
+    Tcl_Interp *interp,		/* Current interpreter. */
+    TreeCtrl *tree,		/* Widget info. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     if (tree->yScrollIncrement <= 0)
 	return B_YviewCmd(tree, objc, objv);
     return A_YviewCmd(tree, objc, objv);
 }
 
-void Tree_Debug(TreeCtrl *tree)
+void Tree_Debug(
+    TreeCtrl *tree		/* Widget info. */
+    )
 {
     if (TreeItem_Debug(tree, tree->root) != TCL_OK) {
 	dbwin("Tree_Debug: %s\n", Tcl_GetStringResult(tree->interp));
@@ -2567,8 +3119,31 @@ void Tree_Debug(TreeCtrl *tree)
     }
 }
 
-static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDebugCmd --
+ *
+ *	This procedure is invoked to process the [debug] widget
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+TreeDebugCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = { "cget", "configure", "dinfo",
@@ -2671,6 +3246,24 @@ static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
 }
 
 /*
+ *--------------------------------------------------------------
+ *
+ * TextLayoutCmd --
+ *
+ *	This procedure is invoked to process the [textlayout] Tcl
+ *	command. The command is used by the library scripts to place
+ *	the text-edit Entry or Text widget.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+/*
 textlayout $font $text
 	-width pixels
 	-wrap word|char
@@ -2678,8 +3271,13 @@ textlayout $font $text
 	-ignoretabs boolean
 	-ignorenewlines boolean
 */
-int TextLayoutCmd(ClientData clientData, Tcl_Interp *interp, int objc,
-	Tcl_Obj *CONST objv[])
+int
+TextLayoutCmd(
+    ClientData clientData,	/* Not used. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tk_Font tkfont;
     Tk_Window tkwin = Tk_MainWindow(interp);
@@ -2777,7 +3375,32 @@ done:
     return result;
 }
 
-int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * ImageTintCmd --
+ *
+ *	This procedure is invoked to process the [imagetint] Tcl
+ *	command. The command may be used to apply a highlight to an
+ *	existing photo image. It is used by the demos to produce a
+ *	selected version of an image.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	A photo image is modified.
+ *
+ *--------------------------------------------------------------
+ */
+
+int
+ImageTintCmd(
+    ClientData clientData,	/* Not used. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     char *imageName;
     Tk_PhotoHandle photoH;
@@ -2861,7 +3484,33 @@ int ImageTintCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *C
 
 #if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
 
-int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[])
+/*
+ *--------------------------------------------------------------
+ *
+ * LoupeCmd --
+ *
+ *	This procedure is invoked to process the [loupe] Tcl
+ *	command. The command is used to perform a screen grab on the
+ *	root window and place a magnified version of the screen grab
+ *	into an existing photo image. The command is used to check those
+ *	dotted lines and make sure they line up properly.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	A photo image is modified.
+ *
+ *--------------------------------------------------------------
+ */
+
+int
+LoupeCmd(
+    ClientData clientData,	/* Not used. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
 {
     Tk_Window tkwin = Tk_MainWindow(interp);
     Display *display = Tk_Display(tkwin);
@@ -3006,8 +3655,30 @@ int LoupeCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST
 
 #endif /* not WIN32 && not MAC_TCL && not MAC_OSX_TK */
 
-/* Taken from tkFont.c */
-static void RecomputeWidgets(TkWindow *winPtr)
+/*
+ *--------------------------------------------------------------
+ *
+ * RecomputeWidgets --
+ *
+ *	This procedure is called when the system theme changes on platforms
+ *	that support theming. The worldChangedProc of all treectrl widgets
+ *	is called to relayout and redisplay the widgets. 
+ *
+ *	Taken from tkFont.c.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	All treectrl widgets will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
+static void
+RecomputeWidgets(
+    TkWindow *winPtr		/* Window info. */
+    )
 {
     Tk_ClassWorldChangedProc *proc;
 
@@ -3023,9 +3694,27 @@ static void RecomputeWidgets(TkWindow *winPtr)
 }
 
 /*
- * Called when the system theme changes.
+ *--------------------------------------------------------------
+ *
+ * Tree_TheWorldHasChanged --
+ *
+ *	This procedure is called when the system theme changes on platforms
+ *	that support theming. The worldChangedProc of all treectrl widgets
+ *	is called to relayout and redisplay the widgets. 
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	All treectrl widgets will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
  */
-void Tree_TheWorldHasChanged(Tcl_Interp *interp)
+
+void
+Tree_TheWorldHasChanged(
+    Tcl_Interp *interp		/* Current interpreter. */
+    )
 {
     /* Could send a <<ThemeChanged>> event to every window like Tile does. */
     /* Could keep a list of treectrl widgets */
@@ -3033,6 +3722,10 @@ void Tree_TheWorldHasChanged(Tcl_Interp *interp)
     RecomputeWidgets(winPtr);
 }
 
+/*
+ * In order to find treectrl.tcl during initialization, the following script
+ * is invoked.
+ */
 static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
   namespace eval ::TreeCtrl {}\n\
   proc ::TreeCtrl::Init {} {\n\
@@ -3042,8 +3735,27 @@ static char initScript[] = "if {![llength [info proc ::TreeCtrl::Init]]} {\n\
 }\n\
 ::TreeCtrl::Init";
 
+/*
+ *--------------------------------------------------------------
+ *
+ * Treectrl_Init --
+ *
+ *	This procedure initializes the TreeCtrl package and related
+ *	commands.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated. New Tcl commands are created.
+ *
+ *--------------------------------------------------------------
+ */
 
-DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
+DLLEXPORT int
+Treectrl_Init(
+    Tcl_Interp *interp		/* Interpreter the package is loading into. */
+    )
 {
 #ifdef USE_TCL_STUBS
     if (Tcl_InitStubs(interp, "8.4", 0) == NULL) {
@@ -3080,7 +3792,27 @@ DLLEXPORT int Treectrl_Init(Tcl_Interp *interp)
     return Tcl_EvalEx(interp, initScript, -1, TCL_EVAL_GLOBAL);
 }
 
-DLLEXPORT int Treectrl_SafeInit(Tcl_Interp *interp)
+/*
+ *--------------------------------------------------------------
+ *
+ * Treectrl_SafeInit --
+ *
+ *	This procedure initializes the TreeCtrl package and related
+ *	commands.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory is allocated. New Tcl commands are created.
+ *
+ *--------------------------------------------------------------
+ */
+
+DLLEXPORT int
+Treectrl_SafeInit(
+    Tcl_Interp *interp		/* Interpreter the package is loading into. */
+    )
 {
     return Treectrl_Init(interp);
 }
