@@ -1,3 +1,9 @@
+2005-09-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* demos/demo.tcl: just check for 'loupe' to run loupe demo
+	* generic/tkTreeCtrl.c (LoupeCmd): add Win32 code to enable loupe
+	functionality on Windows.
+
 2005-08-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* Makefile.in: install man pages with html docs

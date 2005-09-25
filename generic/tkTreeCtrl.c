@@ -7,10 +7,13 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.52 2005/09/21 22:39:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.53 2005/09/25 20:53:24 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 /*
  * TIP #116 altered Tk_PhotoPutBlock API to add interp arg.
@@ -3482,7 +3485,7 @@ ImageTintCmd(
     return TCL_OK;
 }
 
-#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
+#if !defined(MAC_TCL) && !defined(MAC_OSX_TK)
 
 /*
  *--------------------------------------------------------------
@@ -3515,24 +3518,35 @@ LoupeCmd(
     Tk_Window tkwin = Tk_MainWindow(interp);
     Display *display = Tk_Display(tkwin);
     int screenNum = Tk_ScreenNumber(tkwin);
-    Visual *visual = Tk_Visual(tkwin);
-    Window rootWindow = RootWindow(display, screenNum);
     int displayW = DisplayWidth(display, screenNum);
     int displayH = DisplayHeight(display, screenNum);
     char *imageName;
     Tk_PhotoHandle photoH;
     Tk_PhotoImageBlock photoBlock;
     unsigned char *pixelPtr;
-    int x, y, w, h, zoom;
+    int x, y, w, h, zoom, xx, yy;
     int grabX, grabY, grabW, grabH;
-    XImage *ximage;
     int i, ncolors;
+#ifdef WIN32
+    HWND hwnd;
+    HDC hdc;
+#else
+    int screenNum = Tk_ScreenNumber(tkwin);
+    Visual *visual = Tk_Visual(tkwin);
+    Window rootWindow = RootWindow(display, screenNum);
+    XImage *ximage;
     XColor *xcolors;
     unsigned long red_shift, green_shift, blue_shift;
     int separated = 0;
+#endif
 
-    if (objc != 7) {
-	Tcl_WrongNumArgs(interp, 1, objv, "imageName x y w h zoom");
+    /*
+     * x && y are points on screen to snap from
+     * w && h are size of image to grab (default to image size)
+     * zoom is the integer zoom factor to grab
+     */
+    if ((objc != 4) && (objc != 6) && (objc != 7)) {
+	Tcl_WrongNumArgs(interp, 1, objv, "imageName x y ?w h? ?zoom?");
 	return TCL_ERROR;
     }
 
@@ -3545,33 +3559,75 @@ LoupeCmd(
 	return TCL_ERROR;
     }
 
-    if (Tcl_GetIntFromObj(interp, objv[2], &x) != TCL_OK)
+    if ((Tcl_GetIntFromObj(interp, objv[2], &x) != TCL_OK)
+	    || (Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)) {
 	return TCL_ERROR;
-    if (Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)
-	return TCL_ERROR;
-    if (Tcl_GetIntFromObj(interp, objv[4], &w) != TCL_OK)
-	return TCL_ERROR;
-    if (Tcl_GetIntFromObj(interp, objv[5], &h) != TCL_OK)
-	return TCL_ERROR;
-    if (Tcl_GetIntFromObj(interp, objv[6], &zoom) != TCL_OK)
-	return TCL_ERROR;
+    }
+    if (objc >= 6) {
+	if ((Tcl_GetIntFromObj(interp, objv[4], &w) != TCL_OK)
+		|| (Tcl_GetIntFromObj(interp, objv[5], &h) != TCL_OK)) {
+	    return TCL_ERROR;
+	}
+    } else {
+	/*
+	 * Get dimensions from image
+	 */
+	Tk_PhotoGetSize(photoH, &w, &h);
+    }
+    if (objc == 7) {
+	if (Tcl_GetIntFromObj(interp, objv[6], &zoom) != TCL_OK) {
+	    return TCL_ERROR;
+	}
+    } else {
+	zoom = 1;
+    }
 
-    grabX = x - w / zoom / 2;
-    grabY = y - h / zoom / 2;
+    grabX = x - (w / zoom / 2);
+    grabY = y - (h / zoom / 2);
     grabW = w / zoom;
     grabH = h / zoom;
-    if (grabW > displayW)
-	grabW = displayW;
-    if (grabH > displayH)
-	grabH = displayH;
-    if (grabX < 0)
-	grabX = 0;
-    if (grabY < 0)
-	grabY = 0;
-    if (grabX + grabW > displayW)
-	grabX = displayW - grabW;
-    if (grabY + grabH > displayH)
-	grabY = displayH - grabH;
+    if (grabW > displayW)		grabW = displayW;
+    if (grabH > displayH)		grabH = displayH;
+    if (grabX < 0)			grabX = 0;
+    if (grabY < 0)			grabY = 0;
+    if (grabX + grabW > displayW)	grabX = displayW - grabW;
+    if (grabY + grabH > displayH)	grabY = displayH - grabH;
+#ifdef WIN32
+    hwnd = GetDesktopWindow();
+    hdc = GetWindowDC(hwnd);
+
+    /* XImage -> Tk_Image */
+    pixelPtr = (unsigned char *) Tcl_Alloc(w * h * 4);
+    memset(pixelPtr, 0, (w * h * 4));
+    photoBlock.pixelPtr  = pixelPtr;
+    photoBlock.width     = w;
+    photoBlock.height    = h;
+    photoBlock.pitch     = w * 4;
+    photoBlock.pixelSize = 4;
+    photoBlock.offset[0] = 0;
+    photoBlock.offset[1] = 1;
+    photoBlock.offset[2] = 2;
+    photoBlock.offset[3] = 3;
+
+    /*
+     * We could do a BitBlt for bulk copying, but then we'd have to
+     * do screen size consistency checks and possibly pixel conversion.
+     */
+    for (yy = 0; yy < h; yy++) {
+	COLORREF pixel;
+	for (xx = 0; xx < w; xx++) {
+	    pixel = GetPixel(hdc, x+xx, y+yy);
+	    if (pixel == CLR_INVALID) {
+		break;
+	    }
+	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 0] = GetRValue(pixel);
+	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 1] = GetGValue(pixel);
+	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 2] = GetBValue(pixel);
+	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 3] = 255;
+	}
+    }
+    ReleaseDC(hwnd, hdc);
+#else
     ximage = XGetImage(display, rootWindow,
 	    grabX, grabY, grabW, grabH, AllPlanes, ZPixmap);
     if (ximage == NULL) {
@@ -3642,13 +3698,16 @@ LoupeCmd(
 	    pixelPtr[y * photoBlock.pitch + x * 4 + 3] = 255;
 	}
     }
+#endif
 
     TK_PHOTOPUTZOOMEDBLOCK(interp, photoH, &photoBlock, 0, 0, w, h,
 	    zoom, zoom, 1, 1, TK_PHOTO_COMPOSITE_SET);
 
     Tcl_Free((char *) pixelPtr);
+#ifndef WIN32
     ckfree((char *) xcolors);
     XDestroyImage(ximage);
+#endif
 
     return TCL_OK;
 }
@@ -3781,7 +3840,7 @@ Treectrl_Init(
 
     /* Hack for colorizing a image (like Win98 explorer) */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
-#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
+#if !defined(MAC_TCL) && !defined(MAC_OSX_TK)
     /* Screen magnifier to check those dotted lines */
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
 #endif

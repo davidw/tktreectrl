@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.39 2005/09/07 20:43:35 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.40 2005/09/25 20:53:24 hobbs2 Exp $
 
 set VERSION 2.1
 
@@ -1420,7 +1420,7 @@ proc compare {i1 i2} {
 }
 
 # A little screen magnifier for X11
-if {$::thisPlatform eq "unix"} {
+if {[llength [info commands loupe]]} {
 
     set Loupe(zoom) 3
     set Loupe(x) 0
@@ -1459,6 +1459,5 @@ if {$::thisPlatform eq "unix"} {
     }
     MakeLoupeWindow
 
-    # unix
 }
 
