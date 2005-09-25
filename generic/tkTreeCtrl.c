@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2004 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.53 2005/09/25 20:53:24 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.54 2005/09/25 20:56:32 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3524,19 +3524,19 @@ LoupeCmd(
     Tk_PhotoHandle photoH;
     Tk_PhotoImageBlock photoBlock;
     unsigned char *pixelPtr;
-    int x, y, w, h, zoom, xx, yy;
+    int x, y, w, h, zoom;
     int grabX, grabY, grabW, grabH;
-    int i, ncolors;
 #ifdef WIN32
+    int xx, yy;
     HWND hwnd;
     HDC hdc;
 #else
-    int screenNum = Tk_ScreenNumber(tkwin);
     Visual *visual = Tk_Visual(tkwin);
     Window rootWindow = RootWindow(display, screenNum);
     XImage *ximage;
     XColor *xcolors;
     unsigned long red_shift, green_shift, blue_shift;
+    int i, ncolors;
     int separated = 0;
 #endif
 
