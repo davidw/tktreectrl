@@ -3,6 +3,7 @@
 	* generic/tkTreeCtrl.c (LoupeCmd): add OS X support.  Correct
 	Win32 code to use grab size constraints and honor the virtual
 	system metrics (OS X needs similar correction still).
+	Hide cursor on OS X and capture display while grabbing.
 
 2005-09-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
