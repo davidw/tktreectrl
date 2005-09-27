@@ -1,3 +1,9 @@
+2005-09-26  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (LoupeCmd): add OS X support.  Correct
+	Win32 code to use grab size constraints and honor the virtual
+	system metrics (OS X needs similar correction still).
+
 2005-09-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* demos/demo.tcl: just check for 'loupe' to run loupe demo

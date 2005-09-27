@@ -5,14 +5,17 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
- * Copyright (c) 2003-2004 ActiveState, a division of Sophos
+ * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.54 2005/09/25 20:56:32 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.55 2005/09/27 04:04:01 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
 #ifdef WIN32
 #include <windows.h>
+#endif
+#if defined(MAC_TCL) || defined(MAC_OSX_TK)
+#include <Carbon/Carbon.h>
 #endif
 
 /*
@@ -3485,8 +3488,6 @@ ImageTintCmd(
     return TCL_OK;
 }
 
-#if !defined(MAC_TCL) && !defined(MAC_OSX_TK)
-
 /*
  *--------------------------------------------------------------
  *
@@ -3526,10 +3527,12 @@ LoupeCmd(
     unsigned char *pixelPtr;
     int x, y, w, h, zoom;
     int grabX, grabY, grabW, grabH;
+    int minx = 0, miny = 0;
 #ifdef WIN32
     int xx, yy;
     HWND hwnd;
     HDC hdc;
+#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
 #else
     Visual *visual = Tk_Visual(tkwin);
     Window rootWindow = RootWindow(display, screenNum);
@@ -3582,27 +3585,52 @@ LoupeCmd(
 	zoom = 1;
     }
 
+#ifdef WIN32
+    /*
+     * Windows multiple monitors can have negative coords
+     */
+    minx = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    miny = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    displayW = GetSystemMetrics(SM_CXVIRTUALSCREEN);
+    displayH = GetSystemMetrics(SM_CYVIRTUALSCREEN);
+#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
+    /*
+     * OS X multiple monitors can have negative coords
+     * FIX: must be implemented
+     * Probably with CGDisplayPixelsWide & CGDisplayPixelsHigh,
+     * may need to iterate existing displays
+     */
+#else
+    /*
+     * Does X11 allow for negative screen coords?
+     */
+#endif
     grabX = x - (w / zoom / 2);
     grabY = y - (h / zoom / 2);
     grabW = w / zoom;
     grabH = h / zoom;
     if (grabW > displayW)		grabW = displayW;
     if (grabH > displayH)		grabH = displayH;
-    if (grabX < 0)			grabX = 0;
-    if (grabY < 0)			grabY = 0;
+    if (grabX < minx)			grabX = minx;
+    if (grabY < miny)			grabY = miny;
     if (grabX + grabW > displayW)	grabX = displayW - grabW;
     if (grabY + grabH > displayH)	grabY = displayH - grabH;
+
+    if ((grabW <= 0) || (grabH <= 0)) {
+	return TCL_OK;
+    }
+
 #ifdef WIN32
     hwnd = GetDesktopWindow();
     hdc = GetWindowDC(hwnd);
 
     /* XImage -> Tk_Image */
-    pixelPtr = (unsigned char *) Tcl_Alloc(w * h * 4);
-    memset(pixelPtr, 0, (w * h * 4));
+    pixelPtr = (unsigned char *) Tcl_Alloc(grabW * grabH * 4);
+    memset(pixelPtr, 0, (grabW * grabH * 4));
     photoBlock.pixelPtr  = pixelPtr;
-    photoBlock.width     = w;
-    photoBlock.height    = h;
-    photoBlock.pitch     = w * 4;
+    photoBlock.width     = grabW;
+    photoBlock.height    = grabH;
+    photoBlock.pitch     = grabW * 4;
     photoBlock.pixelSize = 4;
     photoBlock.offset[0] = 0;
     photoBlock.offset[1] = 1;
@@ -3613,20 +3641,82 @@ LoupeCmd(
      * We could do a BitBlt for bulk copying, but then we'd have to
      * do screen size consistency checks and possibly pixel conversion.
      */
-    for (yy = 0; yy < h; yy++) {
+    for (yy = 0; yy < grabH; yy++) {
 	COLORREF pixel;
-	for (xx = 0; xx < w; xx++) {
-	    pixel = GetPixel(hdc, x+xx, y+yy);
+	unsigned long stepDest = yy * photoBlock.pitch;
+	for (xx = 0; xx < grabW; xx++) {
+	    pixel = GetPixel(hdc, grabX + xx, grabY + yy);
 	    if (pixel == CLR_INVALID) {
-		break;
+		/*
+		 * Skip just this pixel, as others will be valid depending on
+		 * what corner we are in.
+		 */
+		continue;
 	    }
-	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 0] = GetRValue(pixel);
-	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 1] = GetGValue(pixel);
-	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 2] = GetBValue(pixel);
-	    pixelPtr[yy * photoBlock.pitch + xx * 4 + 3] = 255;
+	    pixelPtr[stepDest + xx * 4 + 0] = GetRValue(pixel);
+	    pixelPtr[stepDest + xx * 4 + 1] = GetGValue(pixel);
+	    pixelPtr[stepDest + xx * 4 + 2] = GetBValue(pixel);
+	    pixelPtr[stepDest + xx * 4 + 3] = 255;
 	}
     }
     ReleaseDC(hwnd, hdc);
+#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
+    /*
+     * Adapted from John Anon's ScreenController demo code.
+     */
+    int xx, yy;
+    unsigned char *screenBytes;
+    int bPerPixel, byPerRow, byPerPixel;
+
+    // Gets all the screen info:
+    bPerPixel  = CGDisplayBitsPerPixel(kCGDirectMainDisplay);
+    byPerRow   = CGDisplayBytesPerRow(kCGDirectMainDisplay);
+    byPerPixel = bPerPixel / 8;
+
+    screenBytes = (unsigned char *)CGDisplayBaseAddress(kCGDirectMainDisplay);
+
+    pixelPtr = (unsigned char *) Tcl_Alloc(grabW * grabH * 4);
+    memset(pixelPtr, 0, (grabW * grabH * 4));
+
+    photoBlock.pixelPtr  = pixelPtr;
+    photoBlock.width     = grabW;
+    photoBlock.height    = grabH;
+    photoBlock.pitch     = grabW * 4;
+    photoBlock.pixelSize = 4;
+    photoBlock.offset[0] = 0;
+    photoBlock.offset[1] = 1;
+    photoBlock.offset[2] = 2;
+    photoBlock.offset[3] = 3;
+
+    for (yy = 0; yy < grabH; yy++) {
+	unsigned long newPixel = 0;
+	unsigned long stepSrc = (grabY + yy) * byPerRow;
+	unsigned long stepDest = yy * photoBlock.pitch;
+
+	for (xx = 0; xx < grabW; xx++) {
+	    if (bPerPixel == 16) {
+		unsigned short thisPixel;
+
+		thisPixel = *((unsigned short*)(screenBytes + stepSrc
+				      + ((grabX + xx) * byPerPixel)));
+		/* Transform from 0xARGB (1555) to 0xR0G0B0A0 (4444) */
+		newPixel = (((thisPixel & 0x8000) >> 15) * 0xF8) | /* A */
+		    ((thisPixel & 0x7C00) << 17) | /* R */
+		    ((thisPixel & 0x03E0) << 14) | /* G */
+		    ((thisPixel & 0x001F) << 11);  /* B */
+	    } else if (bPerPixel == 32) {
+		unsigned long thisPixel;
+
+		thisPixel = *((unsigned long*)(screenBytes + stepSrc
+				      + ((grabX + xx) * byPerPixel)));
+
+		/* Transformation is from 0xAARRGGBB to 0xRRGGBBAA */
+		newPixel = ((thisPixel & 0xFF000000) >> 24) |
+		    ((thisPixel & 0x00FFFFFF) << 8);
+	    }
+	    *((unsigned int *)(pixelPtr + stepDest + xx * 4)) = newPixel;
+	}
+    }
 #else
     ximage = XGetImage(display, rootWindow,
 	    grabX, grabY, grabW, grabH, AllPlanes, ZPixmap);
@@ -3704,15 +3794,13 @@ LoupeCmd(
 	    zoom, zoom, 1, 1, TK_PHOTO_COMPOSITE_SET);
 
     Tcl_Free((char *) pixelPtr);
-#ifndef WIN32
+#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
     ckfree((char *) xcolors);
     XDestroyImage(ximage);
 #endif
 
     return TCL_OK;
 }
-
-#endif /* not WIN32 && not MAC_TCL && not MAC_OSX_TK */
 
 /*
  *--------------------------------------------------------------
@@ -3840,10 +3928,8 @@ Treectrl_Init(
 
     /* Hack for colorizing a image (like Win98 explorer) */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
-#if !defined(MAC_TCL) && !defined(MAC_OSX_TK)
     /* Screen magnifier to check those dotted lines */
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
-#endif
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_PATCHLEVEL) != TCL_OK) {
 	return TCL_ERROR;
