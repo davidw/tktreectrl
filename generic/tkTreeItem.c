@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.53 2005/09/16 00:05:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.54 2005/09/28 21:55:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -88,7 +88,7 @@ static Tk_OptionSpec itemOptionSpecs[] = {
  *
  * Column_Alloc --
  *
- *	Allocate an initialize a new Column record.
+ *	Allocate and initialize a new Column record.
  *
  * Results:
  *	Pointer to allocated Column.
