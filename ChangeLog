@@ -1,3 +1,8 @@
+2005-09-27  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (LoupeCmd): don't capture display (it
+	causes flashing) on OS X.
+
 2005-09-26  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.c (LoupeCmd): add OS X support.  Correct

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.56 2005/09/27 04:44:36 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.57 2005/09/28 03:27:02 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3669,7 +3669,6 @@ LoupeCmd(
     int bPerPixel, byPerRow, byPerPixel;
 
     // Gets all the screen info:
-    CGDisplayCapture(kCGDirectMainDisplay);
     CGDisplayHideCursor(kCGDirectMainDisplay);
     bPerPixel  = CGDisplayBitsPerPixel(kCGDirectMainDisplay);
     byPerRow   = CGDisplayBytesPerRow(kCGDirectMainDisplay);
@@ -3720,7 +3719,6 @@ LoupeCmd(
 	}
     }
     CGDisplayShowCursor(kCGDirectMainDisplay);
-    CGDisplayRelease(kCGDirectMainDisplay);
 #else
     ximage = XGetImage(display, rootWindow,
 	    grabX, grabY, grabW, grabH, AllPlanes, ZPixmap);
