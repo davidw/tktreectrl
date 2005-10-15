@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.57 2005/09/28 03:27:02 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.58 2005/10/15 03:05:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3664,6 +3664,7 @@ LoupeCmd(
     /*
      * Adapted from John Anon's ScreenController demo code.
      */
+    {
     int xx, yy;
     unsigned char *screenBytes;
     int bPerPixel, byPerRow, byPerPixel;
@@ -3719,6 +3720,7 @@ LoupeCmd(
 	}
     }
     CGDisplayShowCursor(kCGDirectMainDisplay);
+    }
 #else
     ximage = XGetImage(display, rootWindow,
 	    grabX, grabY, grabW, grabH, AllPlanes, ZPixmap);
