@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.10 2005/07/07 03:17:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.11 2005/11/18 22:47:49 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -687,6 +687,8 @@ int TreeTheme_Init(Tcl_Interp *interp)
 #include <Carbon/Carbon.h>
 #include "tkMacOSXInt.h"
 
+static RgnHandle oldClip = NULL, boundsRgn = NULL;
+
 int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     int arrow, int x, int y, int width, int height)
 {
@@ -718,12 +720,30 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     SetGWorld(destPort, 0);
     TkMacOSXSetUpClippingRgn(drawable);
 
+    /* Save the old clipping region because we are going to modify it. */
+    if (oldClip == NULL)
+	oldClip = NewRgn();
+    GetClip(oldClip);
+
+    /* Create a clipping region as big as the header. */
+    if (boundsRgn == NULL)
+	boundsRgn = NewRgn();
+    RectRgn(boundsRgn, &bounds);
+
+    /* Set the clipping region to the intersection of the two regions. */
+    SectRgn(oldClip, boundsRgn, boundsRgn);
+    SetClip(boundsRgn);
+
+    /* Draw the left edge outside of the clipping region. */
+    bounds.left -= 1;
+
     (void) DrawThemeButton(&bounds, kThemeListHeaderButton, &info,
 	NULL,	/*prevInfo*/
 	NULL,	/*eraseProc*/
 	NULL,	/*labelProc*/
 	NULL);	/*userData*/
-   
+
+    SetClip(oldClip);
     SetGWorld(saveWorld,saveDevice);
 
     return TCL_OK;
