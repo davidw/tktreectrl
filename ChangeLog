@@ -1,3 +1,8 @@
+2006-01-25  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* configure, configure.ac: update to TEA 3.5
+	* tclconfig/tcl.m4:        TEA rcs 1.89 2006/01/25 21:25:02
+
 2005-12-02  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* tclconfig/tcl.m4, configure.ac, configure: update to TEA 3.4
