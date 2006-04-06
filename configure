@@ -1773,12 +1773,12 @@ echo "$as_me: error: ${with_tkconfig} directory doesn't contain tkConfig.sh" >&2
 
 	    # on Windows, check in common installation locations
 	    if test "${TEA_PLATFORM}" = "windows" \
-		-a x"${ac_cv_c_tclconfig}" = x ; then
+		-a x"${ac_cv_c_tkconfig}" = x ; then
 		for i in `ls -d C:/Tcl/lib 2>/dev/null` \
 			`ls -d C:/Progra~1/Tcl/lib 2>/dev/null` \
 			; do
-		    if test -f "$i/tclConfig.sh" ; then
-			ac_cv_c_tclconfig=`(cd $i; pwd)`
+		    if test -f "$i/tkConfig.sh" ; then
+			ac_cv_c_tkconfig=`(cd $i; pwd)`
 			break
 		    fi
 		done
@@ -8715,7 +8715,7 @@ echo "$as_me: WARNING: 64bit mode not supported by gcc" >&2;}
 	    # NetBSD/SPARC needs -fPIC, -fpic will not do.
 	    SHLIB_CFLAGS="-fPIC"
 	    SHLIB_LD="ld -Bshareable -x"
-	    SHLIB_LD_LIBS=""
+	    SHLIB_LD_LIBS='${LIBS}'
 	    SHLIB_SUFFIX=".so"
 	    DL_OBJS="tclLoadDl.o"
 	    DL_LIBS=""
@@ -10286,6 +10286,9 @@ _ACEOF
 	fi
 	# Some packages build their own stubs libraries
 	eval eval "PKG_STUB_LIB_FILE=${PACKAGE_NAME}stub${UNSHARED_LIB_SUFFIX}"
+	if test "$GCC" = "yes"; then
+	    PKG_STUB_LIB_FILE=lib${PKG_STUB_LIB_FILE}
+	fi
 	# These aren't needed on Windows (either MSVC or gcc)
 	RANLIB=:
 	RANLIB_STUB=:
