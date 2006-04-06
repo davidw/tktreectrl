@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.58 2005/10/15 03:05:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.59 2006/04/06 00:30:55 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3701,20 +3701,35 @@ LoupeCmd(
 
 		thisPixel = *((unsigned short*)(screenBytes + stepSrc
 				      + ((grabX + xx) * byPerPixel)));
+#ifdef WORDS_BIGENDIAN
 		/* Transform from 0xARGB (1555) to 0xR0G0B0A0 (4444) */
 		newPixel = (((thisPixel & 0x8000) >> 15) * 0xF8) | /* A */
 		    ((thisPixel & 0x7C00) << 17) | /* R */
 		    ((thisPixel & 0x03E0) << 14) | /* G */
 		    ((thisPixel & 0x001F) << 11);  /* B */
+#else
+		/* Transform from 0xARGB (1555) to 0xB0G0R0A0 (4444) */
+		newPixel = (((thisPixel & 0x8000) >> 15) * 0xF8) | /* A */
+		    ((thisPixel & 0x7C00) << 11) | /* R */
+		    ((thisPixel & 0x03E0) << 14) | /* G */
+		    ((thisPixel & 0x001F) << 17);  /* B */
+#endif
 	    } else if (bPerPixel == 32) {
 		unsigned long thisPixel;
 
 		thisPixel = *((unsigned long*)(screenBytes + stepSrc
 				      + ((grabX + xx) * byPerPixel)));
 
+#ifdef WORDS_BIGENDIAN
 		/* Transformation is from 0xAARRGGBB to 0xRRGGBBAA */
 		newPixel = ((thisPixel & 0xFF000000) >> 24) |
 		    ((thisPixel & 0x00FFFFFF) << 8);
+#else
+		/* Transformation is from 0xAARRGGBB to 0xBBGGRRAA */
+		newPixel = (thisPixel & 0xFF00FF00) |
+		    ((thisPixel & 0x00FF0000) >> 16) |
+		    ((thisPixel & 0x000000FF) << 16);
+#endif
 	    }
 	    *((unsigned int *)(pixelPtr + stepDest + xx * 4)) = newPixel;
 	}

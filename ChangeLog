@@ -1,3 +1,10 @@
+2006-04-05  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (LoupeCmd): correct loupe on OS X x86.
+
+	* configure, configure.ac: add AC_C_BIGENDIAN check
+	* tclconfig/tcl.m4:        TEA rcs 1.91 2006/03/28 21:07:09
+
 2006-01-25  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* configure, configure.ac: update to TEA 3.5
