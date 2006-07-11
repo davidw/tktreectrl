@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.45 2005/09/16 02:02:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.46 2006/07/11 00:10:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4191,7 +4191,7 @@ TreeStyle_ElementCget(
 /*
  *----------------------------------------------------------------------
  *
- * TreeStyle_ElementCget --
+ * TreeStyle_ElementConfigure --
  *
  *	This procedure is invoked to process the [item element configure]
  *	widget command.  See the user documentation for details on what
