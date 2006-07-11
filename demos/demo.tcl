@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.40 2005/09/25 20:53:24 hobbs2 Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.41 2006/07/11 00:11:29 treectrl Exp $
 
 set VERSION 2.1
 
@@ -160,6 +160,7 @@ foreach file {
     outlook-folders
     outlook-newgroup
     random
+    span
     textvariable
     www-options
 } {
@@ -936,6 +937,7 @@ proc InitDemoList {} {
 	"Firefox Privacy" DemoFirefoxPrivacy firefox.tcl \
 	"Textvariable" DemoTextvariable textvariable.tcl \
 	"Big List" DemoBigList biglist.tcl \
+	"Column Spanning" DemoSpan span.tcl \
 	] {
 	set item [$t item create]
 	$t item lastchild root $item
