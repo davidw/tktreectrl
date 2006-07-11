@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.21 2005/11/16 23:39:06 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.22 2006/07/11 22:10:58 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -72,11 +72,15 @@ bind TreeCtrl <Control-KeyPress-Right> {
 }
 bind TreeCtrl <KeyPress-Prior> {
     %W yview scroll -1 pages
-    %W activate {nearest 0 0}
+    if {[%W item id {nearest 0 0}] ne ""} {
+	%W activate {nearest 0 0}
+    }
 }
 bind TreeCtrl <KeyPress-Next> {
     %W yview scroll 1 pages
-    %W activate {nearest 0 0}
+    if {[%W item id {nearest 0 0}] ne ""} {
+	%W activate {nearest 0 0}
+    }
 }
 bind TreeCtrl <Control-KeyPress-Prior> {
     %W xview scroll -1 pages
@@ -91,17 +95,21 @@ bind TreeCtrl <KeyPress-End> {
     %W xview moveto 1
 }
 bind TreeCtrl <Control-KeyPress-Home> {
-    %W activate {first visible}
-    %W see active
-    %W selection modify active all
+    if {[%W item id {first visible}] ne ""} {
+	%W activate {first visible}
+	%W see active
+	%W selection modify active all
+    }
 }
 bind TreeCtrl <Shift-Control-KeyPress-Home> {
     TreeCtrl::DataExtend %W 0
 }
 bind TreeCtrl <Control-KeyPress-End> {
-    %W activate {last visible}
-    %W see active
-    %W selection modify active all
+    if {[%W item id {last visible}] ne ""} {
+	%W activate {last visible}
+	%W see active
+	%W selection modify active all
+    }
 }
 bind TreeCtrl <Shift-Control-KeyPress-End> {
     TreeCtrl::DataExtend %W [%W item id {last visible}]
