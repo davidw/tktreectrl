@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.54 2005/09/28 21:55:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.55 2006/07/11 00:07:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -177,6 +177,121 @@ TreeItemColumn_NeededWidth(
 		item->state | self->cstate);
     return 0;
 }
+
+#ifdef EXPENSIVE_SPAN_WIDTH /* NOT USED */
+
+/*
+ * When a style spans 2 or more columns, all of the requested width goes
+ * to the first column in the span. Ideally the width needed by the style
+ * would be distributed over each column in the span. To be done properly,
+ * the visibility and fixed-width of each column needs to be considered.
+ *
+ * This routine does an okay job of calculating the requested width of a
+ * column in an item when spans are involved; however there is a lot of
+ * processing involved, and this routine is called for each column in
+ * a span separately (it would be better to calculate the width of all
+ * the columns in a span at the same time).
+ */
+
+int
+TreeItem_NeededWidthOfColumn(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int _columnIndex		/* Column index. */
+    )
+{
+    Item *item = (Item *) item_;
+    TreeColumn treeColumn = tree->columns;
+    Column *column = item->columns;
+    int columnIndex = 0, itemColumnIndex = 0, span = 1;
+    int selfIndex = _columnIndex, fixedWidth = 0, width = 0;
+    int spanStart, spanEnd;
+    struct span {
+	Column *itemColumn;
+	int itemColumnIndex;
+	int fixedWidth;
+	int spanWidth;
+	int visible;
+    } staticSpans[STATIC_SIZE], *spans = staticSpans;
+
+    STATIC_ALLOC(spans, struct span, tree->columnCount);
+
+    while (treeColumn != NULL) {
+	spans[columnIndex].visible = TreeColumn_Visible(treeColumn);
+	if (--span == 0) {
+	    if (spans[columnIndex].visible)
+		span = column ? column->span : 1;
+	    else
+		span = 1;
+	    itemColumnIndex = columnIndex;
+	}
+	spans[columnIndex].itemColumn = column;
+	spans[columnIndex].itemColumnIndex = itemColumnIndex;
+	spans[columnIndex].spanWidth = 0;
+	spans[columnIndex].fixedWidth = TreeColumn_FixedWidth(treeColumn);
+	++columnIndex;
+	treeColumn = TreeColumn_Next(treeColumn);
+	if (column != NULL)
+	    column = column->next;
+    }
+
+    span = 0;
+    columnIndex = spanStart = spanEnd = spans[selfIndex].itemColumnIndex;
+    while (spans[columnIndex].itemColumnIndex == spanStart) {
+	if (spans[columnIndex].visible) {
+	    if (spans[columnIndex].fixedWidth >= 0) {
+		fixedWidth += spans[columnIndex].fixedWidth;
+		spans[columnIndex].spanWidth = spans[columnIndex].fixedWidth;
+	    } else
+		++span; /* number of visible columns in the span with no
+			 * fixed width */
+	}
+	spanEnd = columnIndex;
+	++columnIndex;
+	if (columnIndex == tree->columnCount)
+	    break;
+    }
+
+    column = spans[spanStart].itemColumn;
+    if (column != NULL && column->style != NULL) {
+	width = TreeStyle_NeededWidth(tree, column->style,
+		item->state | column->cstate);
+	if (width > fixedWidth && span > 0) {
+	    width -= fixedWidth;
+	    while (width > 0) {
+		int each = (width > span) ? width / span : 1;
+		columnIndex = spanStart;
+		while (columnIndex <= spanEnd) {
+		    if (spans[columnIndex].visible) {
+			if (spans[columnIndex].fixedWidth < 0) {
+			    spans[columnIndex].spanWidth += each;
+			    width -= each;
+			    if (width <= 0)
+				break;
+			}
+		    }
+		    ++columnIndex;
+		}
+	    }
+	};
+    }
+
+if (0)
+{
+    int i;
+    for (i = 0; i < tree->columnCount; i++) {
+	dbwin("%d,%d: itemColumn %p itemColumnIndex %d fixedWidth %d spanWidth %d\n",
+	    item->id, i, spans[i].itemColumn, spans[i].itemColumnIndex, spans[i].fixedWidth,
+	    spans[i].spanWidth);
+    }
+}
+    width = spans[selfIndex].spanWidth;
+    STATIC_FREE(spans, struct span, tree->columnCount);
+
+    return width;
+}
+
+#endif /* COLUMN_SPAN */
 
 /*
  *----------------------------------------------------------------------
@@ -4311,12 +4426,16 @@ struct SortData
     struct SortItem1 *item1s; /* SortItem.item1 points in here */
 #define MAX_SORT_COLUMNS 40
     struct SortColumn columns[MAX_SORT_COLUMNS];
-    int count; /* max number of columns to compare */
+    int columnCount; /* max number of columns to compare */
     int result;
 };
 
 /* from Tcl 8.4.0 */
-static int DictionaryCompare(char *left, char *right)
+static int
+DictionaryCompare(
+    char *left,
+    char *right
+    )
 {
     Tcl_UniChar uniLeft, uniRight, uniLeftLower, uniRightLower;
     int diff, zeros;
@@ -4422,7 +4541,12 @@ static int DictionaryCompare(char *left, char *right)
 }
 
 static int
-CompareAscii(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
+CompareAscii(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b,
+    int n			/* Column index. */
+    )
 {
     char *left  = a->item1[n].string;
     char *right = b->item1[n].string;
@@ -4438,7 +4562,12 @@ CompareAscii(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
 }
 
 static int
-CompareDict(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
+CompareDict(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b,
+    int n			/* Column index. */
+    )
 {
     char *left  = a->item1[n].string;
     char *right = b->item1[n].string;
@@ -4454,21 +4583,36 @@ CompareDict(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
 }
 
 static int
-CompareDouble(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
+CompareDouble(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b,
+    int n			/* Column index. */
+    )
 {
     return (a->item1[n].doubleValue < b->item1[n].doubleValue) ? -1 :
 	((a->item1[n].doubleValue == b->item1[n].doubleValue) ? 0 : 1);
 }
 
 static int
-CompareLong(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
+CompareLong(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b,
+    int n			/* Column index. */
+    )
 {
     return (a->item1[n].longValue < b->item1[n].longValue) ? -1 :
 	((a->item1[n].longValue == b->item1[n].longValue) ? 0 : 1);
 }
 
 static int
-CompareCmd(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
+CompareCmd(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b,
+    int n			/* Column index. */
+    )
 {
     Tcl_Interp *interp = sortData->tree->interp;
     Tcl_Obj **objv, *paramObjv[2];
@@ -4501,11 +4645,19 @@ CompareCmd(SortData *sortData, struct SortItem *a, struct SortItem *b, int n)
     return v;
 }
 
-static int CompareProc(SortData *sortData, struct SortItem *a, struct SortItem *b)
+static int
+CompareProc(
+    SortData *sortData,
+    struct SortItem *a,
+    struct SortItem *b
+    )
 {
     int i, v;
 
-    for (i = 0; i < sortData->count; i++) {
+    if (a->item == b->item)
+	return 0;
+
+    for (i = 0; i < sortData->columnCount; i++) {
 	v = (*sortData->columns[i].proc)(sortData, a, b, i);
 
 	/* -command returned error */
@@ -4523,30 +4675,38 @@ static int CompareProc(SortData *sortData, struct SortItem *a, struct SortItem *
 
 /* BEGIN custom quicksort() */
 
-static int find_pivot(SortData *sortData, struct SortItem *left, struct SortItem *right, struct SortItem *pivot)
+static int
+find_pivot(
+    SortData *sortData,
+    struct SortItem *left,
+    struct SortItem *right,
+    struct SortItem *pivot
+    )
 {
-    struct SortItem *a, *b, *c, *p;
+    struct SortItem *a, *b, *c, *p, *tmp;
     int v;
 
     a = left;
     b = (left + (right - left) / 2);
     c = right;
 
+    /* Arrange a <= b <= c. */
     v = CompareProc(sortData, a, b);
     if (sortData->result != TCL_OK)
 	return 0;
-    if (v < 0) { p = a; a = b; b = p; }
+    if (v > 0) { tmp = a; a = b; b = tmp; }
 
     v = CompareProc(sortData, a, c);
     if (sortData->result != TCL_OK)
 	return 0;
-    if (v < 0) { p = a; a = c; c = p; }
+    if (v > 0) { tmp = a; a = c; c = tmp; }
 
     v = CompareProc(sortData, b, c);
     if (sortData->result != TCL_OK)
 	return 0;
-    if (v < 0) { p = b; b = c; c = p; }
+    if (v > 0) { tmp = b; b = c; c = tmp; }
 
+    /* if (a < b) pivot = b */
     v = CompareProc(sortData, a, b);
     if (sortData->result != TCL_OK)
 	return 0;
@@ -4555,6 +4715,7 @@ static int find_pivot(SortData *sortData, struct SortItem *left, struct SortItem
 	return 1;
     }
 
+    /* if (b < c) pivot = c */
     v = CompareProc(sortData, b, c);
     if (sortData->result != TCL_OK)
 	return 0;
@@ -4581,7 +4742,13 @@ static int find_pivot(SortData *sortData, struct SortItem *left, struct SortItem
  * quicksort, but are present to detect the aforementioned bugs. */
 #define BUGGY_COMMAND
 
-static struct SortItem *partition(SortData *sortData, struct SortItem *left, struct SortItem *right, struct SortItem *pivot)
+static struct SortItem *
+partition(
+    SortData *sortData,
+    struct SortItem *left,
+    struct SortItem *right,
+    struct SortItem *pivot
+    )
 {
     int v;
 #ifdef BUGGY_COMMAND
@@ -4591,7 +4758,7 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
     while (left <= right) {
 	/*
 	  while (*left < *pivot)
-	  ++left;
+	    ++left;
 	*/
 	while (1) {
 	    v = CompareProc(sortData, left, pivot);
@@ -4608,7 +4775,7 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
 	}
 	/*
 	  while (*right >= *pivot)
-	  --right;
+	    --right;
 	*/
 	while (1) {
 	    v = CompareProc(sortData, right, pivot);
@@ -4640,22 +4807,27 @@ static struct SortItem *partition(SortData *sortData, struct SortItem *left, str
 #endif
 }
 
-static void quicksort(SortData *sortData, struct SortItem *left, struct SortItem *right)
+static void
+quicksort(
+    SortData *sortData,
+    struct SortItem *left,
+    struct SortItem *right
+    )
 {
     struct SortItem *p, pivot;
 
     if (sortData->result != TCL_OK)
 	return;
 
+    if (left == right)
+	return;
+
+    /* FIXME: switch to insertion sort or similar when the number of
+     * elements is small. */
+
     if (find_pivot(sortData, left, right, &pivot) == 1) {
 	p = partition(sortData, left, right, &pivot);
-	if (sortData->result != TCL_OK)
-	    return;
-
 	quicksort(sortData, left, p - 1);
-	if (sortData->result != TCL_OK)
-	    return;
-
 	quicksort(sortData, p, right);
     }
 }
@@ -4713,7 +4885,7 @@ ItemSortCmd(
 
     /* Defaults: sort ascii strings in column 0 only */
     sortData.tree = tree;
-    sortData.count = 1;
+    sortData.columnCount = 1;
     sortData.columns[0].column = 0;
     sortData.columns[0].sortBy = SORT_ASCII;
     sortData.columns[0].order = 1;
@@ -4742,7 +4914,7 @@ ItemSortCmd(
 	}
 	switch (index) {
 	    case OPT_ASCII:
-		sortData.columns[sortData.count - 1].sortBy = SORT_ASCII;
+		sortData.columns[sortData.columnCount - 1].sortBy = SORT_ASCII;
 		break;
 	    case OPT_COLUMN:
 		if (TreeColumn_FromObj(tree, objv[i + 1], &treeColumn,
@@ -4750,31 +4922,31 @@ ItemSortCmd(
 		    return TCL_ERROR;
 		/* The first -column we see is the first column we compare */
 		if (sawColumn) {
-		    if (sortData.count + 1 > MAX_SORT_COLUMNS) {
+		    if (sortData.columnCount + 1 > MAX_SORT_COLUMNS) {
 			FormatResult(interp,
 				"can't compare more than %d columns",
 				MAX_SORT_COLUMNS);
 			return TCL_ERROR;
 		    }
-		    sortData.count++;
+		    sortData.columnCount++;
 		    /* Defaults for this column */
-		    sortData.columns[sortData.count - 1].sortBy = SORT_ASCII;
-		    sortData.columns[sortData.count - 1].order = 1;
-		    sortData.columns[sortData.count - 1].elemCount = 0;
+		    sortData.columns[sortData.columnCount - 1].sortBy = SORT_ASCII;
+		    sortData.columns[sortData.columnCount - 1].order = 1;
+		    sortData.columns[sortData.columnCount - 1].elemCount = 0;
 		}
-		sortData.columns[sortData.count - 1].column = TreeColumn_Index(treeColumn);
+		sortData.columns[sortData.columnCount - 1].column = TreeColumn_Index(treeColumn);
 		sawColumn = TRUE;
 		break;
 	    case OPT_COMMAND:
-		sortData.columns[sortData.count - 1].command = objv[i + 1];
-		sortData.columns[sortData.count - 1].sortBy = SORT_COMMAND;
+		sortData.columns[sortData.columnCount - 1].command = objv[i + 1];
+		sortData.columns[sortData.columnCount - 1].sortBy = SORT_COMMAND;
 		sawCmd = TRUE;
 		break;
 	    case OPT_DECREASING:
-		sortData.columns[sortData.count - 1].order = 0;
+		sortData.columns[sortData.columnCount - 1].order = 0;
 		break;
 	    case OPT_DICT:
-		sortData.columns[sortData.count - 1].sortBy = SORT_DICT;
+		sortData.columns[sortData.columnCount - 1].sortBy = SORT_DICT;
 		break;
 	    case OPT_ELEMENT:
 	    {
@@ -4784,8 +4956,8 @@ ItemSortCmd(
 		if (Tcl_ListObjGetElements(interp, objv[i + 1], &listObjc,
 			    &listObjv) != TCL_OK)
 		    return TCL_ERROR;
-		elemPtr = sortData.columns[sortData.count - 1].elems;
-		sortData.columns[sortData.count - 1].elemCount = 0;
+		elemPtr = sortData.columns[sortData.columnCount - 1].elems;
+		sortData.columns[sortData.columnCount - 1].elemCount = 0;
 		if (listObjc == 0) {
 		} else if (listObjc == 1) {
 		    if (TreeElement_FromObj(tree, listObjv[0], &elemPtr->elem)
@@ -4804,7 +4976,7 @@ ItemSortCmd(
 		    }
 		    elemPtr->style = NULL;
 		    elemPtr->elemIndex = -1;
-		    sortData.columns[sortData.count - 1].elemCount++;
+		    sortData.columns[sortData.columnCount - 1].elemCount++;
 		} else {
 		    if (listObjc & 1) {
 			FormatResult(interp,
@@ -4832,7 +5004,7 @@ ItemSortCmd(
 				    "\n    (processing -element option)");
 			    return TCL_ERROR;
 			}
-			sortData.columns[sortData.count - 1].elemCount++;
+			sortData.columns[sortData.columnCount - 1].elemCount++;
 			elemPtr++;
 		    }
 		}
@@ -4850,10 +5022,10 @@ ItemSortCmd(
 		}
 		break;
 	    case OPT_INCREASING:
-		sortData.columns[sortData.count - 1].order = 1;
+		sortData.columns[sortData.columnCount - 1].order = 1;
 		break;
 	    case OPT_INTEGER:
-		sortData.columns[sortData.count - 1].sortBy = SORT_LONG;
+		sortData.columns[sortData.columnCount - 1].sortBy = SORT_LONG;
 		break;
 	    case OPT_LAST:
 		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK)
@@ -4870,7 +5042,7 @@ ItemSortCmd(
 		notReally = TRUE;
 		break;
 	    case OPT_REAL:
-		sortData.columns[sortData.count - 1].sortBy = SORT_DOUBLE;
+		sortData.columns[sortData.columnCount - 1].sortBy = SORT_DOUBLE;
 		break;
 	}
 	i += numArgs[index];
@@ -4883,15 +5055,21 @@ ItemSortCmd(
 	return TCL_ERROR;
     }
 
+    /* If there is only one item to sort, then return early. */
     if (first == last) {
 	if (notReally)
 	    Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) first));
 	return TCL_OK;
     }
 
-    for (i = 0; i < sortData.count; i++) {
+    for (i = 0; i < sortData.columnCount; i++) {
+
+	/* Initialize the sort procedure for this column. */
 	sortData.columns[i].proc = sortProc[sortData.columns[i].sortBy];
 
+	/* Append two dummy args to the -command argument. These two dummy
+	 * args are replaced by the 2 item ids being compared. See
+	 * CompareCmd(). */
 	if (sortData.columns[i].sortBy == SORT_COMMAND) {
 	    Tcl_Obj *obj = Tcl_DuplicateObj(sortData.columns[i].command);
 	    Tcl_Obj *obj2 = Tcl_NewObj();
@@ -4900,7 +5078,11 @@ ItemSortCmd(
 		Tcl_DecrRefCount(obj);
 		Tcl_IncrRefCount(obj2);
 		Tcl_DecrRefCount(obj2);
-		/* FIXME: free other .command[] */
+
+		for (j = 0; j < i; j++)
+		    if (sortData.columns[j].sortBy == SORT_COMMAND)
+			Tcl_DecrRefCount(sortData.columns[j].command);
+
 		return TCL_ERROR;
 	    }
 	    (void) Tcl_ListObjAppendElement(interp, obj, obj2);
@@ -4929,10 +5111,10 @@ ItemSortCmd(
     }
     count = indexL - indexF + 1;
 
-    sortData.item1s = (struct SortItem1 *) ckalloc(sizeof(struct SortItem1) * count * sortData.count);
+    sortData.item1s = (struct SortItem1 *) ckalloc(sizeof(struct SortItem1) * count * sortData.columnCount);
     sortData.items = (struct SortItem *) ckalloc(sizeof(struct SortItem) * count);
     for (i = 0; i < count; i++) {
-	sortData.items[i].item1 = sortData.item1s + i * sortData.count;
+	sortData.items[i].item1 = sortData.item1s + i * sortData.columnCount;
 	sortData.items[i].obj = NULL;
     }
 
@@ -4947,7 +5129,7 @@ ItemSortCmd(
 	    Tcl_IncrRefCount(obj);
 	    sortData.items[index].obj = obj;
 	}
-	for (i = 0; i < sortData.count; i++) {
+	for (i = 0; i < sortData.columnCount; i++) {
 	    struct SortItem1 *sortItem1 = sortItem->item1 + i;
 
 	    if (sortData.columns[i].sortBy == SORT_COMMAND)
@@ -5098,7 +5280,7 @@ ItemSortCmd(
     for (i = 0; i < count; i++)
 	if (sortData.items[i].obj != NULL)
 	    Tcl_DecrRefCount(sortData.items[i].obj);
-    for (i = 0; i < sortData.count; i++)
+    for (i = 0; i < sortData.columnCount; i++)
 	if (sortData.columns[i].sortBy == SORT_COMMAND)
 	    Tcl_DecrRefCount(sortData.columns[i].command);
     ckfree((char *) sortData.item1s);
