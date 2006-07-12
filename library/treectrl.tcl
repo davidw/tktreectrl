@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.22 2006/07/11 22:10:58 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.23 2006/07/12 20:51:24 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -676,6 +676,8 @@ proc ::TreeCtrl::SelectionMotion {w el} {
 		set i $el
 		lappend select $el
 		set hack [$w item compare $el == anchor]
+	    } else {
+		set hack 0
 	    }
 	    if {[$w selection includes anchor] || $hack} {
 		set deselect [concat $deselect [$w range $i $el]]
