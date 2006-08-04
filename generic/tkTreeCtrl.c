@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.59 2006/04/06 00:30:55 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.60 2006/08/04 22:49:37 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -487,10 +487,16 @@ static int TreeWidgetCmd(
 		goto error;
 	    }
 	    if (item != tree->activeItem) {
+		int x, y, w, h;
+
 		TreeNotify_ActiveItem(tree, tree->activeItem, item);
 		TreeItem_ChangeState(tree, tree->activeItem, STATE_ACTIVE, 0);
 		tree->activeItem = item;
 		TreeItem_ChangeState(tree, tree->activeItem, 0, STATE_ACTIVE);
+		if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) >= 0) {
+		    Tk_SetCaretPos(tree->tkwin, x - tree->xOrigin,
+			    y - tree->yOrigin, h);
+		}
 	    }
 	    break;
 	}

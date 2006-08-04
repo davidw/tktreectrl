@@ -1,3 +1,8 @@
+2006-08-04  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.c (TreeWidgetCmd): set the tk caret when the
+	active item changes.
+
 2006-04-05  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.c (LoupeCmd): correct loupe on OS X x86.
