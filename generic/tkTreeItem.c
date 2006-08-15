@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.55 2006/07/11 00:07:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.56 2006/08/15 02:23:57 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3686,6 +3686,7 @@ static int Item_Configure(
     int error;
     Tcl_Obj *errorResult = NULL;
     int mask;
+    int lastVisible = item->isVisible;
 
     for (error = 0; error <= 1; error++) {
 	if (error == 0) {
@@ -3720,7 +3721,7 @@ static int Item_Configure(
     if (mask & ITEM_CONF_BUTTON)
 	Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
 
-    if (mask & ITEM_CONF_VISIBLE) {
+    if ((mask & ITEM_CONF_VISIBLE) && (item->isVisible != lastVisible)) {
 	/* May change the width of any column */
 	Tree_InvalidateColumnWidth(tree, -1);
 

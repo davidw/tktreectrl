@@ -1,3 +1,8 @@
+2006-08-14  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeItem.c (Item_Configure): on checking for -visible,
+	verify that the value actually changed, because it can be expensive.
+
 2006-08-04  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.c (TreeWidgetCmd): set the tk caret when the
