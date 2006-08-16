@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.56 2006/08/15 02:23:57 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.57 2006/08/16 00:45:21 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3740,11 +3740,7 @@ static int Item_Configure(
 	}
 
 	tree->updateIndex = 1;
-	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-
-#ifdef SELECTION_VISIBLE
-	Tree_DeselectHidden(tree);
-#endif
+	Tree_DInfoChanged(tree, DINFO_REDO_RANGES | DINFO_REDO_SELECTION);
     }
 
     return TCL_OK;
@@ -5080,9 +5076,11 @@ ItemSortCmd(
 		Tcl_IncrRefCount(obj2);
 		Tcl_DecrRefCount(obj2);
 
-		for (j = 0; j < i; j++)
-		    if (sortData.columns[j].sortBy == SORT_COMMAND)
+		for (j = 0; j < i; j++) {
+		    if (sortData.columns[j].sortBy == SORT_COMMAND) {
 			Tcl_DecrRefCount(sortData.columns[j].command);
+		    }
+		}
 
 		return TCL_ERROR;
 	    }
@@ -5278,17 +5276,22 @@ ItemSortCmd(
     Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 
     done:
-    for (i = 0; i < count; i++)
-	if (sortData.items[i].obj != NULL)
+    for (i = 0; i < count; i++) {
+	if (sortData.items[i].obj != NULL) {
 	    Tcl_DecrRefCount(sortData.items[i].obj);
-    for (i = 0; i < sortData.columnCount; i++)
-	if (sortData.columns[i].sortBy == SORT_COMMAND)
+	}
+    }
+    for (i = 0; i < sortData.columnCount; i++) {
+	if (sortData.columns[i].sortBy == SORT_COMMAND) {
 	    Tcl_DecrRefCount(sortData.columns[i].command);
+	}
+    }
     ckfree((char *) sortData.item1s);
     ckfree((char *) sortData.items);
 
-    if (tree->debug.enable && tree->debug.data)
+    if (tree->debug.enable && tree->debug.data) {
 	Tree_Debug(tree);
+    }
 
     return result;
 }
@@ -5691,7 +5694,10 @@ doNotify:
  *----------------------------------------------------------------------
  */
 
-/* FIXME: optimize all calls to this routine */
+/*
+ * FIXME: optimize all calls to this routine.
+ * Optionally call Tree_DInfoChanged(tree, DINFO_REDO_SELECTION) instead.
+ */
 void
 Tree_DeselectHidden(
     TreeCtrl *tree		/* Widget info. */

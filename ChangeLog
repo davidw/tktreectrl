@@ -1,3 +1,11 @@
+2006-08-15  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeDisplay.c (Tree_Display): Allow Tree_DeselectHidden
+	* generic/tkTreeItem.c (Item_Configure):  to be deferred to next
+	* generic/tkTreeCtrl.h:                   redraw by calling
+	Tree_DInfoChanged(tree, DINFO_REDO_SELECTION).  Significantly
+	improves performance of multiple item visibility changes.
+
 2006-08-14  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeItem.c (Item_Configure): on checking for -visible,

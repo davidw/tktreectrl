@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2005 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.35 2005/09/28 21:56:10 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.36 2006/08/16 00:45:21 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3692,6 +3692,14 @@ Tree_Display(
 	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 	return;
     }
+    /* Some change requires selection changes */
+    if (dInfo->flags & DINFO_REDO_SELECTION) {
+#ifdef SELECTION_VISIBLE
+	Tree_DeselectHidden(tree);
+#endif
+	dInfo->flags &= ~(DINFO_REDO_SELECTION);
+    }
+
     /* A column was deleted */
     if (dInfo->flags & DINFO_REDO_COLUMN_WIDTH) {
 	TreeColumn treeColumn = tree->columns;
