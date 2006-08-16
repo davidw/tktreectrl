@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.19 2005/09/15 04:40:15 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.20 2006/08/16 02:39:58 hobbs2 Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -33,6 +33,50 @@ bind TreeCtrlFileList <ButtonRelease-1> {
     break
 }
 
+## Bindings for the Entry widget used for editing
+
+# Accept edit when we lose the focus
+bind TreeCtrlEntry <FocusOut> {
+    if {[winfo ismapped %W]} {
+	TreeCtrl::EditClose [winfo parent %W] entry 1 0
+    }
+}
+
+# Accept edit on <Return>
+bind TreeCtrlEntry <KeyPress-Return> {
+    TreeCtrl::EditClose [winfo parent %W] entry 1 1
+    break
+}
+
+# Cancel edit on <Escape>, use break as we are doing a "closing" action
+# and don't want that propagated upwards
+bind TreeCtrlEntry <KeyPress-Escape> {
+    TreeCtrl::EditClose [winfo parent %W] entry 0 1
+    break
+}
+
+## Bindings for the Text widget used for editing
+
+# Accept edit when we lose the focus
+bind TreeCtrlText <FocusOut> {
+    if {[winfo ismapped %W]} {
+	TreeCtrl::EditClose [winfo parent %W] text 1 0
+    }
+}
+
+# Accept edit on <Return>
+bind TreeCtrlText <KeyPress-Return> {
+    TreeCtrl::EditClose [winfo parent %W] text 1 1
+    break
+}
+
+# Cancel edit on <Escape>, use break as we are doing a "closing" action
+# and don't want that propagated upwards
+bind TreeCtrlText <KeyPress-Escape> {
+    TreeCtrl::EditClose [winfo parent %W] text 0 1
+    break
+}
+
 namespace eval TreeCtrl {
     variable Priv
     set Priv(edit,delay) 500
@@ -44,11 +88,10 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
     set id [$T identify $x $y]
     set marquee 0
     set Priv(buttonMode) ""
-    if {[winfo exists $T.entry] && [winfo ismapped $T.entry]} {
-	EntryClose $T 1
-    }
-    if {[winfo exists $T.text] && [winfo ismapped $T.text]} {
-	TextClose $T 1
+    foreach e {text entry} {
+	if {[winfo exists $T.$e] && [winfo ismapped $T.$e]} {
+	    EditClose $T $e 1 0
+	}
     }
     FileListEditCancel $T
     # Click outside any item
@@ -488,51 +531,31 @@ proc ::TreeCtrl::EntryOpen {T item column element} {
     set text [$T item element cget $item $column $element -text]
 
     # Create the Entry widget if needed
-    if {[winfo exists $T.entry]} {
-	$T.entry delete 0 end
+    set e $T.entry
+    if {[winfo exists $e]} {
+	$e delete 0 end
     } else {
-	entry $T.entry -borderwidth 1 -highlightthickness 0 -relief solid
-
-	# Accept edit when we lose the focus
-	bind $T.entry <FocusOut> {
-	    if {[winfo ismapped %W]} {
-		TreeCtrl::EntryClose [winfo parent %W] 1
-	    }
-	}
-
-	# Accept edit on <Return>
-	bind $T.entry <KeyPress-Return> {
-	    TreeCtrl::EntryClose [winfo parent %W] 1
-	    focus $TreeCtrl::Priv(entry,[winfo parent %W],focus)
-	}
-
-	# Cancel edit on <Escape>
-	bind $T.entry <KeyPress-Escape> {
-	    TreeCtrl::EntryClose [winfo parent %W] 0
-	    focus $TreeCtrl::Priv(entry,[winfo parent %W],focus)
-	}
+	entry $e -borderwidth 1 -relief solid -highlightthickness 0
+	bindtags $e [linsert [bindtags $e] 1 TreeCtrlEntry]
     }
 
     # Pesky MouseWheel
-    $T notify bind $T.entry <Scroll> {
-	TreeCtrl::EntryClose %T 0
-	focus $TreeCtrl::Priv(entry,%T,focus)
-    }
+    $T notify bind $e <Scroll> { TreeCtrl::EditClose %T entry 0 1 }
 
-    $T.entry configure -font $font
-    $T.entry insert end $text
-    $T.entry selection range 0 end
+    $e configure -font $font
+    $e insert end $text
+    $e selection range 0 end
 
-    set ebw [$T.entry cget -borderwidth]
+    set ebw [$e cget -borderwidth]
     if 1 {
 	set ex [expr {$x - $ebw - 1}]
-	place $T.entry -x $ex -y [expr {$y - $ebw - 1}] \
+	place $e -x $ex -y [expr {$y - $ebw - 1}] \
 	    -bordermode outside
     } else {
 	set hw [$T cget -highlightthickness]
 	set bw [$T cget -borderwidth]
 	set ex [expr {$x - $bw - $hw - $ebw - 1}]
-	place $T.entry -x $ex -y [expr {$y - $bw - $hw - $ebw - 1}]
+	place $e -x $ex -y [expr {$y - $bw - $hw - $ebw - 1}]
     }
 
     # Make the Entry as wide as the text plus "W" but keep it within the
@@ -547,9 +570,9 @@ proc ::TreeCtrl::EntryOpen {T item column element} {
     if {$ex + $width > $right} {
 	set width [expr {$right - $ex}]
     }
-    place configure $T.entry -width $width
+    place configure $e -width $width
 
-    focus $T.entry
+    focus $e
 
     return
 }
@@ -579,50 +602,30 @@ proc ::TreeCtrl::EntryExpanderOpen {T item column element} {
     set text [$T item element cget $item $column $element -text]
 
     # Create the Entry widget if needed
-    if {[winfo exists $T.entry]} {
-	$T.entry delete 0 end
+    set e $T.entry
+    if {[winfo exists $e]} {
+	$e delete 0 end
     } else {
-	entry $T.entry -borderwidth 1 -highlightthickness 0 \
+	entry $e -borderwidth 1 -highlightthickness 0 \
 	    -selectborderwidth 0 -relief solid
-
-	# Accept edit when we lose the focus
-	bind $T.entry <FocusOut> {
-	    if {[winfo ismapped %W]} {
-		TreeCtrl::EntryClose [winfo parent %W] 1
-	    }
-	}
-
-	# Accept edit on <Return>
-	bind $T.entry <KeyPress-Return> {
-	    TreeCtrl::EntryClose [winfo parent %W] 1
-	    focus $TreeCtrl::Priv(entry,[winfo parent %W],focus)
-	}
-
-	# Cancel edit on <Escape>
-	bind $T.entry <KeyPress-Escape> {
-	    TreeCtrl::EntryClose [winfo parent %W] 0
-	    focus $TreeCtrl::Priv(entry,[winfo parent %W],focus)
-	}
+	bindtags $e [linsert [bindtags $e] 1 TreeCtrlEntry]
 
 	# Resize as user types
-	bind $T.entry <KeyPress> {
+	bind $e <KeyPress> {
 	    after idle [list TreeCtrl::EntryExpanderKeypress [winfo parent %W]]
 	}
     }
 
     # Pesky MouseWheel
-    $T notify bind $T.entry <Scroll> {
-	TreeCtrl::EntryClose %T 0
-	focus $TreeCtrl::Priv(entry,%T,focus)
-    }
+    $T notify bind $e <Scroll> { TreeCtrl::EditClose %T entry 0 1 }
 
-    $T.entry configure -font $font -background [$T cget -background]
-    $T.entry insert end $text
-    $T.entry selection range 0 end
+    $e configure -font $font -background [$T cget -background]
+    $e insert end $text
+    $e selection range 0 end
 
-    set ebw [$T.entry cget -borderwidth]
+    set ebw [$e cget -borderwidth]
     set ex [expr {$x - $ebw - 1}]
-    place $T.entry -x $ex -y [expr {$y - $ebw - 1}] \
+    place $e -x $ex -y [expr {$y - $ebw - 1}] \
 	-bordermode outside
 
     # Make the Entry as wide as the text plus "W" but keep it within the
@@ -633,32 +636,44 @@ proc ::TreeCtrl::EntryExpanderOpen {T item column element} {
     if {$ex + $width > $right} {
 	set width [expr {$right - $ex}]
     }
-    place configure $T.entry -width $width
+    place configure $e -width $width
 
-    focus $T.entry
+    focus $e
 
     return
 }
 
-proc ::TreeCtrl::EntryClose {T accept} {
-
+proc ::TreeCtrl::EditClose {T type accept {refocus 0}} {
     variable Priv
 
-    place forget $T.entry
+    set w $T.$type
+    # We need the double-idle to get winfo ismapped to report properly
+    # so this don't get the FocusOut following Escape immediately
+    update idletasks
+    place forget $w
     focus $T
-    update
+    update idletasks
 
     if {$accept} {
+	if {$type eq "entry"} {
+	    set t [$w get]
+	} else {
+	    set t [$w get 1.0 end-1c]
+	}
 	TryEvent $T Edit accept \
-	    [list I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
-		E $Priv(entry,$T,element) t [$T.entry get]]
+	    [list I $Priv($type,$T,item) C $Priv($type,$T,column) \
+		 E $Priv($type,$T,element) t $t]
     }
 
-    $T notify bind $T.entry <Scroll> {}
+    $T notify bind $w <Scroll> {}
 
     TryEvent $T Edit end \
-	[list I $Priv(entry,$T,item) C $Priv(entry,$T,column) \
-	    E $Priv(entry,$T,element)]
+	[list I $Priv($type,$T,item) C $Priv($type,$T,column) \
+	     E $Priv($type,$T,element)]
+
+    if {$refocus} {
+	focus $Priv($type,$T,focus)
+    }
 
     return
 }
@@ -706,52 +721,31 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
     set text [$T item element cget $item $column $element -text]
 
     # Create the Text widget if needed
-    if {[winfo exists $T.text]} {
-	$T.text delete 1.0 end
+    set w $T.text
+    if {[winfo exists $w]} {
+	$w delete 1.0 end
     } else {
-	text $T.text -borderwidth 1 -highlightthickness 0 -relief solid
-
-	# Accept edit when we lose the focus
-	bind $T.text <FocusOut> {
-	    if {[winfo ismapped %W]} {
-		TreeCtrl::TextClose [winfo parent %W] 1
-	    }
-	}
-
-	# Accept edit on <Return>
-	bind $T.text <KeyPress-Return> {
-	    TreeCtrl::TextClose [winfo parent %W] 1
-	    focus $TreeCtrl::Priv(text,[winfo parent %W],focus)
-	    break
-	}
-
-	# Cancel edit on <Escape>
-	bind $T.text <KeyPress-Escape> {
-	    TreeCtrl::TextClose [winfo parent %W] 0
-	    focus $TreeCtrl::Priv(text,[winfo parent %W],focus)
-	}
+	text $w -borderwidth 1 -highlightthickness 0 -relief solid
+	bindtags $w [linsert [bindtags $w] 1 TreeCtrlText]
     }
 
     # Pesky MouseWheel
-    $T notify bind $T.text <Scroll> {
-	TreeCtrl::TextClose %T 0
-	focus $TreeCtrl::Priv(text,%T,focus)
-    }
+    $T notify bind $w <Scroll> { TreeCtrl::EditClose %T text 0 1 }
 
-    $T.text tag configure TAG -justify [$T element cget $element -justify]
-    $T.text configure -font $font
-    $T.text insert end $text
-    $T.text tag add sel 1.0 end
-    $T.text tag add TAG 1.0 end
+    $w tag configure TAG -justify [$T element cget $element -justify]
+    $w configure -font $font
+    $w insert end $text
+    $w tag add sel 1.0 end
+    $w tag add TAG 1.0 end
 
-    set tbw [$T.text cget -borderwidth]
+    set tbw [$w cget -borderwidth]
     set tx [expr {$x1 - $tbw - 1}]
-    place $T.text -x $tx -y [expr {$y1 - $tbw - 1}] \
+    place $w -x $tx -y [expr {$y1 - $tbw - 1}] \
 	-width [expr {$x2 - $x1 + ($tbw + 1) * 2}] \
 	-height [expr {$y2 - $y1 + ($tbw + 1) * 2}] \
 	-bordermode outside
 
-    focus $T.text
+    focus $w
 
     return
 }
@@ -786,49 +780,28 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     }
 
     # Create the Text widget if needed
-    if {[winfo exists $T.text]} {
-	$T.text delete 1.0 end
+    set w $T.text
+    if {[winfo exists $w]} {
+	$w delete 1.0 end
     } else {
-	text $T.text -borderwidth 1 -highlightthickness 0 \
+	text $w -borderwidth 1 -highlightthickness 0 \
 	    -selectborderwidth 0 -relief solid
-
-	# Accept edit when we lose the focus
-	bind $T.text <FocusOut> {
-	    if {[winfo ismapped %W]} {
-		TreeCtrl::TextClose [winfo parent %W] 1
-	    }
-	}
-
-	# Accept edit on <Return>
-	bind $T.text <KeyPress-Return> {
-	    TreeCtrl::TextClose [winfo parent %W] 1
-	    focus $TreeCtrl::Priv(text,[winfo parent %W],focus)
-	    break
-	}
-
-	# Cancel edit on <Escape>
-	bind $T.text <KeyPress-Escape> {
-	    TreeCtrl::TextClose [winfo parent %W] 0
-	    focus $TreeCtrl::Priv(text,[winfo parent %W],focus)
-	}
+	bindtags $w [linsert [bindtags $w] 1 TreeCtrlText]
 
 	# Resize as user types
-	bind $T.text <KeyPress> {
+	bind $w <KeyPress> {
 	    after idle TreeCtrl::TextExpanderKeypress [winfo parent %W]
 	}
     }
 
     # Pesky MouseWheel
-    $T notify bind $T.text <Scroll> {
-	TreeCtrl::TextClose %T 0
-	focus $TreeCtrl::Priv(text,%T,focus)
-    }
+    $T notify bind $w <Scroll> { TreeCtrl::EditClose %T text 0 1 }
 
-    $T.text tag configure TAG -justify $justify
-    $T.text configure -font $font -background [$T cget -background]
-    $T.text insert end $text
-    $T.text tag add sel 1.0 end
-    $T.text tag add TAG 1.0 end
+    $w tag configure TAG -justify $justify
+    $w configure -font $font -background [$T cget -background]
+    $w insert end $text
+    $w tag add sel 1.0 end
+    $w tag add TAG 1.0 end
 
     set Priv(text,$T,font) $font
     set Priv(text,$T,justify) $justify
@@ -837,37 +810,14 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     scan [textlayout $font $text -justify $justify -width $width] \
 	"%d %d" width height
 
-    set tbw [$T.text cget -borderwidth]
+    set tbw [$w cget -borderwidth]
     incr tbw
-    place $T.text -x [expr {$x1 - $tbw}] -y [expr {$y1 - $tbw}] \
+    place $w -x [expr {$x1 - $tbw}] -y [expr {$y1 - $tbw}] \
 	-width [expr {$width + $tbw * 2}] \
 	-height [expr {$height + $tbw * 2}] \
 	-bordermode outside
 
-    focus $T.text
-
-    return
-}
-
-proc ::TreeCtrl::TextClose {T accept} {
-
-    variable Priv
-
-    place forget $T.text
-    focus $T
-    update
-
-    if {$accept} {
-	TryEvent $T Edit accept \
-	    [list I $Priv(text,$T,item) C $Priv(text,$T,column) \
-		E $Priv(text,$T,element) t [$T.text get 1.0 end-1c]]
-    }
-
-    $T notify bind $T.text <Scroll> {}
-
-    TryEvent $T Edit end \
-	[list I $Priv(text,$T,item) C $Priv(text,$T,column) \
-		E $Priv(text,$T,element)]
+    focus $w
 
     return
 }

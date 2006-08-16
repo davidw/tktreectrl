@@ -1,5 +1,10 @@
 2006-08-15  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* library/filelist-bindings.tcl (::TreeCtrl::EditClose): rewrote
+	bindings of edit widget helpers to use TreeCtrlEntry and
+	TreeCtrlText classes.
+	Fix for <Escape> binding possibly triggering <FocusOut>.
+
 	* generic/tkTreeDisplay.c (Tree_Display): Allow Tree_DeselectHidden
 	* generic/tkTreeItem.c (Item_Configure):  to be deferred to next
 	* generic/tkTreeCtrl.h:                   redraw by calling
