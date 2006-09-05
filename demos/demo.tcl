@@ -1,8 +1,8 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.41 2006/07/11 00:11:29 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.42 2006/09/05 21:54:16 treectrl Exp $
 
-set VERSION 2.1
+set VERSION 2.1.1
 
 package require Tk 8.4
 
@@ -1415,13 +1415,7 @@ proc CursorWindow {} {
     return
 }
 
-proc compare {i1 i2} {
-    if {$i1 < $i2} { return -1 }
-    if {$i1 == $i2} { return 0 }
-    return 1
-}
-
-# A little screen magnifier for X11
+# A little screen magnifier
 if {[llength [info commands loupe]]} {
 
     set Loupe(zoom) 3
@@ -1453,7 +1447,18 @@ if {[llength [info commands loupe]]} {
 	set w [toplevel .loupe]
 	wm geometry $w -0+0
 	image create photo ImageLoupe -width 150 -height 150
-	pack [label $w.label -image ImageLoupe]
+	pack [label $w.label -image ImageLoupe -borderwidth 0]
+
+	# Resize the image with the window
+	bind LoupeWindow <Configure> {
+	    if {%w != [$Loupe(image) cget -width] ||
+		%h != [$Loupe(image) cget -height]} {
+		$Loupe(image) configure -width %w -height %h
+		loupe $Loupe(image) $Loupe(x) $Loupe(y) %w %h $Loupe(zoom)
+	    }
+	}
+	bindtags .loupe [concat [bindtags .loupe] LoupeWindow]
+
 	set Loupe(image) ImageLoupe
 	set Loupe(delay) 500
 	after $Loupe(delay) LoupeAfter
