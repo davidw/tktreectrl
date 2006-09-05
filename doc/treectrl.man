@@ -3,11 +3,11 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.32 2005/09/07 20:38:04 treectrl Exp $}
-][manpage_begin treectrl n 2.1]
+  $Id: treectrl.man,v 1.33 2006/09/05 21:55:29 treectrl Exp $}
+][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
-[require treectrl 2.1]
+[require treectrl 2.1.1]
 
 [description]
 [list_begin definitions] 
