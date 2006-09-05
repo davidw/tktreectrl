@@ -3,9 +3,9 @@
  *
  *	This module implements "qebind.c" events for treectrl widgets.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.14 2005/09/16 01:29:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.15 2006/09/05 21:56:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

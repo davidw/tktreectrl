@@ -3,9 +3,9 @@
  *
  *	This module implements styles for treectrl widgets.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.46 2006/07/11 00:10:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.47 2006/09/05 21:56:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

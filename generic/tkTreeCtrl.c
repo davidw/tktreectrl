@@ -3,11 +3,11 @@
  *
  *	This module implements treectrl widgets for the Tk toolkit.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.60 2006/08/04 22:49:37 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.61 2006/09/05 21:56:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

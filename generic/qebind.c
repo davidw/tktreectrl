@@ -3,9 +3,9 @@
  *
  *	This module implements quasi-events.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.14 2005/07/23 00:35:53 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.15 2006/09/05 21:56:15 treectrl Exp $
  */
 
 /*

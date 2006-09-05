@@ -3,9 +3,9 @@
  *
  *	This module implements the selection rectangle for treectrl widgets.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.7 2005/09/17 00:05:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.8 2006/09/05 21:56:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

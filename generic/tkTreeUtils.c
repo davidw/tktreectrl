@@ -3,9 +3,9 @@
  *
  *	This module implements misc routines for treectrl widgets.
  *
- * Copyright (c) 2002-2005 Tim Baker
+ * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.37 2005/09/19 20:38:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.38 2006/09/05 21:56:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
