@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.20 2006/08/16 02:39:58 hobbs2 Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.21 2006/09/05 21:57:21 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -547,16 +547,8 @@ proc ::TreeCtrl::EntryOpen {T item column element} {
     $e selection range 0 end
 
     set ebw [$e cget -borderwidth]
-    if 1 {
-	set ex [expr {$x - $ebw - 1}]
-	place $e -x $ex -y [expr {$y - $ebw - 1}] \
-	    -bordermode outside
-    } else {
-	set hw [$T cget -highlightthickness]
-	set bw [$T cget -borderwidth]
-	set ex [expr {$x - $bw - $hw - $ebw - 1}]
-	place $e -x $ex -y [expr {$y - $bw - $hw - $ebw - 1}]
-    }
+    set ex [expr {$x - $ebw - 1}]
+    place $e -x $ex -y [expr {$y - $ebw - 1}] -bordermode outside
 
     # Make the Entry as wide as the text plus "W" but keep it within the
     # TreeCtrl borders
@@ -665,7 +657,7 @@ proc ::TreeCtrl::EditClose {T type accept {refocus 0}} {
 		 E $Priv($type,$T,element) t $t]
     }
 
-    $T notify bind $w <Scroll> {}
+    $T notify unbind $w <Scroll>
 
     TryEvent $T Edit end \
 	[list I $Priv($type,$T,item) C $Priv($type,$T,column) \
