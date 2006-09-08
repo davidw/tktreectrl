@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.32 2006/09/05 21:55:29 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.33 2006/09/08 22:10:04 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.32 2006/09/05 21:55:29 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.33 2006/09/08 22:10:04 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -102,7 +102,7 @@ package require <b>treectrl 2.1.1</b><br>
 <tr valign=top ><td ><a href="#56"><i class='arg'>pathName</i> <b class='cmd'>item compare</b> <i class='arg'>itemDesc1</i> <i class='arg'>op</i> <i class='arg'>itemDesc2</i></a></td></tr>
 <tr valign=top ><td ><a href="#57"><i class='arg'>pathName</i> <b class='cmd'>item complex</b> <i class='arg'>itemDesc</i> ?<i class='arg'>list...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#58"><i class='arg'>pathName</i> <b class='cmd'>item configure</b> <i class='arg'>itemDesc</i> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#59"><i class='arg'>pathName</i> <b class='cmd'>item count</b></a></td></tr>
+<tr valign=top ><td ><a href="#59"><i class='arg'>pathName</i> <b class='cmd'>item count</b> ?<i class='arg'>-visible</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#60"><i class='arg'>pathName</i> <b class='cmd'>item create</b> ?<i class='arg'>option value ...</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#61"><i class='arg'>pathName</i> <b class='cmd'>item delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a></td></tr>
 <tr valign=top ><td ><a href="#62"><i class='arg'>pathName</i> <b class='cmd'>item dump</b> <i class='arg'>itemDesc</i></a></td></tr>
@@ -1387,12 +1387,15 @@ the meaning of each option):
 
 </dl>
 
-<dt><a name="59"><i class='arg'>pathName</i> <b class='cmd'>item count</b></a><dd>
+<dt><a name="59"><i class='arg'>pathName</i> <b class='cmd'>item count</b> ?<i class='arg'>-visible</i>?</a><dd>
 
 Returns a decimal string giving the number of
 items created by the <b class='cmd'>item create</b> widget command which haven't been
 deleted by the <b class='cmd'>item delete</b> widget command, plus 1 for the ever-present
-root item.
+root item. If the optional argument <i class='arg'>-visible</i> is given, only the items
+whose ancestors are expanded, and whose -visible option is true, get counted.
+Additionally, for the root item, the treectrl option <strong>-showroot</strong> must
+be true for the root item to be counted.
 
 <br><br>
 <dt><a name="60"><i class='arg'>pathName</i> <b class='cmd'>item create</b> ?<i class='arg'>option value ...</i>?</a><dd>
