@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.58 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.59 2006/09/08 22:09:44 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4081,7 +4081,6 @@ ItemElementCmd(
 	/* T item element configure I C E ... */
 	case COMMAND_CONFIGURE:
 	{
-#if 1
 	    /* T item element configure I C E option value \
 	     *     + E option value , C E option value */
 	    int eMask, cMask = 0, iMask = 0;
@@ -4177,25 +4176,6 @@ ItemElementCmd(
 	    else if (iMask & CS_DISPLAY)
 		Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
 	    return result;
-#else
-	    int result, eMask;
-
-	    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
-		    (TreeItemColumn) column, column->style, objv[6],
-		    objc - 7, (Tcl_Obj **) objv + 7, &eMask);
-	    if (eMask != 0) {
-		if (eMask & CS_DISPLAY)
-		    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
-		if (eMask & CS_LAYOUT) {
-		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-		    Tree_InvalidateColumnWidth(tree, columnIndex);
-		    TreeItem_InvalidateHeight(tree, (TreeItem) item);
-		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-		    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-		}
-	    }
-	    return result;
-#endif
 	}
     }
 
@@ -5874,7 +5854,7 @@ TreeItemCmd(
 	{ 3, 3, 0, AF_NOT_ITEM, "item1 op item2" }, /* compare */
 	{ 2, 100000, 0, AF_NOT_ITEM, "item list ..." }, /* complex */
 	{ 1, 100000, 0, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?" }, /* configure */
-	{ 0, 0, 0, 0, NULL }, /* count */
+	{ 0, 1, AF_NOT_ITEM, 0, "?-visible?" }, /* count */
 	{ 1, 1, 0, 0, "item" }, /* dump */
 	{ 4, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item column element ?arg ...?" }, /* element */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* expand */
@@ -6251,42 +6231,30 @@ TreeItemCmd(
 	}
 	case COMMAND_COUNT:
 	{
-	    if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
-		return TCL_ERROR;
+	    int visible = FALSE;
+	    if (objc == 4) {
+		int len;
+		char *s = Tcl_GetStringFromObj(objv[3], &len);
+		if ((s[0] == '-') && (strncmp(s, "-visible", len) == 0))
+		    visible = TRUE;
+		else {
+		    FormatResult(interp, "bad switch \"%s\": must be -visible",
+			s);
+		    return TCL_ERROR;
+		}
 	    }
-	    Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
+	    if (visible) {
+		if (tree->updateIndex)
+		    Tree_UpdateItemIndex(tree);
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemVisCount));
+	    } else {
+		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
+	    }
 	    break;
 	}
 	case COMMAND_CREATE:
 	{
-#if 1
 	    return ItemCreateCmd(clientData, interp, objc, objv);
-#else
-	    item = Item_Alloc(tree);
-
-	    if (objc > 3) {
-		if (Item_Configure(tree, item, objc - 3, objv + 3) != TCL_OK) {
-		    TreeItem_Delete(tree, (TreeItem) item);
-		    return TCL_ERROR;
-		}
-	    }
-
-	    /* Apply default styles */
-	    if (tree->defaultStyle.numStyles) {
-		int i, n = MIN(tree->columnCount, tree->defaultStyle.numStyles);
-
-		for (i = 0; i < n; i++) {
-		    Column *column = Item_CreateColumn(tree, item, i, NULL);
-		    if (tree->defaultStyle.styles[i] != NULL) {
-			column->style = TreeStyle_NewInstance(tree,
-				tree->defaultStyle.styles[i]);
-		    }
-		}
-	    }
-	    Tcl_SetObjResult(interp, TreeItem_ToObj(tree, (TreeItem) item));
-#endif
-	    break;
 	}
 	case COMMAND_DELETE:
 	{
