@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.28 2005/09/15 04:39:23 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.29 2006/09/16 20:33:39 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -244,9 +244,9 @@ test treectrl-1.54 {configure: -wrap empty option} -body {
     .t configure -wrap
 } -result {-wrap wrap Wrap {} {}}
 
-# For the tests of the item descriptions we use see,
+# For the tests of the item descriptions we use [.t see],
 # if we want to generate an error on unknown items.
-# For the positive cases we use "item id" since it returns the item id.
+# For the positive cases we use [.t item id] since it returns the item id.
 
 test treectrl-2.1 {bogus itemdesc} -body {
     .t item id foo
@@ -302,7 +302,7 @@ test treectrl-2.12 {itemdesc last visible without any node} -body {
 
 test treectrl-2.13 {itemdesc nearest without x/y} -body {
     .t item id nearest
-} -returnCodes error -result {bad item description "nearest"}
+} -returnCodes error -result {missing arguments to "nearest" keyword}
 
 test treectrl-2.14 {itemdesc nearest with invalid x/y} -body {
     .t item id "nearest foo bar"
@@ -342,7 +342,7 @@ test treectrl-2.17 {itemdesc nearest with valid x/y} -body {
 
 test treectrl-2.18 {itemdesc rnc without r/c} -body {
     .t item id rnc
-} -returnCodes error -result {bad item description "rnc"}
+} -returnCodes error -result {missing arguments to "rnc" keyword}
 
 test treectrl-2.19 {itemdesc rnc with invalid r/c} -body {
     .t item id "rnc foo bar"
@@ -363,11 +363,11 @@ test treectrl-2.22 {bogus modifier} -body {
 
 test treectrl-2.23 {valid modifier with too less arguments} -body {
     .t item id "0 child"
-} -returnCodes error -result {bad item description "0 child"}
+} -returnCodes error -result {missing arguments to "child" modifier}
 
 test treectrl-2.24 {modifier visible alone generates an error} -body {
     .t item id "0 visible"
-} -returnCodes error -result {bad item description "0 visible"}
+} -returnCodes error -result {bad modifier "visible": must be *} -match glob
 
 test treectrl-2.25 {modifier above} -body {
     set res {}
@@ -494,6 +494,89 @@ test treectrl-2.37 {modifier cocktail} -body {
     }
     set res
 } -result {8 8 1 5 4 3 2 1 5 7 8}
+
+
+# qualifiers in item descriptions
+test treectrl-3.1 {where visible is allowed} -body {
+    .t item collapse 3
+    .t item collapse 5
+    set res {}
+    foreach index {
+	first last
+    } {
+	lappend res [.t item id "$index visible"]
+    }
+    foreach modifier {
+	next prev firstchild lastchild {child 1}
+	nextsibling prevsibling {sibling 0}
+    } {
+	lappend res [.t item id "5 $modifier visible"]
+    }
+    set res
+} -result {0 8 8 3 {} {} {} 8 1 1}
+
+test treectrl-3.2 {where state is allowed} -body {
+    set res {}
+    foreach index {
+	first last
+    } {
+	lappend res [.t item id "$index state enabled"]
+    }
+    foreach modifier {
+	next prev firstchild lastchild {child 0}
+	nextsibling prevsibling {sibling 0}
+    } {
+	lappend res [.t item id "5 $modifier state enabled"]
+    }
+    set res
+} -result {0 8 6 4 6 7 6 8 1 1}
+
+test treectrl-3.3 {qualifier state: missing args} -body {
+    .t item id "first state"
+} -returnCodes error -result {missing arguments to "state" qualifier}
+
+test treectrl-3.4 {qualifier state: unknown state} -body {
+    .t item id "first state foo"
+} -returnCodes error -result {unknown state "foo"}
+
+test treectrl-3.5 {qualifier state: toggle not allowed} -body {
+    .t item id "first state ~open"
+} -returnCodes error -result {can't specify '~' for this command}
+
+test treectrl-3.6 {qualifier state: open ok} -body {
+    .t item id "first state open"
+} -result {0}
+
+test treectrl-3.7 {qualifier state: !open ok} -body {
+    set res {}
+    lappend res [.t item id "first state !open"]
+    lappend res [.t item id "last state !open"]
+} -result {3 5}
+
+test treectrl-3.8 {qualifier state: multiple states} -body {
+    .t item id "last state {open enabled active}"
+} -result {0}
+
+test treectrl-3.9 {qualifier after index and modifier} -body {
+    .t item id "first state !open next state !open"
+} -result {5}
+
+test treectrl-3.10 {qualifier state: following each modifier} -body {
+    set res {}
+    foreach modifier {
+	firstchild lastchild {child 0}
+    } {
+	lappend res [.t item id "root $modifier state !open"]
+    }
+    foreach modifier {
+	next prev nextsibling prevsibling {sibling 0}
+    } {
+	lappend res [.t item id "1 $modifier state !open"]
+    }
+    .t item expand 3
+    .t item expand 5
+    set res
+} -result {5 5 5 3 {} 5 {} 5}
 
 test treectrl-5.1 {state: missing args} -body {
     .t state
