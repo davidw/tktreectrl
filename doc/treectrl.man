@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.34 2006/09/08 22:10:04 treectrl Exp $}
+  $Id: treectrl.man,v 1.35 2006/09/16 20:04:52 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -245,11 +245,10 @@ or [const extended];  the default value is [const browse].
 
 [tkoption_def -showbuttons showButtons ShowButtons]
 Specifies a boolean value that determines whether this widget
-displays a button to the left of any item.
-If the button is actually drawn can be configured for every item
-with the [cmd {item hasbutton}] widget command, but if this option is
-set to false, the configuration of an item has no effect.
+leaves indentation space to display the expand/collapse buttons next to items.
 The default value is true.
+The item option [option -button] determines whether any item has a button.
+See also the treectrl option [option -showrootbutton]. 
 
 [tkoption_def -showheader showHeader ShowHeader]
 Specifies a boolean value that determines whether this widget
@@ -270,8 +269,9 @@ The default value is true.
 
 [tkoption_def -showrootbutton showRootButton ShowRootButton]
 Specifies a boolean value that determines whether this widget
-should draw a button before the root item.
-The default value is false.
+leaves indentation space to display the expand/collapse button next to the
+root item. The default value is false.
+The item option [option -button] determines whether the root item has a button.
 
 [tkoption_def -showrootlines showRootLines ShowRootLines]
 Specifies a boolean value that determines whether this widget
@@ -1089,6 +1089,11 @@ and dynamic, see [sectref STATES]) is used in place of the current state for
 
 [list_end]
 
+[call [arg pathName] [cmd {item enabled}] [arg itemDesc] [opt [arg boolean]]]
+Returns 1 if the item described by [arg itemDesc] has the
+state [const enabled] switched on, 0 otherwise. If [arg boolean] is specified,
+the [const enabled] state is set accordingly.
+
 [call [arg pathName] [cmd {item expand}] [arg itemDesc] [opt [option -recurse]]]
 Switches on the [const open] state of the item(s) described by [arg itemDesc].
 If the item has descendants, they are now displayed.
@@ -1654,6 +1659,29 @@ by means of the [cmd {item remove}] widget command. The root item is not returne
 
 [call [arg pathName] [cmd range] [arg first] [arg last]]
 Deprecated. Use the [cmd {item range}] command instead.
+
+[call [arg pathName] [cmd scan] [arg option] [arg args]]
+This command is used to implement scanning on treectrls. It has two forms,
+depending on [arg option]: 
+[list_begin definitions]
+
+[call [arg pathName] [cmd {scan mark}] [arg x] [arg y]]
+Records [arg x] and [arg y] and the treectrl's current view;  used in conjunction with
+later [cmd {scan dragto}] commands. Typically this command is associated with a
+mouse button press in the widget and [arg x] and [arg y] are the coordinates of the
+mouse. It returns an empty string. 
+
+[call [arg pathName] [cmd {scan dragto}] [arg x] [arg y] [opt [arg gain]]]
+This command computes the difference between its [arg x] and [arg y] arguments (which
+are typically mouse coordinates) and the [arg x] and [arg y] arguments to the last
+[cmd {scan mark}] command for the widget. It then adjusts the view by [arg gain]
+times the difference in coordinates, where [arg gain] defaults to 10. This
+command is typically associated with mouse motion events in the widget,
+to produce the effect of dragging the treectrl at high speed through its window.
+The return value is an empty string.
+[list_end]
+
+
 
 [call [arg pathName] [cmd state] [arg option] [opt [arg stateName]]]
 This command is used to manipulate the list of user-defined states,
@@ -2290,8 +2318,10 @@ the root item will become the active item.
 This state can be modified by means of the widget command [cmd activate].
 
 [lst_item [const enabled]]
-This state is set for every item, when it is created.
-It cannot be modified.
+This state is set for every item when it is created.
+Disabled items cannot be selected and are ignored by the default bindings
+when navigating via the keyboard.
+This state can be modified by means of the widget command [cmd {item enabled}].
 
 [lst_item [const focus]]
 This state is set for every item,
@@ -2667,18 +2697,14 @@ Indicates the anchor item of the selection, i.e. normally
 the item specified as argument of the last successful [cmd {selection anchor}]
 widget command, or the root item if no such call happened yet.
 
-[lst_item "[const first] [opt [const visible]]"]
-Indicates the first item of the treectrl, i.e. the root item.
-If [const visible] is specified and the widget is configured with
-[option -showroot] [const no], the first visible child of the root node
-is specified instead.
+[lst_item "[const first] [arg QUALIFIERS]"]
+Indicates the first item of the treectrl (the root item),
+or the first item matching [arg QUALIFIERS].
 
-[lst_item "[const end] [opt [const visible]]"]
-[lst_item "[const last] [opt [const visible]]"]
-Indicates the last item of the treectrl.
-If [const visible] is specified and the last item is currently not visible,
-i.e. one of its father nodes is collapsed,
-the last visible item is specified instead.
+[lst_item "[const end] [arg QUALIFIERS]"]
+[lst_item "[const last] [arg QUALIFIERS]"]
+Indicates the last item of the treectrl,
+or the last item matching [arg QUALIFIERS].
 
 [lst_item "[const nearest] [arg {x y}]"]
 Indicates the item nearest to the point given by [arg x] and [arg y].
@@ -2688,7 +2714,7 @@ Indicates the item in the given [arg row] and [arg column].
 The row and column corresponds to
 the on-screen arrangement of items as determined by the -orient and -wrap
 options.
-You can memorize [const rnc] as abbreviation of "row 'n' column".
+You can memorize [const rnc] as an abbreviation of "row 'n' column".
 
 [lst_item [const root]]
 Indicates the root item of the treectrl.
@@ -2711,13 +2737,13 @@ Use the item one row below in this column.
 [lst_item [const bottom]]
 Use the item in the last row of this column.
 
-[lst_item "[const child] [arg n] [opt [const visible]]"]
+[lst_item "[const child] [arg n] [arg QUALIFIERS]"]
 Use the [arg n]th child of the item.
 
-[lst_item "[const firstchild] [opt [const visible]]"]
+[lst_item "[const firstchild] [arg QUALIFIERS]"]
 Use the first child of the item.
 
-[lst_item "[const lastchild] [opt [const visible]]"]
+[lst_item "[const lastchild] [arg QUALIFIERS]"]
 Use the last child of the item.
 
 [lst_item [const left]]
@@ -2726,22 +2752,22 @@ Use the item one column to the left in the same row.
 [lst_item [const leftmost]]
 Use the item of the first column in the same row.
 
-[lst_item "[const next] [opt [const visible]]"]
-Use the next item, which is the first existant (or visible) item of the
+[lst_item "[const next] [arg QUALIFIERS]"]
+Use the next item, which is the first item from the
 following list: the first child, the next sibling or the next sibling of
-the nearest parent which has one.
+the nearest ancestor which has one.
 
-[lst_item "[const nextsibling] [opt [const visible]]"]
+[lst_item "[const nextsibling] [arg QUALIFIERS]"]
 Use the next sibling of the item.
 
 [lst_item [const parent]]
 Use the parent of the item.
 
-[lst_item "[const prev] [opt [const visible]]"]
+[lst_item "[const prev] [arg QUALIFIERS]"]
 Use the last child of the previous sibling,
 or the parent if there is no previous sibling.
 
-[lst_item "[const prevsibling] [opt [const visible]]"]
+[lst_item "[const prevsibling] [arg QUALIFIERS]"]
 Use the previous sibling of the item.
 
 [lst_item [const right]]
@@ -2750,11 +2776,38 @@ Use the item one column to the right in the same row.
 [lst_item [const rightmost]]
 Use the item of the last column in the same row.
 
-[lst_item "[const sibling] [arg n] [opt [const visible]]"]
+[lst_item "[const sibling] [arg n] [arg QUALIFIERS]"]
 Use the [arg n]th child of the item's parent.
 
 [lst_item [const top]]
 Use the item in the first row of this column.
+[list_end]
+
+The word [arg QUALIFIERS] above represents a list of zero or more of the
+following terms that changes which item is chosen:
+
+[list_begin definitions]
+[lst_item "[const state] [arg stateList]"]
+[arg StateList] is a list of item state names (static and dynamic, see [sectref STATES]).
+Only items that have the given states set (or unset if the '!' prefix is used)
+are considered.
+[nl]
+To get the first item in the list that is enabled:
+[example_begin]
+$T item id "first state enabled"
+[example_end]
+To get the first item in the list that is not open:
+[example_begin]
+$T item id "first state !open"
+[example_end]
+
+[lst_item [const visible]]
+When this qualifier is given, only items that are displayed are considered.
+[nl]
+To get the first item in the list that is displayed:
+[example_begin]
+$T item id "first visible"
+[example_end]
 [list_end]
 
 [section {EVENTS AND SCRIPT SUBSTITUTIONS}]

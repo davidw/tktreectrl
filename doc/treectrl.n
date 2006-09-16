@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.50 2006/09/08 22:10:04 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.51 2006/09/16 20:04:52 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1.1 treectrl "Tk Commands"
 .BS
@@ -149,6 +149,8 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
 .sp
+\fIpathName\fR \fBitem enabled\fR \fIitemDesc\fR ?\fIboolean\fR?
+.sp
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 .sp
 \fIpathName\fR \fBitem firstchild\fR \fIparent\fR ?\fIchild\fR?
@@ -254,6 +256,12 @@ package require \fBtreectrl  2.1.1\fR
 \fIpathName\fR \fBorphans\fR
 .sp
 \fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR
+.sp
+\fIpathName\fR \fBscan\fR \fIoption\fR \fIargs\fR
+.sp
+\fIpathName\fR \fBscan mark\fR \fIx\fR \fIy\fR
+.sp
+\fIpathName\fR \fBscan dragto\fR \fIx\fR \fIy\fR ?\fIgain\fR?
 .sp
 \fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
 .sp
@@ -740,11 +748,10 @@ Database Class:	\fBShowButtons\fR
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
-displays a button to the left of any item.
-If the button is actually drawn can be configured for every item
-with the \fBitem hasbutton\fR widget command, but if this option is
-set to false, the configuration of an item has no effect.
+leaves indentation space to display the expand/collapse buttons next to items.
 The default value is true.
+The item option \fB-button\fR determines whether any item has a button.
+See also the treectrl option \fB-showrootbutton\fR.
 .LP
 .nf
 .ta 6c
@@ -793,8 +800,9 @@ Database Class:	\fBShowRootButton\fR
 .fi
 .IP
 Specifies a boolean value that determines whether this widget
-should draw a button before the root item.
-The default value is false.
+leaves indentation space to display the expand/collapse button next to the
+root item. The default value is false.
+The item option \fB-button\fR determines whether the root item has a button.
 .LP
 .nf
 .ta 6c
@@ -1641,6 +1649,11 @@ and dynamic, see \fBSTATES\fR) is used in place of the current state for
 \fIitem\fR and \fIcolumn.\fR
 .RE
 .TP
+\fIpathName\fR \fBitem enabled\fR \fIitemDesc\fR ?\fIboolean\fR?
+Returns 1 if the item described by \fIitemDesc\fR has the
+state \fBenabled\fR switched on, 0 otherwise. If \fIboolean\fR is specified,
+the \fBenabled\fR state is set accordingly.
+.TP
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
 If the item has descendants, they are now displayed.
@@ -2161,6 +2174,27 @@ by means of the \fBitem remove\fR widget command. The root item is not returned.
 .TP
 \fIpathName\fR \fBrange\fR \fIfirst\fR \fIlast\fR
 Deprecated. Use the \fBitem range\fR command instead.
+.TP
+\fIpathName\fR \fBscan\fR \fIoption\fR \fIargs\fR
+This command is used to implement scanning on treectrls. It has two forms,
+depending on \fIoption\fR:
+.RS
+.TP
+\fIpathName\fR \fBscan mark\fR \fIx\fR \fIy\fR
+Records \fIx\fR and \fIy\fR and the treectrl's current view;  used in conjunction with
+later \fBscan dragto\fR commands. Typically this command is associated with a
+mouse button press in the widget and \fIx\fR and \fIy\fR are the coordinates of the
+mouse. It returns an empty string.
+.TP
+\fIpathName\fR \fBscan dragto\fR \fIx\fR \fIy\fR ?\fIgain\fR?
+This command computes the difference between its \fIx\fR and \fIy\fR arguments (which
+are typically mouse coordinates) and the \fIx\fR and \fIy\fR arguments to the last
+\fBscan mark\fR command for the widget. It then adjusts the view by \fIgain\fR
+times the difference in coordinates, where \fIgain\fR defaults to 10. This
+command is typically associated with mouse motion events in the widget,
+to produce the effect of dragging the treectrl at high speed through its window.
+The return value is an empty string.
+.RE
 .TP
 \fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
 This command is used to manipulate the list of user-defined states,
@@ -2774,8 +2808,10 @@ the root item will become the active item.
 This state can be modified by means of the widget command \fBactivate\fR.
 .TP
 \fBenabled\fR
-This state is set for every item, when it is created.
-It cannot be modified.
+This state is set for every item when it is created.
+Disabled items can not be selected and are ignored by the default bindings
+when navigating via the keyboard.
+This state can be modified by means of the widget command \fBitem enabled\fR.
 .TP
 \fBfocus\fR
 This state is set for every item,
@@ -3125,19 +3161,15 @@ Indicates the anchor item of the selection, i.e. normally
 the item specified as argument of the last successful \fBselection anchor\fR
 widget command, or the root item if no such call happened yet.
 .TP
-\fBfirst\fR ?\fBvisible\fR?
-Indicates the first item of the treectrl, i.e. the root item.
-If \fBvisible\fR is specified and the widget is configured with
-\fB-showroot\fR \fBno\fR, the first visible child of the root node
-is specified instead.
+\fBfirst\fR \fIQUALIFIERS\fR
+Indicates the first item of the treectrl (the root item),
+or the first item matching \fIQUALIFIERS\fR.
 .TP
-\fBend\fR ?\fBvisible\fR?
+\fBend\fR \fIQUALIFIERS\fR
 .TP
-\fBlast\fR ?\fBvisible\fR?
-Indicates the last item of the treectrl.
-If \fBvisible\fR is specified and the last item is currently not visible,
-i.e. one of its father nodes is collapsed,
-the last visible item is specified instead.
+\fBlast\fR \fIQUALIFIERS\fR
+Indicates the last item of the treectrl,
+or the last item matching \fIQUALIFIERS\fR.
 .TP
 \fBnearest\fR \fIx y\fR
 Indicates the item nearest to the point given by \fIx\fR and \fIy\fR.
@@ -3147,7 +3179,7 @@ Indicates the item in the given \fIrow\fR and \fIcolumn\fR.
 The row and column corresponds to
 the on-screen arrangement of items as determined by the -orient and -wrap
 options.
-You can memorize \fBrnc\fR as abbreviation of "row 'n' column".
+You can memorize \fBrnc\fR as an abbreviation of "row 'n' column".
 .TP
 \fBroot\fR
 Indicates the root item of the treectrl.
@@ -3167,13 +3199,13 @@ Use the item one row below in this column.
 \fBbottom\fR
 Use the item in the last row of this column.
 .TP
-\fBchild\fR \fIn\fR ?\fBvisible\fR?
+\fBchild\fR \fIn\fR \fIQUALIFIERS\fR
 Use the \fIn\fRth child of the item.
 .TP
-\fBfirstchild\fR ?\fBvisible\fR?
+\fBfirstchild\fR \fIQUALIFIERS\fR
 Use the first child of the item.
 .TP
-\fBlastchild\fR ?\fBvisible\fR?
+\fBlastchild\fR \fIQUALIFIERS\fR
 Use the last child of the item.
 .TP
 \fBleft\fR
@@ -3182,22 +3214,22 @@ Use the item one column to the left in the same row.
 \fBleftmost\fR
 Use the item of the first column in the same row.
 .TP
-\fBnext\fR ?\fBvisible\fR?
-Use the next item, which is the first existant (or visible) item of the
+\fBnext\fR \fIQUALIFIERS\fR
+Use the next item, which is the first item from the
 following list: the first child, the next sibling or the next sibling of
-the nearest parent which has one.
+the nearest ancestor which has one.
 .TP
-\fBnextsibling\fR ?\fBvisible\fR?
+\fBnextsibling\fR \fIQUALIFIERS\fR
 Use the next sibling of the item.
 .TP
 \fBparent\fR
 Use the parent of the item.
 .TP
-\fBprev\fR ?\fBvisible\fR?
+\fBprev\fR \fIQUALIFIERS\fR
 Use the last child of the previous sibling,
-or the parent if there is no previos sibling.
+or the parent if there is no previous sibling.
 .TP
-\fBprevsibling\fR ?\fBvisible\fR?
+\fBprevsibling\fR \fIQUALIFIERS\fR
 Use the previous sibling of the item.
 .TP
 \fBright\fR
@@ -3206,11 +3238,41 @@ Use the item one column to the right in the same row.
 \fBrightmost\fR
 Use the item of the last column in the same row.
 .TP
-\fBsibling\fR \fIn\fR ?\fBvisible\fR?
+\fBsibling\fR \fIn\fR \fIQUALIFIERS\fR
 Use the \fIn\fRth child of the item's parent.
 .TP
 \fBtop\fR
 Use the item in the first row of this column.
+The word \fIQUALIFIERS\fR above represents a list of zero or more of the
+following terms that changes which item is chosen:
+.TP
+\fBstate\fR \fIstateList\fR
+\fIStateList\fR is a list of item state names (static and dynamic, see \fBSTATES\fR).
+Only items that have the given states set (or unset if the '!' prefix is used)
+are considered.
+.sp
+To get the first item in the list that is enabled:
+.nf
+
+$T item id "first state enabled"
+
+.fi
+To get the first item in the list that is not open:
+.nf
+
+$T item id "first state !open"
+
+.fi
+.TP
+\fBvisible\fR
+When this qualifier is given, only items that are displayed are considered.
+.sp
+To get the first item in the list that is displayed:
+.nf
+
+$T item id "first visible"
+
+.fi
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
 The \fIscript\fR argument to \fBnotify bind\fR is a Tcl script, which will be
 evaluated whenever the given event is generated. \fIScript\fR will be executed
