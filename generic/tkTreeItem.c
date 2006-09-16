@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.59 2006/09/08 22:09:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.60 2006/09/16 20:18:08 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1041,6 +1041,32 @@ TreeItem_SetID(
 /*
  *----------------------------------------------------------------------
  *
+ * TreeItem_GetEnabled --
+ *
+ *	Return whether an Item is enabled or not.
+ *
+ * Results:
+ *	TRUE if the item is enabled, FALSE otherwise.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeItem_GetEnabled(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
+{
+    Item *item = (Item *) item_;
+    return (item->state & STATE_ENABLED) != 0;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * TreeItem_GetSelected --
  *
  *	Return whether an Item is selected or not.
@@ -1178,7 +1204,7 @@ TreeItem_SetDInfo(
 /*
  *----------------------------------------------------------------------
  *
- * TreeItem_SetDInfo --
+ * TreeItem_GetDInfo --
  *
  *	Return the display-info token of an Item. Called by the display
  *	code.
@@ -1442,12 +1468,12 @@ TreeItem_ToIndex(
 /*
  *----------------------------------------------------------------------
  *
- * IndexFromList --
+ * GatherQualifiers --
  *
- *	Utility wrapper around Tcl_GetIndexFromObj().
+ *	Helper routine for TreeItem_FromObj.
  *
  * Results:
- *	The result of Tcl_GetIndexFromObj() or -1.
+ *	TCL_OK or TCL_ERROR.
  *
  * Side effects:
  *	None.
@@ -1456,24 +1482,106 @@ TreeItem_ToIndex(
  */
 
 static int
-IndexFromList(
-    int listIndex,		/* Index of objv[] to pass to
-				 * Tcl_GetIndexFromObj */
+GatherQualifiers(
+    TreeCtrl *tree,		/* Widget info. */
     int objc,			/* Number of arguments. */
-    Tcl_Obj **objv,		/* Arguments. */
-    CONST char **indexNames	/* NULL-terminated list of names. */
+    Tcl_Obj **objv,		/* Argument values. */
+    int startIndex,		/* First objv[] index to look at. */
+    int *argsUsed,		/* Out: number of objv[] used. */
+    int *visible,		/* Out: TRUE if the item must be ReallyVisible(). */
+    int states[3]		/* Out: Item states that must be on or off. */
     )
 {
-    Tcl_Obj *elemPtr;
-    int index;
+    Tcl_Interp *interp = tree->interp;
+    int qual, j = startIndex;
 
-    if (listIndex >= objc)
-	return -1;
-    elemPtr = objv[listIndex];
-    if (Tcl_GetIndexFromObj(NULL, elemPtr, indexNames, NULL, 0, &index)
-	    != TCL_OK)
-	return -1;
-    return index;
+    static CONST char *qualifiers[] = {
+	"state", "visible", NULL
+    };
+    enum qualEnum {
+	QUAL_STATE, QUAL_VISIBLE
+    };
+    /* Number of arguments used by qualifiers[]. */
+    static int qualArgs[] = {
+	2, 1
+    };
+
+    *argsUsed = 0;
+    *visible = FALSE;
+    states[0] = states[1] = states[2] = 0;
+
+    for (; j < objc; ) {
+	if (Tcl_GetIndexFromObj(NULL, objv[j], qualifiers, NULL, 0,
+		&qual) != TCL_OK)
+	    break;
+	if (objc - j < qualArgs[qual]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(objv[j]), "\" qualifier", NULL);
+	    return TCL_ERROR;
+	}
+	switch ((enum qualEnum) qual) {
+	    case QUAL_STATE:
+	    {
+		int i, listObjc;
+		Tcl_Obj **listObjv;
+		if (Tcl_ListObjGetElements(interp, objv[j + 1],
+			&listObjc, &listObjv) != TCL_OK)
+		    return TCL_ERROR;
+		for (i = 0; i < listObjc; i++) {
+		    if (Tree_StateFromObj(tree, listObjv[i], states,
+			    NULL, SFO_NOT_TOGGLE) != TCL_OK)
+			return TCL_ERROR;
+		}
+		break;
+	    }
+	    case QUAL_VISIBLE:
+	    {
+		*visible = TRUE;
+		break;
+	    }
+	}
+	*argsUsed += qualArgs[qual];
+	j += qualArgs[qual];
+    }
+    return TCL_OK;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Qualifies --
+ *
+ *	Helper routine for TreeItem_FromObj.
+ *
+ * Results:
+ *	Returns TRUE if the item meets the given criteria.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Qualifies(
+    TreeCtrl *tree,		/* Widget info. */
+    Item *item,			/* The item to test. May be NULL. */
+    int visible,		/* TRUE if the item must be ReallyVisible() */
+    int states[3]		/* Item states that must be on or off
+				 * for the item. */
+    )
+{
+    /* Note: if the item is NULL it is a "match" because we have run
+     * out of items to check. */
+    if (item == NULL)
+	return 1;
+    if (visible && !TreeItem_ReallyVisible(tree, (TreeItem) item))
+	return 0;
+    if (states[STATE_OP_OFF] & item->state)
+	return 0;
+    if ((states[STATE_OP_ON] & item->state) != states[STATE_OP_ON])
+	return 0;
+    return 1;
 }
 
 /*
@@ -1481,16 +1589,16 @@ IndexFromList(
  *
  * TreeItem_FromObj --
  *
- *	Convert a Tcl_Obj into a TreeItem.
+ *	Parse a Tcl_Obj item description to get a TreeItem.
  *
  *   all
  *   "active MODIFIERS"
  *   "anchor MODIFIERS"
  *   "nearest x y MODIFIERS"
  *   "root MODIFIERS"
- *   "first ?visible? MODIFIERS"
- *   "last ?visible? MODIFIERS"
- *   "end ?visible? MODIFIERS"
+ *   "first QUALIFIERS MODIFIERS"
+ *   "last QUALIFIERS MODIFIERS"
+ *   "end QUALIFIERS MODIFIERS"
  *   "rnc row col MODIFIERS"
  *   "ID MODIFIERS"
  *
@@ -1503,20 +1611,25 @@ IndexFromList(
  *   bottom
  *   leftmost
  *   rightmost
- *   next ?visible?
- *   prev ?visible?
+ *   next QUALIFIERS
+ *   prev QUALIFIERS
  *   parent
- *   firstchild ?visible?
- *   lastchild ?visible?
- *   child N ?visible?
- *   nextsibling ?visible?
- *   prevsibling ?visible?
- *   sibling N ?visible?
+ *   firstchild QUALIFIERS
+ *   lastchild QUALIFIERS
+ *   child N QUALIFIERS
+ *   nextsibling QUALIFIERS
+ *   prevsibling QUALIFIERS
+ *   sibling N QUALIFIERS
+ *
+ *   QUALIFIERS:
+ *   state stateList
+ *   visible
  *
  *   Examples:
- *   %W index "first visible firstchild"
- *   %W index "first visible firstchild visible"
- *   %W index "nearest x y nextsibling visible"
+ *   $T item id "first visible firstchild"
+ *   $T item id "first visible firstchild visible"
+ *   $T item id "nearest x y nextsibling visible"
+ *   $T item id "last visible state enabled" 
  *
  * Results:
  *	TCL_OK or TCL_ERROR.
@@ -1541,6 +1654,7 @@ TreeItem_FromObj(
     Tcl_HashEntry *hPtr;
     Tcl_Obj **objv, *elemPtr;
     Item *item = NULL;
+
     static CONST char *indexName[] = {
 	"active", "all", "anchor", "end", "first", "last",
 	"nearest", "rnc", "root", (char *) NULL
@@ -1548,21 +1662,35 @@ TreeItem_FromObj(
     enum indexEnum {
 	INDEX_ACTIVE, INDEX_ALL, INDEX_ANCHOR, INDEX_END, INDEX_FIRST,
 	INDEX_LAST, INDEX_NEAREST, INDEX_RNC, INDEX_ROOT
-    } ;
+    };
+    /* Number of arguments used by indexName[]. */
+    static int indexArgs[] = {
+	1, 1, 1, 1, 1, 1, 3, 3, 1
+    };
+    /* Boolean: can indexName[] be followed by 1 or more qualifiers. */
+    static int indexQual[] = {
+	0, 0, 0, 1, 1, 1, 0, 0, 0
+    };
+
     static CONST char *modifiers[] = {
 	"above", "below", "bottom", "child",
 	"firstchild", "lastchild", "left", "leftmost", "next", "nextsibling",
 	"parent", "prev", "prevsibling", "right", "rightmost", "sibling",
-	"top", "visible", (char *) NULL
+	"top", (char *) NULL
     };
     enum modEnum {
 	TMOD_ABOVE, TMOD_BELOW, TMOD_BOTTOM, TMOD_CHILD, TMOD_FIRSTCHILD,
 	TMOD_LASTCHILD, TMOD_LEFT, TMOD_LEFTMOST, TMOD_NEXT, TMOD_NEXTSIBLING,
 	TMOD_PARENT, TMOD_PREV, TMOD_PREVSIBLING, TMOD_RIGHT, TMOD_RIGHTMOST,
-	TMOD_SIBLING, TMOD_TOP, TMOD_VISIBLE
+	TMOD_SIBLING, TMOD_TOP
     };
+    /* Number of arguments used by modifiers[]. */
     static int modArgs[] = {
 	1, 1, 1, 2, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 2, 1, 1
+    };
+    /* Boolean: can modifiers[] be followed by 1 or more qualifiers. */
+    static int modQual[] = {
+	0, 0, 0, 1, 1, 1, 0, 0, 1, 1, 0, 1, 1, 0, 0, 1, 0, 0
     };
 
     if (Tcl_ListObjGetElements(NULL, objPtr, &objc, &objv) != TCL_OK)
@@ -1571,9 +1699,26 @@ TreeItem_FromObj(
 	goto baditem;
 
     listIndex = 0;
-    elemPtr = objv[listIndex++];
+    elemPtr = objv[listIndex];
     if (Tcl_GetIndexFromObj(NULL, elemPtr, indexName, NULL, 0, &index)
 	    == TCL_OK) {
+	int visible = FALSE;
+	int states[3] = {0, 0, 0};
+	int qualArgsTotal = 0;
+
+	if (objc - listIndex < indexArgs[index]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(elemPtr), "\" keyword", NULL);
+	    return TCL_ERROR;
+	}
+
+	/* Gather up any qualifiers that follow this index. */
+	if (indexQual[index]) {
+	    if (GatherQualifiers(tree, objc, objv, listIndex + indexArgs[index],
+		    &qualArgsTotal, &visible, states) != TCL_OK)
+		return TCL_ERROR;
+	}
+
 	switch ((enum indexEnum) index) {
 	    case INDEX_ACTIVE:
 	    {
@@ -1600,14 +1745,8 @@ TreeItem_FromObj(
 	    case INDEX_FIRST:
 	    {
 		item = (Item *) tree->root;
-		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == TMOD_VISIBLE) {
-		    if (!item->isVisible)
-			item = NULL;
-		    else if (!tree->showRoot)
-			item = (Item *) TreeItem_NextVisible(tree, (TreeItem) item);
-		    listIndex++;
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = (Item *) TreeItem_Next(tree, (TreeItem) item);
 		break;
 	    }
 	    case INDEX_END:
@@ -1617,28 +1756,17 @@ TreeItem_FromObj(
 		while (item->lastChild) {
 		    item = item->lastChild;
 		}
-		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == TMOD_VISIBLE) {
-		    if (!((Item *) tree->root)->isVisible)
-			item = NULL; /* nothing is visible */
-		    else if (item == (Item *) tree->root && !tree->showRoot)
-			item = NULL; /* no item but root, not visible */
-		    else if (!TreeItem_ReallyVisible(tree, (TreeItem) item))
-			item = (Item *) TreeItem_PrevVisible(tree,
-				(TreeItem) item);
-		    listIndex++;
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = (Item *) TreeItem_Prev(tree, (TreeItem) item);
 		break;
 	    }
 	    case INDEX_NEAREST:
 	    {
 		int x, y;
 
-		if (objc < 3)
+		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &x) != TCL_OK)
 		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex++], &x) != TCL_OK)
-		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex++], &y) != TCL_OK)
+		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 2], &y) != TCL_OK)
 		    goto baditem;
 		item = (Item *) Tree_ItemUnderPoint(tree, &x, &y, TRUE);
 		break;
@@ -1647,11 +1775,9 @@ TreeItem_FromObj(
 	    {
 		int row, col;
 
-		if (objc < 3)
+		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &row) != TCL_OK)
 		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex++], &row) != TCL_OK)
-		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex++], &col) != TCL_OK)
+		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 2], &col) != TCL_OK)
 		    goto baditem;
 		item = (Item *) Tree_RNCToItem(tree, row, col);
 		break;
@@ -1662,6 +1788,9 @@ TreeItem_FromObj(
 		break;
 	    }
 	}
+	listIndex += indexArgs[index] + qualArgsTotal;
+
+    /* No indexName[] was found. Try an itemPrefix + item ID. */
     } else if (tree->itemPrefixLen) {
 	char *end, *t = Tcl_GetString(elemPtr);
 	if (strncmp(t, tree->itemPrefix, tree->itemPrefixLen) != 0)
@@ -1679,6 +1808,9 @@ TreeItem_FromObj(
 	    return TCL_OK;
 	}
 	item = (Item *) Tcl_GetHashValue(hPtr);
+	listIndex++;
+
+    /* Try an item ID. */
     } else if (Tcl_GetIntFromObj(NULL, elemPtr, &id) == TCL_OK) {
 	hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
 	if (!hPtr) {
@@ -1688,6 +1820,7 @@ TreeItem_FromObj(
 	    return TCL_OK;
 	}
 	item = (Item *) Tcl_GetHashValue(hPtr);
+	listIndex++;
     } else {
 	goto baditem;
     }
@@ -1699,35 +1832,44 @@ TreeItem_FromObj(
 	(*itemPtr) = (TreeItem) item;
 	return TCL_OK;
     }
+
+    /* Process any modifiers following the item we matched above. */
     for (; listIndex < objc; /* nothing */) {
-	int nextIsVisible = FALSE;
+	int visible = FALSE;
+	int states[3] = {0, 0, 0};
+	int qualArgsTotal = 0;
 
 	elemPtr = objv[listIndex];
 	if (Tcl_GetIndexFromObj(interp, elemPtr, modifiers, "modifier", 0,
 		    &index) != TCL_OK)
 	    return TCL_ERROR;
-	if (objc - listIndex < modArgs[index])
-	    goto baditem;
-	if (IndexFromList(listIndex + modArgs[index], objc, objv,
-		    modifiers) == TMOD_VISIBLE)
-	    nextIsVisible = TRUE;
+	if (objc - listIndex < modArgs[index]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(elemPtr), "\" modifier", NULL);
+	    return TCL_ERROR;
+	}
+
+	/* Gather up any qualifiers that follow this modifier. */
+	if (modQual[index]) {
+	    if (GatherQualifiers(tree, objc, objv, listIndex + modArgs[index],
+		    &qualArgsTotal, &visible, states) != TCL_OK)
+		return TCL_ERROR;
+	}
+
 	switch ((enum modEnum) index) {
 	    case TMOD_ABOVE:
 	    {
 		item = (Item *) Tree_ItemAbove(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_BELOW:
 	    {
 		item = (Item *) Tree_ItemBelow(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_BOTTOM:
 	    {
 		item = (Item *) Tree_ItemBottom(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_CHILD:
@@ -1738,103 +1880,79 @@ TreeItem_FromObj(
 			    &n) != TCL_OK)
 		    return TCL_ERROR;
 		item = item->firstChild;
-		if (nextIsVisible) {
-		    while (item != NULL) {
-			if (TreeItem_ReallyVisible(tree, (TreeItem) item))
-			    if (n-- <= 0)
-				break;
-			item = item->nextSibling;
-		    }
-		} else {
-		    while ((n-- > 0) && (item != NULL))
-			item = item->nextSibling;
+		while (item != NULL) {
+		    if (Qualifies(tree, item, visible, states))
+			if (n-- <= 0)
+			    break;
+		    item = item->nextSibling;
 		}
 		break;
 	    }
 	    case TMOD_FIRSTCHILD:
 	    {
 		item = item->firstChild;
-		if (nextIsVisible) {
-		    while ((item != NULL)
-			    && !TreeItem_ReallyVisible(tree, (TreeItem) item))
-			item = item->nextSibling;
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = item->nextSibling;
 		break;
 	    }
 	    case TMOD_LASTCHILD:
 	    {
 		item = item->lastChild;
-		if (nextIsVisible) {
-		    while ((item != NULL)
-			    && !TreeItem_ReallyVisible(tree, (TreeItem) item))
-			item = item->prevSibling;
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = item->prevSibling;
 		break;
 	    }
 	    case TMOD_LEFT:
 	    {
 		item = (Item *) Tree_ItemLeft(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_LEFTMOST:
 	    {
 		item = (Item *) Tree_ItemLeftMost(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_NEXT:
 	    {
-		if (nextIsVisible)
-		    item = (Item *) TreeItem_NextVisible(tree, (TreeItem) item);
-		else
+		item = (Item *) TreeItem_Next(tree, (TreeItem) item);
+		while (!Qualifies(tree, item, visible, states))
 		    item = (Item *) TreeItem_Next(tree, (TreeItem) item);
 		break;
 	    }
 	    case TMOD_NEXTSIBLING:
 	    {
 		item = item->nextSibling;
-		if (nextIsVisible) {
-		    while ((item != NULL) && !TreeItem_ReallyVisible(tree, (TreeItem) item)) {
-			item = item->nextSibling;
-		    }
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = item->nextSibling;
 		break;
 	    }
 	    case TMOD_PARENT:
 	    {
 		item = item->parent;
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_PREV:
 	    {
-		if (nextIsVisible)
-		    item = (Item *) TreeItem_PrevVisible(tree, (TreeItem) item);
-		else
+		item = (Item *) TreeItem_Prev(tree, (TreeItem) item);
+		while (!Qualifies(tree, item, visible, states))
 		    item = (Item *) TreeItem_Prev(tree, (TreeItem) item);
 		break;
 	    }
 	    case TMOD_PREVSIBLING:
 	    {
 		item = item->prevSibling;
-		if (nextIsVisible) {
-		    while ((item != NULL) && !TreeItem_ReallyVisible(tree, (TreeItem) item)) {
-			item = item->prevSibling;
-		    }
-		}
+		while (!Qualifies(tree, item, visible, states))
+		    item = item->prevSibling;
 		break;
 	    }
 	    case TMOD_RIGHT:
 	    {
 		item = (Item *) Tree_ItemRight(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_RIGHTMOST:
 	    {
 		item = (Item *) Tree_ItemRightMost(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
 	    }
 	    case TMOD_SIBLING:
@@ -1847,28 +1965,18 @@ TreeItem_FromObj(
 		if (item == NULL)
 		    break;
 		item = item->firstChild;
-		if (nextIsVisible) {
-		    while (item != NULL) {
-			if (TreeItem_ReallyVisible(tree, (TreeItem) item))
-			    if (n-- <= 0)
-				break;
-			item = item->nextSibling;
-		    }
-		} else {
-		    while ((n-- > 0) && (item != NULL))
-			item = item->nextSibling;
+		while (item != NULL) {
+		    if (Qualifies(tree, item, visible, states))
+			if (n-- <= 0)
+			    break;
+		    item = item->nextSibling;
 		}
 		break;
 	    }
 	    case TMOD_TOP:
 	    {
 		item = (Item *) Tree_ItemTop(tree, (TreeItem) item);
-		nextIsVisible = FALSE;
 		break;
-	    }
-	    case TMOD_VISIBLE:
-	    {
-		goto baditem;
 	    }
 	}
 	if (item == NULL) {
@@ -1877,9 +1985,7 @@ TreeItem_FromObj(
 	    (*itemPtr) = (TreeItem) item;
 	    return TCL_OK;
 	}
-	listIndex += modArgs[index];
-	if (nextIsVisible)
-	    listIndex++;
+	listIndex += modArgs[index] + qualArgsTotal;
     }
     if (ISROOT(item)) {
 	if ((flags & IFO_NOTROOT)) {
@@ -5767,6 +5873,7 @@ TreeItemCmd(
 	"count",
 	"dump",
 	"element",
+	"enabled",
 	"expand",
 	"id",
 	"image",
@@ -5807,6 +5914,7 @@ TreeItemCmd(
 	COMMAND_COUNT,
 	COMMAND_DUMP,
 	COMMAND_ELEMENT,
+	COMMAND_ENABLED,
 	COMMAND_EXPAND,
 	COMMAND_ID,
 	COMMAND_IMAGE,
@@ -5857,6 +5965,7 @@ TreeItemCmd(
 	{ 0, 1, AF_NOT_ITEM, 0, "?-visible?" }, /* count */
 	{ 1, 1, 0, 0, "item" }, /* dump */
 	{ 4, 100000, AF_NOT_ITEM, AF_NOT_ITEM, "command item column element ?arg ...?" }, /* element */
+	{ 1, 2, 0, AF_NOT_ITEM, "item ?boolean?" }, /* enabled */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, "item ?-recurse?"}, /* expand */
 	{ 1, 1, IFO_NULLOK, 0, "item" }, /* id */
 	{ 1, 100000, 0, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?" }, /* text */
@@ -6404,6 +6513,29 @@ TreeItemCmd(
 	case COMMAND_ELEMENT:
 	{
 	    return ItemElementCmd(clientData, interp, objc, objv);
+	}
+	case COMMAND_ENABLED:
+	{
+	    if (objc == 5) {
+		int enabled;
+		if (Tcl_GetBooleanFromObj(interp, objv[4], &enabled) != TCL_OK)
+		    return TCL_ERROR;
+		if (enabled != TreeItem_GetEnabled(tree, (TreeItem) item)) {
+		    int stateOff = enabled ? 0 : STATE_ENABLED;
+		    int stateOn = enabled ? STATE_ENABLED : 0;
+		    TreeItem_ChangeState(tree, (TreeItem) item, stateOff, stateOn);
+		    /* Disabled items may not be selected. */
+		    if (!enabled && TreeItem_GetSelected(tree, (TreeItem) item)) {
+			TreeItem newD[2];
+			Tree_RemoveFromSelection(tree, (TreeItem) item);
+			newD[0] = (TreeItem) item;
+			newD[1] = NULL;
+			TreeNotify_Selection(tree, NULL, newD);
+		    }
+		}
+	    }
+	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(item->state & STATE_ENABLED));
+	    break;
 	}
 	case COMMAND_FIRSTCHILD:
 	{
