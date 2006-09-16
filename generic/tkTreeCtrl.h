@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.44 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.45 2006/09/16 20:11:03 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -373,6 +373,7 @@ extern int TreeItem_GetButton(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_GetDepth(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_GetID(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_SetID(TreeCtrl *tree, TreeItem item_, int id);
+extern int TreeItem_GetEnabled(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_GetSelected(TreeCtrl *tree, TreeItem item_);
 extern TreeItem TreeItem_GetParent(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_GetNextSibling(TreeCtrl *tree, TreeItem item);
