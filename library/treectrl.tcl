@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.23 2006/07/12 20:51:24 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.24 2006/09/16 20:29:48 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -41,31 +41,31 @@ bind TreeCtrl <Button1-Enter> {
 }
 
 bind TreeCtrl <KeyPress-Up> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::UpDown %W -1]
+    TreeCtrl::SetActiveItem %W [TreeCtrl::UpDown %W active -1]
 }
 bind TreeCtrl <Shift-KeyPress-Up> {
-    TreeCtrl::ExtendUpDown %W above
+    TreeCtrl::Extend %W above
 }
 bind TreeCtrl <KeyPress-Down> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::UpDown %W 1]
+    TreeCtrl::SetActiveItem %W [TreeCtrl::UpDown %W active 1]
 }
 bind TreeCtrl <Shift-KeyPress-Down> {
-    TreeCtrl::ExtendUpDown %W below
+    TreeCtrl::Extend %W below
 }
 bind TreeCtrl <KeyPress-Left> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W -1]
+    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active -1]
 }
 bind TreeCtrl <Shift-KeyPress-Left> {
-    TreeCtrl::ExtendUpDown %W left
+    TreeCtrl::Extend %W left
 }
 bind TreeCtrl <Control-KeyPress-Left> {
     %W xview scroll -1 pages
 }
 bind TreeCtrl <KeyPress-Right> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W 1]
+    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active 1]
 }
 bind TreeCtrl <Shift-KeyPress-Right> {
-    TreeCtrl::ExtendUpDown %W right
+    TreeCtrl::Extend %W right
 }
 bind TreeCtrl <Control-KeyPress-Right> {
     %W xview scroll 1 pages
@@ -95,24 +95,16 @@ bind TreeCtrl <KeyPress-End> {
     %W xview moveto 1
 }
 bind TreeCtrl <Control-KeyPress-Home> {
-    if {[%W item id {first visible}] ne ""} {
-	%W activate {first visible}
-	%W see active
-	%W selection modify active all
-    }
+    TreeCtrl::SetActiveItem %W [%W item id {first visible state enabled}]
 }
 bind TreeCtrl <Shift-Control-KeyPress-Home> {
-    TreeCtrl::DataExtend %W 0
+    TreeCtrl::DataExtend %W [%W item id {first visible state enabled}]
 }
 bind TreeCtrl <Control-KeyPress-End> {
-    if {[%W item id {last visible}] ne ""} {
-	%W activate {last visible}
-	%W see active
-	%W selection modify active all
-    }
+    TreeCtrl::SetActiveItem %W [%W item id {last visible state enabled}]
 }
 bind TreeCtrl <Shift-Control-KeyPress-End> {
-    TreeCtrl::DataExtend %W [%W item id {last visible}]
+    TreeCtrl::DataExtend %W [%W item id {last visible state enabled}]
 }
 bind TreeCtrl <<Copy>> {
     if {[string equal [selection own -displayof %W] "%W"]} {
@@ -173,10 +165,7 @@ if {$tcl_platform(platform) eq "windows"} {
     }
 }
 
-# The MouseWheel will typically only fire on Windows.  However,
-# someone could use the "event generate" command to produce one
-# on other platforms.
-
+# MouseWheel
 if {[string equal "x11" [tk windowingsystem]]} {
     # Support for mousewheels on Linux/Unix commonly comes through mapping
     # the wheel to the extended buttons.  If you have a mousewheel, find
@@ -206,12 +195,24 @@ namespace eval ::TreeCtrl {
     variable Priv
     array set Priv {
 	prev {}
-	rnc {}
     }
 }
 
 # Retrieve filelist bindings from this dir
 source [file join [file dirname [info script]] filelist-bindings.tcl]
+
+# ::TreeCtrl::CursorCheck --
+#
+# Sees if the given pointer coordinates are near the edge of a resizable
+# column in the header. If so and the treectrl's cursor is not already
+# set to sb_h_double_arrow, then the current cursor is saved and changed
+# to sb_h_double_arrow, and an [after] callback to CursorCheckAux is
+# scheduled.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
 
 proc ::TreeCtrl::CursorCheck {w x y} {
     variable Priv
@@ -238,6 +239,14 @@ proc ::TreeCtrl::CursorCheck {w x y} {
     return
 }
 
+# ::TreeCtrl::CursorCheckAux --
+#
+# Get's the location of the pointer and calls CursorCheck if the treectrl's
+# cursor was previously set to sb_h_double_arrow.
+#
+# Arguments:
+# w		The treectrl widget.
+
 proc ::TreeCtrl::CursorCheckAux {w} {
     variable Priv
     set x [winfo pointerx $w]
@@ -249,6 +258,14 @@ proc ::TreeCtrl::CursorCheckAux {w} {
     }
     return
 }
+
+# ::TreeCtrl::CursorCancel --
+#
+# Restores the treectrl's cursor if it was changed to sb_h_double_arrow.
+# Cancels any pending [after] callback to CursorCheckAux.
+#
+# Arguments:
+# w		The treectrl widget.
 
 proc ::TreeCtrl::CursorCancel {w} {
     variable Priv
@@ -262,6 +279,16 @@ proc ::TreeCtrl::CursorCancel {w} {
     }
     return
 }
+
+# ::TreeCtrl::MotionInHeader --
+#
+# This procedure updates the active/normal states of columns as the pointer
+# moves in and out of column headers. Typically this results in visual
+# feedback by changing the appearance of the headers.
+#
+# Arguments:
+# w		The treectrl widget.
+# args		x y coords if the pointer is in the window, or an empty list.
 
 proc ::TreeCtrl::MotionInHeader {w args} {
     variable Priv
@@ -304,6 +331,15 @@ proc ::TreeCtrl::MotionInHeader {w args} {
     }
     return
 }
+
+# ::TreeCtrl::ButtonPress1 --
+#
+# Handle <ButtonPress-1> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
 
 proc ::TreeCtrl::ButtonPress1 {w x y} {
     variable Priv
@@ -352,10 +388,23 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	set Priv(columnDrag,y) $y
 	return
     }
+    set item [lindex $id 1]
+    if {![$w item enabled $item]} {
+	return
+    }
     set Priv(buttonMode) normal
-    BeginSelect $w [lindex $id 1]
+    BeginSelect $w $item
     return
 }
+
+# ::TreeCtrl::DoubleButtonPress1 --
+#
+# Handle <Double-ButtonPress-1> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
 
 proc ::TreeCtrl::DoubleButton1 {w x y} {
     set id [$w identify $x $y]
@@ -391,6 +440,15 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
     }
     return
 }
+
+# ::TreeCtrl::Motion1 --
+#
+# Handle <Button1-Motion> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
 
 proc ::TreeCtrl::Motion1 {w x y} {
     variable Priv
@@ -498,6 +556,15 @@ proc ::TreeCtrl::Motion1 {w x y} {
     return
 }
 
+# ::TreeCtrl::Leave1 --
+#
+# Handle <Button1-Leave> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
+
 proc ::TreeCtrl::Leave1 {w x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
@@ -511,6 +578,15 @@ proc ::TreeCtrl::Leave1 {w x y} {
     return
 }
 
+# ::TreeCtrl::Enter1 --
+#
+# Handle <Button1-Enter> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
+
 proc ::TreeCtrl::Enter1 {w x y} {
     variable Priv
     if {![info exists Priv(buttonMode)]} return
@@ -519,6 +595,15 @@ proc ::TreeCtrl::Enter1 {w x y} {
     }
     return
 }
+
+# ::TreeCtrl::Release1 --
+#
+# Handle <ButtonRelease-1> event.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
 
 proc ::TreeCtrl::Release1 {w x y} {
     variable Priv
@@ -575,29 +660,28 @@ set Priv(prev) ""
 # ::TreeCtrl::BeginSelect --
 #
 # This procedure is typically invoked on button-1 presses.  It begins
-# the process of making a selection in the listbox.  Its exact behavior
-# depends on the selection mode currently in effect for the listbox;
-# see the Motif documentation for details.
+# the process of making a selection in the treectrl.  Its exact behavior
+# depends on the selection mode currently in effect for the treectrl.
 #
 # Arguments:
-# w -		The listbox widget.
-# el -		The element for the selection operation (typically the
-#		one under the pointer).  Must be in numerical form.
+# w		The treectrl widget.
+# item		The item for the selection operation (typically the
+#		one under the pointer).
 
-proc ::TreeCtrl::BeginSelect {w el} {
+proc ::TreeCtrl::BeginSelect {w item} {
     variable Priv
-    if {$el eq ""} return
+    if {$item eq ""} return
     if {[string equal [$w cget -selectmode] "multiple"]} {
-	if {[$w selection includes $el]} {
-	    $w selection clear $el
+	if {[$w selection includes $item]} {
+	    $w selection clear $item
 	} else {
-	    $w selection add $el
+	    $w selection add $item
 	}
     } else {
-	$w selection anchor $el
-	$w selection modify $el all
+	$w selection anchor $item
+	$w selection modify $item all
 	set Priv(selection) {}
-	set Priv(prev) $el
+	set Priv(prev) $item
     }
     return
 }
@@ -606,102 +690,57 @@ proc ::TreeCtrl::BeginSelect {w el} {
 #
 # This procedure is called to process mouse motion events while
 # button 1 is down.  It may move or extend the selection, depending
-# on the listbox's selection mode.
+# on the treectrl's selection mode.
 #
 # Arguments:
-# w -		The listbox widget.
-# el -		The element under the pointer (must be a number).
+# w		The treectrl widget.
+# item-		The item under the pointer.
 
-# NOT USED
-proc ::TreeCtrl::SelectionMotion {w el} {
+proc ::TreeCtrl::SelectionMotion {w item} {
     variable Priv
-    if {$el eq $Priv(prev)} {
+    if {$item eq $Priv(prev)} {
 	return
     }
+    if {![$w item enabled $item]} return
     switch [$w cget -selectmode] {
 	browse {
-	    $w selection modify $el all
-	    set Priv(prev) $el
-	}
-	extended {
-	    set i $Priv(prev)
-	    if {$i eq ""} {
-		set i $el
-		$w selection add $el
-	    }
-	    if {[$w selection includes anchor]} {
-		$w selection clear $i $el
-		$w selection add anchor $el
-	    } else {
-		$w selection clear $i $el
-		$w selection clear anchor $el
-	    }
-	    if {![info exists Priv(selection)]} {
-		set Priv(selection) [$w selection get]
-	    }
-	    while {[$w item compare $i < $el] && [$w item compare $i < anchor]} {
-		if {[lsearch $Priv(selection) $i] >= 0} {
-		    $w selection add $i
-		}
-		set i [$w item id "$i next visible"]
-	    }
-	    while {[$w item compare $i > $el] && [$w item compare $i > anchor]} {
-		if {[lsearch $Priv(selection) $i] >= 0} {
-		    $w selection add $i
-		}
-		set i [$w item id "$i prev visible"]
-	    }
-	    set Priv(prev) $el
-	}
-    }
-    return
-}
-
-# Different version that uses single "selection modify" call
-proc ::TreeCtrl::SelectionMotion {w el} {
-    variable Priv
-    if {$el eq $Priv(prev)} {
-	return
-    }
-    switch [$w cget -selectmode] {
-	browse {
-	    $w selection modify $el all
-	    set Priv(prev) $el
+	    $w selection modify $item all
+	    set Priv(prev) $item
 	}
 	extended {
 	    set i $Priv(prev)
 	    set select {}
 	    set deselect {}
 	    if {$i eq ""} {
-		set i $el
-		lappend select $el
-		set hack [$w item compare $el == anchor]
+		set i $item
+		lappend select $item
+		set hack [$w item compare $item == anchor]
 	    } else {
 		set hack 0
 	    }
 	    if {[$w selection includes anchor] || $hack} {
-		set deselect [concat $deselect [$w range $i $el]]
-		set select [concat $select [$w range anchor $el]]
+		set deselect [concat $deselect [$w range $i $item]]
+		set select [concat $select [$w range anchor $item]]
 	    } else {
-		set deselect [concat $deselect [$w range $i $el]]
-		set deselect [concat $deselect [$w range anchor $el]]
+		set deselect [concat $deselect [$w range $i $item]]
+		set deselect [concat $deselect [$w range anchor $item]]
 	    }
 	    if {![info exists Priv(selection)]} {
 		set Priv(selection) [$w selection get]
 	    }
-	    while {[$w item compare $i < $el] && [$w item compare $i < anchor]} {
+	    while {[$w item compare $i < $item] && [$w item compare $i < anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    lappend select $i
 		}
 		set i [$w item id "$i next visible"]
 	    }
-	    while {[$w item compare $i > $el] && [$w item compare $i > anchor]} {
+	    while {[$w item compare $i > $item] && [$w item compare $i > anchor]} {
 		if {[lsearch $Priv(selection) $i] >= 0} {
 		    lappend select $i
 		}
 		set i [$w item id "$i prev visible"]
 	    }
-	    set Priv(prev) $el
+	    set Priv(prev) $item
 	    $w selection modify $select $deselect
 	}
     }
@@ -711,22 +750,22 @@ proc ::TreeCtrl::SelectionMotion {w el} {
 # ::TreeCtrl::BeginExtend --
 #
 # This procedure is typically invoked on shift-button-1 presses.  It
-# begins the process of extending a selection in the listbox.  Its
+# begins the process of extending a selection in the treectrl.  Its
 # exact behavior depends on the selection mode currently in effect
-# for the listbox;  see the Motif documentation for details.
+# for the treectrl.
 #
 # Arguments:
-# w -		The listbox widget.
-# el -		The element for the selection operation (typically the
-#		one under the pointer).  Must be in numerical form.
+# w		The treectrl widget.
+# item-		The item for the selection operation (typically the
+#		one under the pointer).
 
-proc ::TreeCtrl::BeginExtend {w el} {
+proc ::TreeCtrl::BeginExtend {w item} {
     if {[string equal [$w cget -selectmode] "extended"]} {
 	if {[$w selection includes anchor]} {
-	    SelectionMotion $w $el
+	    SelectionMotion $w $item
 	} else {
 	    # No selection yet; simulate the begin-select operation.
-	    BeginSelect $w $el
+	    BeginSelect $w $item
 	}
     }
     return
@@ -735,38 +774,42 @@ proc ::TreeCtrl::BeginExtend {w el} {
 # ::TreeCtrl::BeginToggle --
 #
 # This procedure is typically invoked on control-button-1 presses.  It
-# begins the process of toggling a selection in the listbox.  Its
+# begins the process of toggling a selection in the treectrl.  Its
 # exact behavior depends on the selection mode currently in effect
-# for the listbox;  see the Motif documentation for details.
+# for the treectrl.
 #
 # Arguments:
-# w -		The listbox widget.
-# el -		The element for the selection operation (typically the
-#		one under the pointer).  Must be in numerical form.
+# w		The treectrl widget.
+# item		The item for the selection operation (typically the
+#		one under the pointer).
 
-proc ::TreeCtrl::BeginToggle {w el} {
+proc ::TreeCtrl::BeginToggle {w item} {
     variable Priv
     if {[string equal [$w cget -selectmode] "extended"]} {
 	set Priv(selection) [$w selection get]
-	set Priv(prev) $el
-	$w selection anchor $el
-	if {[$w selection includes $el]} {
-	    $w selection clear $el
+	set Priv(prev) $item
+	$w selection anchor $item
+	if {[$w selection includes $item]} {
+	    $w selection clear $item
 	} else {
-	    $w selection add $el
+	    $w selection add $item
 	}
     }
     return
 }
 
-proc ::TreeCtrl::CancelRepeat {} {
-    variable Priv
-    if {[info exists Priv(afterId)]} {
-	after cancel $Priv(afterId)
-	unset Priv(afterId)
-    }
-    return
-}
+# ::TreeCtrl::AutoScanCheck --
+#
+# Sees if the given pointer coords are outside the content area of the
+# treectrl (ie, not including borders or column headers) or within
+# -scrollmargin distance of the edges of the content area. If so and
+# auto-scanning is not already in progress, then the window is scrolled
+# and an [after] callback to AutoScanCheckAux is scheduled.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window x coord.
+# y		Window y coord.
 
 proc ::TreeCtrl::AutoScanCheck {w x y} {
     variable Priv
@@ -811,6 +854,13 @@ proc ::TreeCtrl::AutoScanCheck {w x y} {
     return
 }
 
+# ::TreeCtrl::AutoScanCheckAux --
+#
+# Gets the location of the pointer and calls AutoScanCheck.
+#
+# Arguments:
+# w		The treectrl widget.
+
 proc ::TreeCtrl::AutoScanCheckAux {w} {
     variable Priv
     # Not quite sure how this can happen
@@ -824,6 +874,13 @@ proc ::TreeCtrl::AutoScanCheckAux {w} {
     return
 }
 
+# ::TreeCtrl::AutoScanCancel --
+#
+# Cancels any pending [after] callback to AutoScanCheckAux.
+#
+# Arguments:
+# w		The treectrl widget.
+
 proc ::TreeCtrl::AutoScanCancel {w} {
     variable Priv
     if {[info exists Priv(autoscan,afterId,$w)]} {
@@ -833,6 +890,19 @@ proc ::TreeCtrl::AutoScanCancel {w} {
     unset -nocomplain Priv(autoscan,scanning,$w)
     return
 }
+
+# ::TreeCtrl::ColumnDragScrollCheck --
+#
+# Sees if the given pointer coords are outside the left or right edges of
+# the content area of the treectrl (ie, not including borders). If so and
+# auto-scanning is not already in progress, then the window is scrolled
+# horizontally and the column drag-image is repositioned, and an [after]
+# callback to ColumnDragScrollCheckAux is scheduled.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
 
 proc ::TreeCtrl::ColumnDragScrollCheck {w x y} {
     variable Priv
@@ -858,6 +928,13 @@ proc ::TreeCtrl::ColumnDragScrollCheck {w x y} {
     return
 }
 
+# ::TreeCtrl::ColumnDragScrollCheckAux --
+#
+# Gets the location of the pointer and calls ColumnDragScrollCheck.
+#
+# Arguments:
+# w		The treectrl widget.
+
 proc ::TreeCtrl::ColumnDragScrollCheckAux {w} {
     variable Priv
     # Not quite sure how this can happen
@@ -873,60 +950,95 @@ proc ::TreeCtrl::ColumnDragScrollCheckAux {w} {
 
 # ::TreeCtrl::UpDown --
 #
-# Moves the location cursor (active element) up or down by one element,
-# and changes the selection if we're in browse or extended selection
-# mode.
+# Returns the id of an item above or below the given item that the active
+# item could be set to. If the given item isn't visible, the first visible
+# enabled item is returned. An attempt is made to choose an item in the
+# same column over repeat calls; this gives a better result if some rows
+# have less items than others. Only enabled items are considered.
 #
 # Arguments:
-# w -		The listbox widget.
-# amount -	+1 to move down one item, -1 to move back one item.
+# w		The treectrl widget.
+# item		Item to move from, typically the active item.
+# n		+1 to move down, -1 to move up.
 
-proc ::TreeCtrl::UpDown {w n} {
+proc ::TreeCtrl::UpDown {w item n} {
     variable Priv
-    set rnc [$w item rnc active]
-    # active item isn't visible
+    set rnc [$w item rnc $item]
     if {$rnc eq ""} {
-	set rnc [$w item rnc first]
-	if {$rnc eq ""} return
+	return [$w item id {first visible state enabled}]
     }
     scan $rnc "%d %d" row col
-    set Priv(row) [expr {$row + $n}]
-    if {$rnc ne $Priv(rnc)} {
-	set Priv(col) $col
+    set Priv(keyNav,row,$w) [expr {$row + $n}]
+    if {![info exists Priv(keyNav,rnc,$w)] || $rnc ne $Priv(keyNav,rnc,$w)} {
+	set Priv(keyNav,col,$w) $col
     }
-    set index [$w item id "rnc $Priv(row) $Priv(col)"]
-    if {[$w item compare active == $index]} {
-	set Priv(row) $row
+    set item2 [$w item id "rnc $Priv(keyNav,row,$w) $Priv(keyNav,col,$w)"]
+    if {[$w item compare $item == $item2]} {
+	set Priv(keyNav,row,$w) $row
+	if {![$w item enabled $item2]} {
+	    return ""
+	}
     } else {
-	set Priv(rnc) [$w item rnc $index]
+	set Priv(keyNav,rnc,$w) [$w item rnc $item2]
+	if {![$w item enabled $item2]} {
+	    return [UpDown $w $item2 $n]
+	}
     }
-    return $index
+    return $item2
 }
 
-proc ::TreeCtrl::LeftRight {w n} {
+# ::TreeCtrl::LeftRight --
+#
+# Returns the id of an item left or right of the given item that the active
+# item could be set to. If the given item isn't visible, the first visible
+# enabled item is returned. An attempt is made to choose an item in the
+# same row over repeat calls; this gives a better result if some columns
+# have less items than others. Only enabled items are considered.
+#
+# Arguments:
+# w		The treectrl widget.
+# item		Item to move from, typically the active item.
+# n		+1 to move right, -1 to move left.
+
+proc ::TreeCtrl::LeftRight {w item n} {
     variable Priv
-    set rnc [$w item rnc active]
+    set rnc [$w item rnc $item]
     if {$rnc eq ""} {
-	set rnc [$w item rnc first]
-	if {$rnc eq ""} return
+	return [$w item id {first visible state enabled}]
     }
     scan $rnc "%d %d" row col
-    set Priv(col) [expr {$col + $n}]
-    if {$rnc ne $Priv(rnc)} {
-	set Priv(row) $row
+    set Priv(keyNav,col,$w) [expr {$col + $n}]
+    if {![info exists Priv(keyNav,rnc,$w)] || $rnc ne $Priv(keyNav,rnc,$w)} {
+	set Priv(keyNav,row,$w) $row
     }
-    set index [$w item id "rnc $Priv(row) $Priv(col)"]
-    if {[$w item compare active == $index]} {
-	set Priv(col) $col
+    set item2 [$w item id "rnc $Priv(keyNav,row,$w) $Priv(keyNav,col,$w)"]
+    if {[$w item compare $item == $item2]} {
+	set Priv(keyNav,col,$w) $col
+	if {![$w item enabled $item2]} {
+	    return ""
+	}
     } else {
-	set Priv(rnc) [$w item rnc $index]
+	set Priv(keyNav,rnc,$w) [$w item rnc $item2]
+	if {![$w item enabled $item2]} {
+	    return [LeftRight $w $item2 $n]
+	}
     }
-    return $index
+    return $item2
 }
 
-proc ::TreeCtrl::SetActiveItem {w index} {
-    if {$index eq ""} return
-    $w activate $index
+# ::TreeCtrl::SetActiveItem --
+#
+# Sets the active item, scrolls it into view, and makes it the only selected
+# item. If -selectmode is extended, makes the active item the anchor of any
+# future extended selection.
+#
+# Arguments:
+# w		The treectrl widget.
+# item		The new active item, or "".
+
+proc ::TreeCtrl::SetActiveItem {w item} {
+    if {$item eq ""} return
+    $w activate $item
     $w see active
     $w selection modify active all
     switch [$w cget -selectmode] {
@@ -939,29 +1051,33 @@ proc ::TreeCtrl::SetActiveItem {w index} {
     return
 }
 
-# ::TreeCtrl::ExtendUpDown --
+# ::TreeCtrl::Extend --
 #
 # Does nothing unless we're in extended selection mode;  in this
-# case it moves the location cursor (active element) up or down by
-# one element, and extends the selection to that point.
+# case it moves the location cursor (active item) up, down, left or
+# right, and extends the selection to that point.
 #
 # Arguments:
-# w -		The listbox widget.
-# amount -	+1 to move down one item, -1 to move back one item.
+# w		The treectrl widget.
+# dir		up, down, left or right
 
-proc ::TreeCtrl::ExtendUpDown {w amount} {
+proc ::TreeCtrl::Extend {w dir} {
     variable Priv
     if {[string compare [$w cget -selectmode] "extended"]} {
 	return
     }
-    set active [$w item id active]
     if {![info exists Priv(selection)]} {
-	$w selection add $active
+	$w selection add active
 	set Priv(selection) [$w selection get]
     }
-    set index [$w item id "active $amount"]
-    if {$index eq ""} return
-    $w activate $index
+    switch -- $dir {
+	above { set item [UpDown $w active -1] }
+	below { set item [UpDown $w active 1] }
+	left { set item [LeftRight $w active -1] }
+	right { set item [LeftRight $w active 1] }
+    }
+    if {$item eq ""} return
+    $w activate $item
     $w see active
     SelectionMotion $w [$w item id active]
     return
@@ -970,25 +1086,26 @@ proc ::TreeCtrl::ExtendUpDown {w amount} {
 # ::TreeCtrl::DataExtend
 #
 # This procedure is called for key-presses such as Shift-KEndData.
-# If the selection mode isn't multiple or extend then it does nothing.
-# Otherwise it moves the active element to el and, if we're in
+# If the selection mode isn't multiple or extended then it does nothing.
+# Otherwise it moves the active item and, if we're in
 # extended mode, extends the selection to that point.
 #
 # Arguments:
-# w -		The listbox widget.
-# el -		An integer element number.
+# w		The treectrl widget.
+# item		Item to become new active item.
 
-proc ::TreeCtrl::DataExtend {w el} {
+proc ::TreeCtrl::DataExtend {w item} {
+    if {$item eq ""} return
     set mode [$w cget -selectmode]
     if {[string equal $mode "extended"]} {
-	$w activate $el
-	$w see $el
+	$w activate $item
+	$w see $item
         if {[$w selection includes anchor]} {
-	    SelectionMotion $w $el
+	    SelectionMotion $w $item
 	}
     } elseif {[string equal $mode "multiple"]} {
-	$w activate $el
-	$w see $el
+	$w activate $item
+	$w see $item
     }
     return
 }
@@ -1001,7 +1118,7 @@ proc ::TreeCtrl::DataExtend {w el} {
 # to their previous selection state.
 #
 # Arguments:
-# w -		The listbox widget.
+# w		The treectrl widget.
 
 proc ::TreeCtrl::Cancel w {
     variable Priv
@@ -1032,11 +1149,11 @@ proc ::TreeCtrl::Cancel w {
 # ::TreeCtrl::SelectAll
 #
 # This procedure is invoked to handle the "select all" operation.
-# For single and browse mode, it just selects the active element.
+# For single and browse mode, it just selects the active item.
 # Otherwise it selects everything in the widget.
 #
 # Arguments:
-# w -		The listbox widget.
+# w		The treectrl widget.
 
 proc ::TreeCtrl::SelectAll w {
     set mode [$w cget -selectmode]
@@ -1048,6 +1165,15 @@ proc ::TreeCtrl::SelectAll w {
     return
 }
 
+# ::TreeCtrl::MarqueeBegin --
+#
+# Shows the selection rectangle at the given coords.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
+
 proc ::TreeCtrl::MarqueeBegin {w x y} {
     set x [$w canvasx $x]
     set y [$w canvasy $y]
@@ -1056,16 +1182,44 @@ proc ::TreeCtrl::MarqueeBegin {w x y} {
     return
 }
 
+# ::TreeCtrl::MarqueeUpdate --
+#
+# Resizes the selection rectangle.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
+
 proc ::TreeCtrl::MarqueeUpdate {w x y} {
     set x [$w canvasx $x]
     set y [$w canvasy $y]
     $w marquee corner $x $y
     return
 }
+
+# ::TreeCtrl::MarqueeEnd --
+#
+# Hides the selection rectangle.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
+
 proc ::TreeCtrl::MarqueeEnd {w x y} {
     $w marquee configure -visible no
     return
 }
+
+# ::TreeCtrl::ScanMark --
+#
+# Marks the start of a possible scan drag operation.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
 
 proc ::TreeCtrl::ScanMark {w x y} {
     variable Priv
@@ -1075,6 +1229,15 @@ proc ::TreeCtrl::ScanMark {w x y} {
     set Priv(mouseMoved) 0
     return
 }
+
+# ::TreeCtrl::ScanDrag --
+#
+# Performs a scan drag if the mouse moved.
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
 
 proc ::TreeCtrl::ScanDrag {w x y} {
     variable Priv
@@ -1089,6 +1252,19 @@ proc ::TreeCtrl::ScanDrag {w x y} {
     return
 }
 
+# ::TreeCtrl::TryEvent --
+#
+# This procedure is used to cause a treectrl to generate a dynamic event.
+# If the treectrl doesn't have the event defined (because you didn't call
+# the [notify install] command) nothing happens. TreeCtrl::PercentsCmd is
+# used to perform %-substitution on any scripts bound to the event.
+#
+# Arguments:
+# T		The treectrl widget.
+# event		Name of event.
+# detail	Name of detail or "".
+# charMap	%-char substitution list (even number of elements).
+
 proc ::TreeCtrl::TryEvent {T event detail charMap} {
     if {[lsearch -exact [$T notify eventnames] $event] == -1} return
     if {$detail ne ""} {
@@ -1099,6 +1275,20 @@ proc ::TreeCtrl::TryEvent {T event detail charMap} {
     }
     return
 }
+
+# ::TreeCtrl::PercentsCmd --
+#
+# This command is passed to [notify generate] to perform %-substitution on
+# scripts bound to dynamic events. It supports the same set of substitution
+# characters as the built-in static events (plus any event-specific chars).
+#
+# Arguments:
+# T		The treectrl widget.
+# char		%-char to be replaced in bound scripts.
+# object	Same arg passed to [notify bind].
+# event		Name of event.
+# detail	Name of detail or "".
+# charMap	%-char substitution list (even number of elements).
 
 proc ::TreeCtrl::PercentsCmd {T char object event detail charMap} {
     if {$detail ne ""} {
