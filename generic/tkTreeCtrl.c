@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.61 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.62 2006/09/16 20:12:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2227,6 +2227,9 @@ Tree_AddToSelection(
     if (TreeItem_GetSelected(tree, item))
 	panic("Tree_AddToSelection: item %d already selected",
 		TreeItem_GetID(tree, item));
+    if (!TreeItem_GetEnabled(tree, item))
+	panic("Tree_AddToSelection: item %d not enabled",
+		TreeItem_GetID(tree, item));
     TreeItem_ChangeState(tree, item, 0, STATE_SELECTED);
     hPtr = Tcl_CreateHashEntry(&tree->selection, (char *) item, &isNew);
     if (!isNew)
@@ -2348,9 +2351,11 @@ TreeSelectionCmd(
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
 #ifdef SELECTION_VISIBLE
 		    if (!TreeItem_GetSelected(tree, item) &&
+			    TreeItem_GetEnabled(tree, item) &&
 			    TreeItem_ReallyVisible(tree, item)) {
 #else
-		    if (!TreeItem_GetSelected(tree, item)) {
+		    if (!TreeItem_GetSelected(tree, item) &&
+			    TreeItem_GetEnabled(tree, item)) {
 #endif
 			Tree_AddToSelection(tree, item);
 			items[count++] = item;
@@ -2390,9 +2395,11 @@ TreeSelectionCmd(
 	    while (item != NULL) {
 #ifdef SELECTION_VISIBLE
 		if (!TreeItem_GetSelected(tree, item) &&
+			TreeItem_GetEnabled(tree, item) &&
 			TreeItem_ReallyVisible(tree, item)) {
 #else
-		if (!TreeItem_GetSelected(tree, item)) {
+		if (!TreeItem_GetSelected(tree, item) &&
+			TreeItem_GetEnabled(tree, item)) {
 #endif
 		    Tree_AddToSelection(tree, item);
 		    items[count++] = item;
@@ -2452,7 +2459,6 @@ doneADD:
 		count = tree->selectCount;
 		STATIC_ALLOC(items, TreeItem, count + 1);
 		count = 0;
-#if 1
 		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
@@ -2461,14 +2467,6 @@ doneADD:
 		}
 		for (index = 0; index < count; index++)
 		    Tree_RemoveFromSelection(tree, items[index]);
-#else
-		while (tree->selectCount) {
-		    hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
-		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
-		    Tree_RemoveFromSelection(tree, item);
-		    items[count++] = item;
-		}
-#endif
 		goto doneCLEAR;
 	    }
 	    if (objc == 4) {
@@ -2618,7 +2616,8 @@ doneCLEAR:
 		if (!TreeItem_ReallyVisible(tree, item))
 		    item = TreeItem_NextVisible(tree, item);
 		while (item != NULL) {
-		    if (!TreeItem_GetSelected(tree, item)) {
+		    if (!TreeItem_GetSelected(tree, item) &&
+			    TreeItem_GetEnabled(tree, item)) {
 			Tree_AddToSelection(tree, item);
 			newS[count++] = item;
 		    }
@@ -2629,7 +2628,8 @@ doneCLEAR:
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
-		    if (!TreeItem_GetSelected(tree, item)) {
+		    if (!TreeItem_GetSelected(tree, item) &&
+			    TreeItem_GetEnabled(tree, item)) {
 			Tree_AddToSelection(tree, item);
 			newS[count++] = item;
 		    }
@@ -2651,6 +2651,8 @@ doneCLEAR:
 		for (i = 0; i < objcS; i++) {
 		    item = itemS[i];
 		    if (TreeItem_GetSelected(tree, item))
+			continue;
+		    if (!TreeItem_GetEnabled(tree, item))
 			continue;
 #ifdef SELECTION_VISIBLE
 		    if (!TreeItem_ReallyVisible(tree, item))
@@ -2748,6 +2750,8 @@ doneCLEAR:
 		    item = itemS[i];
 		    if (TreeItem_GetSelected(tree, item))
 			continue;
+		    if (!TreeItem_GetEnabled(tree, item))
+			continue;
 #ifdef SELECTION_VISIBLE
 		    if (!TreeItem_ReallyVisible(tree, item))
 			continue;
@@ -2816,6 +2820,8 @@ doneCLEAR:
 	    for (i = 0; i < objcS; i++) {
 		item = itemS[i];
 		if (TreeItem_GetSelected(tree, item))
+		    continue;
+		if (!TreeItem_GetEnabled(tree, item))
 		    continue;
 #ifdef SELECTION_VISIBLE
 		if (!TreeItem_ReallyVisible(tree, item))
@@ -3478,16 +3484,7 @@ ImageTintCmd(
 	}
 	TK_PHOTOPUTBLOCK(interp, photoH, &photoBlock, 0, y,
 		imgW, 1, TK_PHOTO_COMPOSITE_OVERLAY);
-#if 1
 	photoPix += pitch;
-#else
-	{
-	    Tk_PhotoImageBlock photoBlock;
-	    Tk_PhotoGetImage(photoH, &photoBlock);
-	    photoPix = photoBlock.pixelPtr;
-	    photoPix += photoBlock.pitch * (y + 1);
-	}
-#endif
     }
     Tcl_Free((char *) photoBlock.pixelPtr);
 
