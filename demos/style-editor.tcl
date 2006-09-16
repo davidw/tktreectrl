@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.6 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.7 2006/09/16 20:10:27 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -286,7 +286,7 @@ proc StyleEditor::SetPropertyList {} {
 
 	update idletasks
 	set height 0
-	foreach editor {pad expand iexpand squeeze boolean pixels} {	
+	foreach editor {pad expand iexpand squeeze boolean pixels} {
 	    set heightWin [winfo reqheight [Info editor,$editor]]
 	    incr heightWin
 	    if {$heightWin > $height} {
@@ -335,6 +335,7 @@ proc StyleEditor::SetPropertyList {} {
 	    $T item span $I 0 2
 	    $T item element configure $I 0 e1 -text $header -fill White
 	    $T item state set $I header
+	    $T item enabled $I false
 	} else {
 	    $T item style set $I 1 s1
 	    $T item text $I 0 $option 1 [$Tdemo style layout $style $element $option]
