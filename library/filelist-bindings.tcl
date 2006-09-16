@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.21 2006/09/05 21:57:21 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.22 2006/09/16 20:31:05 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -125,6 +125,9 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 			set ok 1
 			break
 		    }
+		}
+		if {![$T item enabled $item]} {
+		    set ok 0
 		}
 		if {$ok} {
 		    set Priv(drag,motion) 0
