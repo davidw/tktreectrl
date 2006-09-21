@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.38 2006/09/05 21:56:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.39 2006/09/21 06:38:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3239,3 +3239,169 @@ AllocHax_Finalize(
 }
 
 #endif /* ALLOC_HAX */
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Init --
+ *
+ *	Initializes an item list, discarding any previous contents
+ *	of the item list (TreeItemList_Free should have been called already
+ *	if the item list was previously in use).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The item list is initialized to be empty.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeItemList_Init(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemList *tilPtr,	/* Structure describing item list. */
+    int count			/* Number of items the list should hold.
+				 * 0 for default. */
+    )
+{
+    tilPtr->tree = tree;
+    tilPtr->items = tilPtr->itemSpace;
+    tilPtr->count = 0;
+    tilPtr->space = TIL_STATIC_SPACE;
+
+    if (count + 1 > TIL_STATIC_SPACE) {
+	tilPtr->space = count + 1;
+	tilPtr->items = (TreeItem *) ckalloc(tilPtr->space * sizeof(TreeItem));
+    }
+
+    tilPtr->items[0] = NULL;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Grow --
+ *
+ *	Increase the available space in an item list.
+ *
+ * Results:
+ *	The items[] array is resized if needed.
+ *
+ * Side effects:
+ *	Memory gets reallocated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeItemList_Grow(
+    TreeItemList *tilPtr,	/* Structure describing item list. */
+    int count			/* Number of items the list should hold. */
+    )
+{
+    if (tilPtr->space >= count + 1)
+	return;
+    while (tilPtr->space < count + 1)
+	tilPtr->space *= 2;
+    if (tilPtr->items == tilPtr->itemSpace) {
+	TreeItem *items;
+	items = (TreeItem *) ckalloc(tilPtr->space * sizeof(TreeItem));
+	memcpy(items, tilPtr->items, (tilPtr->count + 1) * sizeof(TreeItem));
+	tilPtr->items = items;
+    } else {
+	tilPtr->items = (TreeItem *) ckrealloc((char *) tilPtr->items,
+		tilPtr->space * sizeof(TreeItem));
+    }
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Append --
+ *
+ *	Append an item to an item list.
+ *
+ * Results:
+ *	The return value is a pointer to the list of items.
+ *
+ * Side effects:
+ *	Memory gets reallocated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeItem *
+TreeItemList_Append(
+    TreeItemList *tilPtr,	/* Structure describing item list. */
+    TreeItem item		/* Item to append. */
+    )
+{
+    TreeItemList_Grow(tilPtr, tilPtr->count + 1);
+    tilPtr->items[tilPtr->count] = item;
+    tilPtr->count++;
+    tilPtr->items[tilPtr->count] = NULL;
+    return tilPtr->items;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Concat --
+ *
+ *	Join two item lists.
+ *
+ * Results:
+ *	The return value is a pointer to the list of items.
+ *
+ * Side effects:
+ *	Memory gets reallocated if needed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeItem *
+TreeItemList_Concat(
+    TreeItemList *tilPtr,	/* Structure describing item list. */
+    TreeItemList *til2Ptr	/* Item list to append. */
+    )
+{
+    TreeItemList_Grow(tilPtr, tilPtr->count + til2Ptr->count);
+    memcpy(tilPtr->items + tilPtr->count, til2Ptr->items,
+	til2Ptr->count * sizeof(TreeItem));
+    tilPtr->count += til2Ptr->count;
+    tilPtr->items[tilPtr->count] = NULL;
+    return tilPtr->items;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Free --
+ *
+ *	Frees up any memory allocated for the item list and
+ *	reinitializes the item list to an empty state.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The previous contents of the item list are lost.
+ *
+ *---------------------------------------------------------------------- */
+
+void
+TreeItemList_Free(
+    TreeItemList *tilPtr	/* Structure describing item list. */
+    )
+{
+    if (tilPtr->items != tilPtr->itemSpace) {
+	ckfree((char *) tilPtr->items);
+    }
+    tilPtr->items = tilPtr->itemSpace;
+    tilPtr->count = 0;
+    tilPtr->space = TIL_STATIC_SPACE;
+    tilPtr->items[0] = NULL;
+}
+
