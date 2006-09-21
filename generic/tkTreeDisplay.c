@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.37 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.38 2006/09/21 06:08:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -98,6 +98,8 @@ struct DInfo
     TkRegion wsRgn;		/* Region containing whitespace */
     Tcl_HashTable itemVisHash;	/* Table of visible items */
     DItem *dItemFree;		/* List of unused DItems */
+    int requests;		/* Incremented for every call to
+				   Tree_EventuallyRedraw */
 };
 
 /*========*/
@@ -3684,6 +3686,7 @@ Tree_Display(
     int numCopy = 0, numDraw = 0;
     TkRegion wsRgnNew, wsRgnDif;
     XRectangle wsBox;
+    int requests;
 
     if (tree->debug.enable && tree->debug.display && 0)
 	dbwin("Tree_Display %s\n", Tk_PathName(tkwin));
@@ -3692,18 +3695,20 @@ Tree_Display(
 	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
 	return;
     }
+
+    /* */
+    Tcl_Preserve((ClientData) tree);
+    Tree_PreserveItems(tree);
+
+displayRetry:
+
     /* Some change requires selection changes */
     if (dInfo->flags & DINFO_REDO_SELECTION) {
 #ifdef SELECTION_VISIBLE
-	int abort = 0;
-	/* A <Selection> event may occur so preserve things */
-	Tcl_Preserve((ClientData) tree);
+	/* Possible <Selection> event. */
 	Tree_DeselectHidden(tree);
 	if (tree->deleted)
-	    abort = 1;
-	Tcl_Release((ClientData) tree);
-	if (abort)
-	    return;
+	    goto displayExit;
 #endif
 	dInfo->flags &= ~(DINFO_REDO_SELECTION);
     }
@@ -3798,35 +3803,125 @@ Tree_Display(
 	Tree_SetOriginY(tree, tree->yOrigin);
 	dInfo->flags &= ~DINFO_SET_ORIGIN_Y;
     }
+    /*
+     * dInfo->requests counts the number of calls to Tree_EventuallyRedraw().
+     * If binding scripts do something that causes a redraw to be requested,
+     * then we abort the current draw and start again.
+     */
+    requests = dInfo->requests;
     if (dInfo->flags & DINFO_UPDATE_SCROLLBAR_X) {
+	/* Possible <Scroll-x> event. */
 	Tree_UpdateScrollbarX(tree);
 	dInfo->flags &= ~DINFO_UPDATE_SCROLLBAR_X;
     }
     if (dInfo->flags & DINFO_UPDATE_SCROLLBAR_Y) {
+	/* Possible <Scroll-y> event. */
 	Tree_UpdateScrollbarY(tree);
 	dInfo->flags &= ~DINFO_UPDATE_SCROLLBAR_Y;
     }
-    if (tree->deleted || !Tk_IsMapped(tkwin)) {
-	dInfo->flags &= ~(DINFO_REDRAW_PENDING);
-	return;
+    if (tree->deleted || !Tk_IsMapped(tkwin))
+	goto displayExit;
+    if (requests != dInfo->requests) {
+	dbwin("displayRetry\n");
+	goto displayRetry;
     }
     if (dInfo->flags & DINFO_OUT_OF_DATE) {
 	Tree_UpdateDInfo(tree);
 	dInfo->flags &= ~DINFO_OUT_OF_DATE;
     }
 
+    /*
+     * When an item goes from visible to hidden, "window" elements in the
+     * item must be hidden. An item may become hidden because of scrolling,
+     * or because an ancestor was collapsed, or because the -visible option
+     * of the item changed.
+     */
+    {
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+	TreeItemList newV, newH;
+	TreeItem item;
+	int isNew, i, count;
+
+	TreeItemList_Init(tree, &newV, 0);
+	TreeItemList_Init(tree, &newH, 0);
+
+	/* This is needed for updating window positions */
+	tree->drawableXOrigin = tree->xOrigin;
+	tree->drawableYOrigin = tree->yOrigin;
+
+	for (dItem = dInfo->dItem;
+	    dItem != NULL;
+	    dItem = dItem->next) {
+
+	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) dItem->item);
+	    if (hPtr == NULL) {
+		/* This item is now visible, wasn't before */
+		TreeItemList_Append(&newV, dItem->item);
+		TreeItem_OnScreen(tree, dItem->item, TRUE);
+	    }
+	}
+
+	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
+	while (hPtr != NULL) {
+	    item = (TreeItem) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
+	    if (TreeItem_GetDInfo(tree, item) == NULL) {
+		/* This item was visible but isn't now */
+		TreeItemList_Append(&newH, item);
+		TreeItem_OnScreen(tree, item, FALSE);
+	    }
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+
+	/* Remove newly-hidden items from itemVisHash */
+	count = TreeItemList_Count(&newH);
+	for (i = 0; i < count; i++) {
+	    item = TreeItemList_ItemN(&newH, i);
+	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
+	    Tcl_DeleteHashEntry(hPtr);
+	}
+
+	/* Add newly-visible items to itemVisHash */
+	count = TreeItemList_Count(&newV);
+	for (i = 0; i < count; i++) {
+	    item = TreeItemList_ItemN(&newV, i);
+	    hPtr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) item, &isNew);
+	}
+
+	requests = dInfo->requests;
+
+	/*
+	 * Generate an <ItemVisibility> event here. This can be used to set
+	 * an item's styles when the item is about to be displayed, and to
+	 * clear an item's styles when the item is no longer displayed.
+	 */
+	if (TreeItemList_Count(&newV) || TreeItemList_Count(&newH)) {
+	    /* Possible <ItemVisibility> event. */
+	    TreeNotify_ItemVisibility(tree, &newV, &newH);
+	}
+
+	TreeItemList_Free(&newV);
+	TreeItemList_Free(&newH);
+
+	if (tree->deleted || !Tk_IsMapped(tkwin))
+	    goto displayExit;
+
+	if (requests != dInfo->requests) {
+	    dbwin("displayRetry\n");
+	    goto displayRetry;
+	}
+    }
+
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	dInfo->dirty[LEFT] = dInfo->dirty[TOP] = 100000;
 	dInfo->dirty[RIGHT] = dInfo->dirty[BOTTOM] = -100000;
+	drawable = dInfo->pixmap;
     }
 
     minX = tree->inset;
     maxX = Tk_Width(tkwin) - tree->inset;
     minY = tree->inset + Tree_HeaderHeight(tree);
     maxY = Tk_Height(tkwin) - tree->inset;
-
-    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW)
-	drawable = dInfo->pixmap;
 
     /* XOR off */
     TreeColumnProxy_Undisplay(tree);
@@ -3835,16 +3930,13 @@ Tree_Display(
 
     if (dInfo->flags & DINFO_DRAW_HEADER) {
 	if (tree->showHeader) {
+	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, tree->inset);
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		Tree_DrawHeader(tree, dInfo->pixmap, 0 - tree->xOrigin,
-			tree->inset);
 		dInfo->dirty[LEFT] = minX;
 		dInfo->dirty[TOP] = tree->inset;
 		dInfo->dirty[RIGHT] = maxX;
 		dInfo->dirty[BOTTOM] = minY;
 	    }
-	    else
-		Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, tree->inset);
 	}
 	dInfo->flags &= ~DINFO_DRAW_HEADER;
     }
@@ -3963,113 +4055,6 @@ Tree_Display(
 	dInfo->wsRgn = wsRgnNew;
     }
 
-    /*
-     * When an item goes from visible to hidden, "window" elements in the
-     * item must be hidden. An item may become hidden because of scrolling,
-     * or because an ancestor was collapsed, or because the -visible option
-     * of the item changed.
-     */
-    {
-	Tcl_HashEntry *hPtr, *h2Ptr;
-	Tcl_HashSearch search;
-	Tcl_HashTable table, tableV, tableH;
-	int id, isNew;
-	int numV = 0, numH = 0;
-	int abort = 0;
-
-	Tcl_InitHashTable(&table, TCL_ONE_WORD_KEYS);
-	Tcl_InitHashTable(&tableV, TCL_ONE_WORD_KEYS);
-	Tcl_InitHashTable(&tableH, TCL_ONE_WORD_KEYS);
-
-	/* This is needed for updating window positions */
-	tree->drawableXOrigin = tree->xOrigin;
-	tree->drawableYOrigin = tree->yOrigin;
-
-	for (dItem = dInfo->dItem;
-	    dItem != NULL;
-	    dItem = dItem->next) {
-
-	    id = TreeItem_GetID(tree, dItem->item);
-
-	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
-	    if (hPtr == NULL) {
-		/* This item is now visible, wasn't before */
-		hPtr = Tcl_CreateHashEntry(&tableV, (char *) id, &isNew);
-		TreeItem_OnScreen(tree, dItem->item, TRUE);
-		numV++;
-	    } else {
-		/*
-		 * This item was visible and still is. Handle scrolling.
-		 */
-		TreeItem_UpdateWindowPositions(tree, dItem->item,
-		    dItem->x, dItem->y, dItem->width, dItem->height);
-	    }
-	    hPtr = Tcl_CreateHashEntry(&table, (char *) id, &isNew);
-	}
-
-	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr);
-	    h2Ptr = Tcl_FindHashEntry(&table, (char *) id);
-	    if (h2Ptr == NULL) {
-		/* This item was visible but isn't now */
-		h2Ptr = Tcl_CreateHashEntry(&tableH, (char *) id, &isNew);
-		numH++;
-		h2Ptr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
-		if (h2Ptr != NULL) {
-		    TreeItem item = (TreeItem) Tcl_GetHashValue(h2Ptr);
-		    TreeItem_OnScreen(tree, item, FALSE);
-		}
-	    }
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/* Remove newly-hidden items from itemVisHash */
-	hPtr = Tcl_FirstHashEntry(&tableH, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&tableH, hPtr);
-	    h2Ptr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) id);
-	    Tcl_DeleteHashEntry(h2Ptr);
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/* Add newly-visible items to itemVisHash */
-	hPtr = Tcl_FirstHashEntry(&tableV, &search);
-	while (hPtr != NULL) {
-	    id = (int) Tcl_GetHashKey(&tableV, hPtr);
-	    h2Ptr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) id, &isNew);
-	    hPtr = Tcl_NextHashEntry(&search);
-	}
-
-	/*
-	 * Generate an <ItemVisibility> event here. This can be used to set
-	 * an item's styles when the item is about to be displayed, and to
-	 * clear an item's styles when the item is no longer displayed.
-	 */
-	if (numV || numH) {
-	    /*
-	     * All sorts of nasty stuff could happen now, such as the
-	     * treectrl being destroyed, or the interpreter being deleted.
-	     * We prevent items being deleted.
-	     */
-	    Tcl_Preserve((ClientData) tree);
-	    tree->displayInProgress = 1;
-	    TreeNotify_ItemVisibility(tree, &tableV, &tableH);
-	    tree->displayInProgress = 0;
-	    if (tree->deleted)
-		abort = 1;
-	    Tcl_Release((ClientData) tree);
-	}
-
-	Tcl_DeleteHashTable(&table);
-	Tcl_DeleteHashTable(&tableV);
-	Tcl_DeleteHashTable(&tableH);
-
-	/* The window was deleted */
-	if (abort)
-	    return;
-    }
-
     /* See if there are any dirty items */
     count = 0;
     for (dItem = dInfo->dItem;
@@ -4094,8 +4079,15 @@ Tree_Display(
 	for (dItem = dInfo->dItem;
 	     dItem != NULL;
 	     dItem = dItem->next) {
-	    if (!(dItem->flags & DITEM_DIRTY))
+
+	    if (!(dItem->flags & DITEM_DIRTY)) {
+		/*
+		 * This item was visible and still is. Handle scrolling.
+		 */
+		TreeItem_UpdateWindowPositions(tree, dItem->item,
+		    dItem->x, dItem->y, dItem->width, dItem->height);
 		continue;
+	    }
 
 	    if (dItem->flags & DITEM_ALL_DIRTY) {
 		left = dItem->x;
@@ -4216,6 +4208,11 @@ Tree_Display(
 		tree->relief);
 	dInfo->flags &= ~DINFO_DRAW_BORDER;
     }
+
+displayExit:
+    dInfo->flags &= ~(DINFO_REDRAW_PENDING);
+    Tree_ReleaseItems(tree);
+    Tcl_Release((ClientData) tree);
 }
 
 /*
@@ -4777,6 +4774,7 @@ Tree_EventuallyRedraw(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
+    dInfo->requests++;
     if ((dInfo->flags & DINFO_REDRAW_PENDING) ||
 	    tree->deleted ||
 	    !Tk_IsMapped(tree->tkwin)) {
@@ -4987,8 +4985,6 @@ Tree_FreeItemDInfo(
     TreeItem item = item1;
     int changed = 0;
 
-    if (tree->displayInProgress) return;
-
     while (item != NULL) {
 	dItem = (DItem *) TreeItem_GetDInfo(tree, item);
 	if (dItem != NULL) {
@@ -5078,8 +5074,7 @@ TreeDisplay_ItemDeleted(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Tcl_HashEntry *hPtr;
 
-    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash,
-	    (char *) TreeItem_GetID(tree, item));
+    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
     if (hPtr != NULL)
 	Tcl_DeleteHashEntry(hPtr);
 }
