@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.45 2006/09/16 20:11:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.46 2006/09/21 05:45:44 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -89,6 +89,22 @@ struct PerStateType
 };
 
 /*****/
+
+/*
+ * A TreeItemList is used for dynamically-growing lists of items.
+ * A TreeItemList is NULL-terminated.
+ * Based on Tcl_DString code.
+ */
+#define TIL_STATIC_SPACE 128
+typedef struct TreeItemList TreeItemList;
+struct TreeItemList {
+    TreeCtrl *tree;
+    TreeItem *items;		/* NULL-terminated list of items. */
+    int count;			/* Number of items. */
+    int space;			/* Number of slots pointed to by items[]. */
+    TreeItem itemSpace[TIL_STATIC_SPACE]; /* Space to use in common case
+				 * where the list is small. */
+};
 
 enum { LEFT, TOP, RIGHT, BOTTOM };
 
@@ -219,7 +235,6 @@ struct TreeCtrl
     int gotFocus;		/* flag */
     int deleted;		/* flag */
     int updateIndex;		/* flag */
-    int displayInProgress;	/* flag: displaying the tree */
     int isActive;		/* flag: mac & win "active" toplevel */
     int inset;			/* borderWidth + highlightWidth */
     int xOrigin;		/* offset from content x=0 to window x=0 */
@@ -303,8 +318,11 @@ struct TreeCtrl
     int itemPrefixLen;		/* -itemprefix */
     int columnPrefixLen;	/* -columnprefix */
 #ifdef ALLOC_HAX
-	ClientData allocData;
+    ClientData allocData;
 #endif
+    int preserveItemRefCnt;	/* Ref count so items-in-use aren't freed. */
+    TreeItemList preserveItemList;	/* List of items to be deleted when
+				 * preserveItemRefCnt==0. */
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -331,6 +349,8 @@ extern void Tree_UpdateScrollbarX(TreeCtrl *tree);
 extern void Tree_UpdateScrollbarY(TreeCtrl *tree);
 extern void Tree_AddToSelection(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveFromSelection(TreeCtrl *tree, TreeItem item);
+extern void Tree_PreserveItems(TreeCtrl *tree);
+extern void Tree_ReleaseItems(TreeCtrl *tree);
 
 #define STATE_OP_ON	0
 #define STATE_OP_OFF	1
@@ -346,6 +366,8 @@ extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *i
 #define IFO_ALLOK	0x0001	/* ItemFromObj flag: "all" is acceptable */
 #define IFO_NULLOK	0x0002	/* ItemFromObj flag: can be NULL */
 #define IFO_NOTROOT	0x0004	/* ItemFromObj flag: "root" is forbidden */
+#define IFO_NOTORPHAN	0x0008	/* ItemFromObj flag: item must have a parent */
+extern int TreeItemList_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItemList *items, int flags);
 extern int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int flags);
 
 extern void FormatResult(Tcl_Interp *interp, char *fmt, ...);
@@ -354,6 +376,7 @@ extern void Tree_Debug(TreeCtrl *tree);
 extern int TreeItem_Init(TreeCtrl *tree);
 extern int TreeItem_Debug(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item, int mode, int recurse);
+extern void TreeItem_Delete(TreeCtrl *tree, TreeItem item);
 
 #define STATE_OPEN	0x0001
 #define STATE_SELECTED	0x0002
@@ -385,6 +408,7 @@ extern TreeItemRInfo TreeItem_GetRInfo(TreeCtrl *tree, TreeItem item);
 
 extern void TreeItem_AppendChild(TreeCtrl *tree, TreeItem self, TreeItem child);
 extern void TreeItem_RemoveFromParent(TreeCtrl *tree, TreeItem self);
+extern int TreeItem_FirstAndLast(TreeCtrl *tree, TreeItem *first, TreeItem *last);
 extern int TreeItem_Height(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
@@ -494,12 +518,12 @@ extern int ButtonHeight(TreeCtrl *tree, int state);
 /* tkTreeNotify.c */
 extern int TreeNotify_Init(TreeCtrl *tree);
 extern void TreeNotify_OpenClose(TreeCtrl *tree, TreeItem item, int isOpen, int before);
-extern void TreeNotify_Selection(TreeCtrl *tree, TreeItem select[], TreeItem deselect[]);
+extern void TreeNotify_Selection(TreeCtrl *tree, TreeItemList *select, TreeItemList *deselect);
 extern int TreeNotifyCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern void TreeNotify_ActiveItem(TreeCtrl *tree, TreeItem itemOld, TreeItem itemNew);
 extern void TreeNotify_Scroll(TreeCtrl *tree, double fractions[2], int vertical);
-extern void TreeNotify_ItemDeleted(TreeCtrl *tree, int itemIds[], int count);
-extern void TreeNotify_ItemVisibility(TreeCtrl *tree, Tcl_HashTable *v, Tcl_HashTable *h);
+extern void TreeNotify_ItemDeleted(TreeCtrl *tree, TreeItemList *items);
+extern void TreeNotify_ItemVisibility(TreeCtrl *tree, TreeItemList *v, TreeItemList *h);
 
 /* tkTreeColumn.c */
 extern void Tree_InitColumns(TreeCtrl *tree);
@@ -754,6 +778,14 @@ extern char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp);
 extern void AllocHax_Free(ClientData data, char *ptr, int size);
 extern void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp);
 #endif
+
+#define TreeItemList_Items(tilPtr) ((tilPtr)->items)
+#define TreeItemList_ItemN(tilPtr,n) ((tilPtr)->items[n])
+#define TreeItemList_Count(tilPtr) ((tilPtr)->count)
+extern void TreeItemList_Init(TreeCtrl *tree, TreeItemList *tilPtr, int count);
+extern TreeItem *TreeItemList_Append(TreeItemList *tilPtr, TreeItem item);
+extern TreeItem *TreeItemList_Concat(TreeItemList *tilPtr, TreeItemList *til2Ptr);
+extern void TreeItemList_Free(TreeItemList *tilPtr);
 
 /*****/
 
