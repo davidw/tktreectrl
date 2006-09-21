@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.62 2006/09/16 20:12:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.63 2006/09/21 05:54:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -371,6 +371,8 @@ TreeObjCmd(
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->imageHash, TCL_STRING_KEYS);
 
+    TreeItemList_Init(tree, &tree->preserveItemList, 0);
+
 #ifdef ALLOC_HAX
     tree->allocData = AllocHax_Init();
 #endif
@@ -473,6 +475,7 @@ static int TreeWidgetCmd(
     }
 
     Tcl_Preserve((ClientData) tree);
+    Tree_PreserveItems(tree);
 
     switch (index) {
 	case COMMAND_ACTIVATE:
@@ -1080,10 +1083,12 @@ static int TreeWidgetCmd(
 	}
     }
 done:
+    Tree_ReleaseItems(tree);
     Tcl_Release((ClientData) tree);
     return result;
 
 error:
+    Tree_ReleaseItems(tree);
     Tcl_Release((ClientData) tree);
     return TCL_ERROR;
 }
@@ -1608,6 +1613,8 @@ TreeDestroy(
 	hPtr = Tcl_NextHashEntry(&search);
     }
     Tcl_DeleteHashTable(&tree->itemHash);
+
+    TreeItemList_Free(&tree->preserveItemList);
 
     hPtr = Tcl_FirstHashEntry(&tree->imageHash, &search);
     while (hPtr != NULL) {
@@ -2309,6 +2316,7 @@ TreeSelectionCmd(
 	COMMAND_GET, COMMAND_INCLUDES, COMMAND_MODIFY
     };
     int index;
+    TreeItemList itemsFirst, itemsLast;
     TreeItem item, itemFirst, itemLast;
 
     if (objc < 3) {
@@ -2324,8 +2332,8 @@ TreeSelectionCmd(
     switch (index) {
 	case COMMAND_ADD:
 	{
-	    int indexFirst, indexLast, count;
-	    TreeItem staticItems[STATIC_SIZE], *items = staticItems;
+	    int i, count;
+	    TreeItemList items;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 
@@ -2333,19 +2341,23 @@ TreeSelectionCmd(
 		Tcl_WrongNumArgs(interp, 3, objv, "first ?last?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItem_FromObj(tree, objv[3], &itemFirst, IFO_ALLOK) != TCL_OK)
+	    if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_ALLOK) != TCL_OK)
 		return TCL_ERROR;
+	    itemFirst = TreeItemList_ItemN(&itemsFirst, 0);
 	    itemLast = NULL;
 	    if (objc == 5) {
-		if (TreeItem_FromObj(tree, objv[4], &itemLast, IFO_ALLOK) != TCL_OK)
+		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_ALLOK) != TCL_OK) {
+		    TreeItemList_Free(&itemsFirst);
 		    return TCL_ERROR;
+		}
+		itemLast = TreeItemList_ItemN(&itemsLast, 0);
 	    }
 	    if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
-		count = tree->itemCount - tree->selectCount;
-		STATIC_ALLOC(items, TreeItem, count + 1);
-		count = 0;
+		if (objc == 5) TreeItemList_Free(&itemsLast);
+		TreeItemList_Init(tree, &items,
+			tree->itemCount - tree->selectCount);
 
-		/* Include detached items */
+		/* Include orphans. */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
@@ -2358,41 +2370,41 @@ TreeSelectionCmd(
 			    TreeItem_GetEnabled(tree, item)) {
 #endif
 			Tree_AddToSelection(tree, item);
-			items[count++] = item;
+			TreeItemList_Append(&items, item);
 		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
 		goto doneADD;
 	    }
-	    if (objc == 4) {
-		itemLast = itemFirst;
-		count = 1;
-	    } else {
-		if (TreeItem_RootAncestor(tree, itemFirst) !=
-			TreeItem_RootAncestor(tree, itemLast)) {
-		    FormatResult(interp,
-			    "item %s%d and item %s%d don't share a common ancestor",
-			    tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
-			    tree->itemPrefix, TreeItem_GetID(tree, itemLast));
+	    if (objc == 5) {
+		TreeItemList_Free(&itemsFirst);
+		TreeItemList_Free(&itemsLast);
+		count = TreeItem_FirstAndLast(tree, &itemFirst, &itemLast);
+		if (count == 0)
 		    return TCL_ERROR;
+		TreeItemList_Init(tree, &items, count);
+		while (1) {
+#ifdef SELECTION_VISIBLE
+		    if (!TreeItem_GetSelected(tree, itemFirst) &&
+			    TreeItem_GetEnabled(tree, itemFirst) &&
+			    TreeItem_ReallyVisible(tree, itemFirst)) {
+#else
+		    if (!TreeItem_GetSelected(tree, itemFirst) &&
+			    TreeItem_GetEnabled(tree, itemFirst)) {
+#endif
+			Tree_AddToSelection(tree, itemFirst);
+			TreeItemList_Append(&items, itemFirst);
+		    }
+		    if (itemFirst == itemLast)
+			break;
+		    itemFirst = TreeItem_Next(tree, itemFirst);
 		}
-		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
-		TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
-		if (indexFirst > indexLast) {
-		    item = itemFirst;
-		    itemFirst = itemLast;
-		    itemLast = item;
-
-		    index = indexFirst;
-		    indexFirst = indexLast;
-		    indexLast = index;
-		}
-		count = indexLast - indexFirst + 1;
+		goto doneADD;
 	    }
-	    STATIC_ALLOC(items, TreeItem, count + 1);
-	    count = 0;
-	    item = itemFirst;
-	    while (item != NULL) {
+	    count = TreeItemList_Count(&itemsFirst);
+	    TreeItemList_Init(tree, &items, count);
+	    for (i = 0; i < count; i++) {
+		item = TreeItemList_ItemN(&itemsFirst, i);
 #ifdef SELECTION_VISIBLE
 		if (!TreeItem_GetSelected(tree, item) &&
 			TreeItem_GetEnabled(tree, item) &&
@@ -2402,18 +2414,15 @@ TreeSelectionCmd(
 			TreeItem_GetEnabled(tree, item)) {
 #endif
 		    Tree_AddToSelection(tree, item);
-		    items[count++] = item;
+		    TreeItemList_Append(&items, item);
 		}
-		if (item == itemLast)
-		    break;
-		item = TreeItem_Next(tree, item);
 	    }
 doneADD:
-	    if (count) {
-		items[count] = NULL;
-		TreeNotify_Selection(tree, items, NULL);
+	    if (TreeItemList_Count(&items)) {
+		TreeNotify_Selection(tree, &items, NULL);
 	    }
-	    STATIC_FREE2(items, staticItems);
+	    TreeItemList_Free(&items);
+	    TreeItemList_Free(&itemsFirst);
 	    break;
 	}
 
@@ -2435,8 +2444,8 @@ doneADD:
 
 	case COMMAND_CLEAR:
 	{
-	    int indexFirst, indexLast, count;
-	    TreeItem staticItems[STATIC_SIZE], *items = staticItems;
+	    int i, count;
+	    TreeItemList items;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 
@@ -2446,72 +2455,70 @@ doneADD:
 	    }
 	    itemFirst = itemLast = NULL;
 	    if (objc >= 4) {
-		if (TreeItem_FromObj(tree, objv[3], &itemFirst, IFO_ALLOK) != TCL_OK)
+		if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_ALLOK) != TCL_OK)
 		    return TCL_ERROR;
+		itemFirst = TreeItemList_ItemN(&itemsFirst, 0);
 	    }
 	    if (objc == 5) {
-		if (TreeItem_FromObj(tree, objv[4], &itemLast, IFO_ALLOK) != TCL_OK)
+		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_ALLOK) != TCL_OK) {
+		    TreeItemList_Free(&itemsFirst);
 		    return TCL_ERROR;
+		}
+		itemLast = TreeItemList_ItemN(&itemsLast, 0);
 	    }
-	    if (tree->selectCount < 1)
+	    if (tree->selectCount < 1) {
+		if (objc >= 4) TreeItemList_Free(&itemsFirst);
+		if (objc == 5) TreeItemList_Free(&itemsLast);
 		break;
+	    }
 	    if ((objc == 3) || (itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
-		count = tree->selectCount;
-		STATIC_ALLOC(items, TreeItem, count + 1);
-		count = 0;
+		if (objc >= 4) TreeItemList_Free(&itemsFirst);
+		if (objc == 5) TreeItemList_Free(&itemsLast);
+		TreeItemList_Init(tree, &items, tree->selectCount);
 		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
-		    items[count++] = item;
+		    TreeItemList_Append(&items, item);
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
-		for (index = 0; index < count; index++)
-		    Tree_RemoveFromSelection(tree, items[index]);
+		count = TreeItemList_Count(&items);
+		for (i = 0; i < count; i++)
+		    Tree_RemoveFromSelection(tree, TreeItemList_ItemN(&items, i));
 		goto doneCLEAR;
 	    }
-	    if (objc == 4) {
-		itemLast = itemFirst;
-		count = 1;
-	    } else {
-		if (TreeItem_RootAncestor(tree, itemFirst) !=
-			TreeItem_RootAncestor(tree, itemLast)) {
-		    FormatResult(interp,
-			    "item %s%d and item %s%d don't share a common ancestor",
-			    tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
-			    tree->itemPrefix, TreeItem_GetID(tree, itemLast));
+	    if (objc == 5) {
+		TreeItemList_Free(&itemsFirst);
+		TreeItemList_Free(&itemsLast);
+		count = TreeItem_FirstAndLast(tree, &itemFirst, &itemLast);
+		if (count == 0)
 		    return TCL_ERROR;
+		TreeItemList_Init(tree, &items, count);
+		while (1) {
+		    if (TreeItem_GetSelected(tree, itemFirst)) {
+			Tree_RemoveFromSelection(tree, itemFirst);
+			TreeItemList_Append(&items, itemFirst);
+		    }
+		    if (itemFirst == itemLast)
+			break;
+		    itemFirst = TreeItem_Next(tree, itemFirst);
 		}
-		TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
-		TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
-		if (indexFirst > indexLast) {
-		    item = itemFirst;
-		    itemFirst = itemLast;
-		    itemLast = item;
-
-		    index = indexFirst;
-		    indexFirst = indexLast;
-		    indexLast = index;
-		}
-		count = indexLast - indexFirst + 1;
+		goto doneCLEAR;
 	    }
-	    STATIC_ALLOC(items, TreeItem, count + 1);
-	    count = 0;
-	    item = itemFirst;
-	    while (item != NULL) {
+	    count = TreeItemList_Count(&itemsFirst);
+	    TreeItemList_Init(tree, &items, count);
+	    for (i = 0; i < count; i++) {
+		item = TreeItemList_ItemN(&itemsFirst, i);
 		if (TreeItem_GetSelected(tree, item)) {
 		    Tree_RemoveFromSelection(tree, item);
-		    items[count++] = item;
+		    TreeItemList_Append(&items, item);
 		}
-		if (item == itemLast)
-		    break;
-		item = TreeItem_Next(tree, item);
 	    }
+	    TreeItemList_Free(&itemsFirst);
 doneCLEAR:
-	    if (count) {
-		items[count] = NULL;
-		TreeNotify_Selection(tree, NULL, items);
+	    if (TreeItemList_Count(&items)) {
+		TreeNotify_Selection(tree, NULL, &items);
 	    }
-	    STATIC_FREE2(items, staticItems);
+	    TreeItemList_Free(&items);
 	    break;
 	}
 
@@ -2565,17 +2572,14 @@ doneCLEAR:
 
 	case COMMAND_MODIFY:
 	{
-	    int i, j, count, objcS, objcD;
+	    int i, j, k, objcS, objcD;
 	    Tcl_Obj **objvS, **objvD;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 	    TreeItem item;
-	    TreeItem staticItemS[STATIC_SIZE], *itemS = staticItemS;
-	    TreeItem staticItemD[STATIC_SIZE], *itemD = staticItemD;
-	    TreeItem staticNewS[STATIC_SIZE], *newS = staticNewS;
-	    TreeItem staticNewD[STATIC_SIZE], *newD = staticNewD;
+	    TreeItemList items;
+	    TreeItemList itemS, itemD, newS, newD;
 	    int allS = FALSE, allD = FALSE;
-	    int countS, countD;
 
 	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "select deselect");
@@ -2590,27 +2594,68 @@ doneCLEAR:
 	    if (!objcS && !objcD)
 		break;
 
+	    /* Some of these may get double-initialized. */
+	    TreeItemList_Init(tree, &itemS, 0);
+	    TreeItemList_Init(tree, &itemD, 0);
+	    TreeItemList_Init(tree, &newS, 0);
+	    TreeItemList_Init(tree, &newD, 0);
+
 	    /* List of items to select */
-	    if (objcS > 0) {
-		STATIC_ALLOC(itemS, TreeItem, objcS);
-		for (i = 0; i < objcS; i++) {
-		    if (TreeItem_FromObj(tree, objvS[i], &itemS[i], IFO_ALLOK) != TCL_OK) {
-			STATIC_FREE2(itemS, staticItemS);
-			return TCL_ERROR;
-		    }
-		    if (itemS[i] == ITEM_ALL) {
-			STATIC_FREE2(itemS, staticItemS);
+	    for (i = 0; i < objcS; i++) {
+		if (TreeItemList_FromObj(tree, objvS[i], &items, IFO_ALLOK) != TCL_OK) {
+		    TreeItemList_Free(&itemS);
+		    return TCL_ERROR;
+		}
+
+		/* Add unique items to itemS */
+		for (k = 0; k < TreeItemList_Count(&items); k++) {
+		    item = TreeItemList_ItemN(&items, k);
+		    if (item == ITEM_ALL) {
 			allS = TRUE;
 			break;
 		    }
+		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
+			if (TreeItemList_ItemN(&itemS, j) == item)
+			    break;
+		    }
+		    if (j == TreeItemList_Count(&itemS)) {
+			TreeItemList_Append(&itemS, item);
+		    }
 		}
+		TreeItemList_Free(&items);
+		if (allS) break;
+	    }
+
+	    /* List of items to deselect */
+	    for (i = 0; i < objcD; i++) {
+		if (TreeItemList_FromObj(tree, objvD[i], &items, IFO_ALLOK) != TCL_OK) {
+		    TreeItemList_Free(&itemS);
+		    TreeItemList_Free(&itemD);
+		    return TCL_ERROR;
+		}
+
+		/* Add unique items to itemD */
+		for (k = 0; k < TreeItemList_Count(&items); k++) {
+		    item = TreeItemList_ItemN(&items, k);
+		    if (item == ITEM_ALL) {
+			allD = TRUE;
+			break;
+		    }
+		    for (j = 0; j < TreeItemList_Count(&itemD); j++) {
+			if (TreeItemList_ItemN(&itemD, j) == item)
+			    break;
+		    }
+		    if (j == TreeItemList_Count(&itemD)) {
+			TreeItemList_Append(&itemD, item);
+		    }
+		}
+		TreeItemList_Free(&items);
+		if (allD) break;
 	    }
 
 	    /* Select all */
 	    if (allS) {
-		count = tree->itemCount - tree->selectCount;
-		STATIC_ALLOC(newS, TreeItem, count + 1);
-		count = 0;
+		TreeItemList_Init(tree, &newS, tree->itemCount - tree->selectCount);
 #ifdef SELECTION_VISIBLE
 		item = tree->root;
 		if (!TreeItem_ReallyVisible(tree, item))
@@ -2618,8 +2663,7 @@ doneCLEAR:
 		while (item != NULL) {
 		    if (!TreeItem_GetSelected(tree, item) &&
 			    TreeItem_GetEnabled(tree, item)) {
-			Tree_AddToSelection(tree, item);
-			newS[count++] = item;
+			TreeItemList_Append(&newS, item);
 		    }
 		    item = TreeItem_NextVisible(tree, item);
 		}
@@ -2630,26 +2674,20 @@ doneCLEAR:
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
 		    if (!TreeItem_GetSelected(tree, item) &&
 			    TreeItem_GetEnabled(tree, item)) {
-			Tree_AddToSelection(tree, item);
-			newS[count++] = item;
+			TreeItemList_Append(&newS, item);
 		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
 #endif
-		if (count) {
-		    newS[count] = NULL;
-		    TreeNotify_Selection(tree, newS, NULL);
-		}
-		STATIC_FREE2(newS, staticNewS);
-		break;
+		/* Ignore the deselect list. */
+		goto modifyDONE;
 	    }
 
-	    /* Select some, deselect none */
-	    if ((objcS > 0) && (objcD == 0)) {
-		STATIC_ALLOC(newS, TreeItem, objcS + 1);
-		count = 0;
-		for (i = 0; i < objcS; i++) {
-		    item = itemS[i];
+	    /* Select some */
+	    if (objcS > 0) {
+		TreeItemList_Init(tree, &newS, objcS);
+		for (i = 0; i < TreeItemList_Count(&itemS); i++) {
+		    item = TreeItemList_ItemN(&itemS, i);
 		    if (TreeItem_GetSelected(tree, item))
 			continue;
 		    if (!TreeItem_GetEnabled(tree, item))
@@ -2658,193 +2696,57 @@ doneCLEAR:
 		    if (!TreeItem_ReallyVisible(tree, item))
 			continue;
 #endif
-		    /* Add unique item to newly-selected list */
-		    for (j = 0; j < count; j++)
-			if (newS[j] == item)
-			    break;
-		    if (j == count) {
-			Tree_AddToSelection(tree, item);
-			newS[count++] = item;
-		    }
-		}
-		if (count) {
-		    newS[count] = NULL;
-		    TreeNotify_Selection(tree, newS, NULL);
-		}
-		STATIC_FREE2(newS, staticNewS);
-		STATIC_FREE2(itemS, staticItemS);
-		break;
-	    }
-
-	    /* Nothing to deselect */
-	    if (objcD == 0)
-		break;
-
-	    /* List of items to deselect */
-	    STATIC_ALLOC(itemD, TreeItem, objcD);
-	    for (i = 0; i < objcD; i++) {
-		if (TreeItem_FromObj(tree, objvD[i], &itemD[i], IFO_ALLOK) != TCL_OK) {
-		    STATIC_FREE2(itemS, staticItemS);
-		    STATIC_FREE2(itemD, staticItemD);
-		    return TCL_ERROR;
-		}
-		if (itemD[i] == ITEM_ALL) {
-		    allD = TRUE;
-		    break;
+		    TreeItemList_Append(&newS, item);
 		}
 	    }
 
-	    /* Select none, Deselect all */
-	    if ((objcS == 0) && allD) {
-		count = tree->selectCount;
-		STATIC_ALLOC(newD, TreeItem, count + 1);
-		count = 0;
+	    /* Deselect all */
+	    if (allD) {
+		TreeItemList_Init(tree, &newD, tree->selectCount);
 		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
-		    newD[count++] = item;
+		    /* Don't deselect an item in the select list */
+		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
+			if (item == TreeItemList_ItemN(&itemS, j))
+			    break;
+		    }
+		    if (j == TreeItemList_Count(&itemS)) {
+			TreeItemList_Append(&newD, item);
+		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
-		for (i = 0; i < count; i++)
-		    Tree_RemoveFromSelection(tree, newD[i]);
-		if (count) {
-		    newD[count] = NULL;
-		    TreeNotify_Selection(tree, NULL, newD);
-		}
-		STATIC_FREE2(newD, staticNewD);
-		break;
 	    }
 
-	    /* Select none, deselect some */
-	    if ((objcS == 0) && !allD) {
-		STATIC_ALLOC(newD, TreeItem, objcD + 1);
-		count = 0;
-		for (i = 0; i < objcD; i++) {
-		    item = itemD[i];
+	    /* Deselect some */
+	    if ((objcD > 0) && !allD) {
+		TreeItemList_Init(tree, &newD, objcD);
+		for (i = 0; i < TreeItemList_Count(&itemD); i++) {
+		    item = TreeItemList_ItemN(&itemD, i);
 		    if (!TreeItem_GetSelected(tree, item))
 			continue;
-		    /* Add unique item to newly-deselected list */
-		    for (j = 0; j < count; j++)
-			if (newD[j] == item)
+		    /* Don't deselect an item in the select list */
+		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
+			if (item == TreeItemList_ItemN(&itemS, j))
 			    break;
-		    if (j == count) {
-			Tree_RemoveFromSelection(tree, item);
-			newD[count++] = item;
+		    }
+		    if (j == TreeItemList_Count(&itemS)) {
+			TreeItemList_Append(&newD, item);
 		    }
 		}
-		if (count) {
-		    newD[count] = NULL;
-		    TreeNotify_Selection(tree, NULL, newD);
-		}
-		STATIC_FREE2(newD, staticNewD);
-		STATIC_FREE2(itemD, staticItemD);
-		break;
 	    }
-
-	    /* Select some, deselect some */
-	    if ((objcS > 0) && !allD) {
-		STATIC_ALLOC(newS, TreeItem, objcS + 1);
-		STATIC_ALLOC(newD, TreeItem, objcD + 1);
-		countS = 0;
-		for (i = 0; i < objcS; i++) {
-		    item = itemS[i];
-		    if (TreeItem_GetSelected(tree, item))
-			continue;
-		    if (!TreeItem_GetEnabled(tree, item))
-			continue;
-#ifdef SELECTION_VISIBLE
-		    if (!TreeItem_ReallyVisible(tree, item))
-			continue;
-#endif
-		    /* Add unique item to newly-selected list */
-		    for (j = 0; j < countS; j++)
-			if (newS[j] == item)
-			    break;
-		    if (j == countS) {
-			Tree_AddToSelection(tree, item);
-			newS[countS++] = item;
-		    }
-		}
-		countD = 0;
-		for (i = 0; i < objcD; i++) {
-		    item = itemD[i];
-		    if (!TreeItem_GetSelected(tree, item))
-			continue;
-		    /* Don't deselect an item in the selected list */
-		    for (j = 0; j < objcS; j++)
-			if (item == itemS[j])
-			    break;
-		    if (j != objcS)
-			continue;
-		    /* Add unique item to newly-deselected list */
-		    for (j = 0; j < countD; j++)
-			if (newD[j] == item)
-			    break;
-		    if (j == countD) {
-			Tree_RemoveFromSelection(tree, item);
-			newD[countD++] = item;
-		    }
-		}
-		if (countS || countD) {
-		    newS[countS] = NULL;
-		    newD[countD] = NULL;
-		    TreeNotify_Selection(tree, newS, newD);
-		}
-		STATIC_FREE2(newS, staticNewS);
-		STATIC_FREE2(itemS, staticItemS);
-		STATIC_FREE2(newD, staticNewD);
-		STATIC_FREE2(itemD, staticItemD);
-		break;
+modifyDONE:
+	    for (i = 0; i < TreeItemList_Count(&newS); i++)
+		Tree_AddToSelection(tree, TreeItemList_ItemN(&newS, i));
+	    for (i = 0; i < TreeItemList_Count(&newD); i++)
+		Tree_RemoveFromSelection(tree, TreeItemList_ItemN(&newD, i));
+	    if (TreeItemList_Count(&newS) || TreeItemList_Count(&newD)) {
+		TreeNotify_Selection(tree, &newS, &newD);
 	    }
-
-	    /* Select some, deselect all */
-	    countD = tree->selectCount;
-	    STATIC_ALLOC(newD, TreeItem, countD + 1);
-	    countD = 0;
-	    hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
-	    while (hPtr != NULL) {
-		item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
-		/* Don't deselect an item in the selected list */
-		for (j = 0; j < objcS; j++)
-		    if (item == itemS[j])
-			break;
-		if (j == objcS) {
-		    newD[countD++] = item;
-		}
-		hPtr = Tcl_NextHashEntry(&search);
-	    }
-	    for (i = 0; i < countD; i++)
-		Tree_RemoveFromSelection(tree, newD[i]);
-	    STATIC_ALLOC(newS, TreeItem, objcS + 1);
-	    countS = 0;
-	    for (i = 0; i < objcS; i++) {
-		item = itemS[i];
-		if (TreeItem_GetSelected(tree, item))
-		    continue;
-		if (!TreeItem_GetEnabled(tree, item))
-		    continue;
-#ifdef SELECTION_VISIBLE
-		if (!TreeItem_ReallyVisible(tree, item))
-		    continue;
-#endif
-		/* Add unique item to newly-selected list */
-		for (j = 0; j < countS; j++)
-		    if (newS[j] == item)
-			break;
-		if (j == countS) {
-		    Tree_AddToSelection(tree, item);
-		    newS[countS++] = item;
-		}
-	    }
-	    if (countS || countD) {
-		newS[countS] = NULL;
-		newD[countD] = NULL;
-		TreeNotify_Selection(tree, newS, newD);
-	    }
-	    STATIC_FREE2(newS, staticNewS);
-	    STATIC_FREE2(itemS, staticItemS);
-	    STATIC_FREE2(newD, staticNewD);
-	    STATIC_FREE2(itemD, staticItemD);
+	    TreeItemList_Free(&newS);
+	    TreeItemList_Free(&itemS);
+	    TreeItemList_Free(&newD);
+	    TreeItemList_Free(&itemD);
 	    break;
 	}
     }
@@ -3261,6 +3163,41 @@ TreeDebugCmd(
     }
 
     return TCL_OK;
+}
+
+void Tree_PreserveItems(
+    TreeCtrl *tree
+    )
+{
+    tree->preserveItemRefCnt++;
+}
+
+void Tree_ReleaseItems(
+    TreeCtrl *tree
+    )
+{
+    int i, count;
+    TreeItem item;
+
+    if (tree->preserveItemRefCnt == 0)
+	panic("mismatched calls to Tree_PreserveItems/Tree_ReleaseItems");
+
+    if (--tree->preserveItemRefCnt > 0)
+	return;
+
+    count = TreeItemList_Count(&tree->preserveItemList);
+    for (i = 0; i < count; i++) {
+	item = TreeItemList_ItemN(&tree->preserveItemList, i);
+	/* if (!TreeItem_Deleted(tree, item)) panic(""); */
+	TreeItem_RemoveFromParent(tree, item);
+    }
+    for (i = 0; i < count; i++) {
+	item = TreeItemList_ItemN(&tree->preserveItemList, i);
+	/* if (TreeItem_NumChildren(tree, item) > 0) panic(""); */
+	TreeItem_Delete(tree, item);
+    }
+
+    TreeItemList_Free(&tree->preserveItemList);
 }
 
 /*
