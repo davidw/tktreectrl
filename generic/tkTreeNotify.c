@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.15 2006/09/05 21:56:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.16 2006/09/21 06:37:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -232,13 +232,12 @@ Percents_ItemVisibility(
 {
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	Tcl_HashTable *v;
-	Tcl_HashTable *h;
+	TreeItemList *v;
+	TreeItemList *h;
     } *data = args->clientData;
     TreeCtrl *tree = data->tree;
-    Tcl_HashTable *table;
-    Tcl_HashSearch search;
-    Tcl_HashEntry *hPtr;
+    TreeItemList *table;
+    int i, count;
 
     switch (args->which)
     {
@@ -246,20 +245,20 @@ Percents_ItemVisibility(
 	case 'h':
 	    table = (args->which == 'v') ? data->v : data->h;
 	    Tcl_DStringStartSublist(args->result);
-	    hPtr = Tcl_FirstHashEntry(table, &search);
-	    while (hPtr != NULL)
+	    count = TreeItemList_Count(table);
+	    for (i = 0; i < count; i++)
 	    {
-		int id = (int) Tcl_GetHashKey(table, hPtr);
+		TreeItem item = TreeItemList_ItemN(table, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix, id);
+		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
+			    TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, buf);
 		} else {
 		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, id);
+		    TclFormatInt(string, TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, string);
 		}
-		hPtr = Tcl_NextHashEntry(&search);
 	    }
 	    Tcl_DStringEndSublist(args->result);
 	    break;
@@ -293,13 +292,13 @@ Percents_Selection(
 {
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	int *select;
-	int *deselect;
+	TreeItemList *select;
+	TreeItemList *deselect;
 	int count;
     } *data = args->clientData;
     TreeCtrl *tree = data->tree;
-    int *items = NULL;
-    int i = 0;
+    TreeItemList *itemList;
+    int i, count;
 
     switch (args->which)
     {
@@ -308,25 +307,27 @@ Percents_Selection(
 	    break;
 	case 'D':
 	case 'S':
-	    items = (args->which == 'D') ? data->deselect : data->select;
-	    if (items == NULL)
+	    itemList = (args->which == 'D') ? data->deselect : data->select;
+	    if (itemList == NULL)
 	    {
 		Tcl_DStringAppend(args->result, "{}", 2);
 		break;
 	    }
 	    Tcl_DStringStartSublist(args->result);
-	    while (items[i] != -1)
+	    count = TreeItemList_Count(itemList);
+	    for (i = 0; i < count; i++)
 	    {
+		TreeItem item = TreeItemList_ItemN(itemList, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix, items[i]);
+		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
+			    TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, buf);
 		} else {
 		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, items[i]);
+		    TclFormatInt(string, TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, string);
 		}
-		i++;
 	    }
 	    Tcl_DStringEndSublist(args->result);
 	    break;
@@ -605,52 +606,21 @@ TreeNotify_OpenClose(
 void
 TreeNotify_Selection(
     TreeCtrl *tree,		/* Widget info. */
-    TreeItem select[],		/* NULL-terminated list of item tokens. */
-    TreeItem deselect[]		/* NULL-terminated list of item tokens. */
+    TreeItemList *select,	/* List of items or NULL. */
+    TreeItemList *deselect	/* List of items or NULL. */
     )
 {
     QE_Event event;
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	int *select;
-	int *deselect;
+	TreeItemList *select;
+	TreeItemList *deselect;
 	int count;
     } data;
-    int staticS[128], staticD[128];
-    int i;
 
     data.tree = tree;
-
-    if (select == NULL)
-	data.select = NULL;
-    else
-    {
-	for (i = 0; select[i] != NULL; i++)
-	    /* nothing */;
-	if (i < sizeof(staticS) / sizeof(staticS[0]))
-	    data.select = staticS;
-	else
-	    data.select = (int *) ckalloc(sizeof(int) * (i + 1));
-	for (i = 0; select[i] != NULL; i++)
-	    data.select[i] = TreeItem_GetID(tree, select[i]);
-	data.select[i] = -1;
-    }
-
-    if (deselect == NULL)
-	data.deselect = NULL;
-    else
-    {
-	for (i = 0; deselect[i] != NULL; i++)
-	    /* nothing */;
-	if (i < sizeof(staticD) / sizeof(staticD[0]))
-	    data.deselect = staticD;
-	else
-	    data.deselect = (int *) ckalloc(sizeof(int) * (i + 1));
-	for (i = 0; deselect[i] != NULL; i++)
-	    data.deselect[i] = TreeItem_GetID(tree, deselect[i]);
-	data.deselect[i] = -1;
-    }
-
+    data.select = select;
+    data.deselect = deselect;
     data.count = tree->selectCount;
 
     event.type = EVENT_SELECTION;
@@ -658,11 +628,6 @@ TreeNotify_Selection(
     event.clientData = (ClientData) &data;
 
     (void) QE_BindEvent(tree->bindingTable, &event);
-
-    if ((select != NULL) && (data.select != staticS))
-	ckfree((char *) data.select);
-    if ((deselect != NULL) && (data.deselect != staticD))
-	ckfree((char *) data.deselect);
 }
 
 /*
@@ -772,25 +737,27 @@ Percents_ItemDelete(
 {
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	int count;
-	int *itemIds;
+	TreeItemList *items;
     } *data = args->clientData;
     TreeCtrl *tree = data->tree;
-    int i;
+    int i, count;
 
     switch (args->which)
     {
 	case 'i':
 	    Tcl_DStringStartSublist(args->result);
-	    for (i = 0; i < data->count; i++)
+	    count = TreeItemList_Count(data->items);
+	    for (i = 0; i < count; i++)
 	    {
+		TreeItem item = TreeItemList_ItemN(data->items, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix, data->itemIds[i]);
+		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
+			    TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, buf);
 		} else {
 		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, data->itemIds[i]);
+		    TclFormatInt(string, TreeItem_GetID(tree, item));
 		    Tcl_DStringAppendElement(args->result, string);
 		}
 	    }
@@ -822,20 +789,17 @@ Percents_ItemDelete(
 void
 TreeNotify_ItemDeleted(
     TreeCtrl *tree,		/* Widget info. */
-    int itemIds[],		/* Array of item IDs. */
-    int count			/* Number of item IDs. */
+    TreeItemList *items		/* List of items. */
     )
 {
     QE_Event event;
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	int count;
-	int *itemIds;
+	TreeItemList *items;
     } data;
 
     data.tree = tree;
-    data.count = count;
-    data.itemIds = itemIds;
+    data.items = items;
 
     event.type = EVENT_ITEM_DELETE;
     event.detail = 0;
@@ -863,17 +827,15 @@ TreeNotify_ItemDeleted(
 void
 TreeNotify_ItemVisibility(
     TreeCtrl *tree,		/* Widget info. */
-    Tcl_HashTable *v,		/* Each key is the ID of a newly-visible
-				 * item. */
-    Tcl_HashTable *h		/* Each key is the ID of a newly-hidden
-				 * item. */
+    TreeItemList *v,		/* List of newly-visible items. */
+    TreeItemList *h		/* List of newly-hidden items. */
     )
 {
     QE_Event event;
     struct {
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
-	Tcl_HashTable *v;
-	Tcl_HashTable *h;
+	TreeItemList *v;
+	TreeItemList *h;
     } data;
 
     data.tree = tree;
