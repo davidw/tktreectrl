@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.47 2006/09/05 21:56:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.48 2006/09/22 23:27:23 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4546,8 +4546,6 @@ TreeElementCmd(
 	case COMMAND_PERSTATE:
 	{
 	    Element *elem;
-	    int i, listObjc;
-	    Tcl_Obj **listObjv;
 	    int states[3];
 	    ElementArgs args;
 
@@ -4560,16 +4558,9 @@ TreeElementCmd(
 	    if (Element_FromObj(tree, objv[3], &elem) != TCL_OK)
 		return TCL_ERROR;
 
-	    if (Tcl_ListObjGetElements(interp, objv[5], &listObjc,
-		&listObjv) != TCL_OK)
-		return TCL_ERROR;
-
-	    states[0] = states[1] = states[2] = 0;
-	    for (i = 0; i < listObjc; i++) {
-		if (Tree_StateFromObj(tree, listObjv[i], states, NULL,
+	    if (Tree_StateFromListObj(tree, objv[5], states,
 		    SFO_NOT_OFF | SFO_NOT_TOGGLE) != TCL_OK)
 		return TCL_ERROR;
-	    }
 
 	    args.tree = tree;
 	    args.elem = elem;
