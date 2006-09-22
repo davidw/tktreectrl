@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.46 2006/09/21 05:45:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.47 2006/09/22 23:26:13 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -359,6 +359,7 @@ extern void Tree_ReleaseItems(TreeCtrl *tree);
 #define SFO_NOT_TOGGLE	0x0002
 #define SFO_NOT_STATIC	0x0004
 extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
+extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int flags);
 
 /* tkTreeItem.c */
 
