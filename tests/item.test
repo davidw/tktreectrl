@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.12 2005/07/15 01:43:39 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.13 2006/09/22 23:34:37 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -84,7 +84,7 @@ test item-3.4 {item delete: item range without common ancestor} -body {
     .t item delete 10 11
 } -returnCodes error -result {item 10 and item 11 don't share a common ancestor}
 
-test item-3.5 {item delete: item range without common ancestor} -body {
+test item-3.5 {item delete: item range with common ancestor} -body {
     .t item lastchild 8 10
     .t item lastchild 8 11
     .t item delete 10 11
@@ -187,7 +187,7 @@ test item-13.2 {item complex: only allowed if column style is defined} -body {
 } -returnCodes error -result {column #0 doesn't exist}
 
 test item-13.3 {item complex: invalid list} -body {
-	.t column create
+    .t column create -tag column0
     .t item style set 8 0 testStyle
     .t item complex 8 {{e1 -text}}
 } -returnCodes error -result {wrong # args: should be "element option value ..."}
@@ -209,37 +209,148 @@ test item-14.1 {item element: missing command} -body {
 } -returnCodes error -result {wrong # args: should be ".t item element command item column element ?arg ...?"}
 
 test item-14.2 {item element: invalid command} -body {
-    .t item element foo 8 0 eText
+    .t item element foo 8 column0 eText
 } -returnCodes error -result {bad command "foo": must be *} -match glob
 
 test item-14.3 {item element perstate: missing arg} -body {
-    .t item element perstate 8 0 eText
+    .t item element perstate 8 column0 eText
 } -returnCodes error -result {wrong # args: should be ".t item element perstate item column element option ?stateList?"}
 
-test item-14.4 {item element perstate} -body {
-    .t item element actual 8 0 eText -fill
+test item-14.4 {item element perstate: without stateList} -body {
+    .t element configure eText -fill {red !selected blue {}}
+    .t item element perstate 8 column0 eText -fill
 } -result {red}
 
-test item-14.5 {item element cget: missing arg} -body {
-    .t item element cget 8 0 eText
+test item-14.5 {item element perstate: without stateList} -body {
+    .t item element perstate 8 column0 eText -fill
+} -result {red}
+
+test item-14.6 {item element perstate: with stateList} -body {
+    .t item element perstate 8 column0 eText -fill {selected}
+} -result {blue}
+
+test item-14.7 {item element perstate: all items} -body {
+    .t item element perstate all column0 eText -fill {selected}
+} -returnCodes error -result {item 0 column 0 has no style}
+
+test item-14.8 {item element perstate: several items} -body {
+    .t item element perstate {list {8 root}} column0 eText -fill {selected}
+} -result {blue}
+
+test item-14.21 {item element cget: missing arg} -body {
+    .t item element cget 8 column0 eText
 } -returnCodes error -result {wrong # args: should be ".t item element cget item column element option"}
 
-test item-14.6 {item element cget} -body {
-    .t item element cget 8 0 eText -fill
+test item-14.22 {item element cget: too many args} -body {
+    .t item element cget 8 a b c d
+} -returnCodes error -result {wrong # args: should be ".t item element cget item column element option"}
+
+test item-14.23 {item element cget: single item, get -fill} -body {
+    .t item element cget 8 column0 eText -fill
 } -result {}
 
-test item-14.7 {item element configure} -body {
-    .t item element configure 8 0 eText
+test item-14.24 {item element cget: all items, get -fill} -body {
+    .t item element cget all column0 eText -fill
+} -returnCodes error -result {item 0 column 0 has no style}
+
+test item-14.25 {item element cget: multiple items, get -fill} -body {
+    .t item element cget {list {8 1 3}} column0 eText -fill
+} -result {}
+
+test item-14.31 {item element configure: get all config info} -body {
+    .t item element configure 8 column0 eText
 } -result {{-data {} {} {} {}} {-datatype {} {} {} {}} *} -match glob
 
-test item-14.8 {item element configure/cget} -body {
-    .t item element configure 8 0 eText -fill yellow
+test item-14.32 {item element configure: single item, set -fill} -body {
+    .t item element configure 8 column0 eText -fill yellow
     .t item element cget 8 0 eText -fill
 } -result {yellow}
 
-test item-14.9 {item element configure} -body {
-    .t item element configure 8 0 eText -fill
+test item-14.33 {item element configure: single item, get -fill} -body {
+    .t item element configure 8 column0 eText -fill
 } -result {-fill {} {} {} yellow}
+
+test item-14.34 {item element configure: all items, get -fill} -body {
+    .t item element configure all column0 eText -fill
+} -returnCodes error -result {item 0 column 0 has no style}
+
+test item-14.35 {item element configure: several items, get -fill} -body {
+    .t item element configure {list {8 3}} column0 eText -fill
+} -result {-fill {} {} {} yellow}
+
+test item-14.36 {item element configure: all items, set -fill} -body {
+    .t item style set all column0 testStyle
+    .t item element configure all column0 eText -fill orange
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item element cget $I column0 eText -fill]
+    }
+    set res
+} -result {orange orange orange orange orange orange orange orange orange}
+
+test item-14.37 {item element configure: single item, multiple elements} -body {
+    .t item element configure root column0 eText -fill blue +
+} -returnCodes error -result {missing element name after "+"}
+
+test item-14.38 {item element configure: single item, multiple elements} -body {
+    .t item element configure root column0 eText -fill blue + eBorder
+} -returnCodes error -result {missing option-value pair after element "eBorder"}
+
+test item-14.39 {item element configure: single item, multiple elements} -body {
+    .t item element configure root column0 eText -fill blue + eBorder -draw
+} -returnCodes error -result {missing option-value pair after element "eBorder"}
+
+test item-14.40 {item element configure: single item, multiple elements} -body {
+    .t item element configure root column0 eText -fill blue + eBorder -draw false
+    list [.t item element cget root column0 eText -fill] \
+	[.t item element cget root column0 eBorder -draw]
+} -result {blue false}
+
+test item-14.41 {item element configure: single item, multiple columns} -body {
+    .t item element configure root column0 eText -fill blue ,
+} -returnCodes error -result {missing column after ","}
+
+test item-14.42 {item element configure: single item, multiple columns} -body {
+    .t column create -tag column1
+    .t item style set all column1 testStyle
+    .t item element configure root column0 eText -fill blue , column1
+} -returnCodes error -result {missing element name after column "column1"}
+
+test item-14.43 {item element configure: single item, multiple columns} -body {
+    .t item element configure root column0 eText -fill blue , column1 eBorder
+} -returnCodes error -result {missing option-value pair after element "eBorder"}
+
+test item-14.44 {item element configure: single item, multiple columns} -body {
+    .t item element configure root column0 eText -fill blue , column1 eBorder -draw
+} -returnCodes error -result {missing option-value pair after element "eBorder"}
+
+test item-14.45 {item element configure: single item, multiple columns} -body {
+    .t item element configure root column0 eText -fill green , column1 eBorder -draw true
+    list [.t item element cget root column0 eText -fill] \
+	[.t item element cget root column1 eBorder -draw]
+} -result {green true}
+
+test item-14.46 {item element configure: multiple items, multiple columns/elements} -body {
+    .t item element configure {list {1 3}} column0 eText -fill green -text boo + \
+	eBorder -background red , column1 eBorder -draw true + eText -font {{times 12}}
+    set res {}
+    foreach I {1 3} {
+	lappend res [.t item element cget $I column0 eText -fill]
+	lappend res [.t item element cget $I column0 eText -text]
+	lappend res [.t item element cget $I column0 eBorder -background]
+	lappend res [.t item element cget $I column1 eBorder -draw]
+	lappend res [.t item element cget $I column1 eText -font]
+    }
+    set res
+} -result {green boo red true {{times 12}} green boo red true {{times 12}}}
+
+test item-14.50 {item element configure: cleanup} -body {
+    .t item style set all 0 ""
+    .t column delete all
+    .t column create
+    .t item style set 8 0 testStyle
+    .t item element configure 8 0 eText -fill yellow
+} -result {}
 
 test item-15.1 {item style: missing args} -body {
     .t item style
@@ -322,10 +433,58 @@ test item-15.19 {item style set: without args returns style} -body {
     .t item style set 8 0
 } -result {testStyle}
 
-test item-15.20 {item style set} -body {
+test item-15.20 {item style set: single item, single column} -body {
     .t item style set 8 0 testStyle2
     .t item style set 8
 } -result {testStyle2}
+
+test item-15.21 {item style set: all items, single column} -body {
+    .t item style set all 0 testStyle2
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item style set $I]
+    }
+    set res
+} -result {testStyle2 testStyle2 testStyle2 testStyle2 testStyle2 testStyle2 testStyle2 testStyle2}
+
+test item-15.22 {item style set: list of items, single column} -body {
+    .t item style set {list {2 4 6 8}} 0 ""
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item style set $I]
+    }
+    set res
+} -result {testStyle2 {{}} testStyle2 {{}} testStyle2 {{}} testStyle2 {{}}}
+
+test item-15.23 {item style set: all items, multiple columns} -body {
+    .t column create
+    .t item style set all 0 testStyle 1 testStyle2
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item style set $I]
+    }
+    set res
+} -result {{testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2} {testStyle testStyle2}}
+
+test item-15.24 {item style set: list of items, multiple columns} -body {
+    .t item style set {list {2 4 6 8}} 0 testStyle2 1 ""
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item style set $I]
+    }
+    set res
+} -result {{testStyle testStyle2} {testStyle2 {}} {testStyle testStyle2} {testStyle2 {}} {testStyle testStyle2} {testStyle2 {}} {testStyle testStyle2} {testStyle2 {}}}
+
+test item-15.25 {item style set: all items, multiple columns} -body {
+    .t item style set all 1 "" 0 ""
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item style set $I]
+    }
+    .t column delete all
+    .t column create
+    set res
+} -result {{{} {}} {{} {}} {{} {}} {{} {}} {{} {}} {{} {}} {{} {}} {{} {}}}
 
 test item-16.1 {item state: missing args} -body {
     .t item state
@@ -424,6 +583,81 @@ test item-16.22 {item state: reset predefined state} -body {
     .t toggle 8
     .t item state get 8 enabled
 } -result {1}
+
+test item-16.23 {item state: set range} -body {
+    .t item state set 1 8 state0
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item state get $I state0]
+    }
+    set res
+} -result {1 1 1 1 1 1 1 1}
+
+test item-16.24 {item state: set list} -body {
+    .t item state set {list {2 4 6 8}} !state0
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item state get $I state0]
+    }
+    set res
+} -result {1 0 1 0 1 0 1 0}
+
+test item-16.25 {item state: set all} -body {
+    .t item state set all ~state0
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item state get $I state0]
+    }
+    set res
+} -result {0 1 0 1 0 1 0 1}
+
+test item-16.26 {item state set: invalid range} -body {
+    set I [.t item create]
+    .t item state set $I 8 state0
+} -returnCodes error -result {item 13 and item 8 don't share a common ancestor}
+
+test item-16.40 {item state forcolumn: missing arg} -body {
+    .t item state forcolumn
+} -returnCodes error -result {wrong # args: should be ".t item state command item ?arg ...?"}
+
+test item-16.41 {item state forcolumn: missing arg} -body {
+    .t item state forcolumn 8
+} -returnCodes error -result {wrong # args: should be ".t item state forcolumn item column ?stateList?"}
+
+test item-16.42 {item state forcolumn: too many args} -body {
+    .t item state forcolumn a b c d
+} -returnCodes error -result {wrong # args: should be ".t item state forcolumn item column ?stateList?"}
+
+test item-16.43 {item state forcolumn: get for single item} -body {
+    .t item state forcolumn 8 0
+} -result {}
+
+test item-16.44 {item state forcolumn: get for all} -body {
+    .t item state forcolumn all 0
+} -result {}
+
+test item-16.45 {item state forcolumn: set for single item} -body {
+    .t item state forcolumn 8 0 state0
+    .t item state forcolumn 8 0
+} -result {state0}
+
+test item-16.46 {item state forcolumn: set all} -body {
+    .t item state forcolumn all 0 state0
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item state forcolumn $I 0]
+    }
+    set res
+} -result {state0 state0 state0 state0 state0 state0 state0 state0}
+
+test item-16.47 {item state forcolumn: set list} -body {
+    .t item state forcolumn {list {2 4 6 8}} 0 !state0
+    set res {}
+    foreach I [.t item id {range 1 8}] {
+	lappend res [.t item state forcolumn $I 0]
+    }
+    set res
+} -result {state0 {} state0 {} state0 {} state0 {}}
 
 test item-17.1 {item sort: missing args} -body {
     .t item sort
@@ -694,6 +928,93 @@ test item-17.49 {item sort -command: no columns} -body {
     }
     .t item sort root
 } -returnCodes error -result {there are no columns}
+
+test item-18.1 {item enabled: too few args} -body {
+    .t item enabled
+} -returnCodes error -result {wrong # args: should be ".t item enabled item ?boolean?"}
+
+test item-18.2 {item enabled: too many args} -body {
+    .t item enabled a b c
+} -returnCodes error -result {wrong # args: should be ".t item enabled item ?boolean?"}
+
+test item-18.3 {item enabled: null item} -body {
+    .t item enabled 99
+} -returnCodes error -result {item "99" doesn't exist}
+
+test item-18.4 {item enabled: single item get} -body {
+    .t item enabled root
+} -result {1}
+
+test item-18.5 {item enabled: single item set} -body {
+    .t item enabled root false
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item enabled $I]
+    }
+    set res
+} -result {0 1 1 1 1 1 1 1 1}
+
+test item-18.6 {item enabled: all get} -body {
+    .t item enabled all
+} -result {0}
+
+test item-18.7 {item enabled: all set} -body {
+    .t item enabled all false
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item enabled $I]
+    }
+    set res
+} -result {0 0 0 0 0 0 0 0 0}
+
+test item-18.8 {item enabled: multi get} -body {
+    .t item enabled {list {2 4 7}}
+} -result {0}
+
+test item-18.9 {item enabled: multi set} -body {
+    .t item enabled {list {2 4 7}} true
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item enabled $I]
+    }
+    set res
+} -result {0 0 1 0 1 0 0 1 0}
+
+test item-19.1 {item text: too few args} -body {
+    .t item text
+} -returnCodes error -result {wrong # args: should be ".t item text item ?column? ?text? ?column text ...?"}
+
+test item-19.2 {item text: all items, get every column} -body {
+    .t item text all
+} -result {}
+
+test item-19.3 {item text: all items, set first column} -body {
+    .t column create
+    .t item style set all first testStyle
+    .t item text all first abc
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item text $I first]
+    }
+    set res
+} -result {abc abc abc abc abc abc abc abc abc}
+
+test item-19.4 {item text: all items, get first column} -body {
+    .t item text all first
+} -result {abc}
+
+test item-19.5 {item text: several items, set first column} -body {
+    .t item text {list {2 4 6 8}} first def
+    set res {}
+    foreach I [.t item id {range first last}] {
+	lappend res [.t item text $I first]
+    }
+    set res
+} -result {abc abc def abc def abc def abc def}
+
+test item-19.6 {item text: several items, get first column} -body {
+    .t item text {list {2 4 6 8}} first
+} -result {def}
 
 test item-99.1 {some needed cleanup} -body {
     destroy .t
