@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: random.tcl,v 1.17 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: random.tcl,v 1.18 2006/09/24 22:58:50 treectrl Exp $
 
 set RandomN 500
 set RandomDepth 5
@@ -395,24 +395,8 @@ proc RandomDrop {T target source pos} {
 		$T item element configure $item colDepth elemTxtAny -text [$T depth $item]
 
 		# Recursively update text: depth
-		set itemList [$T item firstchild $item]
-		while {[llength $itemList]} {
-			# Pop
-			set item [lindex $itemList end]
-			set itemList [lrange $itemList 0 end-1]
-
+		foreach item [$T item descendants $item] {
 			$T item element configure $item colDepth elemTxtAny -text [$T depth $item]
-
-			set item2 [$T item nextsibling $item]
-			if {$item2 ne ""} {
-				# Push
-				lappend itemList $item2
-			}
-			set item2 [$T item firstchild $item]
-			if {$item2 ne ""} {
-				# Push
-				lappend itemList $item2
-			}
 		}
 	}
 

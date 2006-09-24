@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.13 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.14 2006/09/24 22:59:14 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -405,31 +405,15 @@ proc DemoOutlookNewsgroup_2 {} {
 
 	return
 }
+
 proc AnyUnreadDescendants {T I} {
 
 	global Message
 
-	set itemList [$T item firstchild $I]
-	while {[llength $itemList]} {
-		# Pop
-		set item [lindex $itemList end]
-		set itemList [lrange $itemList 0 end-1]
-
+	foreach item [$T item descendants $I] {
 		if {!$Message(read,$item)} {
 			return 1
 		}
-
-		set item2 [$T item nextsibling $item]
-		if {$item2 ne ""} {
-			# Push
-			lappend itemList $item2
-		}
-		set item2 [$T item firstchild $item]
-		if {$item2 ne ""} {
-			# Push
-			lappend itemList $item2
-		}
 	}
-
 	return 0
 }
