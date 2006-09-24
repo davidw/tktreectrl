@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.47 2006/09/22 23:26:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.48 2006/09/24 22:24:21 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -433,6 +433,7 @@ extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
 extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+extern int TreeTagCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
     int x, int y, int width, int height);
 extern void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen);
