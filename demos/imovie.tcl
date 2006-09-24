@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: imovie.tcl,v 1.10 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: imovie.tcl,v 1.11 2006/09/24 23:00:13 treectrl Exp $
 
 #
 # Demo: iMovie
@@ -139,6 +139,8 @@ proc iMovieButton1 {T x y} {
 						set right [expr {$x2 - 3 - 6 + 1}]
 						place $T.entry -x $left -width [expr {$right - $left}]
 						$T.entry icursor [$T.entry index @[expr {$x - ($x1 + 1)}]]
+						# Disable mouse tracking
+						unset ::TreeCtrl::Priv(buttonMode)
 					}
 				}
 			}
