@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.35 2006/09/16 20:04:52 treectrl Exp $}
+  $Id: treectrl.man,v 1.36 2006/09/24 22:56:08 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -355,6 +355,29 @@ are selected) will also be [option -yscrollincrement].  If the value of
 this option is less than or equal to zero, then vertical scrolling
 is unconstrained.
 [list_end]
+
+[section {ITEM TAGS}]
+An item may have any number of tags associated with it. A tag is just a string
+of characters, and it may take any form, including that of an integer,
+although the characters '(', ')', '&', '|', '^' and '!' should be avoided.
+[para]
+The same tag may be associated with many items. This is commonly done to group
+items in various interesting ways; for example, in a file browser all directories
+might be given the tag "directory".
+[para]
+Tag expressions are used in [sectref {ITEM DESCRIPTION} {item descriptions}] to specify which items to
+operate on.
+A tag expression can be a single tag name or a logical expression of tags
+using operators '&&', '||', '^' and '!', and parenthesized subexpressions.
+For example:
+[example_begin]
+.t item id "tag {(a && !b) || (!a && b)}"
+[example_end]
+or equivalently:
+[example_begin]
+.t item id "tag {a ^ b}"
+[example_end]
+will return the unique ids of any items with either "a" or "b" tags, but not both.
 
 [section {WIDGET COMMAND}]
 The [cmd treectrl] command creates a new Tcl command whose
@@ -990,6 +1013,9 @@ Specifies whether or not to return a list of item identifiers for the newly
 created items. Specifying false is useful when creating a large number of items in the
 console or to improve performance. Default is true.
 
+[opt_def [option -tags] [arg tagList]]
+[arg TagList] is a list of tag names to be added to the new items.
+
 [opt_def [option -visible] [arg boolean]]
 [arg Boolean] must have one of the forms accepted by [fun Tcl_GetBoolean]. It
 indicates that the item should be displayed in the list. The item will only be
@@ -1022,6 +1048,11 @@ If any of the deleted items are selected, then a [const <Selection>] event
 is generated just before the items are deleted.
 If any items were actually deleted, then an [const <ItemDelete>] event event is generated just before the items
 are deleted.
+
+[call [arg pathName] [cmd {item descendants}] [arg itemDesc]]
+Returns a list containing the item ids of the descendants
+of the item specified by [arg itemDesc], i.e. the children, grandchildren,
+great-grandchildren etc, of the item.
 
 [call [arg pathName] [cmd {item dump}] [arg itemDesc]]
 Returns a list with six elements in the form
@@ -1119,9 +1150,9 @@ that is not an ancestor of [arg parent].
 Then it will become the new first child of [arg parent].
 
 [call [arg pathName] [cmd {item id}] [arg itemDesc]]
-This command resolves the [sectref {ITEM DESCRIPTION} {item description}] [arg itemDesc] into a unique item
-identifier. If the item described by
-[arg itemDesc] doesn't exist, this command returns an empty string.
+This command resolves the [sectref {ITEM DESCRIPTION} {item description}]
+[arg itemDesc] into a list of unique item identifiers. If the item(s) described by
+[arg itemDesc] don't exist, this command returns an empty list.
 
 [call [arg pathName] [cmd {item image}] [arg itemDesc] [opt [arg column]] \
      [opt [arg image]] [opt [arg {column image ...}]]]
@@ -1681,9 +1712,7 @@ to produce the effect of dragging the treectrl at high speed through its window.
 The return value is an empty string.
 [list_end]
 
-
-
-[call [arg pathName] [cmd state] [arg option] [opt [arg stateName]]]
+[call [arg pathName] [cmd state] [arg option] [arg args]]
 This command is used to manipulate the list of user-defined states,
 see section [sectref STATES] below.
 The exact behavior of the command depends on the [arg option] argument
@@ -1717,7 +1746,7 @@ otherwise the treectrl scrolls to bring the item into view,
 and the corresponding [const <Scroll-x>] and/or [const <Scroll-y>]
 events are generated.
 
-[call [arg pathName] [cmd selection] [arg option] [arg arg]]
+[call [arg pathName] [cmd selection] [arg option] [arg args]]
 This command is used to adjust the selection within a treectrl.
 It has several forms, depending on [arg option]:
 
@@ -1964,6 +1993,31 @@ around a piece of text.
 [call [arg pathName] [cmd {style names}]]
 Returns a list containing the names of all existing styles.
 [list_end]
+
+
+[call [arg pathName] [cmd tag] [arg option] [arg args]]
+This command is used to manipulate [sectref {ITEM TAGS} "item tags"].
+The following forms of the command are supported:
+
+[list_begin definitions]
+[call [arg pathName] [cmd {tag add}] [arg itemDesc] [arg tagList]]
+Adds each tag in [arg tagList] to the item(s) described by [arg itemDesc].
+Duplicate tags are never added to an item.
+
+[call [arg pathName] [cmd {tag expr}] [arg itemDesc] [arg tagExpr]]
+Returns a boolean indicating if the item(s) described by [arg itemDesc]
+meet the tag expression [arg tagExpr]. This command can be used to test
+whether an item has (or doesn't have) a certain tag.
+
+[call [arg pathName] [cmd {tag names}] [arg itemDesc]]
+Returns a list of tag names that any of the items described by [arg itemDesc]
+have.
+
+[call [arg pathName] [cmd {tag remove}] [arg itemDesc] [arg tagList]]
+Removes each tag in [arg tagList] from the item(s) described by [arg itemDesc].
+If an item doesn't have one of the tags, then nothing bad happens.
+[list_end]
+
 
 [call [arg pathName] [cmd toggle] [opt [option -recurse]] \
      [opt [arg {itemDesc ...}]]]
@@ -2675,10 +2729,10 @@ with a particular item.
 [list_end]
 
 [section {ITEM DESCRIPTION}]
-Many of the commands and options for a treectrl take as an argument a
-description of which item to operate on.
-See the [sectref EXAMPLES] section for examples.
-The initial part of an item description must begin with one of the following terms:
+Many of the commands for a treectrl take as an argument a
+description of which items to operate on. An item description is a properly-formed
+tcl list of keywords and arguments.
+The first word of an item description must be one of the following:
 
 [list_begin definitions]
 [lst_item [arg id]]
@@ -2697,6 +2751,11 @@ Indicates the anchor item of the selection, i.e. normally
 the item specified as argument of the last successful [cmd {selection anchor}]
 widget command, or the root item if no such call happened yet.
 
+[lst_item "[const all] [arg QUALIFIERS]"]
+Indicates every item of the treectrl including orphans,
+or the items matching [arg QUALIFIERS].
+This keyword cannot be followed by any modifiers.
+
 [lst_item "[const first] [arg QUALIFIERS]"]
 Indicates the first item of the treectrl (the root item),
 or the first item matching [arg QUALIFIERS].
@@ -2705,6 +2764,11 @@ or the first item matching [arg QUALIFIERS].
 [lst_item "[const last] [arg QUALIFIERS]"]
 Indicates the last item of the treectrl,
 or the last item matching [arg QUALIFIERS].
+
+[lst_item "[const list] [arg itemDescs]"]
+[arg ItemDescs] is a list (a single argument, i.e. "list {a b c}" not "list a b c")
+of other item descriptions.
+This keyword cannot be followed by any modifiers.
 
 [lst_item "[const nearest] [arg {x y}]"]
 Indicates the item nearest to the point given by [arg x] and [arg y].
@@ -2716,8 +2780,19 @@ the on-screen arrangement of items as determined by the -orient and -wrap
 options.
 You can memorize [const rnc] as an abbreviation of "row 'n' column".
 
+[lst_item "[const range] [arg {first last}]"]
+[arg First] and [arg last] specify a range of items.
+This keyword cannot be followed by any modifiers.
+
 [lst_item [const root]]
 Indicates the root item of the treectrl.
+
+[lst_item "[const tag] [arg tagExpr] [arg QUALIFIERS]"]
+[arg TagExpr] is a tag expression (see [sectref {ITEM TAGS}]) against which
+every item's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single item is
+matched.
+
 [list_end]
 
 [para]
@@ -2731,6 +2806,11 @@ It may be specified in any of the following forms:
 [lst_item [const above]]
 Use the item one row above in this column.
 
+[lst_item "[const ancestors] [arg QUALIFIERS]"]
+Use the ancestors of the item (like [cmd {item ancestors}] but QUALIFIERS
+may change which ancestors match).
+This keyword cannot be followed by any modifiers.
+
 [lst_item [const below]]
 Use the item one row below in this column.
 
@@ -2739,6 +2819,16 @@ Use the item in the last row of this column.
 
 [lst_item "[const child] [arg n] [arg QUALIFIERS]"]
 Use the [arg n]th child of the item.
+
+[lst_item "[const children] [arg QUALIFIERS]"]
+Use the children of the item (like [cmd {item children}] but QUALIFIERS
+may change which children match).
+This keyword cannot be followed by any modifiers.
+
+[lst_item "[const descendants] [arg QUALIFIERS]"]
+Use the descendants of the item (like [cmd {item descendants}] but QUALIFIERS
+may change which descendants match).
+This keyword cannot be followed by any modifiers.
 
 [lst_item "[const firstchild] [arg QUALIFIERS]"]
 Use the first child of the item.
@@ -2791,24 +2881,38 @@ following terms that changes which item is chosen:
 [arg StateList] is a list of item state names (static and dynamic, see [sectref STATES]).
 Only items that have the given states set (or unset if the '!' prefix is used)
 are considered.
-[nl]
+
+[lst_item "[const tag] [arg tagExpr]"]
+[arg TagExpr] is a tag expression (see [sectref {ITEM TAGS}]) against which
+every item's tags are tested for a match.
+
+[lst_item [const visible]]
+When this qualifier is given, only items that are displayed are considered.
+
+[lst_item [const !visible]]
+When this qualifier is given, only items that are *not* displayed are considered.
+[list_end]
+
 To get the first item in the list that is enabled:
 [example_begin]
 $T item id "first state enabled"
 [example_end]
-To get the first item in the list that is not open:
+
+To get the ancestors that are not open of the last item in the list:
 [example_begin]
-$T item id "first state !open"
+$T item id "last ancestors state !open"
 [example_end]
 
-[lst_item [const visible]]
-When this qualifier is given, only items that are displayed are considered.
-[nl]
-To get the first item in the list that is displayed:
+To get the visible descendants of the root item:
 [example_begin]
-$T item id "first visible"
+$T item id "root descendants visible"
 [example_end]
-[list_end]
+
+To get the every hidden item with tag "a" or "b":
+[example_begin]
+$T item id "all !visible tag a||b"
+$T item id "tag a||b !visible"
+[example_end]
 
 [section {EVENTS AND SCRIPT SUBSTITUTIONS}]
 

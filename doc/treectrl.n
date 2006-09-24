@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.51 2006/09/16 20:04:52 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.52 2006/09/24 22:56:08 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1.1 treectrl "Tk Commands"
 .BS
@@ -137,6 +137,8 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBitem delete\fR \fIfirst\fR ?\fIlast\fR?
 .sp
+\fIpathName\fR \fBitem descendants\fR \fIitemDesc\fR
+.sp
 \fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
 .sp
 \fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?
@@ -263,7 +265,7 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBscan dragto\fR \fIx\fR \fIy\fR ?\fIgain\fR?
 .sp
-\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
+\fIpathName\fR \fBstate\fR \fIoption\fR \fIargs\fR
 .sp
 \fIpathName\fR \fBstate define\fR \fIstateName\fR
 .sp
@@ -275,7 +277,7 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBsee\fR \fIitemDesc\fR
 .sp
-\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR
+\fIpathName\fR \fBselection\fR \fIoption\fR \fIargs\fR
 .sp
 \fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?
 .sp
@@ -306,6 +308,16 @@ package require \fBtreectrl  2.1.1\fR
 \fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
 \fIpathName\fR \fBstyle names\fR
+.sp
+\fIpathName\fR \fBtag\fR \fIoption\fR \fIargs\fR
+.sp
+\fIpathName\fR \fBtag add\fR \fIitemDesc\fR \fItagList\fR
+.sp
+\fIpathName\fR \fBtag expr\fR \fIitemDesc\fR \fItagExpr\fR
+.sp
+\fIpathName\fR \fBtag names\fR \fIitemDesc\fR
+.sp
+\fIpathName\fR \fBtag remove\fR \fIitemDesc\fR \fItagList\fR
 .sp
 \fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 .sp
@@ -944,6 +956,32 @@ multiple of \fB-yscrollincrement\fR;  furthermore, the units for scrolling
 are selected) will also be \fB-yscrollincrement\fR.  If the value of
 this option is less than or equal to zero, then vertical scrolling
 is unconstrained.
+.SH "ITEM TAGS"
+An item may have any number of tags associated with it. A tag is just a string
+of characters, and it may take any form, including that of an integer,
+although the characters '(', ')', '&', '|', '^' and '!' should be avoided.
+.PP
+The same tag may be associated with many items. This is commonly done to group
+items in various interesting ways; for example, in a file browser all directories
+might be given the tag "directory".
+.PP
+Tag expressions are used in \fBitem descriptions\fR to specify which items to
+operate on.
+A tag expression can be a single tag name or a logical expression of tags
+using operators '&&', '||', '^' and '!', and parenthesized subexpressions.
+For example:
+.nf
+
+.t item id "tag {(a && !b) || (!a && b)}"
+
+.fi
+or equivalently:
+.nf
+
+.t item id "tag {a ^ b}"
+
+.fi
+will return the unique ids of any items with either "a" or "b" tags, but not both.
 .SH "WIDGET COMMAND"
 The \fBtreectrl\fR command creates a new Tcl command whose
 name is the same as the path name of the treectrl's window.
@@ -1556,6 +1594,9 @@ Specifies whether or not to return a list of item identifiers for the newly
 created items. Specifying false is useful when creating a large number of items in the
 console or to improve performance. Default is true.
 .TP
+\fB\fB-tags\fR\fR \fItagList\fR
+\fITagList\fR is a list of tag names to be added to the new items.
+.TP
 \fB\fB-visible\fR\fR \fIboolean\fR
 \fIBoolean\fR must have one of the forms accepted by \fBTcl_GetBoolean\fR. It
 indicates that the item should be displayed in the list. The item will only be
@@ -1587,6 +1628,11 @@ If any of the deleted items are selected, then a \fB<Selection>\fR event
 is generated just before the items are deleted.
 If any items were actually deleted, then an \fB<ItemDelete>\fR event event is generated just before the items
 are deleted.
+.TP
+\fIpathName\fR \fBitem descendants\fR \fIitemDesc\fR
+Returns a list containing the item ids of the descendants
+of the item specified by \fIitemDesc\fR, i.e. the children, grandchildren,
+great-grandchildren etc, of the item.
 .TP
 \fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
 Returns a list with six elements in the form
@@ -1679,9 +1725,9 @@ that is not an ancestor of \fIparent\fR.
 Then it will become the new first child of \fIparent\fR.
 .TP
 \fIpathName\fR \fBitem id\fR \fIitemDesc\fR
-This command resolves the \fBitem description\fR \fIitemDesc\fR into a unique item
-identifier. If the item described by
-\fIitemDesc\fR doesn't exist, this command returns an empty string.
+This command resolves the \fBitem description\fR
+\fIitemDesc\fR into a list of unique item identifiers. If the item(s) described by
+\fIitemDesc\fR don't exist, this command returns an empty list.
 .TP
 \fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
 This command sets or retrieves the value of the \fBper-state\fR
@@ -2196,7 +2242,7 @@ to produce the effect of dragging the treectrl at high speed through its window.
 The return value is an empty string.
 .RE
 .TP
-\fIpathName\fR \fBstate\fR \fIoption\fR ?\fIstateName\fR?
+\fIpathName\fR \fBstate\fR \fIoption\fR \fIargs\fR
 This command is used to manipulate the list of user-defined states,
 see section \fBSTATES\fR below.
 The exact behavior of the command depends on the \fIoption\fR argument
@@ -2230,7 +2276,7 @@ otherwise the treectrl scrolls to bring the item into view,
 and the corresponding \fB<Scroll-x>\fR and/or \fB<Scroll-y>\fR
 events are generated.
 .TP
-\fIpathName\fR \fBselection\fR \fIoption\fR \fIarg\fR
+\fIpathName\fR \fBselection\fR \fIoption\fR \fIargs\fR
 This command is used to adjust the selection within a treectrl.
 It has several forms, depending on \fIoption\fR:
 .RS
@@ -2472,6 +2518,29 @@ around a piece of text.
 .TP
 \fIpathName\fR \fBstyle names\fR
 Returns a list containing the names of all existing styles.
+.RE
+.TP
+\fIpathName\fR \fBtag\fR \fIoption\fR \fIargs\fR
+This command is used to manipulate \fBitem tags\fR.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName\fR \fBtag add\fR \fIitemDesc\fR \fItagList\fR
+Adds each tag in \fItagList\fR to the item(s) described by \fIitemDesc\fR.
+Duplicate tags are never added to an item.
+.TP
+\fIpathName\fR \fBtag expr\fR \fIitemDesc\fR \fItagExpr\fR
+Returns a boolean indicating if the item(s) described by \fIitemDesc\fR
+meet the tag expression \fItagExpr\fR. This command can be used to test
+whether an item has (or doesn't have) a certain tag.
+.TP
+\fIpathName\fR \fBtag names\fR \fIitemDesc\fR
+Returns a list of tag names that any of the items described by \fIitemDesc\fR
+have.
+.TP
+\fIpathName\fR \fBtag remove\fR \fIitemDesc\fR \fItagList\fR
+Removes each tag in \fItagList\fR from the item(s) described by \fIitemDesc\fR.
+If an item doesn't have one of the tags, then nothing bad happens.
 .RE
 .TP
 \fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
@@ -2809,7 +2878,7 @@ This state can be modified by means of the widget command \fBactivate\fR.
 .TP
 \fBenabled\fR
 This state is set for every item when it is created.
-Disabled items can not be selected and are ignored by the default bindings
+Disabled items cannot be selected and are ignored by the default bindings
 when navigating via the keyboard.
 This state can be modified by means of the widget command \fBitem enabled\fR.
 .TP
@@ -3140,10 +3209,10 @@ the \fBelement create\fR or \fBelement configure\fR commands, only by the
 \fBitem element configure\fR command; i.e., the element must be associated
 with a particular item.
 .SH "ITEM DESCRIPTION"
-Many of the commands and options for a treectrl take as an argument a
-description of which item to operate on.
-See the \fBEXAMPLES\fR section for examples.
-The initial part of an item description must begin with one of the following terms:
+Many of the commands for a treectrl take as an argument a
+description of which items to operate on. An item description is a properly-formed
+tcl list of keywords and arguments.
+The first word of an item description must be one of the following:
 .TP
 \fIid\fR
 Specifies the unique item identifier, where \fIid\fR should be
@@ -3161,6 +3230,11 @@ Indicates the anchor item of the selection, i.e. normally
 the item specified as argument of the last successful \fBselection anchor\fR
 widget command, or the root item if no such call happened yet.
 .TP
+\fBall\fR \fIQUALIFIERS\fR
+Indicates every item of the treectrl including orphans,
+or the items matching \fIQUALIFIERS\fR.
+This keyword cannot be followed by any modifiers.
+.TP
 \fBfirst\fR \fIQUALIFIERS\fR
 Indicates the first item of the treectrl (the root item),
 or the first item matching \fIQUALIFIERS\fR.
@@ -3170,6 +3244,11 @@ or the first item matching \fIQUALIFIERS\fR.
 \fBlast\fR \fIQUALIFIERS\fR
 Indicates the last item of the treectrl,
 or the last item matching \fIQUALIFIERS\fR.
+.TP
+\fBlist\fR \fIitemDescs\fR
+\fIItemDescs\fR is a list (a single argument, i.e. "list {a b c}" not "list a b c")
+of other item descriptions.
+This keyword cannot be followed by any modifiers.
 .TP
 \fBnearest\fR \fIx y\fR
 Indicates the item nearest to the point given by \fIx\fR and \fIy\fR.
@@ -3181,8 +3260,18 @@ the on-screen arrangement of items as determined by the -orient and -wrap
 options.
 You can memorize \fBrnc\fR as an abbreviation of "row 'n' column".
 .TP
+\fBrange\fR \fIfirst last\fR
+\fIFirst\fR and \fIlast\fR specify a range of items.
+This keyword cannot be followed by any modifiers.
+.TP
 \fBroot\fR
 Indicates the root item of the treectrl.
+.TP
+\fBtag\fR \fItagExpr\fR \fIQUALIFIERS\fR
+\fITagExpr\fR is a tag expression (see \fBITEM TAGS\fR) against which
+every item's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single item is
+matched.
 .PP
 The initial part of the item description (matching any of the values above)
 may be followed by one or more \fImodifier\fRs.
@@ -3193,6 +3282,11 @@ It may be specified in any of the following forms:
 \fBabove\fR
 Use the item one row above in this column.
 .TP
+\fBancestors\fR \fIQUALIFIERS\fR
+Use the ancestors of the item (like \fBitem ancestors\fR but QUALIFIERS
+may change which ancestors match).
+This keyword cannot be followed by any modifiers.
+.TP
 \fBbelow\fR
 Use the item one row below in this column.
 .TP
@@ -3201,6 +3295,16 @@ Use the item in the last row of this column.
 .TP
 \fBchild\fR \fIn\fR \fIQUALIFIERS\fR
 Use the \fIn\fRth child of the item.
+.TP
+\fBchildren\fR \fIQUALIFIERS\fR
+Use the children of the item (like \fBitem children\fR but QUALIFIERS
+may change which children match).
+This keyword cannot be followed by any modifiers.
+.TP
+\fBdescendants\fR \fIQUALIFIERS\fR
+Use the descendants of the item (like \fBitem descendants\fR but QUALIFIERS
+may change which descendants match).
+This keyword cannot be followed by any modifiers.
 .TP
 \fBfirstchild\fR \fIQUALIFIERS\fR
 Use the first child of the item.
@@ -3250,27 +3354,39 @@ following terms that changes which item is chosen:
 \fIStateList\fR is a list of item state names (static and dynamic, see \fBSTATES\fR).
 Only items that have the given states set (or unset if the '!' prefix is used)
 are considered.
-.sp
+.TP
+\fBtag\fR \fItagExpr\fR
+\fITagExpr\fR is a tag expression (see \fBITEM TAGS\fR) against which
+every item's tags are tested for a match.
+.TP
+\fBvisible\fR
+When this qualifier is given, only items that are displayed are considered.
+.TP
+\fB!visible\fR
+When this qualifier is given, only items that are *not* displayed are considered.
 To get the first item in the list that is enabled:
 .nf
 
 $T item id "first state enabled"
 
 .fi
-To get the first item in the list that is not open:
+To get the ancestors that are not open of the last item in the list:
 .nf
 
-$T item id "first state !open"
+$T item id "last ancestors state !open"
 
 .fi
-.TP
-\fBvisible\fR
-When this qualifier is given, only items that are displayed are considered.
-.sp
-To get the first item in the list that is displayed:
+To get the visible descendants of the root item:
 .nf
 
-$T item id "first visible"
+$T item id "root descendants visible"
+
+.fi
+To get the every hidden item with tag "a" or "b":
+.nf
+
+$T item id "all !visible tag a||b"
+$T item id "tag a||b !visible"
 
 .fi
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
