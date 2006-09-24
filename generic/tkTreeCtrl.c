@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.64 2006/09/22 23:26:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.65 2006/09/24 22:24:50 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -449,7 +449,7 @@ static int TreeWidgetCmd(
 	"element", "expand", "identify", "index", "item",
 	"marquee", "notify", "numcolumns", "numitems", "orphans",
 	"range", "scan", "see", "selection", "state", "style",
-	"toggle", "xview", "yview", (char *) NULL
+	"tag", "toggle", "xview", "yview", (char *) NULL
     };
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
@@ -459,7 +459,7 @@ static int TreeWidgetCmd(
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
 	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS, COMMAND_ORPHANS, COMMAND_RANGE,
 	COMMAND_SCAN, COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE,
-	COMMAND_STYLE, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
+	COMMAND_STYLE, COMMAND_TAG, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
     };
     Tcl_Obj *resultObjPtr;
     int index;
@@ -1067,6 +1067,12 @@ static int TreeWidgetCmd(
 	case COMMAND_STYLE:
 	{
 	    result = TreeStyleCmd(clientData, interp, objc, objv);
+	    break;
+	}
+
+	case COMMAND_TAG:
+	{
+	    result = TreeTagCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
