@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.5 2005/07/16 18:05:23 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.6 2006/09/24 22:57:42 treectrl Exp $
 
 proc DemoBigList {} {
 
@@ -100,7 +100,7 @@ proc DemoBigList {} {
 
 	set index 1
 	foreach I [$T item create -count 10000 -parent root -button yes -open no \
-		-height 20] {
+		-height 20 -tags title] {
 		set BigList(titleIndex,$I) $index
 		incr index 10
 	}
@@ -165,7 +165,7 @@ proc BigListExpandBefore {T I} {
 	if {[$T item numchildren $I]} return
 
 	# Title
-	if {[$T depth $I] == 1} {
+	if {[$T tag expr $I title]} {
 		set index $BigList(titleIndex,$I)
 		set threats {Severe High Elevated Guarded Low}
 		set names1 {Bill John Jack Bob Tim Sam Mary Susan Lilian Jeff Gary
@@ -176,7 +176,7 @@ proc BigListExpandBefore {T I} {
 		# Add 10 child items to this item. Each item represents 1 citizen.
 		# The styles will be assigned in BigListItemVisibility.
 		foreach I [$T item create -count 10 -parent $I -open no -button yes \
-				-height 20] {
+				-height 20 -tags citizen] {
 			set name1 [lindex $names1 [expr {int(rand() * [llength $names1])}]]
 			set name2 [lindex $names2 [expr {int(rand() * [llength $names2])}]]
 			set BigList(itemIndex,$I) $index
@@ -188,11 +188,11 @@ proc BigListExpandBefore {T I} {
 	}
 
 	# Citizen
-	if {[$T depth $I] == 2} {
+	if {[$T tag expr $I citizen]} {
 
 		# Add 1 child item to this item.
 		# The styles will be assigned in BigListItemVisibility.
-		$T item create -parent $I -height $BigList(windowHeight)
+		$T item create -parent $I -height $BigList(windowHeight) -tags info
 	}
 
 	return
@@ -208,7 +208,7 @@ proc BigListItemVisibility {T visible hidden} {
 		set parent [$T item parent $I]
 
 		# Title
-		if {[$T depth $I] == 1} {
+		if {[$T tag expr $I title]} {
 			set first $BigList(titleIndex,$I)
 			set last [expr {$first + 10 - 1}]
 			set first [format %06d $first]
@@ -221,7 +221,7 @@ proc BigListItemVisibility {T visible hidden} {
 		}
 
 		# Citizen
-		if {[$T depth $I] == 2} {
+		if {[$T tag expr $I citizen]} {
 			set index $BigList(itemIndex,$I)
 			$T item style set $I colItem styItem  colID styID colParent styParent
 			$T item element configure $I \
@@ -232,7 +232,7 @@ proc BigListItemVisibility {T visible hidden} {
 		}
 
 		# Citizen info
-		if {[$T depth $I] == 3} {
+		if {[$T tag expr $I info]} {
 			set w [BigListNewWindow $T $parent]
 			$T item style set $I colItem styCitizen
 			$T item span $I colItem 3
@@ -246,7 +246,7 @@ proc BigListItemVisibility {T visible hidden} {
 		set parent [$T item parent $I]
 
 		# Citizen info
-		if {[$T depth $I] == 3} {
+		if {[$T tag expr $I info]} {
 			# Add this window to the list of unused windows
 			set w [$T item element cget $I colItem elemWindow -window]
 			BigListFreeWindow $T $w
@@ -341,7 +341,7 @@ proc BigListButton1 {w x y} {
 			TreeCtrl::ButtonPress1 $w $x $y
 			return
 		}
-		if {[$w depth $item] < 3} {
+		if {[$w tag expr $item !info]} {
 			$w toggle $item
 		}
 	}
@@ -353,7 +353,7 @@ proc BigListMotion {w x y} {
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
-		if {[$w depth $item] < 3} {
+		if {[$w tag expr $item !info]} {
 			if {$item ne $BigList(prev)} {
 				$w configure -cursor hand2
 				set BigList(prev) $item
