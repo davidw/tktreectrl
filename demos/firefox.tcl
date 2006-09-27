@@ -1,5 +1,6 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.11 2005/07/16 18:06:32 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.12 2006/09/27 01:56:38 treectrl Exp $
 
+set ::clip 1
 proc DemoFirefoxPrivacy {} {
 
 	global FirefoxPrivacy
@@ -12,10 +13,12 @@ proc DemoFirefoxPrivacy {} {
 
 	$T configure -showroot no -showbuttons yes -showlines no \
 		-selectmode extended -xscrollincrement 20 -showheader yes
-
+if {$::clip} {
+	$T configure -xscrollincrement 4 -yscrollincrement 4
+} else {
 	# Hide the borders because child windows appear on top of them
 	$T configure -borderwidth 0 -highlightthickness 0
-
+}
 	#
 	# Create columns
 	#
@@ -62,6 +65,7 @@ proc DemoFirefoxPrivacy {} {
 	#
 
 	$T element create eWindow window
+if {$::clip} { $T element configure eWindow -clip yes }
 	$T element create eText1 text -font [list "[$T cget -font] bold"]
 	$T element create eRectTop rect -outline black -fill #FFFFCC \
 		-draw {yes open no {}} -outlinewidth 1 -open s
@@ -88,16 +92,6 @@ proc DemoFirefoxPrivacy {} {
 	$T style layout $S eRectBottom -detach yes -indent no -iexpand xy
 	$T style layout $S eWindow -iexpand x -squeeze x -padx {0 2} -pady {0 8}
 
-	set buttonCmd button
-	set checkbuttonCmd checkbutton
-	set tile 0
-	catch {
-		package require tile 0.6
-		set buttonCmd ttk::button
-#		set checkbuttonCmd ttk::checkbutton
-		set tile 1
-	}
-
 	#
 	# Create items and assign styles
 	#
@@ -112,18 +106,34 @@ proc DemoFirefoxPrivacy {} {
 		set I [$T item create -button yes]
 		$T item style set $I C0 styCategory
 		$T item element configure $I C0 eText1 -text $category
-		set b [$buttonCmd $T.b$I -text "Clear" -command "" -width 11]
+if {$::clip} {
+		set wClip [frame $T.clip$I -background red]
+		set b [button $wClip.b$I -text "Clear" -command "" -width 11]
+		$T item element configure $I C0 eWindow -window $wClip
+} else {
+		set b [button $T.b$I -text "Clear" -command "" -width 11]
 		$T item element configure $I C0 eWindow -window $b
+}
 		$T item lastchild root $I
 	}
 
 	set bg #FFFFCC
 	set textBg $bg
 
+	if {$::tile} {
+		style configure DemoCheckbutton -background $bg
+		style layout DemoCheckbutton [style layout TCheckbutton]
+	}
+
 	# History
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 	label $f.l1 -background $bg -text "Remember visited pages for the last"
 	entry $f.e1 -width 6
 	$f.e1 insert end 20
@@ -131,31 +141,54 @@ proc DemoFirefoxPrivacy {} {
 	pack $f.l1 -side left
 	pack $f.e1 -side left -padx 8
 	pack $f.l2 -side left
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 0" $I
 
 	# Saved Form Information
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
 		-width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Information entered in web page forms and the Search\
 		Bar is saved to make filling out forms and searching faster."
 	bindtags $f.t1 TextWrapBindTag
-	$checkbuttonCmd $f.cb1 -background $bg -highlightthickness 0 -text "Save\
-		information I enter in web page forms and the Search Bar" \
-		-variable ::cbvar($f.cb1)
+	if {$::tile} {
+		checkbutton $f.cb1 -text "Save information I enter in web page forms and the Search Bar" \
+			-variable ::cbvar($f.cb1) -style DemoCheckbutton
+	} else {
+		checkbutton $f.cb1 -background $bg -highlightthickness 0 -text "Save\
+			information I enter in web page forms and the Search Bar" \
+			-variable ::cbvar($f.cb1)
+	}
 	set ::cbvar($f.cb1) 1
 	pack $f.t1 -side top -anchor w -fill x -padx {0 8} -pady {0 4}
 	pack $f.cb1 -side top -anchor w
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 1" $I
 
 	# Saved Passwords
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
 	text $fLeft.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
@@ -164,26 +197,40 @@ proc DemoFirefoxPrivacy {} {
 		Password Manager so that you do not need to re-enter your login\
 		details every time you visit."
 	bindtags $fLeft.t1 TextWrapBindTag
-	$checkbuttonCmd $fLeft.cb1 -background $bg -highlightthickness 0 \
-		-text "Remember Passwords" -variable ::cbvar($fLeft.cb1)
+	if {$::tile} {
+		checkbutton $fLeft.cb1 -text "Remember Passwords" \
+			-variable ::cbvar($fLeft.cb1) -style DemoCheckbutton
+	} else {
+		checkbutton $fLeft.cb1 -background $bg -highlightthickness 0 \
+			-text "Remember Passwords" -variable ::cbvar($fLeft.cb1)
+	}
 	set ::cbvar($fLeft.cb1) 1
 	pack $fLeft.t1 -side top -expand yes -fill x -pady {0 6}
 	pack $fLeft.cb1 -side top -anchor w
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	$buttonCmd $fRight.b1 -text "View Saved Passwords"
-	$buttonCmd $fRight.b2 -text "Change Master Password..."
+	button $fRight.b1 -text "View Saved Passwords"
+	button $fRight.b2 -text "Change Master Password..."
 	pack $fRight.b1 -side top -expand yes -fill x
 	pack $fRight.b2 -side top -expand yes -fill x -pady {8 0}
 	pack $fLeft -side left -expand yes -fill x
 	pack $fRight -side right -padx 12 -anchor n
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 2" $I
 
 	# Download Manager History
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
 		-width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "The Download Manager keeps track of recently downloaded files."
@@ -191,7 +238,7 @@ proc DemoFirefoxPrivacy {} {
 
 	set f1 [frame $f.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Remove files from the Download Manager:"
-	if {$tile} {
+	if {$::tile} {
 		ttk::combobox $f1.mb1 -values {
 			"Upon successful download"
 			"When firefox exits"
@@ -214,13 +261,22 @@ proc DemoFirefoxPrivacy {} {
 	pack $f1.mb1 -side left -padx {8 10}
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10}
 	pack $f1 -side top -anchor w
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 3" $I
 
 	# Cookies
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
 		-width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Cookies are pieces of information stored by web pages\
@@ -229,25 +285,36 @@ proc DemoFirefoxPrivacy {} {
 	bindtags $f.t1 TextWrapBindTag
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
-	$checkbuttonCmd $fLeft.cb1 -background $bg -highlightthickness 0 \
-		-text "Allow sites to set cookies" -variable ::cbvar($fLeft.cb1)
+	if {$::tile} {
+		checkbutton $fLeft.cb1  -style DemoCheckbutton \
+			-text "Allow sites to set cookies" -variable ::cbvar($fLeft.cb1)
+	} else {
+		checkbutton $fLeft.cb1 -background $bg -highlightthickness 0 \
+			-text "Allow sites to set cookies" -variable ::cbvar($fLeft.cb1)
+	}
 	set ::cbvar($fLeft.cb1) 1
-	$checkbuttonCmd $fLeft.cb2 -background $bg -highlightthickness 0 \
-		-text "for the originating web site only" \
-		-variable ::cbar($fLeft.cb2)
+	if {$::tile} {
+		checkbutton $fLeft.cb2  -style DemoCheckbutton \
+			-text "for the originating web site only" \
+			-variable ::cbar($fLeft.cb2)
+	} else {
+		checkbutton $fLeft.cb2 -background $bg -highlightthickness 0 \
+			-text "for the originating web site only" \
+			-variable ::cbar($fLeft.cb2)
+	}
 	set ::cbar($fLeft.cb2) 0
 	pack $fLeft.cb1 -side top -anchor w
 	pack $fLeft.cb2 -side top -anchor w -padx {20 0}
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	$buttonCmd $fRight.b1 -text "Exceptions"
-	$buttonCmd $fRight.b2 -text "View Cookies"
+	button $fRight.b1 -text "Exceptions"
+	button $fRight.b2 -text "View Cookies"
 	pack $fRight.b1 -side left -padx {0 10}
 	pack $fRight.b2 -side left
 
 	set f1 [frame $fLeft.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Keep Cookies:"
-	if {$tile} {
+	if {$::tile} {
 		ttk::combobox $f1.mb1 -values {
 				"until they expire"
 				"until I close Firefox"
@@ -274,13 +341,22 @@ proc DemoFirefoxPrivacy {} {
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10} -pady {0 8}
 	pack $fLeft -side left -expand yes -fill x
 	pack $fRight -side right -padx 14 -anchor n
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 4" $I
 
 	# Cache
 	set I [$T item create]
 	$T item style set $I C0 styFrame
+if {$::clip} {
+	set wClip [frame $T.clip$I -background red]
+	set f [frame $wClip.f$I -borderwidth 0 -background $bg]
+} else {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
+}
 	text $f.t1 -background $textBg -borderwidth 0 -highlightthickness 0 \
 		-width 10 -height 1 -wrap word -cursor ""
 	$f.t1 insert end "Pages you view are stored in the cache for quicker\
@@ -297,7 +373,11 @@ proc DemoFirefoxPrivacy {} {
 	pack $f1.l2 -side left
 	pack $f.t1 -side top -expand yes -fill x -padx {0 10}
 	pack $f1 -side top -anchor w
+if {$::clip} {
+	$T item element configure $I C0 eWindow -window $wClip
+} else {
 	$T item element configure $I C0 eWindow -window $f
+}
 	$T item lastchild "root child 5" $I
 
 	# This binding configures the -height option of a Text widget to the
@@ -305,7 +385,10 @@ proc DemoFirefoxPrivacy {} {
 	bind TextWrapBindTag <Configure> {
 		scan [textlayout [%W cget -font] [%W get 1.0 "end - 1 chars"] \
 			-width %w] "%%d %%d" width height
-		%W configure -height [expr {$height / [font metrics [%W cget -font] -linespace]}]
+		set height [expr {$height / [font metrics [%W cget -font] -linespace]}]
+		if {$height != [%W cget -height]} {
+			%W configure -height $height
+		}
 	}
 
 	# This binding collapses all items before expanding a new one
