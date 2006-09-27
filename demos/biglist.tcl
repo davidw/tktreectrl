@@ -1,5 +1,6 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.6 2006/09/24 22:57:42 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.7 2006/09/27 01:58:43 treectrl Exp $
 
+set ::clip 1
 proc DemoBigList {} {
 
 	global BigList
@@ -14,9 +15,12 @@ proc DemoBigList {} {
 		-showroot no -showbuttons no -showlines no \
 		-showrootlines no
 
+if {$::clip} {
+	$T configure -xscrollincrement 4 -yscrollincrement 4
+} else {
 	# Hide the borders because child windows appear on top of them
 	$T configure -borderwidth 0 -highlightthickness 0
-
+}
 	#
 	# Create columns
 	#
@@ -60,7 +64,9 @@ proc DemoBigList {} {
 
 	# Citizen info
 	$T element create elemWindow window
-
+if {$::clip} {
+    $T element configure elemWindow -clip yes
+}
 	#
 	# Create styles using the elements
 	#
@@ -124,7 +130,11 @@ proc DemoBigList {} {
 	# value of the item -height option for some items.
 	set w [BigListNewWindow $T root]
 	update idletasks
+if {$::clip} {
+	set height [winfo reqheight [lindex [winfo children $w] 0]]
+} else {
 	set height [winfo reqheight $w]
+}
 	# Add 1 pixel for the border
 	incr height
 	set BigList(windowHeight) $height
@@ -243,7 +253,6 @@ proc BigListItemVisibility {T visible hidden} {
 
 	# Clear the styles of each item that is no longer visible on screen.
 	foreach I $hidden {
-		set parent [$T item parent $I]
 
 		# Citizen info
 		if {[$T tag expr $I info]} {
@@ -263,26 +272,39 @@ proc BigListNewWindow {T I} {
 	if {[llength $BigList(freeWindows)]} {
 		set w [lindex $BigList(freeWindows) 0]
 		set BigList(freeWindows) [lrange $BigList(freeWindows) 1 end]
+if {$::clip} {
+    set f $w
+    set w [lindex [winfo children $f] 0]
+}
 puts "reuse window $w"
 
 	# No unused windows exist. Create a new one.
 	} else {
 		set id [incr BigList(nextWindowId)]
+if {$::clip} {
+    set f [frame $T.clip$id -background blue]
+    set w [frame $f.frame$id -background $BigList(bg)]
+} else {
 		set w [frame $T.frame$id -background $BigList(bg)]
-
+}
 		# Name: label + entry
 		label $w.label1 -text "Name:" -anchor w -background $BigList(bg)
 		entry $w.entry1 -width 24
 
 		# Threat Level: label + menubutton
 		label $w.label2 -text "Threat Level:" -anchor w -background $BigList(bg)
-		menubutton $w.mb2 -indicatoron yes -menu $w.mb2.m \
-			-width [string length Elevated] -relief raised
-		menu $w.mb2.m -tearoff no
-		foreach label {Severe High Elevated Guarded Low} {
-			$w.mb2.m add radiobutton -label $label \
-				-value $label \
-				-command [list $w.mb2 configure -text $label]
+		if {$::tile} {
+			ttk::combobox $w.mb2 -values {Severe High Elevated Guarded Low} \
+				-state readonly -width [string length "Elevated"]
+		} else {
+			menubutton $w.mb2 -indicatoron yes -menu $w.mb2.m \
+				-width [string length Elevated] -relief raised
+			menu $w.mb2.m -tearoff no
+			foreach label {Severe High Elevated Guarded Low} {
+				$w.mb2.m add radiobutton -label $label \
+					-value $label \
+					-command [list $w.mb2 configure -text $label]
+			}
 		}
 
 		# Button
@@ -311,9 +333,12 @@ puts "create window $w"
 	# Tie the widgets to the global variables for this citizen
 	$w.entry1 configure -textvariable BigList(name,$I)
 	$w.mb2 configure -textvariable BigList(threat,$I)
-	foreach label {Severe High Elevated Guarded Low} {
-		$w.mb2.m entryconfigure $label -variable BigList(threat,$I)
+	if {!$::tile} {
+		foreach label {Severe High Elevated Guarded Low} {
+			$w.mb2.m entryconfigure $label -variable BigList(threat,$I)
+		}
 	}
+if {$::clip} { return $f }
 	return $w
 }
 
