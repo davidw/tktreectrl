@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.36 2006/09/24 22:56:08 treectrl Exp $}
+  $Id: treectrl.man,v 1.37 2006/09/27 02:05:13 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -2705,6 +2705,14 @@ An element of type [const window] can be used to display a Tk window in an item.
 The following options are supported for window elements:
 
 [list_begin opt]
+[opt_def [option -clip] [arg boolean]]
+Specifies whether the associated Tk window is a borderless frame which should
+be used to clip its child window so it doesn't overlap the header, borders, or
+other items or columns. When this option is true, the treectrl manages the
+geometry of both the [option -window] widget and its first child widget; in
+this case the [option -window] widget (which should be a borderless frame) is
+kept sized and positioned so that it is never out-of-bounds.
+
 [opt_def [option -destroy] [arg boolean]]
 Specifies whether the associated Tk window should be destroyed when the
 element is deleted. The element is deleted when the item containing the
