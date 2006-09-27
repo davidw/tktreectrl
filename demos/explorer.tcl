@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.17 2005/07/15 01:20:52 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.18 2006/09/27 01:56:59 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -241,23 +241,24 @@ proc ExplorerHeaderInvoke {T C} {
 	}
 	$T column configure $C -arrow $arrow -itembackground #F7F7F7
 	set dirCount $::TreeCtrl::Priv(DirCnt,$T)
+	set fileCount [expr {[$T item count] - 1 - $dirCount}]
 	set lastDir [expr {$dirCount - 1}]
 	switch [$T column cget $C -tag] {
 		name {
 			if {$dirCount} {
 				$T item sort root $order -last "root child $lastDir" -column $C -dictionary
 			}
-			if {$dirCount < [$T item count] - 1} {
+			if {$fileCount} {
 				$T item sort root $order -first "root child $dirCount" -column $C -dictionary
 			}
 		}
 		size {
-			if {$dirCount < [$T item count] - 1} {
+			if {$fileCount} {
 				$T item sort root $order -first "root child $dirCount" -column $C -integer -column name -dictionary
 			}
 		}
 		type {
-			if {$dirCount < [$T item count] - 1} {
+			if {$fileCount} {
 				$T item sort root $order -first "root child $dirCount" -column $C -dictionary -column name -dictionary
 			}
 		}
@@ -265,7 +266,7 @@ proc ExplorerHeaderInvoke {T C} {
 			if {$dirCount} {
 				$T item sort root $order -last "root child $lastDir" -column $C -integer -column name -dictionary
 			}
-			if {$dirCount < [$T item count] - 1} {
+			if {$fileCount} {
 				$T item sort root $order -first "root child $dirCount" -column $C -integer -column name -dictionary
 			}
 		}
