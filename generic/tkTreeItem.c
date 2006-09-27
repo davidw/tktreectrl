@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.63 2006/09/24 22:36:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.64 2006/09/27 01:47:44 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4103,6 +4103,75 @@ TreeItem_DrawButton(
  *----------------------------------------------------------------------
  */
 
+#ifdef COLUMN_SPAN
+void
+TreeItem_UpdateWindowPositions(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int x, int y,		/* Window coordinates of the item. */
+    int width, int height	/* Total size of the item. */
+    )
+{
+    Item *self = (Item *) item_;
+    int indent, columnWidth, totalWidth;
+    Column *column;
+    StyleDrawArgs drawArgs;
+    TreeColumn treeColumn;
+    int i, columnIndex;
+    SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+
+    STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+    Item_GetSpans(tree, item_, spans);
+
+    drawArgs.tree = tree;
+    drawArgs.drawable = None;
+
+    totalWidth = 0;
+    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+	treeColumn = spans[columnIndex].treeColumn;
+
+	/* A preceding item column is displayed here */
+	if (spans[columnIndex].itemColumnIndex != columnIndex)
+	    continue;
+
+	/* If this is the single visible column, use the provided width which
+	 * may be different than the column's width */
+	if ((tree->columnCountVis == 1) && (treeColumn == tree->columnVis)) {
+	    columnWidth = width;
+
+	/* More than one column is visible, or this is not the visible
+	 * column. Add up the widths of all columns this column spans */
+	} else {
+	    columnWidth = 0;
+	    for (i = columnIndex; i < tree->columnCount; i++) {
+		if (spans[i].itemColumnIndex != columnIndex)
+		    break;
+		columnWidth += spans[i].width;
+	    }
+	}
+	if (columnWidth <= 0)
+	    continue;
+	column = (Column *) spans[columnIndex].itemColumn;
+	if ((column != NULL) && (column->style != NULL)) {
+	    if (treeColumn == tree->columnTree)
+		indent = TreeItem_Indent(tree, item_);
+	    else
+		indent = 0;
+	    drawArgs.state = self->state | column->cstate;
+	    drawArgs.style = column->style;
+	    drawArgs.indent = indent;
+	    drawArgs.x = x + totalWidth;
+	    drawArgs.y = y;
+	    drawArgs.width = columnWidth;
+	    drawArgs.height = height;
+	    drawArgs.justify = TreeColumn_Justify(treeColumn);
+	    TreeStyle_UpdateWindowPositions(&drawArgs);
+	}
+	totalWidth += columnWidth;
+    }
+    STATIC_FREE(spans, SpanInfo, tree->columnCount);
+}
+#else /* COLUMN_SPAN */
 void
 TreeItem_UpdateWindowPositions(
     TreeCtrl *tree,		/* Widget info. */
@@ -4152,6 +4221,7 @@ TreeItem_UpdateWindowPositions(
 	column = column->next;
     }
 }
+#endif /* COLUMN_SPAN */
 
 /*
  *----------------------------------------------------------------------
