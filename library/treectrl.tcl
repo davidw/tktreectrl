@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.24 2006/09/16 20:29:48 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.25 2006/09/27 05:50:27 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -640,7 +640,10 @@ proc ::TreeCtrl::Release1 {w x y} {
 	}
 	normal {
 	    AutoScanCancel $w
-	    $w activate [$w item id [list nearest $x $y]]
+	    set nearest [$w item id [list nearest $x $y]]
+	    if {$nearest ne ""} {
+		$w activate $nearest
+	    }
 set Priv(prev) ""
 	}
 	resize {
@@ -698,10 +701,11 @@ proc ::TreeCtrl::BeginSelect {w item} {
 
 proc ::TreeCtrl::SelectionMotion {w item} {
     variable Priv
-    if {$item eq $Priv(prev)} {
-	return
-    }
+
+    if {$item eq ""} return
+    if {$item eq $Priv(prev)} return
     if {![$w item enabled $item]} return
+
     switch [$w cget -selectmode] {
 	browse {
 	    $w selection modify $item all
@@ -785,6 +789,7 @@ proc ::TreeCtrl::BeginExtend {w item} {
 
 proc ::TreeCtrl::BeginToggle {w item} {
     variable Priv
+    if {$item eq ""} return
     if {[string equal [$w cget -selectmode] "extended"]} {
 	set Priv(selection) [$w selection get]
 	set Priv(prev) $item
