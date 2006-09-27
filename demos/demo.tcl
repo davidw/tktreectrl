@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.43 2006/09/16 20:07:48 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.44 2006/09/27 01:57:28 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -53,6 +53,14 @@ if {[catch {
     package require dbwin 1.0
 }]} {
     proc dbwin s {puts -nonewline $s}
+}
+
+set tile 0
+catch {
+	package require tile 0.6
+	namespace import -force ::ttk::button ::ttk::checkbutton ::ttk::entry \
+		ttk::radiobutton
+	set tile 1
 }
 
 # This gets called if 'package require' won't work during development.
