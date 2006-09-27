@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.18 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.19 2006/09/27 01:44:25 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -40,6 +40,7 @@ struct ElementArgs
 #define STICKY_S 0x8000
 	int sticky;
 	Drawable drawable;
+	int bounds[4];
     } display;
     struct {
 	int fixedWidth;
