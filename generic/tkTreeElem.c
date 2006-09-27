@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.38 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.39 2006/09/27 01:46:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3257,12 +3257,27 @@ struct ElementWindow
 				 * window has been destroyed. */
     int destroy;		/* Destroy window when element
 				 * is deleted */
+#define CLIP_WINDOW 1
+#ifdef CLIP_WINDOW
+    int clip;			/* TRUE if tkwin is a borderless frame
+				 * widget whose first child is the actual
+				 * window we want displayed. */
+    Tk_Window child;		/* The first child of tkwin. tkwin is resized
+				 * so that it is never out-of-bounds, and
+				 * the child is positioned within tkwin to
+				 * provide clipping of the child. */
+#endif
 };
 
 #define EWIN_CONF_WINDOW 0x0001
 #define EWIN_CONF_DRAW 0x0002
 
 static Tk_OptionSpec windowOptionSpecs[] = {
+#ifdef CLIP_WINDOW
+    {TK_OPTION_CUSTOM, "-clip", (char *) NULL, (char *) NULL,
+     (char) NULL, -1, Tk_Offset(ElementWindow, clip),
+     TK_OPTION_NULL_OK, (ClientData) &booleanCO, 0},
+#endif
     {TK_OPTION_CUSTOM, "-destroy", (char *) NULL, (char *) NULL,
      (char) NULL, -1, Tk_Offset(ElementWindow, destroy),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, 0},
@@ -3284,7 +3299,7 @@ WinItemStructureProc(clientData, eventPtr)
     ElementWindow *elemX = (ElementWindow *) clientData;
 
     if (eventPtr->type == DestroyNotify) {
-	elemX->tkwin = NULL;
+	elemX->tkwin = elemX->child = NULL;
 	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	    (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
     }
@@ -3298,6 +3313,11 @@ WinItemRequestProc(clientData, tkwin)
 {
     ElementWindow *elemX = (ElementWindow *) clientData;
 
+#ifdef CLIP_WINDOW
+    /* We don't care about size changes for the clip window. */
+    if (elemX->child != NULL && tkwin != elemX->child)
+	return;
+#endif
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
 }
@@ -3311,6 +3331,22 @@ WinItemLostSlaveProc(clientData, tkwin)
     ElementWindow *elemX = (ElementWindow *) clientData;
     TreeCtrl *tree = elemX->tree;
 
+#ifdef CLIP_WINDOW
+    if (tkwin == elemX->child) {
+	Tk_DeleteEventHandler(elemX->child, StructureNotifyMask,
+		WinItemStructureProc, (ClientData) elemX);
+	Tk_UnmapWindow(elemX->child);
+	elemX->child = NULL;
+    } else {
+	Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
+		WinItemStructureProc, (ClientData) elemX);
+	if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
+	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	}
+	Tk_UnmapWindow(elemX->tkwin);
+	elemX->tkwin = NULL;
+    }
+#else
     Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
 	    WinItemStructureProc, (ClientData) elemX);
     if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
@@ -3318,6 +3354,7 @@ WinItemLostSlaveProc(clientData, tkwin)
     }
     Tk_UnmapWindow(elemX->tkwin);
     elemX->tkwin = NULL;
+#endif
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
 }
@@ -3336,6 +3373,16 @@ static void DeleteProcWindow(ElementArgs *args)
     ElementWindow *masterX = (ElementWindow *) elem->master;
 
     if (elemX->tkwin != NULL) {
+#ifdef CLIP_WINDOW
+	if (elemX->child != NULL) {
+	    Tk_DeleteEventHandler(elemX->child, StructureNotifyMask,
+		    WinItemStructureProc, (ClientData) elemX);
+	    Tk_ManageGeometry(elemX->child, (Tk_GeomMgr *) NULL,
+		    (ClientData) NULL);
+	    Tk_UnmapWindow(elemX->child);
+	    elemX->child = NULL;
+	}
+#endif
 	Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
 		WinItemStructureProc, (ClientData) elemX);
 	Tk_ManageGeometry(elemX->tkwin, (Tk_GeomMgr *) NULL,
@@ -3376,6 +3423,7 @@ static int ConfigProcWindow(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementWindow *elemX = (ElementWindow *) elem;
+    ElementWindow *masterX = (ElementWindow *) elem->master;
     ElementWindow savedX;
     Tk_SavedOptions savedOptions;
     int error;
@@ -3428,6 +3476,16 @@ static int ConfigProcWindow(ElementArgs *args)
 
     if (savedX.tkwin != elemX->tkwin) {
 	if (savedX.tkwin != NULL) {
+#ifdef CLIP_WINDOW
+	    if (elemX->child != NULL) {
+		Tk_DeleteEventHandler(elemX->child, StructureNotifyMask,
+			WinItemStructureProc, (ClientData) elemX);
+		Tk_ManageGeometry(elemX->child, (Tk_GeomMgr *) NULL,
+			(ClientData) NULL);
+		Tk_UnmapWindow(elemX->child);
+		elemX->child = NULL;
+	    }
+#endif
 	    Tk_DeleteEventHandler(savedX.tkwin, StructureNotifyMask,
 		    WinItemStructureProc, (ClientData) elemX);
 	    Tk_ManageGeometry(savedX.tkwin, (Tk_GeomMgr *) NULL,
@@ -3467,6 +3525,17 @@ static int ConfigProcWindow(ElementArgs *args)
 	    if (elemX->tkwin == tree->tkwin) {
 		goto badWindow;
 	    }
+#ifdef CLIP_WINDOW
+	    if ((elemX->clip == 1) || ((masterX != NULL) && (masterX->clip == 1))) {
+		elemX->child = (Tk_Window) ((TkWindow *) elemX->tkwin)->childList;
+		if (elemX->child != NULL) {
+		    Tk_CreateEventHandler(elemX->child, StructureNotifyMask,
+			    WinItemStructureProc, (ClientData) elemX);
+		    Tk_ManageGeometry(elemX->child, &winElemGeomType,
+			    (ClientData) elemX);
+		}
+	    }
+#endif
 	    Tk_CreateEventHandler(elemX->tkwin, StructureNotifyMask,
 		    WinItemStructureProc, (ClientData) elemX);
 	    Tk_ManageGeometry(elemX->tkwin, &winElemGeomType,
@@ -3496,7 +3565,9 @@ static int CreateProcWindow(ElementArgs *args)
     elemX->item = args->create.item;
     elemX->column = args->create.column;
     elemX->destroy = -1;
-
+#ifdef CLIP_WINDOW
+    elemX->clip = -1;
+#endif
     return TCL_OK;
 }
 
@@ -3508,6 +3579,7 @@ static void DisplayProcWindow(ElementArgs *args)
     ElementWindow *masterX = (ElementWindow *) elem->master;
     int state = args->state;
     int x = args->display.x, y = args->display.y;
+    int minX, maxX, minY, maxY;
     int width, height;
     int match, match2;
     int draw;
@@ -3519,8 +3591,20 @@ static void DisplayProcWindow(ElementArgs *args)
     if (elemX->tkwin == NULL)
 	return;
 
+#ifdef CLIP_WINDOW
+    if (elemX->child != NULL) {
+	width = Tk_ReqWidth(elemX->child);
+	height = Tk_ReqHeight(elemX->child);
+    } else {
+	width = Tk_ReqWidth(elemX->tkwin);
+	height = Tk_ReqHeight(elemX->tkwin);
+    }
+    if (width < 1 || height < 1)
+	goto hideIt;
+#else
     width = Tk_ReqWidth(elemX->tkwin);
     height = Tk_ReqHeight(elemX->tkwin);
+#endif
     AdjustForSticky(args->display.sticky,
 	args->display.width, args->display.height,
 	TRUE, TRUE,
@@ -3534,8 +3618,13 @@ static void DisplayProcWindow(ElementArgs *args)
      * window gets resized.
      */
 
-    if (((x + width) <= 0) || ((y + height) <= 0)
-	    || (x >= Tk_Width(tree->tkwin)) || (y >= Tk_Height(tree->tkwin))) {
+    minX = args->display.bounds[0];
+    minY = args->display.bounds[1];
+    maxX = args->display.bounds[2];
+    maxY = args->display.bounds[3];
+
+    if (((x + width) <= minX) || ((y + height) <= minY)
+	    || (x >= maxX) || (y >= maxY)) {
 hideIt:
 	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
 	    Tk_UnmapWindow(elemX->tkwin); 
@@ -3544,6 +3633,54 @@ hideIt:
 	}
 	return;
     }
+
+#ifdef CLIP_WINDOW
+    if (elemX->child != NULL) {
+	int cx = x, cy = y, cw = width, ch = height; /* clip win coords */
+
+	if (cx < minX) {
+	    cw -= minX - cx;
+	    cx = minX;
+	}
+	if (cy < minY) {
+	    ch -= minY - cy;
+	    cy = minY;
+	}
+	if (cx + cw > maxX)
+	    cw = maxX - cx;
+	if (cy + ch > maxY)
+	    ch = maxY - cy;
+
+	/*
+	* Reposition and map the window (but in different ways depending
+	* on whether the treectrl is the window's parent).
+	*/
+
+	if (tree->tkwin == Tk_Parent(elemX->tkwin)) {
+	    if ((cx != Tk_X(elemX->tkwin)) || (cy != Tk_Y(elemX->tkwin))
+		    || (cw != Tk_Width(elemX->tkwin))
+		    || (ch != Tk_Height(elemX->tkwin))) {
+		Tk_MoveResizeWindow(elemX->tkwin, cx, cy, cw, ch);
+	    }
+	    Tk_MapWindow(elemX->tkwin);
+	} else {
+	    Tk_MaintainGeometry(elemX->tkwin, tree->tkwin, cx, cy, cw, ch);
+	}
+
+	/*
+	 * Position the child window within the clip window.
+	 */
+	x -= cx;
+	y -= cy;
+	if ((x != Tk_X(elemX->child)) || (y != Tk_Y(elemX->child))
+		|| (width != Tk_Width(elemX->child))
+		|| (height != Tk_Height(elemX->child))) {
+	    Tk_MoveResizeWindow(elemX->child, x, y, width, height);
+	}
+	Tk_MapWindow(elemX->child);
+	return;
+    }
+#endif /* CLIP_WINDOW */
 
     /*
      * Reposition and map the window (but in different ways depending
@@ -3572,6 +3709,18 @@ static void NeededProcWindow(ElementArgs *args)
     int state = args->state;*/
     int width = 0, height = 0;
 
+#ifdef CLIP_WINDOW
+    if (elemX->child != NULL) {
+	width = Tk_ReqWidth(elemX->child);
+	if (width <= 0) {
+	    width = 1;
+	}
+	height = Tk_ReqHeight(elemX->child);
+	if (height <= 0) {
+	    height = 1;
+	}
+    } else
+#endif
     if (elemX->tkwin) {
 	width = Tk_ReqWidth(elemX->tkwin);
 	if (width <= 0) {
@@ -3582,7 +3731,6 @@ static void NeededProcWindow(ElementArgs *args)
 	    height = 1;
 	}
     }
-
     args->needed.width = width;
     args->needed.height = height;
 }
