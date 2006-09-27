@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.38 2006/09/21 06:08:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.39 2006/09/27 01:43:42 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3822,7 +3822,6 @@ displayRetry:
     if (tree->deleted || !Tk_IsMapped(tkwin))
 	goto displayExit;
     if (requests != dInfo->requests) {
-	dbwin("displayRetry\n");
 	goto displayRetry;
     }
     if (dInfo->flags & DINFO_OUT_OF_DATE) {
@@ -3845,10 +3844,6 @@ displayRetry:
 
 	TreeItemList_Init(tree, &newV, 0);
 	TreeItemList_Init(tree, &newH, 0);
-
-	/* This is needed for updating window positions */
-	tree->drawableXOrigin = tree->xOrigin;
-	tree->drawableYOrigin = tree->yOrigin;
 
 	for (dItem = dInfo->dItem;
 	    dItem != NULL;
@@ -3907,7 +3902,6 @@ displayRetry:
 	    goto displayExit;
 
 	if (requests != dInfo->requests) {
-	    dbwin("displayRetry\n");
 	    goto displayRetry;
 	}
     }
@@ -4081,6 +4075,11 @@ displayRetry:
 	     dItem = dItem->next) {
 
 	    if (!(dItem->flags & DITEM_DIRTY)) {
+
+		/* This is needed for updating window positions */
+		tree->drawableXOrigin = tree->xOrigin;
+		tree->drawableYOrigin = tree->yOrigin;
+
 		/*
 		 * This item was visible and still is. Handle scrolling.
 		 */
@@ -5200,14 +5199,49 @@ Tree_InvalidateRegion(
 				 * coordinates. */
     )
 {
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    DItem *dItem;
+    int minX = tree->inset, maxX = Tk_Width(tree->tkwin) - tree->inset;
+    int ymin = tree->inset, maxY = Tk_Height(tree->tkwin) - tree->inset;
     XRectangle rect;
+    int x1, x2, y1, y2;
 
-    /* FIXME: It would be more efficient in some cases to only mark as dirty
-     * those items that overlap the given region, in case the region
-     * contains multiple disjoint rectangles. */
     TkClipBox(region, &rect);
-    Tree_InvalidateArea(tree, rect.x, rect.y, rect.x + rect.width,
-	    rect.y + rect.height);
+    if (!rect.width || !rect.height)
+	return;
+    x1 = rect.x, x2 = rect.x + rect.width;
+    y1 = rect.y, y2 = rect.y + rect.height;
+
+    if (TkRectInRegion(region, minX, ymin, maxX - minX, Tree_HeaderHeight(tree)) != RectangleOut)
+	dInfo->flags |= DINFO_DRAW_HEADER;
+
+    dItem = dInfo->dItem;
+    while (dItem != NULL) {
+	if (!(dItem->flags & DITEM_ALL_DIRTY) &&
+		(TkRectInRegion(region, dItem->x, dItem->y,
+		dItem->width, dItem->height) != RectangleOut)) {
+	    InvalidateDItemX(dItem, dItem->x, x1, x2 - x1);
+	    InvalidateDItemY(dItem, dItem->y, y1, y2 - y1);
+	    dItem->flags |= DITEM_DIRTY;
+	}
+	dItem = dItem->next;
+    }
+
+    /* Could check border and highlight separately */
+    if (tree->inset > 0) {
+	if ((x1 < minX) || (y1 < ymin) || (x2 > maxX) || (y2 > maxY)) {
+	    if (tree->highlightWidth > 0)
+		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
+	    if (tree->borderWidth > 0)
+		dInfo->flags |= DINFO_DRAW_BORDER;
+	}
+    }
+
+    if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
+	Tk_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
+		tree->debug.gcErase, region);
+	DisplayDelay(tree);
+    }
 }
 
 /*
