@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.48 2006/09/22 23:27:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.49 2006/09/27 01:49:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2127,12 +2127,24 @@ void TreeStyle_Draw(
     Style *style = (Style *) drawArgs->style;
     TreeCtrl *tree = drawArgs->tree;
     ElementArgs args;
-    int i;
+    int i, x, y;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
     int debugDraw = FALSE;
 
     Style_CheckNeededSize(tree, style, drawArgs->state);
 
+    /* Get the bounds allowed for drawing (in window coordinates), inside
+     * the item-column(s) and inside the header/borders. */
+    x = drawArgs->x + tree->drawableXOrigin - tree->xOrigin;
+    y = drawArgs->y + tree->drawableYOrigin - tree->yOrigin;
+    args.display.bounds[0] = MAX(tree->inset, x);
+    args.display.bounds[1] = MAX(tree->inset + Tree_HeaderHeight(tree), y);
+    args.display.bounds[2] = MIN(x + drawArgs->width,
+	    Tk_Width(tree->tkwin) - tree->inset);
+    args.display.bounds[3] = MIN(y + drawArgs->height,
+	    Tk_Height(tree->tkwin) - tree->inset);
+
+    /* We never lay out the style at less than the minimum size */
     if (drawArgs->width < style->minWidth + drawArgs->indent)
 	drawArgs->width = style->minWidth + drawArgs->indent;
     if (drawArgs->height < style->minHeight)
@@ -2276,12 +2288,24 @@ TreeStyle_UpdateWindowPositions(
     Style *style = (Style *) drawArgs->style;
     TreeCtrl *tree = drawArgs->tree;
     ElementArgs args;
-    int i;
+    int i, x, y;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
 
     /* FIXME: Perhaps remember whether this style has any window
      * elements */
 
+    /* Get the bounds allowed for drawing (in window coordinates), inside
+     * the item-column(s) and inside the header/borders. */
+    x = drawArgs->x + tree->drawableXOrigin - tree->xOrigin;
+    y = drawArgs->y + tree->drawableYOrigin - tree->yOrigin;
+    args.display.bounds[0] = MAX(tree->inset, x);
+    args.display.bounds[1] = MAX(tree->inset + Tree_HeaderHeight(tree), y);
+    args.display.bounds[2] = MIN(x + drawArgs->width,
+	    Tk_Width(tree->tkwin) - tree->inset);
+    args.display.bounds[3] = MIN(y + drawArgs->height,
+	    Tk_Height(tree->tkwin) - tree->inset);
+
+    /* We never lay out the style at less than the minimum size */
     if (drawArgs->width < style->minWidth + drawArgs->indent)
 	drawArgs->width = style->minWidth + drawArgs->indent;
     if (drawArgs->height < style->minHeight)
