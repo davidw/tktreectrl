@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: textvariable.tcl,v 1.3 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: textvariable.tcl,v 1.4 2006/10/04 04:09:52 treectrl Exp $
 
 proc DemoTextvariable {} {
 
@@ -10,10 +10,10 @@ proc DemoTextvariable {} {
 
 	$T configure -showroot no -showbuttons no -showlines no \
 		-selectmode extended -xscrollincrement 20 -showheader no
-
+if {!$::clip} {
 	# Hide the borders because child windows appear on top of them
 	$T configure -borderwidth 0 -highlightthickness 0
-
+}
 	#
 	# Create columns
 	#
@@ -56,11 +56,20 @@ proc DemoTextvariable {} {
 	foreach i {0 1} color {gray75 "light blue"} {
 		set I [$T item create]
 		$T item style set $I C0 s2
-		set e [entry $T.e$I -width 48 -textvariable tvar$I]
+if {$::clip} {
+		set clip [frame $T.clip$I -borderwidth 0]
+		set e [$::entryCmd $clip.e -width 48 -textvariable tvar$I]
+		$T item element configure $I C0 \
+			eRect -fill [list $color] + \
+			eText2 -textvariable tvar$I + \
+			eWindow -window $clip -clip yes
+} else {
+		set e [$::entryCmd $T.e$I -width 48 -textvariable tvar$I]
 		$T item element configure $I C0 \
 			eRect -fill [list $color] + \
 			eText2 -textvariable tvar$I + \
 			eWindow -window $e
+}
 		$T item lastchild root $I
 		set ::tvar$I "This is item $I"
 	}
