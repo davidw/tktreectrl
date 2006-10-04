@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.39 2006/09/27 01:46:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.40 2006/10/04 03:32:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2197,6 +2197,9 @@ struct ElementText
     TreeCtrl *tree;			/* needed to redisplay */
     TreeItem item;			/* needed to redisplay */
     TreeItemColumn column;		/* needed to redisplay */
+#ifdef ROW_LABEL
+    TreeRowLabel row;			/* needed to redisplay */
+#endif
 #endif
 };
 
@@ -2621,9 +2624,13 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
     }
 
     elemX->stringRepInvalid = TRUE;
+#ifdef ROW_LABEL
+    Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	elemX->row, (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#else
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
-
+#endif
     return (char *) NULL;
 }
 #endif /* TEXTVAR */
@@ -2779,6 +2786,9 @@ static int CreateProcText(ElementArgs *args)
     elemX->tree = args->tree;
     elemX->item = args->create.item;
     elemX->column = args->create.column;
+#ifdef ROW_LABEL
+    elemX->row = args->create.row;
+#endif
 #endif
     return TCL_OK;
 }
@@ -3253,6 +3263,9 @@ struct ElementWindow
     TreeCtrl *tree;
     TreeItem item; 		/* Needed if window changes size */
     TreeItemColumn column; 	/* Needed if window changes size */
+#ifdef ROW_LABEL
+    TreeRowLabel row;		/* Needed if window changes size */
+#endif
     Tk_Window tkwin;		/* Window associated with item.  NULL means
 				 * window has been destroyed. */
     int destroy;		/* Destroy window when element
@@ -3300,8 +3313,13 @@ WinItemStructureProc(clientData, eventPtr)
 
     if (eventPtr->type == DestroyNotify) {
 	elemX->tkwin = elemX->child = NULL;
+#ifdef ROW_LABEL
+	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	    elemX->row, (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#else
 	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	    (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#endif
     }
 }
 
@@ -3318,8 +3336,13 @@ WinItemRequestProc(clientData, tkwin)
     if (elemX->child != NULL && tkwin != elemX->child)
 	return;
 #endif
+#ifdef ROW_LABEL
+	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	    elemX->row, (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#else
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#endif
 }
 
 static void
@@ -3355,8 +3378,13 @@ WinItemLostSlaveProc(clientData, tkwin)
     Tk_UnmapWindow(elemX->tkwin);
     elemX->tkwin = NULL;
 #endif
+#ifdef ROW_LABEL
+    Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
+	elemX->row, (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#else
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
 	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+#endif
 }
 
 static Tk_GeomMgr winElemGeomType = {
@@ -3564,6 +3592,9 @@ static int CreateProcWindow(ElementArgs *args)
     elemX->tree = tree;
     elemX->item = args->create.item;
     elemX->column = args->create.column;
+#ifdef ROW_LABEL
+    elemX->row = args->create.row;
+#endif
     elemX->destroy = -1;
 #ifdef CLIP_WINDOW
     elemX->clip = -1;
