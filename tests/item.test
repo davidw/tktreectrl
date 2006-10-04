@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.14 2006/09/24 22:49:48 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.15 2006/10/04 04:43:27 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -1016,111 +1016,116 @@ test item-19.6 {item text: several items, get first column} -body {
     .t item text {list {2 4 6 8}} first
 } -result {def}
 
-test item-20.1 {tag: too few args} -body {
-    .t tag
-} -returnCodes error -result {wrong # args: should be ".t tag command ?arg arg ...?"}
+test item-20.1 {item tag: too few args} -body {
+    .t item tag
+} -returnCodes error -result {wrong # args: should be ".t item tag command ?arg arg ...?"}
 
-test item-20.2 {tag add: too few args} -body {
-    .t tag add
-} -returnCodes error -result {wrong # args: should be ".t tag add item tagList"}
+test item-20.2 {item tag add: too few args} -body {
+    .t item tag add
+} -returnCodes error -result {wrong # args: should be ".t item tag add item tagList"}
 
-test item-20.3 {tag add: too many args} -body {
-    .t tag add a b c
-} -returnCodes error -result {wrong # args: should be ".t tag add item tagList"}
+test item-20.3 {item tag add: too many args} -body {
+    .t item tag add a b c
+} -returnCodes error -result {wrong # args: should be ".t item tag add item tagList"}
 
-test item-20.4 {tag names: too few args} -body {
-    .t tag names
-} -returnCodes error -result {wrong # args: should be ".t tag names item"}
+test item-20.4 {item tag names: too few args} -body {
+    .t item tag names
+} -returnCodes error -result {wrong # args: should be ".t item tag names item"}
 
-test item-20.5 {tag names: too many args} -body {
-    .t tag names a b
-} -returnCodes error -result {wrong # args: should be ".t tag names item"}
+test item-20.5 {item tag names: too many args} -body {
+    .t item tag names a b
+} -returnCodes error -result {wrong # args: should be ".t item tag names item"}
 
-test item-20.6 {tag remove: too few args} -body {
-    .t tag remove
-} -returnCodes error -result {wrong # args: should be ".t tag remove item tagList"}
+test item-20.6 {item tag remove: too few args} -body {
+    .t item tag remove
+} -returnCodes error -result {wrong # args: should be ".t item tag remove item tagList"}
 
-test item-20.7 {tag remove: too many args} -body {
-    .t tag remove a  b c
-} -returnCodes error -result {wrong # args: should be ".t tag remove item tagList"}
+test item-20.7 {item tag remove: too many args} -body {
+    .t item tag remove a  b c
+} -returnCodes error -result {wrong # args: should be ".t item tag remove item tagList"}
 
-test item-20.11 {tag: add tags to all} -body {
+test item-20.11 {item tag: add tags to all} -body {
     .t item delete all
     .t item create -count 9999 -parent root
-    .t tag add all {a b c}
-    lsort [.t tag names all]
+    .t item tag add all {a b c}
+    .t item tag expr all {c && a && b}
+} -result {1}
+
+test item-20.12 {item tag: add duplicate tags} -body {
+    .t item tag add all {c b a}
+    lsort [.t item tag names all]
 } -result {a b c}
 
-test item-20.12 {tag: add duplicate tags} -body {
-    .t tag add all {c b a}
-    lsort [.t tag names all]
-} -result {a b c}
-
-test item-20.13 {tag: remove 1 tag from several items} -body {
-    .t tag remove {range 100 5000} b
-    list [lsort [.t tag names all]] [lsort [.t tag names {range 100 5000}]]
+test item-20.13 {item tag: remove 1 tag from several items} -body {
+    .t item tag remove {range 100 5000} b
+    list [lsort [.t item tag names all]] [lsort [.t item tag names {range 100 5000}]]
 } -result {{a b c} {a c}}
 
-test item-20.14 {tag: remove 1 tag from all items} -body {
-    .t tag remove all b
-    lsort [.t tag names all]
+test item-20.14 {item tag: remove 1 tag from all items} -body {
+    .t item tag remove all b
+    lsort [.t item tag names all]
 } -result {a c}
 
-test item-20.15 {tag: add tags to all (some dups)} -body {
-    .t tag add all {a e f b d h g}
-    lsort [.t tag names all]
+test item-20.15 {item tag: add tags to all (some dups)} -body {
+    .t item tag add all {a e f b d h g}
+    lsort [.t item tag names all]
 } -result {a b c d e f g h}
 
-test item-20.16 {tag: long expr} -body {
+test item-20.16 {item tag: long expr} -body {
     llength [.t item id "tag {(a && e) && (f && b) && (d && h && g)}"]
 } -result {10000}
 
-test item-20.17 {tag: remove b from 100 items} -body {
-    .t tag remove {range 100 199} b
+test item-20.17 {item tag: remove b from 100 items} -body {
+    .t item tag remove {range 100 199} b
     llength [.t item id "tag !b"]
 } -result {100}
 
-test item-20.18 {tag: expr} -body {
+test item-20.18 {item tag: expr} -body {
     llength [.t item id "tag b"]
 } -result {9900}
 
-test item-20.19 {tag: remove e from 100 items, overlapping 50 of !b items} -body {
-    .t tag remove {range 150 249} e
+test item-20.19 {item tag: remove e from 100 items, overlapping 50 of !b items} -body {
+    .t item tag remove {range 150 249} e
     llength [.t item id "tag !e"]
 } -result {100}
 
-test item-20.20 {tag: expr} -body {
+test item-20.20 {item tag: expr} -body {
     llength [.t item id "tag {(!b || !e)}"]
 } -result {150}
 
-test item-20.21 {tag: expr} -body {
+test item-20.21 {item tag: expr} -body {
     llength [.t item id "tag b^e"]
 } -result {100}
 
-test item-20.22 {tag: expr} -body {
-    .t tag remove {tag !b||!e} {a c d f g h}
+test item-20.22 {item tag: expr} -body {
+    .t item tag remove {tag !b||!e} {a c d f g h}
     llength [.t item id "tag !a"]
 } -result {150}
 
-test item-20.23 {tag: item create -tags} -body {
+test item-20.23 {item tag: item create -tags} -body {
     .t item create -count 50 -tags {orphan50 x y z}
     llength [.t item id "tag x"]
 } -result {50}
 
-test item-20.40 {tag: [expr]} -body {
-    .t tag expr "tag orphan50" x
+test item-20.24 {item tag: item create -tags with dups} -body {
+    .t item create -count 10 -tags {orphan10 x z x y z y}
+    lsort [.t item tag names "tag orphan10"]
+} -result {orphan10 x y z}
+
+test item-20.40 {item tag: [expr]} -body {
+    .t item tag expr "tag orphan50" x
 } -result {1}
 
-test item-20.41 {tag: [expr]} -body {
-    .t tag expr "all tag orphan50" x&&y&&z
+test item-20.41 {item tag: [expr]} -body {
+    .t item tag expr "all tag orphan50" x&&y&&z
 } -result {1}
 
-test item-20.42 {tag: [expr]} -body {
-    .t tag expr "tag orphan50" a
+test item-20.42 {item tag: [expr]} -body {
+    .t item tag expr "tag orphan50" a
 } -result {0}
 
-test item-20.43 {tag: [expr]} -body {
-    .t tag expr 100 e^b
+test item-20.43 {item tag: [expr]} -body {
+    .t item tag expr 100 e^b
 } -result {1}
 
 test item-99.1 {some needed cleanup} -body {
