@@ -1,6 +1,5 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.12 2006/09/27 01:56:38 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.13 2006/10/04 04:01:37 treectrl Exp $
 
-set ::clip 1
 proc DemoFirefoxPrivacy {} {
 
 	global FirefoxPrivacy
@@ -46,7 +45,7 @@ if {$::clip} {
 	}
 
 	$T column create -expand yes -arrowimage {arrow-down !up arrow-up {}} \
-		-arrow up -arrowpadx {10 2} -textlines 0 -tag C0 \
+		-arrow up -arrowpadx {10 2} -textlines 0 -tags C0 \
 		-text "This is a multi-line column title\nwith an image for the arrow"
 
 	$T configure -treecolumn C0
@@ -135,7 +134,7 @@ if {$::clip} {
 	set f [frame $T.f$I -borderwidth 0 -background $bg]
 }
 	label $f.l1 -background $bg -text "Remember visited pages for the last"
-	entry $f.e1 -width 6
+	$::entryCmd $f.e1 -width 6
 	$f.e1 insert end 20
 	label $f.l2 -background $bg -text "days" -background $bg
 	pack $f.l1 -side left
@@ -364,7 +363,7 @@ if {$::clip} {
 	bindtags $f.t1 TextWrapBindTag
 	set f1 [frame $f.f1 -borderwidth 0 -background $bg]
 	label $f1.l1 -background $bg -text "Use up to:"
-	entry $f1.e1 -width 10
+	$::entryCmd $f1.e1 -width 10
 	$f1.e1 insert end 50000
 	label $f1.l2 -background $bg -text "KB of disk space for the cache." \
 		-background $bg
