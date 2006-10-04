@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: bitmaps.tcl,v 1.7 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: bitmaps.tcl,v 1.8 2006/10/04 03:57:31 treectrl Exp $
 
 #
 # Demo: Bitmaps
@@ -19,7 +19,7 @@ proc DemoBitmaps {} {
 	# Create columns
 	#
 
-	$T column create -itembackground {gray90 {}} -tag C0
+	$T column create -itembackground {gray90 {}} -tags C0
 
 	#
 	# Create elements

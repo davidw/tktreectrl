@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: imovie.tcl,v 1.11 2006/09/24 23:00:13 treectrl Exp $
+# RCS: @(#) $Id: imovie.tcl,v 1.12 2006/10/04 03:58:26 treectrl Exp $
 
 #
 # Demo: iMovie
@@ -19,7 +19,7 @@ proc DemoIMovie {} {
 	# Create columns
 	#
 
-	$T column create -tag C0
+	$T column create -tags C0
 
 	InitPics imovie-*
 

@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: help.tcl,v 1.16 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: help.tcl,v 1.17 2006/10/04 03:58:08 treectrl Exp $
 
 #
 # Demo: Help contents
@@ -27,7 +27,7 @@ proc DemoHelpContents {} {
 	# Create columns
 	#
 
-	$T column create -text "Help Contents" -tag C0
+	$T column create -text "Help Contents" -tags C0
 
 	$T configure -treecolumn C0
 
@@ -306,7 +306,6 @@ proc HelpButton1 {w x y} {
 }
 
 proc HelpMotion {w x y} {
-	variable TreeCtrl::Priv
 	global HelpContents
 	set id [$w identify $x $y]
 	if {$id eq ""} {

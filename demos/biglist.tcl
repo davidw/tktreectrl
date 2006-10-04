@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.7 2006/09/27 01:58:43 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.8 2006/10/04 03:57:08 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
@@ -25,9 +25,9 @@ if {$::clip} {
 	# Create columns
 	#
 
-	$T column create -expand yes -text Item -itembackground {#F7F7F7} -tag colItem
-	$T column create -text "Item ID" -justify center -itembackground {} -tag colID
-	$T column create -text "Parent ID" -justify center -itembackground {} -tag colParent
+	$T column create -expand yes -text Item -itembackground {#F7F7F7} -tags colItem
+	$T column create -text "Item ID" -justify center -itembackground {} -tags colID
+	$T column create -text "Parent ID" -justify center -itembackground {} -tags colParent
 
 	# Specify the column that will display the heirarchy buttons and lines
 	$T configure -treecolumn colItem
@@ -175,7 +175,7 @@ proc BigListExpandBefore {T I} {
 	if {[$T item numchildren $I]} return
 
 	# Title
-	if {[$T tag expr $I title]} {
+	if {[$T item tag expr $I title]} {
 		set index $BigList(titleIndex,$I)
 		set threats {Severe High Elevated Guarded Low}
 		set names1 {Bill John Jack Bob Tim Sam Mary Susan Lilian Jeff Gary
@@ -198,7 +198,7 @@ proc BigListExpandBefore {T I} {
 	}
 
 	# Citizen
-	if {[$T tag expr $I citizen]} {
+	if {[$T item tag expr $I citizen]} {
 
 		# Add 1 child item to this item.
 		# The styles will be assigned in BigListItemVisibility.
@@ -218,7 +218,7 @@ proc BigListItemVisibility {T visible hidden} {
 		set parent [$T item parent $I]
 
 		# Title
-		if {[$T tag expr $I title]} {
+		if {[$T item tag expr $I title]} {
 			set first $BigList(titleIndex,$I)
 			set last [expr {$first + 10 - 1}]
 			set first [format %06d $first]
@@ -231,7 +231,7 @@ proc BigListItemVisibility {T visible hidden} {
 		}
 
 		# Citizen
-		if {[$T tag expr $I citizen]} {
+		if {[$T item tag expr $I citizen]} {
 			set index $BigList(itemIndex,$I)
 			$T item style set $I colItem styItem  colID styID colParent styParent
 			$T item element configure $I \
@@ -242,7 +242,7 @@ proc BigListItemVisibility {T visible hidden} {
 		}
 
 		# Citizen info
-		if {[$T tag expr $I info]} {
+		if {[$T item tag expr $I info]} {
 			set w [BigListNewWindow $T $parent]
 			$T item style set $I colItem styCitizen
 			$T item span $I colItem 3
@@ -255,7 +255,7 @@ proc BigListItemVisibility {T visible hidden} {
 	foreach I $hidden {
 
 		# Citizen info
-		if {[$T tag expr $I info]} {
+		if {[$T item tag expr $I info]} {
 			# Add this window to the list of unused windows
 			set w [$T item element cget $I colItem elemWindow -window]
 			BigListFreeWindow $T $w
@@ -273,8 +273,8 @@ proc BigListNewWindow {T I} {
 		set w [lindex $BigList(freeWindows) 0]
 		set BigList(freeWindows) [lrange $BigList(freeWindows) 1 end]
 if {$::clip} {
-    set f $w
-    set w [lindex [winfo children $f] 0]
+		set f $w
+		set w [lindex [winfo children $f] 0]
 }
 puts "reuse window $w"
 
@@ -282,14 +282,14 @@ puts "reuse window $w"
 	} else {
 		set id [incr BigList(nextWindowId)]
 if {$::clip} {
-    set f [frame $T.clip$id -background blue]
-    set w [frame $f.frame$id -background $BigList(bg)]
+		set f [frame $T.clip$id -background blue]
+		set w [frame $f.frame$id -background $BigList(bg)]
 } else {
 		set w [frame $T.frame$id -background $BigList(bg)]
 }
 		# Name: label + entry
 		label $w.label1 -text "Name:" -anchor w -background $BigList(bg)
-		entry $w.entry1 -width 24
+		$::entryCmd $w.entry1 -width 24
 
 		# Threat Level: label + menubutton
 		label $w.label2 -text "Threat Level:" -anchor w -background $BigList(bg)
@@ -366,7 +366,7 @@ proc BigListButton1 {w x y} {
 			TreeCtrl::ButtonPress1 $w $x $y
 			return
 		}
-		if {[$w tag expr $item !info]} {
+		if {[$w item tag expr $item !info]} {
 			$w toggle $item
 		}
 	}
@@ -378,7 +378,7 @@ proc BigListMotion {w x y} {
 	set id [$w identify $x $y]
 	if {[lindex $id 0] eq "item"} {
 		set item [lindex $id 1]
-		if {[$w tag expr $item !info]} {
+		if {[$w item tag expr $item !info]} {
 			if {$item ne $BigList(prev)} {
 				$w configure -cursor hand2
 				set BigList(prev) $item

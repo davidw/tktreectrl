@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.18 2006/09/27 01:56:59 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.19 2006/10/04 03:57:52 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -79,12 +79,12 @@ proc DemoExplorerDetails {} {
 	# Create columns
 	#
 
-	$T column create -text Name -tag name -width 200 \
+	$T column create -text Name -tags name -width 200 \
 		-arrow up -itembackground #F7F7F7
-	$T column create -text Size -tag size -justify right -width 60 \
+	$T column create -text Size -tags size -justify right -width 60 \
 		-arrowside left -arrowgravity right
-	$T column create -text Type -tag type -width 120
-	$T column create -text Modified -tag modified -width 120
+	$T column create -text Type -tags type -width 120
+	$T column create -text Modified -tags modified -width 120
 
 	# Demonstration of per-state column options and configure "all"
 	$T column configure all -background {gray90 active gray70 normal gray50 pressed}
@@ -243,7 +243,7 @@ proc ExplorerHeaderInvoke {T C} {
 	set dirCount $::TreeCtrl::Priv(DirCnt,$T)
 	set fileCount [expr {[$T item count] - 1 - $dirCount}]
 	set lastDir [expr {$dirCount - 1}]
-	switch [$T column cget $C -tag] {
+	switch [$T column cget $C -tags] {
 		name {
 			if {$dirCount} {
 				$T item sort root $order -last "root child $lastDir" -column $C -dictionary
@@ -296,7 +296,7 @@ proc DemoExplorerLargeIcons {} {
 	# Create columns
 	#
 
-	$T column create -tag C0
+	$T column create -tags C0
 
 	#
 	# Create elements
@@ -446,7 +446,7 @@ proc DemoExplorerList {} {
 	# Create columns
 	#
 
-	$T column create -tag C0
+	$T column create -tags C0
 
 	#
 	# Create elements
