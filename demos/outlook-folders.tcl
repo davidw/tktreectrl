@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-folders.tcl,v 1.10 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: outlook-folders.tcl,v 1.11 2006/10/04 04:08:25 treectrl Exp $
 
 #
 # Demo: Outlook Express folder list
@@ -25,7 +25,7 @@ proc DemoOutlookFolders {} {
 	# Create columns
 	#
 
-	$T column create -text Folders -tag C0
+	$T column create -text Folders -tags C0
 	$T configure -treecolumn C0
 
 	#

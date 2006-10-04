@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: mycomputer.tcl,v 1.1 2006/09/16 20:41:31 treectrl Exp $
+# RCS: @(#) $Id: mycomputer.tcl,v 1.2 2006/10/04 04:08:25 treectrl Exp $
 
 proc DemoMyComputer {} {
 
@@ -17,12 +17,12 @@ proc DemoMyComputer {} {
     # Create columns
     #
 
-    $T column create -text Name -tag name -width 200
-    $T column create -text Type -tag type -width 120
-    $T column create -text "Total Size" -tag size -justify right -width 100 \
+    $T column create -text Name -tags name -width 200
+    $T column create -text Type -tags type -width 120
+    $T column create -text "Total Size" -tags size -justify right -width 100 \
 	-arrowside left -arrowgravity right
-    $T column create -text "Free Space" -tag free -justify right -width 100
-    $T column create -text Comments -tag comment -width 120
+    $T column create -text "Free Space" -tags free -justify right -width 100
+    $T column create -text Comments -tags comment -width 120
 
     #
     # Create elements

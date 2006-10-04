@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: layout.tcl,v 1.10 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: layout.tcl,v 1.11 2006/10/04 04:08:25 treectrl Exp $
 
 #
 # Demo: Layout
@@ -18,7 +18,7 @@ proc DemoLayout {} {
 	# Create columns
 	#
 
-	$T column create -text Layout -tag C0
+	$T column create -text Layout -tags C0
 	$T configure -treecolumn C0
 
 	#

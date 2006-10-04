@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: random.tcl,v 1.18 2006/09/24 22:58:50 treectrl Exp $
+# RCS: @(#) $Id: random.tcl,v 1.19 2006/10/04 04:08:25 treectrl Exp $
 
 set RandomN 500
 set RandomDepth 5
@@ -29,9 +29,9 @@ proc DemoRandom {} {
 	# Create columns
 	#
 
-	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tag colItem
-	$T column create -text Parent -justify center -itembackground {gray90 {}} -tag colParent
-	$T column create -text Depth -justify center -itembackground {linen {}} -tag colDepth
+	$T column create -expand yes -text Item -itembackground {#e0e8f0 {}} -tags colItem
+	$T column create -text Parent -justify center -itembackground {gray90 {}} -tags colParent
+	$T column create -text Depth -justify center -itembackground {linen {}} -tags colDepth
 
 	$T configure -treecolumn colItem
 

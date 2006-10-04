@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: mailwasher.tcl,v 1.12 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: mailwasher.tcl,v 1.13 2006/10/04 04:08:25 treectrl Exp $
 
 #
 # Demo: MailWasher
@@ -27,14 +27,14 @@ proc DemoMailWasher {} {
 	#
 
 	set pad 4
-	$T column create -text Delete -textpadx $pad -tag delete
-	$T column create -text Bounce -textpadx $pad -tag bounce
-	$T column create -text Status -width 80 -textpadx $pad -tag status
-	$T column create -text Size -width 40 -textpadx $pad -justify right -tag size
-	$T column create -text From -width 140 -textpadx $pad -tag from
-	$T column create -text Subject -width 240 -textpadx $pad -tag subject
-	$T column create -text Received -textpadx $pad -arrow up -tag received
-	$T column create -text Attachments -textpadx $pad -tag attachments
+	$T column create -text Delete -textpadx $pad -tags delete
+	$T column create -text Bounce -textpadx $pad -tags bounce
+	$T column create -text Status -width 80 -textpadx $pad -tags status
+	$T column create -text Size -width 40 -textpadx $pad -justify right -tags size
+	$T column create -text From -width 140 -textpadx $pad -tags from
+	$T column create -text Subject -width 240 -textpadx $pad -tags subject
+	$T column create -text Received -textpadx $pad -arrow up -tags received
+	$T column create -text Attachments -textpadx $pad -tags attachments
 
 	$T state define CHECK
 
@@ -150,7 +150,7 @@ proc DemoMailWasher {} {
 			set SortColumn %C
 		}
 		%T column configure %C -arrow $arrow
-		switch [%T column cget %C -tag] {
+		switch [%T column cget %C -tags] {
 			bounce -
 			delete {
 				%T item sort root $order -column %C -command [list CompareOnOff %T %C] -column subject -dictionary
@@ -183,7 +183,7 @@ proc DemoMailWasher {} {
 		} else {
 			foreach {what item where arg1 arg2 arg3} $id {}
 			if {$where eq "column"} {
-				set tag [%W column cget $arg1 -tag]
+				set tag [%W column cget $arg1 -tags]
 				if {$tag eq "delete" || $tag eq "bounce"} {
 					%W item state forcolumn $item $arg1 ~CHECK
 #					return -code break

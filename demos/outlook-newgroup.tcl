@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.14 2006/09/24 22:59:14 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.15 2006/10/04 04:08:25 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -28,13 +28,13 @@ proc DemoOutlookNewsgroup {} {
 	# Create columns
 	#
 
-	$T column create -image outlook-clip -tag clip
-	$T column create -image outlook-arrow -tag arrow
-	$T column create -image outlook-watch -tag watch
-	$T column create -text Subject -width 250 -tag subject
-	$T column create -text From -width 150 -tag from
-	$T column create -text Sent -width 150 -tag sent
-	$T column create -text Size -width 60 -justify right -tag size
+	$T column create -image outlook-clip -tags clip
+	$T column create -image outlook-arrow -tags arrow
+	$T column create -image outlook-watch -tags watch
+	$T column create -text Subject -width 250 -tags subject
+	$T column create -text From -width 150 -tags from
+	$T column create -text Sent -width 150 -tags sent
+	$T column create -text Size -width 60 -justify right -tags size
 
 	# Would be nice if I could specify a column -tag too
 	# *blink* The amazing code Genie makes it so!!!
@@ -226,13 +226,13 @@ proc DemoOutlookNewsgroup_2 {} {
 	# Create columns
 	#
 
-	$T column create -image outlook-clip -tag clip
-	$T column create -image outlook-arrow -tag arrow
-	$T column create -image outlook-watch -tag watch
-	$T column create -text Subject -width 250 -tag subject
-	$T column create -text From -width 150 -tag from
-	$T column create -text Sent -width 150 -tag sent
-	$T column create -text Size -width 60 -justify right -tag size
+	$T column create -image outlook-clip -tags clip
+	$T column create -image outlook-arrow -tags arrow
+	$T column create -image outlook-watch -tags watch
+	$T column create -text Subject -width 250 -tags subject
+	$T column create -text From -width 150 -tags from
+	$T column create -text Sent -width 150 -tags sent
+	$T column create -text Size -width 60 -justify right -tags size
 
 	$T configure -treecolumn 3
 

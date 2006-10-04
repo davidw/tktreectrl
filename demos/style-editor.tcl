@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.7 2006/09/16 20:10:27 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.8 2006/10/04 04:10:20 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -30,7 +30,7 @@ proc StyleEditor::Init {Tdemo} {
     TreePlusScrollbarsInAFrame $w.pwH.pwV.styleList 0 1
     set T $w.pwH.pwV.styleList.t
     $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
-    $T column create -text "Styles" -expand yes -button no -tag C0
+    $T column create -text "Styles" -expand yes -button no -tags C0
     $T configure -treecolumn C0
 
     $T notify bind $T <Selection> {
@@ -42,7 +42,7 @@ proc StyleEditor::Init {Tdemo} {
     TreePlusScrollbarsInAFrame $w.pwH.pwV.elementList 0 1
     set T $w.pwH.pwV.elementList.t
     $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
-    $T column create -text "Elements" -expand yes -button no -tag C0
+    $T column create -text "Elements" -expand yes -button no -tags C0
     $T configure -treecolumn C0
 
     $T notify bind $T <Selection> {
@@ -62,9 +62,9 @@ proc StyleEditor::Init {Tdemo} {
     TreePlusScrollbarsInAFrame $fRight.propertyList 0 1
     set T $fRight.propertyList.t
     $T configure -showbuttons no -showlines no -showroot no
-    $T column create -text "Property" -expand yes -button no -tag property \
+    $T column create -text "Property" -expand yes -button no -tags property \
 	-itembackground {#E8E8E8 ""}
-    $T column create -text "Value" -expand yes -button no -tag value \
+    $T column create -text "Value" -expand yes -button no -tags value \
 	-itembackground {#E8E8E8 ""}
     $T configure -treecolumn property
 
