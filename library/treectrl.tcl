@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.25 2006/09/27 05:50:27 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.26 2006/10/04 03:54:25 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -201,6 +201,63 @@ namespace eval ::TreeCtrl {
 # Retrieve filelist bindings from this dir
 source [file join [file dirname [info script]] filelist-bindings.tcl]
 
+# ::TreeCtrl::CursorAction --
+#
+# If the given point is at the left or right edge of a resizable column, the
+# result is "column C". If the given point is at the right edge of a rowlabel,
+# the result is "rowlabel all". If the given point is at the top or bottom
+# edge of a resizable rowlabel, the result is "rowlabel R".
+#
+# Arguments:
+# w		The treectrl widget.
+# x		Window coord of pointer.
+# y		Window coord or pointer.
+
+proc ::TreeCtrl::CursorAction {w x y} {
+    variable Priv
+    set id [$w identify $x $y]
+    if {([llength $id] == 3) && ([lindex $id 0] eq "header")} {
+	set column [lindex $id 1]
+	set side [lindex $id 2]
+	if {$side eq "left"} {
+	    if {[$w column compare $column != "first visible"]} {
+		set column [$w column id "$column prev visible"]
+		if {[$w column cget $column -resize]} {
+		    return "column $column"
+		}
+	    }
+	} else {
+	    if {[$w column cget $column -resize]} {
+		return "column $column"
+	    }
+	}
+    }
+    scan [$w contentbox] "%d %d %d %d" left top right bottom
+    if {[$w cget -showrowlabels] && [$w cget -rowlabelresize] &&
+	    ($x >= $left - 4) && ($x < $left + 4)} {
+	if {![$w cget -showheader] || ($y < $top)} {
+	    return "rowlabel all"
+	}
+    }
+    if {([llength $id] > 1) && ([lindex $id 0] eq "rowlabel")} {
+	set rowlabel [lindex $id 1]
+	if {[lindex $id end] eq "top"} {
+	    if {[$w rowlabel compare $rowlabel != "first visible"]} {
+		set rowlabel [$w rowlabel id "$rowlabel prev visible"]
+		if {[$w rowlabel cget $rowlabel -resize]} {
+		    return "rowlabel $rowlabel"
+		}
+	    }
+	}
+	if {[lindex $id end] eq "bottom"} {
+	    if {[$w rowlabel cget $rowlabel -resize]} {
+		return "rowlabel $rowlabel"
+	    }
+	}
+    }
+    return ""
+}
+
 # ::TreeCtrl::CursorCheck --
 #
 # Sees if the given pointer coordinates are near the edge of a resizable
@@ -216,26 +273,30 @@ source [file join [file dirname [info script]] filelist-bindings.tcl]
 
 proc ::TreeCtrl::CursorCheck {w x y} {
     variable Priv
-    set id [$w identify $x $y]
-    if {([llength $id] == 3) && ([lindex $id 0] eq "header")} {
-	set column [lindex $id 1]
-	set side [lindex $id 2]
-	if {$side eq "left"} {
-	    if {[$w column compare $column == "first visible"]} return
-	    set column [$w column id "$column prev visible"]
-	}
-	if {![$w column cget $column -resize]} return
-	if {![info exists Priv(cursor,$w)]} {
-	    set Priv(cursor,$w) [$w cget -cursor]
-	    $w configure -cursor sb_h_double_arrow
-	    if {[info exists Priv(cursor,afterId,$w)]} {
-		after cancel $Priv(cursor,afterId,$w)
-	    }
-	    set Priv(cursor,afterId,$w) [after 150 [list TreeCtrl::CursorCheckAux $w]]
-	}
+    set action [CursorAction $w $x $y]
+    if {$action eq ""} {
+	CursorCancel $w
 	return
     }
-    CursorCancel $w
+    if {[lindex $action 0] eq "column"} {
+	set cursor sb_h_double_arrow
+    }
+    if {[lindex $action 0] eq "rowlabel"} {
+	set rowlabel [lindex $action 1]
+	if {$rowlabel eq "all"} {
+	    set cursor sb_h_double_arrow
+	} else {
+	    set cursor sb_v_double_arrow
+	}
+    }
+    if {![info exists Priv(cursor,$w)]} {
+	set Priv(cursor,$w) [$w cget -cursor]
+    }
+    $w configure -cursor $cursor
+    if {[info exists Priv(cursor,afterId,$w)]} {
+	after cancel $Priv(cursor,afterId,$w)
+    }
+    set Priv(cursor,afterId,$w) [after 150 [list TreeCtrl::CursorCheckAux $w]]
     return
 }
 
@@ -344,6 +405,21 @@ proc ::TreeCtrl::MotionInHeader {w args} {
 proc ::TreeCtrl::ButtonPress1 {w x y} {
     variable Priv
     focus $w
+
+    set action [CursorAction $w $x $y]
+    if {$action ne "" && [lindex $action 0] eq "rowlabel"} {
+	set Priv(buttonMode) rowlabel
+	set Priv(rowlabel) [lindex $action 1]
+	set Priv(x) $x
+	set Priv(y) $y
+	set Priv(width) [$w rowlabel width]
+	if {$Priv(rowlabel) ne "all"} {
+	    scan [$w rowlabel bbox $Priv(rowlabel)] "%d %d %d %d" x1 y1 x2 y2
+	    set Priv(height) [expr {$y2 - $y1}]
+	}
+	return
+    }
+
     set id [$w identify $x $y]
     if {$id eq ""} {
 	return
@@ -388,6 +464,11 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	set Priv(columnDrag,y) $y
 	return
     }
+    if {[lindex $id 0] eq "rowlabel"} {
+	# What action should be taken when clicking in a rowlabel?
+	# Resizing is handled above.
+	return
+    }
     set item [lindex $id 1]
     if {![$w item enabled $item]} {
 	return
@@ -407,6 +488,17 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 # y		Window y coord.
 
 proc ::TreeCtrl::DoubleButton1 {w x y} {
+
+    set action [CursorAction $w $x $y]
+    if {$action ne "" && [lindex $action 0] eq "rowlabel"} {
+	set rowlabel [lindex $action 1]
+	if {$rowlabel eq "all"} {
+	    $w configure -rowlabelwidth ""
+	} else {
+	    $w rowlabel configure $rowlabel -height ""
+	}
+    }
+
     set id [$w identify $x $y]
     if {$id eq ""} {
 	return
@@ -552,6 +644,70 @@ proc ::TreeCtrl::Motion1 {w x y} {
 		}
 	    }
 	}
+	rowlabel {
+	    if {$Priv(rowlabel) eq "all"} {
+		set width [expr {$Priv(width) + $x - $Priv(x)}]
+		set minWidth [$w cget -minrowlabelwidth]
+		set maxWidth [$w cget -maxrowlabelwidth]
+		if {$minWidth eq ""} {
+		    set minWidth 0
+		}
+		if {$minWidth >= 0 && $width < $minWidth} {
+		    set width $minWidth
+		}
+		if {$maxWidth ne "" && $width > $maxWidth} {
+		    set width $maxWidth
+		}
+		if {$width == 0} {
+		    incr width
+		}
+		switch -- [$w cget -columnresizemode] {
+		    proxy {
+			scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
+			incr x1 -[$w rowlabel width]
+			# Use "ne" because -columnproxy could be ""
+			if {($x1 + $width - 1) ne [$w cget -columnproxy]} {
+			    $w configure -columnproxy [expr {$x1 + $width - 1}]
+			}
+		    }
+		    realtime {
+			if {[$w cget -rowlabelwidth] != $width} {
+			    $w configure -rowlabelwidth $width
+			}
+		    }
+		}
+	    } else {
+		set height [expr {$Priv(height) + $y - $Priv(y)}]
+		set minHeight [$w rowlabel cget $Priv(rowlabel) -minheight]
+		set maxHeight [$w rowlabel cget $Priv(rowlabel) -maxheight]
+		if {$minHeight eq ""} {
+		    set minHeight 0
+		}
+		if {$minHeight >= 0 && $height < $minHeight} {
+		    set height $minHeight
+		}
+		if {$maxHeight ne "" && $height > $maxHeight} {
+		    set height $maxHeight
+		}
+		if {$height == 0} {
+		    incr height
+		}
+		switch -- [$w cget -columnresizemode] {
+		    proxy {
+			scan [$w rowlabel bbox $Priv(rowlabel)] "%d %d %d %d" x1 y1 x2 y2
+			# Use "ne" because -rowproxy could be ""
+			if {($y1 + $height - 1) ne [$w cget -rowproxy]} {
+			    $w configure -rowproxy [expr {$y1 + $height - 1}]
+			}
+		    }
+		    realtime {
+			if {[$w rowlabel cget $Priv(rowlabel) -height] != $height} {
+			    $w rowlabel configure $Priv(rowlabel) -height $height
+			}
+		    }
+		}
+	    }
+	}
     }
     return
 }
@@ -653,6 +809,22 @@ set Priv(prev) ""
 		$w configure -columnproxy {}
 		$w column configure $Priv(column) -width $width
 		CursorCheck $w $x $y
+	    }
+	}
+	rowlabel {
+	    if {[$w cget -columnproxy] ne ""} {
+		scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
+		incr x1 -[$w rowlabel width]
+		set width [expr {[$w cget -columnproxy] - $x1 + 1}]
+		$w configure -columnproxy {}
+		$w configure -rowlabelwidth $width
+		CursorCheck $w $x $y
+	    }
+	    if {[$w cget -rowproxy] ne ""} {
+		scan [$w rowlabel bbox $Priv(rowlabel)] "%d %d %d %d" x1 y1 x2 y2
+		set height [expr {[$w cget -rowproxy] - $y1 + 1}]
+		$w configure -rowproxy {}
+		$w rowlabel configure $Priv(rowlabel) -height $height
 	    }
 	}
     }
