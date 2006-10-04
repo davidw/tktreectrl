@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.39 2006/09/21 06:38:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.40 2006/10/04 03:51:51 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -510,10 +510,10 @@ DotRect_Setup(
 
     /* Keep drawing inside the contentbox */
     dotState->rgn = CreateRectRgn(
-	tree->inset,
-	tree->inset + Tree_HeaderHeight(tree),
-	Tk_Width(tree->tkwin) - tree->inset,
-	Tk_Height(tree->tkwin) - tree->inset);
+	Tree_ContentLeft(tree),
+	Tree_ContentTop(tree),
+	Tree_ContentRight(tree),
+	Tree_ContentBottom(tree));
     SelectClipRgn(dotState->dc, dotState->rgn);
 #elif defined(MAC_OSX_TK)
     tree->display->request++;
@@ -540,10 +540,10 @@ DotRect_Setup(
 
     /* Keep drawing inside the contentbox */
     dotState->rgn = TkCreateRegion();
-    xrect.x = tree->inset;
-    xrect.y = tree->inset + Tree_HeaderHeight(tree);
-    xrect.width = Tk_Width(tree->tkwin) - tree->inset - xrect.x;
-    xrect.height = Tk_Height(tree->tkwin) - tree->inset - xrect.y;
+    xrect.x = Tree_ContentLeft(tree);
+    xrect.y = Tree_ContentTop(tree);
+    xrect.width = Tree_ContentRight(tree) - xrect.x;
+    xrect.height = Tree_ContentBottom(tree) - xrect.y;
     TkUnionRectWithRegion(&xrect, dotState->rgn, dotState->rgn);
     TkSetRegion(tree->display, dotState->gc, dotState->rgn);
 #endif
@@ -2101,7 +2101,7 @@ PerStateInfo_Free(
 
     if (pInfo->data == NULL)
 	return;
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     if (pInfo->type != typePtr)
 	panic("PerStateInfo_Free type mismatch: got %s expected %s",
 		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
@@ -2153,7 +2153,7 @@ PerStateInfo_FromObj(
     Tcl_Obj **objv, **objv2;
     PerStateData *pData;
 
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     pInfo->type = typePtr;
 #endif
 
@@ -2268,7 +2268,7 @@ PerStateInfo_ForState(
     int stateOff = ~state, stateOn = state;
     int i;
 
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     if ((pInfo->data != NULL) && (pInfo->type != typePtr))
 	panic("PerStateInfo_ForState type mismatch: got %s expected %s",
 		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
@@ -2337,7 +2337,7 @@ PerStateInfo_ObjForState(
     Tcl_Obj *obj;
     int i;
 
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     if ((pInfo->data != NULL) && (pInfo->type != typePtr))
 	panic("PerStateInfo_ObjForState type mismatch: got %s expected %s",
 		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
@@ -2385,7 +2385,7 @@ int PerStateInfo_Undefine(
     Tcl_Obj *configObj = pInfo->obj, *listObj, *stateObj;
     int modified = 0;
 
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     if ((pInfo->data != NULL) && (pInfo->type != typePtr))
 	panic("PerStateInfo_Undefine type mismatch: got %s expected %s",
 		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
@@ -2509,7 +2509,7 @@ static void PSDBitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
 
 PerStateType pstBitmap =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Bitmap",
 #endif
     sizeof(PerStateDataBitmap),
@@ -2580,7 +2580,7 @@ static void PSDBooleanFree(TreeCtrl *tree, PerStateDataBoolean *pBoolean)
 
 PerStateType pstBoolean =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Boolean",
 #endif
     sizeof(PerStateDataBoolean),
@@ -2632,7 +2632,7 @@ static void PSDBorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
 
 PerStateType pstBorder =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Border",
 #endif
     sizeof(PerStateDataBorder),
@@ -2684,7 +2684,7 @@ static void PSDColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
 
 PerStateType pstColor =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Color",
 #endif
     sizeof(PerStateDataColor),
@@ -2736,7 +2736,7 @@ static void PSDFontFree(TreeCtrl *tree, PerStateDataFont *pFont)
 
 PerStateType pstFont =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Font",
 #endif
     sizeof(PerStateDataFont),
@@ -2797,7 +2797,7 @@ static void PSDImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
 
 PerStateType pstImage =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Image",
 #endif
     sizeof(PerStateDataImage),
@@ -2869,7 +2869,7 @@ static void PSDReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
 
 PerStateType pstRelief =
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     "Relief",
 #endif
     sizeof(PerStateDataRelief),
@@ -2897,7 +2897,7 @@ void PSTSave(
     PerStateInfo *pInfo,
     PerStateInfo *pSave)
 {
-#ifdef DEBUG_PSI
+#ifdef TREECTRL_DEBUG
     pSave->type = pInfo->type; /* could be NULL */
 #endif
     pSave->data = pInfo->data;
@@ -2938,7 +2938,9 @@ typedef struct AllocData AllocData;
 struct AllocElem
 {
     AllocElem *next;
+#ifdef TREECTRL_DEBUG
     int free;
+#endif
     char body[1];	/* First byte of client's space.  Actual
 			 * size of this field will be larger than
 			 * one. */
@@ -3039,23 +3041,28 @@ AllocHax_Alloc(
 	freeList->head = block;
 	elem = freeList->head;
 	for (i = 1; i < freeList->blockSize - 1; i++) {
+#ifdef TREECTRL_DEBUG
 	    elem->free = 1;
+#endif
 	    elem->next = (AllocElem *) (((char *) freeList->head) +
 		elemSize * i);
 	    elem = elem->next;
 	}
 	elem->next = NULL;
+#ifdef TREECTRL_DEBUG
 	elem->free = 1;
+#endif
 	result = freeList->head;
 	freeList->head = result->next;
 	if (freeList->blockSize < 1024)
 	    freeList->blockSize *= 2;
     }
 
+#ifdef TREECTRL_DEBUG
     if (!result->free)
 	panic("AllocHax_Alloc: element not marked free");
-
     result->free = 0;
+#endif
     return result->body;
 }
 
@@ -3097,9 +3104,10 @@ AllocHax_Free(
 
     elem = (AllocElem *) (((unsigned long) ptr) - BODY_OFFSET);
 
+#ifdef TREECTRL_DEBUG
     if (elem->free)
 	panic("AllocHax_Free: element already marked free");
-
+#endif
     while (freeList != NULL && freeList->size != size)
 	freeList = freeList->next;
     if (freeList == NULL)
@@ -3107,7 +3115,9 @@ AllocHax_Free(
 
     WIPE(elem->body, size);
     elem->next = freeList->head;
+#ifdef TREECTRL_DEBUG
     elem->free = 1;
+#endif
     freeList->head = elem;
 }
 
@@ -3243,51 +3253,51 @@ AllocHax_Finalize(
 /*
  *----------------------------------------------------------------------
  *
- * TreeItemList_Init --
+ * TreePtrList_Init --
  *
- *	Initializes an item list, discarding any previous contents
- *	of the item list (TreeItemList_Free should have been called already
- *	if the item list was previously in use).
+ *	Initializes an pointer list, discarding any previous contents
+ *	of the pointer list (TreePtrList_Free should have been called already
+ *	if the pointer list was previously in use).
  *
  * Results:
  *	None.
  *
  * Side effects:
- *	The item list is initialized to be empty.
+ *	The pointer list is initialized to be empty.
  *
  *----------------------------------------------------------------------
  */
 
 void
-TreeItemList_Init(
+TreePtrList_Init(
     TreeCtrl *tree,		/* Widget info. */
-    TreeItemList *tilPtr,	/* Structure describing item list. */
-    int count			/* Number of items the list should hold.
+    TreePtrList *tplPtr,	/* Structure describing pointer list. */
+    int count			/* Number of pointers the list should hold.
 				 * 0 for default. */
     )
 {
-    tilPtr->tree = tree;
-    tilPtr->items = tilPtr->itemSpace;
-    tilPtr->count = 0;
-    tilPtr->space = TIL_STATIC_SPACE;
+    tplPtr->tree = tree;
+    tplPtr->pointers = tplPtr->pointerSpace;
+    tplPtr->count = 0;
+    tplPtr->space = TIL_STATIC_SPACE;
 
     if (count + 1 > TIL_STATIC_SPACE) {
-	tilPtr->space = count + 1;
-	tilPtr->items = (TreeItem *) ckalloc(tilPtr->space * sizeof(TreeItem));
+	tplPtr->space = count + 1;
+	tplPtr->pointers = (ClientData *) ckalloc(tplPtr->space * sizeof(ClientData));
     }
 
-    tilPtr->items[0] = NULL;
+    tplPtr->pointers[0] = NULL;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeItemList_Grow --
+ * TreePtrList_Grow --
  *
- *	Increase the available space in an item list.
+ *	Increase the available space in an pointer list.
  *
  * Results:
- *	The items[] array is resized if needed.
+ *	The pointers[] array is resized if needed.
  *
  * Side effects:
  *	Memory gets reallocated if needed.
@@ -3296,35 +3306,35 @@ TreeItemList_Init(
  */
 
 void
-TreeItemList_Grow(
-    TreeItemList *tilPtr,	/* Structure describing item list. */
-    int count			/* Number of items the list should hold. */
+TreePtrList_Grow(
+    TreePtrList *tplPtr,	/* Structure describing pointer list. */
+    int count			/* Number of pointers the list should hold. */
     )
 {
-    if (tilPtr->space >= count + 1)
+    if (tplPtr->space >= count + 1)
 	return;
-    while (tilPtr->space < count + 1)
-	tilPtr->space *= 2;
-    if (tilPtr->items == tilPtr->itemSpace) {
-	TreeItem *items;
-	items = (TreeItem *) ckalloc(tilPtr->space * sizeof(TreeItem));
-	memcpy(items, tilPtr->items, (tilPtr->count + 1) * sizeof(TreeItem));
-	tilPtr->items = items;
+    while (tplPtr->space < count + 1)
+	tplPtr->space *= 2;
+    if (tplPtr->pointers == tplPtr->pointerSpace) {
+	ClientData *pointers;
+	pointers = (ClientData *) ckalloc(tplPtr->space * sizeof(ClientData));
+	memcpy(pointers, tplPtr->pointers, (tplPtr->count + 1) * sizeof(ClientData));
+	tplPtr->pointers = pointers;
     } else {
-	tilPtr->items = (TreeItem *) ckrealloc((char *) tilPtr->items,
-		tilPtr->space * sizeof(TreeItem));
+	tplPtr->pointers = (ClientData *) ckrealloc((char *) tplPtr->pointers,
+		tplPtr->space * sizeof(ClientData));
     }
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeItemList_Append --
+ * TreePtrList_Append --
  *
- *	Append an item to an item list.
+ *	Append an pointer to an pointer list.
  *
  * Results:
- *	The return value is a pointer to the list of items.
+ *	The return value is a pointer to the list of pointers.
  *
  * Side effects:
  *	Memory gets reallocated if needed.
@@ -3332,28 +3342,28 @@ TreeItemList_Grow(
  *----------------------------------------------------------------------
  */
 
-TreeItem *
-TreeItemList_Append(
-    TreeItemList *tilPtr,	/* Structure describing item list. */
-    TreeItem item		/* Item to append. */
+ClientData *
+TreePtrList_Append(
+    TreePtrList *tplPtr,	/* Structure describing pointer list. */
+    ClientData pointer		/* Item to append. */
     )
 {
-    TreeItemList_Grow(tilPtr, tilPtr->count + 1);
-    tilPtr->items[tilPtr->count] = item;
-    tilPtr->count++;
-    tilPtr->items[tilPtr->count] = NULL;
-    return tilPtr->items;
+    TreePtrList_Grow(tplPtr, tplPtr->count + 1);
+    tplPtr->pointers[tplPtr->count] = pointer;
+    tplPtr->count++;
+    tplPtr->pointers[tplPtr->count] = NULL;
+    return tplPtr->pointers;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeItemList_Concat --
+ * TreePtrList_Concat --
  *
- *	Join two item lists.
+ *	Join two pointer lists.
  *
  * Results:
- *	The return value is a pointer to the list of items.
+ *	The return value is a pointer to the list of pointers.
  *
  * Side effects:
  *	Memory gets reallocated if needed.
@@ -3361,47 +3371,981 @@ TreeItemList_Append(
  *----------------------------------------------------------------------
  */
 
-TreeItem *
-TreeItemList_Concat(
-    TreeItemList *tilPtr,	/* Structure describing item list. */
-    TreeItemList *til2Ptr	/* Item list to append. */
+ClientData *
+TreePtrList_Concat(
+    TreePtrList *tplPtr,	/* Structure describing pointer list. */
+    TreePtrList *tpl2Ptr	/* Item list to append. */
     )
 {
-    TreeItemList_Grow(tilPtr, tilPtr->count + til2Ptr->count);
-    memcpy(tilPtr->items + tilPtr->count, til2Ptr->items,
-	til2Ptr->count * sizeof(TreeItem));
-    tilPtr->count += til2Ptr->count;
-    tilPtr->items[tilPtr->count] = NULL;
-    return tilPtr->items;
+    TreePtrList_Grow(tplPtr, tplPtr->count + tpl2Ptr->count);
+    memcpy(tplPtr->pointers + tplPtr->count, tpl2Ptr->pointers,
+	tpl2Ptr->count * sizeof(ClientData));
+    tplPtr->count += tpl2Ptr->count;
+    tplPtr->pointers[tplPtr->count] = NULL;
+    return tplPtr->pointers;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeItemList_Free --
+ * TreePtrList_Free --
  *
- *	Frees up any memory allocated for the item list and
- *	reinitializes the item list to an empty state.
+ *	Frees up any memory allocated for the pointer list and
+ *	reinitializes the pointer list to an empty state.
  *
  * Results:
  *	None.
  *
  * Side effects:
- *	The previous contents of the item list are lost.
+ *	The previous contents of the pointer list are lost.
  *
  *---------------------------------------------------------------------- */
 
 void
-TreeItemList_Free(
-    TreeItemList *tilPtr	/* Structure describing item list. */
+TreePtrList_Free(
+    TreePtrList *tplPtr		/* Structure describing pointer list. */
     )
 {
-    if (tilPtr->items != tilPtr->itemSpace) {
-	ckfree((char *) tilPtr->items);
+    if (tplPtr->pointers != tplPtr->pointerSpace) {
+	ckfree((char *) tplPtr->pointers);
     }
-    tilPtr->items = tilPtr->itemSpace;
-    tilPtr->count = 0;
-    tilPtr->space = TIL_STATIC_SPACE;
-    tilPtr->items[0] = NULL;
+    tplPtr->pointers = tplPtr->pointerSpace;
+    tplPtr->count = 0;
+    tplPtr->space = TIL_STATIC_SPACE;
+    tplPtr->pointers[0] = NULL;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagInfo_Add --
+ *
+ *	Adds tags to a list of tags.
+ *
+ * Results:
+ *	Non-duplicate tags are added.
+ *
+ * Side effects:
+ *	Memory may be (re)allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TagInfo *
+TagInfo_Add(
+    TagInfo *tagInfo,		/* Tag list. May be NULL. */
+    Tk_Uid tags[],
+    int numTags
+    )
+{
+    int i, j;
+
+    if (tagInfo == NULL) {
+	if (numTags <= TREE_TAG_SPACE) {
+	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo));
+	    tagInfo->tagSpace = TREE_TAG_SPACE;
+	} else {
+	    int tagSpace = numTags;
+	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) + 
+		((tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
+	    tagInfo->tagSpace = tagSpace;
+	}
+	tagInfo->numTags = 0;
+    }
+    for (i = 0; i < numTags; i++) {
+	for (j = 0; j < tagInfo->numTags; j++) {
+	    if (tagInfo->tagPtr[j] == tags[i])
+		break;
+	}
+	if (j >= tagInfo->numTags) {
+	    /* Resize existing storage if needed. */
+	    if (tagInfo->tagSpace == tagInfo->numTags) {
+		tagInfo->tagSpace += TREE_TAG_SPACE + 1;
+		tagInfo = (TagInfo *) ckrealloc((char *) tagInfo,
+		    sizeof(TagInfo) + 
+		    ((tagInfo->tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
+	    }
+	    tagInfo->tagPtr[tagInfo->numTags++] = tags[i];
+	}
+    }
+    return tagInfo;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagInfo_Remove --
+ *
+ *	Removes tags from a list of tags.
+ *
+ * Results:
+ *	Existing tags are removed.
+ *
+ * Side effects:
+ *	Memory may be reallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TagInfo *
+TagInfo_Remove(
+    TagInfo *tagInfo,		/* Tag list. May be NULL. */
+    Tk_Uid tags[],
+    int numTags
+    )
+{
+    int i, j;
+
+    if (tagInfo == NULL)
+	return tagInfo;
+    for (i = 0; i < numTags; i++) {
+	for (j = 0; j < tagInfo->numTags; j++) {
+	    if (tagInfo->tagPtr[j] == tags[i]) {
+		tagInfo->tagPtr[j] =
+		    tagInfo->tagPtr[tagInfo->numTags - 1];
+		tagInfo->numTags--;
+		break;
+	    }
+	}
+    }
+    if (tagInfo->numTags == 0) {
+	ckfree((char *) tagInfo);
+	tagInfo = NULL;
+    }
+    return tagInfo;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagInfo_Names --
+ *
+ *	Build a list of unique tag names.
+ *
+ * Results:
+ *	Unique tags are added to a dynamically-allocated list.
+ *
+ * Side effects:
+ *	Memory may be (re)allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tk_Uid *
+TagInfo_Names(
+    TagInfo *tagInfo,		/* Tag list. May be NULL. */
+    Tk_Uid *tags,		/* Current list, may be NULL. */
+    int *numTagsPtr,		/* Number of tags in tags[]. */
+    int *tagSpacePtr		/* Size of tags[]. */
+    )
+{
+    int numTags = *numTagsPtr, tagSpace = *tagSpacePtr;
+    int i, j;
+
+    if (tagInfo == NULL)
+	return tags;
+    for (i = 0; i < tagInfo->numTags; i++) {
+	Tk_Uid tag = tagInfo->tagPtr[i];
+	for (j = 0; j < numTags; j++) {
+	    if (tag == tags[j])
+		break;
+	}
+	if (j < numTags)
+	    continue;
+	if ((tags == NULL) || (numTags == tagSpace)) {
+	    if (tags == NULL) {
+		tagSpace = 32;
+		tags = (Tk_Uid *) ckalloc(sizeof(Tk_Uid) * tagSpace);
+	    }
+	    else {
+		tagSpace *= 2;
+		tags = (Tk_Uid *) ckrealloc((char *) tags,
+		    sizeof(Tk_Uid) * tagSpace);
+	    }
+	}
+	tags[numTags++] = tag;
+    }
+    *numTagsPtr = numTags;
+    *tagSpacePtr = tagSpace;
+    return tags;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagInfo_Copy --
+ *
+ *	Copy a list of tags.
+ *
+ * Results:
+ *	Allocates a new TagInfo if given one is not NULL.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TagInfo *
+TagInfo_Copy(
+    TagInfo *tagInfo		/* Tag list. May be NULL. */
+    )
+{
+    TagInfo *copy = NULL;
+
+    if (tagInfo != NULL) {
+	int tagSpace = tagInfo->numTags;
+	copy = (TagInfo *) ckalloc(sizeof(TagInfo) +
+	    ((tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
+	memcpy(copy->tagPtr, tagInfo->tagPtr, tagSpace * sizeof(Tk_Uid));
+	copy->numTags = tagInfo->numTags;
+	copy->tagSpace = tagSpace;
+    }
+    return copy;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagInfo_Free --
+ *
+ *	Free a list of tags.
+ *
+ * Results:
+ *	TagInfo struct is freed if non-NULL.
+ *
+ * Side effects:
+ *	Memory may be freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TagInfo_Free(
+    TagInfo *tagInfo		/* Tag list. May be NULL. */
+    )
+{
+    if (tagInfo != NULL)
+	ckfree((char *) tagInfo);
+}
+
+int
+TagInfo_FromObj(
+    Tcl_Interp *interp,
+    Tcl_Obj *objPtr,
+    TagInfo **tagInfoPtr
+    )
+{
+    int i, numTags;
+    Tcl_Obj **listObjv;
+    TagInfo *tagInfo = NULL;
+
+    if (Tcl_ListObjGetElements(interp, objPtr, &numTags, &listObjv) != TCL_OK) {
+	return TCL_ERROR;
+    }
+    if (numTags == 0) {
+	*tagInfoPtr = NULL;
+	return TCL_OK;
+    }
+    for (i = 0; i < numTags; i++) {
+	Tk_Uid tag = Tk_GetUid(Tcl_GetString(listObjv[i]));
+	tagInfo = TagInfo_Add(tagInfo, &tag, 1);
+    }
+    *tagInfoPtr = tagInfo;
+    return TCL_OK;
+}
+
+Tcl_Obj *
+TagInfo_ToObj(
+    TagInfo *tagInfo
+    )
+{
+    Tcl_Obj *listObj;
+    int i;
+
+    if (tagInfo == NULL)
+	return NULL;
+
+    listObj = Tcl_NewListObj(0, NULL);
+    for (i = 0; i < tagInfo->numTags; i++) {
+	Tcl_ListObjAppendElement(NULL, listObj,
+		Tcl_NewStringObj((char *) tagInfo->tagPtr[i], -1));
+    }
+    return listObj;
+}
+
+static int
+TagInfoCO_Set(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **value,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags
+    )
+{
+    int objEmpty;
+    TagInfo *new, **internalPtr;
+
+    if (internalOffset >= 0)
+	internalPtr = (TagInfo **) (recordPtr + internalOffset);
+    else
+	internalPtr = NULL;
+
+    objEmpty = ObjectIsEmpty((*value));
+
+    if ((flags & TK_OPTION_NULL_OK) && objEmpty)
+	(*value) = NULL;
+    else {
+	if (TagInfo_FromObj(interp, (*value), &new) != TCL_OK)
+	    return TCL_ERROR;
+    }
+    if (internalPtr != NULL) {
+	if ((*value) == NULL)
+	    new = NULL;
+	*((TagInfo **) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
+    }
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+TagInfoCO_Get(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset
+    )
+{
+    TagInfo *value = *(TagInfo **) (recordPtr + internalOffset);
+    return TagInfo_ToObj(value);
+}
+
+static void
+TagInfoCO_Restore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr
+    )
+{
+    *(TagInfo **) internalPtr = *(TagInfo **) saveInternalPtr;
+}
+
+static void
+TagInfoCO_Free(
+    ClientData clientData,	/* unused. */
+    Tk_Window tkwin,		/* A window; unused */
+    char *internalPtr		/* Pointer to the place, where the internal
+				 * form resides. */
+    )
+{
+    TagInfo_Free(*(TagInfo **)internalPtr);
+}
+
+Tk_ObjCustomOption TagInfoCO =
+{
+    "tag list",
+    TagInfoCO_Set,
+    TagInfoCO_Get,
+    TagInfoCO_Restore,
+    TagInfoCO_Free,
+    (ClientData) NULL
+};
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagExpr_Init --
+ *
+ *	This procedure initializes a TagExpr struct by parsing a Tcl_Obj
+ *	string representation of a tag expression.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TagExpr_Init(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *exprObj,		/* Tag expression string. */
+    TagExpr *expr		/* Struct to initialize. */
+    )
+{
+    int i;
+    char *tag;
+
+    expr->tree = tree;
+    expr->index = 0;
+    expr->length = 0;
+    expr->uid = NULL;
+    expr->allocated = sizeof(expr->staticUids) / sizeof(Tk_Uid);
+    expr->uids = expr->staticUids;
+    expr->simple = TRUE;
+    expr->rewritebuffer = expr->staticRWB;
+
+    tag = Tcl_GetStringFromObj(exprObj, &expr->stringLength);
+
+    /* short circuit impossible searches for null tags */
+    if (expr->stringLength == 0) {
+	return TCL_OK;
+    }
+
+    /*
+     * Pre-scan tag for at least one unquoted "&&" "||" "^" "!"
+     *   if not found then use string as simple tag
+     */
+    for (i = 0; i < expr->stringLength ; i++) {
+	if (tag[i] == '"') {
+	    i++;
+	    for ( ; i < expr->stringLength; i++) {
+		if (tag[i] == '\\') {
+		    i++;
+		    continue;
+		}
+		if (tag[i] == '"') {
+		    break;
+		}
+	    }
+	} else {
+	    if ((tag[i] == '&' && tag[i+1] == '&')
+	     || (tag[i] == '|' && tag[i+1] == '|')
+	     || (tag[i] == '^')
+	     || (tag[i] == '!')) {
+		expr->simple = FALSE;
+		break;
+	    }
+	}
+    }
+
+    if (expr->simple) {
+	expr->uid = Tk_GetUid(tag);
+	return TCL_OK;
+    }
+
+    expr->string = tag;
+    expr->stringIndex = 0;
+
+    /* Allocate buffer for rewritten tags (after de-escaping) */
+    if (expr->stringLength >= sizeof(expr->staticRWB))
+	expr->rewritebuffer = ckalloc(expr->stringLength + 1);
+
+    if (TagExpr_Scan(expr) != TCL_OK) {
+	TagExpr_Free(expr);
+	return TCL_ERROR;
+    }
+    expr->length = expr->index;
+    return TCL_OK;
+}
+
+/*
+ * Uids for operands in compiled tag expressions.
+ * Initialization is done by GetStaticUids().
+ */
+typedef struct {
+    Tk_Uid andUid;
+    Tk_Uid orUid;
+    Tk_Uid xorUid;
+    Tk_Uid parenUid;
+    Tk_Uid negparenUid;
+    Tk_Uid endparenUid;
+    Tk_Uid tagvalUid;
+    Tk_Uid negtagvalUid;
+} SearchUids;
+
+static Tcl_ThreadDataKey dataKey;
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * GetStaticUids --
+ *
+ *	This procedure is invoked to return a structure filled with
+ *	the Uids used when doing tag searching. If it was never before
+ *	called in the current thread, it initializes the structure for
+ *	that thread (uids are only ever local to one thread [Bug
+ *	1114977]).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static SearchUids *
+GetStaticUids()
+{
+    SearchUids *searchUids = (SearchUids *)
+	    Tcl_GetThreadData(&dataKey, sizeof(SearchUids));
+
+    if (searchUids->andUid == NULL) {
+	searchUids->andUid       = Tk_GetUid("&&");
+	searchUids->orUid        = Tk_GetUid("||");
+	searchUids->xorUid       = Tk_GetUid("^");
+	searchUids->parenUid     = Tk_GetUid("(");
+	searchUids->endparenUid  = Tk_GetUid(")");
+	searchUids->negparenUid  = Tk_GetUid("!(");
+	searchUids->tagvalUid    = Tk_GetUid("!!");
+	searchUids->negtagvalUid = Tk_GetUid("!");
+    }
+    return searchUids;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagExpr_Scan --
+ *
+ *	This procedure recursively parses a string representation of a
+ *	tag expression into an array of Tk_Uids.
+ *
+ * Results:
+ *	The return value indicates if the tag expression
+ *	was successfully scanned (syntax).
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TagExpr_Scan(
+    TagExpr *expr		/* Info about a tag expression. */
+    )
+{
+    Tcl_Interp *interp = expr->tree->interp;
+    int looking_for_tag;        /* When true, scanner expects
+				 * next char(s) to be a tag,
+				 * else operand expected */
+    int found_tag;              /* One or more tags found */
+    int found_endquote;         /* For quoted tag string parsing */
+    int negate_result;          /* Pending negation of next tag value */
+    char *tag;                  /* tag from tag expression string */
+    SearchUids *searchUids;	/* Collection of uids for basic search
+				 * expression terms. */
+    char c;
+
+    searchUids = GetStaticUids();
+    negate_result = 0;
+    found_tag = 0;
+    looking_for_tag = 1;
+    while (expr->stringIndex < expr->stringLength) {
+	c = expr->string[expr->stringIndex++];
+
+	if (expr->allocated == expr->index) {
+	    expr->allocated += 15;
+	    if (expr->uids != expr->staticUids) {
+		expr->uids =
+		    (Tk_Uid *) ckrealloc((char *)(expr->uids),
+		    (expr->allocated)*sizeof(Tk_Uid));
+	    } else {
+		expr->uids =
+		(Tk_Uid *) ckalloc((expr->allocated)*sizeof(Tk_Uid));
+		memcpy(expr->uids, expr->staticUids, sizeof(expr->staticUids));
+	    }
+	}
+
+	if (looking_for_tag) {
+
+	    switch (c) {
+		case ' '  :	/* ignore unquoted whitespace */
+		case '\t' :
+		case '\n' :
+		case '\r' :
+		    break;
+
+		case '!'  :	/* negate next tag or subexpr */
+		    if (looking_for_tag > 1) {
+			Tcl_AppendResult(interp,
+				"Too many '!' in tag search expression",
+				(char *) NULL);
+			return TCL_ERROR;
+		    }
+		    looking_for_tag++;
+		    negate_result = 1;
+		    break;
+
+		case '('  :	/* scan (negated) subexpr recursively */
+		    if (negate_result) {
+			expr->uids[expr->index++] = searchUids->negparenUid;
+			negate_result = 0;
+		    } else {
+			expr->uids[expr->index++] = searchUids->parenUid;
+		    }
+		    if (TagExpr_Scan(expr) != TCL_OK) {
+			/* Result string should be already set
+			 * by nested call to tag_expr_scan() */
+			return TCL_ERROR;
+		    }
+		    looking_for_tag = 0;
+		    found_tag = 1;
+		    break;
+
+		case '"'  :	/* quoted tag string */
+		    if (negate_result) {
+			expr->uids[expr->index++] = searchUids->negtagvalUid;
+			negate_result = 0;
+		    } else {
+			expr->uids[expr->index++] = searchUids->tagvalUid;
+		    }
+		    tag = expr->rewritebuffer;
+		    found_endquote = 0;
+		    while (expr->stringIndex < expr->stringLength) {
+			c = expr->string[expr->stringIndex++];
+			if (c == '\\') {
+			    c = expr->string[expr->stringIndex++];
+			}
+			if (c == '"') {
+			    found_endquote = 1;
+			    break;
+			}
+			*tag++ = c;
+		    }
+		    if (! found_endquote) {
+			Tcl_AppendResult(interp,
+				"Missing endquote in tag search expression",
+				(char *) NULL);
+			return TCL_ERROR;
+		    }
+		    if (! (tag - expr->rewritebuffer)) {
+			Tcl_AppendResult(interp,
+			    "Null quoted tag string in tag search expression",
+			    (char *) NULL);
+			return TCL_ERROR;
+		    }
+		    *tag++ = '\0';
+		    expr->uids[expr->index++] =
+			    Tk_GetUid(expr->rewritebuffer);
+		    looking_for_tag = 0;
+		    found_tag = 1;
+		    break;
+
+		case '&'  :	/* illegal chars when looking for tag */
+		case '|'  :
+		case '^'  :
+		case ')'  :
+		    Tcl_AppendResult(interp,
+			    "Unexpected operator in tag search expression",
+			    (char *) NULL);
+		    return TCL_ERROR;
+
+		default :	/* unquoted tag string */
+		    if (negate_result) {
+			expr->uids[expr->index++] = searchUids->negtagvalUid;
+			negate_result = 0;
+		    } else {
+			expr->uids[expr->index++] = searchUids->tagvalUid;
+		    }
+		    tag = expr->rewritebuffer;
+		    *tag++ = c;
+		    /* copy rest of tag, including any embedded whitespace */
+		    while (expr->stringIndex < expr->stringLength) {
+			c = expr->string[expr->stringIndex];
+			if (c == '!' || c == '&' || c == '|' || c == '^'
+				|| c == '(' || c == ')' || c == '"') {
+			    break;
+			}
+			*tag++ = c;
+			expr->stringIndex++;
+		    }
+		    /* remove trailing whitespace */
+		    while (1) {
+			c = *--tag;
+			/* there must have been one non-whitespace char,
+			 *  so this will terminate */
+			if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
+			    break;
+			}
+		    }
+		    *++tag = '\0';
+		    expr->uids[expr->index++] =
+			    Tk_GetUid(expr->rewritebuffer);
+		    looking_for_tag = 0;
+		    found_tag = 1;
+	    }
+
+	} else {    /* ! looking_for_tag */
+
+	    switch (c) {
+		case ' '  :	/* ignore whitespace */
+		case '\t' :
+		case '\n' :
+		case '\r' :
+		    break;
+
+		case '&'  :	/* AND operator */
+		    c = expr->string[expr->stringIndex++];
+		    if (c != '&') {
+			Tcl_AppendResult(interp,
+				"Singleton '&' in tag search expression",
+				(char *) NULL);
+			return TCL_ERROR;
+		    }
+		    expr->uids[expr->index++] = searchUids->andUid;
+		    looking_for_tag = 1;
+		    break;
+
+		case '|'  :	/* OR operator */
+		    c = expr->string[expr->stringIndex++];
+		    if (c != '|') {
+			Tcl_AppendResult(interp,
+				"Singleton '|' in tag search expression",
+				(char *) NULL);
+			return TCL_ERROR;
+		    }
+		    expr->uids[expr->index++] = searchUids->orUid;
+		    looking_for_tag = 1;
+		    break;
+
+		case '^'  :	/* XOR operator */
+		    expr->uids[expr->index++] = searchUids->xorUid;
+		    looking_for_tag = 1;
+		    break;
+
+		case ')'  :	/* end subexpression */
+		    expr->uids[expr->index++] = searchUids->endparenUid;
+		    goto breakwhile;
+
+		default   :	/* syntax error */
+		    Tcl_AppendResult(interp,
+			    "Invalid boolean operator in tag search expression",
+			    (char *) NULL);
+		    return TCL_ERROR;
+	    }
+	}
+    }
+breakwhile:
+    if (found_tag && ! looking_for_tag) {
+	return TCL_OK;
+    }
+    Tcl_AppendResult(interp, "Missing tag in tag search expression",
+	    (char *) NULL);
+    return TCL_ERROR;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagExpr_Eval --
+ *
+ *	This procedure recursively evaluates a compiled tag expression.
+ *
+ * Results:
+ *	The return value indicates if the tag expression
+ *	successfully matched the tags of the given item.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+_TagExpr_Eval(
+    TagExpr *expr,		/* Info about a tag expression. */
+    TagInfo *tagInfo		/* Tags to test. */
+    )
+{
+    int looking_for_tag;        /* When true, scanner expects
+				 * next char(s) to be a tag,
+				 * else operand expected */
+    int negate_result;          /* Pending negation of next tag value */
+    Tk_Uid uid;
+    Tk_Uid *tagPtr;
+    int count;
+    int result;                 /* Value of expr so far */
+    int parendepth;
+    SearchUids *searchUids;	/* Collection of uids for basic search
+				 * expression terms. */
+    TagInfo dummy;
+
+    if (expr->stringLength == 0) /* empty expression (an error?) */
+	return 0;
+
+    /* No tags given. */
+    if (tagInfo == NULL) {
+	dummy.numTags = 0;
+	tagInfo = &dummy;
+    }
+
+    /* A single tag. */
+    if (expr->simple) {
+	for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
+	    count > 0; tagPtr++, count--) {
+	    if (*tagPtr == expr->uid) {
+		return 1;
+	    }
+	}
+	return 0;
+    }
+
+    searchUids = GetStaticUids();
+    result = 0;  /* just to keep the compiler quiet */
+
+    negate_result = 0;
+    looking_for_tag = 1;
+    while (expr->index < expr->length) {
+	uid = expr->uids[expr->index++];
+	if (looking_for_tag) {
+	    if (uid == searchUids->tagvalUid) {
+/*
+ *              assert(expr->index < expr->length);
+ */
+		uid = expr->uids[expr->index++];
+		result = 0;
+		/*
+		 * set result 1 if tag is found in item's tags
+		 */
+		for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
+		    count > 0; tagPtr++, count--) {
+		    if (*tagPtr == uid) {
+			result = 1;
+			break;
+		    }
+		}
+
+	    } else if (uid == searchUids->negtagvalUid) {
+		negate_result = ! negate_result;
+/*
+ *              assert(expr->index < expr->length);
+ */
+		uid = expr->uids[expr->index++];
+		result = 0;
+		/*
+		 * set result 1 if tag is found in item's tags
+		 */
+		for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
+		    count > 0; tagPtr++, count--) {
+		    if (*tagPtr == uid) {
+			result = 1;
+			break;
+		    }
+		}
+
+	    } else if (uid == searchUids->parenUid) {
+		/*
+		 * evaluate subexpressions with recursion
+		 */
+		result = _TagExpr_Eval(expr, tagInfo);
+
+	    } else if (uid == searchUids->negparenUid) {
+		negate_result = ! negate_result;
+		/*
+		 * evaluate subexpressions with recursion
+		 */
+		result = _TagExpr_Eval(expr, tagInfo);
+/*
+ *          } else {
+ *              assert(0);
+ */
+	    }
+	    if (negate_result) {
+		result = ! result;
+		negate_result = 0;
+	    }
+	    looking_for_tag = 0;
+	} else {    /* ! looking_for_tag */
+	    if (((uid == searchUids->andUid) && (!result)) ||
+		    ((uid == searchUids->orUid) && result)) {
+		/*
+		 * short circuit expression evaluation
+		 *
+		 * if result before && is 0, or result before || is 1,
+		 *   then the expression is decided and no further
+		 *   evaluation is needed.
+		 */
+
+		    parendepth = 0;
+		while (expr->index < expr->length) {
+		    uid = expr->uids[expr->index++];
+		    if (uid == searchUids->tagvalUid ||
+			    uid == searchUids->negtagvalUid) {
+			expr->index++;
+			continue;
+		    }
+		    if (uid == searchUids->parenUid ||
+			    uid == searchUids->negparenUid) {
+			parendepth++;
+			continue;
+		    } 
+		    if (uid == searchUids->endparenUid) {
+			parendepth--;
+			if (parendepth < 0) {
+			    break;
+			}
+		    }
+		}
+		return result;
+
+	    } else if (uid == searchUids->xorUid) {
+		/*
+		 * if the previous result was 1
+		 *   then negate the next result
+		 */
+		negate_result = result;
+
+	    } else if (uid == searchUids->endparenUid) {
+		return result;
+/*
+ *          } else {
+ *               assert(0);
+ */
+	    }
+	    looking_for_tag = 1;
+	}
+    }
+/*
+ *  assert(! looking_for_tag);
+ */
+    return result;
+}
+
+int
+TagExpr_Eval(
+    TagExpr *expr,		/* Info about a tag expression. */
+    TagInfo *tagInfo		/* Tags to test. */
+    )
+{
+    expr->index = 0;
+    return _TagExpr_Eval(expr, tagInfo);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TagExpr_Free --
+ *
+ *	This procedure frees the given struct.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TagExpr_Free(
+    TagExpr *expr
+    )
+{
+    if (expr->rewritebuffer != expr->staticRWB)
+	ckfree(expr->rewritebuffer);
+    if (expr->uids != expr->staticUids)
+	ckfree((char *) expr->uids);
 }
 
