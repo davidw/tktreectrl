@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.44 2006/09/27 01:57:28 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.45 2006/10/04 04:07:02 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -56,10 +56,15 @@ if {[catch {
 }
 
 set tile 0
+set entryCmd ::entry
 catch {
 	package require tile 0.6
-	namespace import -force ::ttk::button ::ttk::checkbutton ::ttk::entry \
+	namespace import -force ::ttk::button ::ttk::checkbutton \
 		ttk::radiobutton
+	# Don't import this, it messes up our edit bindings, and I'm not
+	# sure how to get/set the equivalent -borderwidth, -selectborderwidth
+	# etc options of a TEntry.
+	set ::entryCmd ::ttk::entry
 	set tile 1
 }
 
@@ -169,6 +174,7 @@ foreach file {
     outlook-folders
     outlook-newgroup
     random
+    rowlabels
     span
     textvariable
     www-options
@@ -241,7 +247,7 @@ proc MakeEventsWindow {} {
     set T $w.f.t
 
     $T configure -showheader no -showroot no -showrootlines no -height 300
-    $T column create -tag C0
+    $T column create -tags C0
     $T configure -treecolumn C0
 
     $T element create e1 text -fill [list $::SystemHighlightText {selected focus}]
@@ -585,19 +591,19 @@ proc MakeMainWindow {} {
     # Tree + scrollbar: demos
     TreePlusScrollbarsInAFrame .f1 0 1
     .f1.t configure -showbuttons no -showlines no -showroot no -height 100
-    .f1.t column create -text "List of Demos" -expand yes -button no -tag C0
+    .f1.t column create -text "List of Demos" -expand yes -button no -tags C0
     .f1.t configure -treecolumn C0
 
     # Tree + scrollbar: styles + elements in list
     TreePlusScrollbarsInAFrame .f4 0 1
     .f4.t configure -showlines $::ShowLines -showroot no -height 140
-    .f4.t column create -text "Elements and Styles" -expand yes -button no -tag C0
+    .f4.t column create -text "Elements and Styles" -expand yes -button no -tags C0
     .f4.t configure -treecolumn C0
 
     # Tree + scrollbar: styles + elements in selected item
     TreePlusScrollbarsInAFrame .f3 0 1
     .f3.t configure -showlines $::ShowLines -showroot no
-    .f3.t column create -text "Styles in Item" -expand yes -button no -tag C0
+    .f3.t column create -text "Styles in Item" -expand yes -button no -tags C0
     .f3.t configure -treecolumn C0
 
     .pw1 add .f1 .f4 .f3 -height 150
@@ -695,6 +701,13 @@ proc MakeListPopup {T} {
     set m2 [menu $m.mVisible -tearoff no]
     $m add cascade -label Columns -menu $m2
 
+    set m2 [menu $m.mColumnResizeMode -tearoff no]
+    $m2 add radiobutton -label proxy -variable Popup(columnresizemode) -value proxy \
+	-command {$Popup(T) configure -columnresizemode $Popup(columnresizemode)}
+    $m2 add radiobutton -label realtime -variable Popup(columnresizemode) -value realtime \
+	-command {$Popup(T) configure -columnresizemode $Popup(columnresizemode)}
+    $m add cascade -label "Column Resize Mode" -menu $m2
+
     set m2 [menu $m.mDebug -tearoff no]
     $m2 add checkbutton -label Data -variable Popup(debug,data) \
 	-command {$Popup(T) debug configure -data $Popup(debug,data)}
@@ -750,11 +763,15 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) configure -showroot $Popup(showroot)}
     $m2 add checkbutton -label "Root Button" -variable Popup(showrootbutton) \
 	-command {$Popup(T) configure -showrootbutton $Popup(showrootbutton)}
+    $m2 add checkbutton -label "Row Labels" -variable Popup(showrowlabels) \
+	-command {$Popup(T) configure -showrowlabels $Popup(showrowlabels)}
     $m add cascade -label Show -menu $m2
 
     set m2 [menu $m.mSpan -tearoff no]
     $m add cascade -label Span -menu $m2
 
+    $m add checkbutton -label "Row Label Resize" -variable Popup(rowlabelresize) \
+	-command {$Popup(T) configure -rowlabelresize $Popup(rowlabelresize)}
     $m add checkbutton -label "Use Theme" -variable Popup(usetheme) \
 	-command {$Popup(T) configure -usetheme $Popup(usetheme)}
 
@@ -865,6 +882,7 @@ proc ShowPopup {T x y X Y} {
     set Popup(bgimg) [$T cget -backgroundimage]
     if {$Popup(bgimg) eq ""} { set Popup(bgimg) none }
     set Popup(bgmode) [$T cget -backgroundmode]
+    set Popup(columnresizemode) [$T cget -columnresizemode]
     set Popup(doublebuffer) [$T cget -doublebuffer]
     set Popup(linestyle) [$T cget -linestyle]
     set Popup(orient) [$T cget -orient]
@@ -875,12 +893,15 @@ proc ShowPopup {T x y X Y} {
     set Popup(showrootlines) [$T cget -showrootlines]
     set Popup(showroot) [$T cget -showroot]
     set Popup(showrootbutton) [$T cget -showrootbutton]
+    set Popup(showrowlabels) [$T cget -showrowlabels]
     set m $menu.mVisible
     $m delete 0 end
     foreach C [$T column list] {
+	set break [expr {!([$T column order $C] % 20)}]
 	set Popup(visible,$C) [$T column cget $C -visible]
 	$m add checkbutton -label "Column $C \"[$T column cget $C -text]\" \[[$T column cget $C -image]\]" -variable Popup(visible,$C) \
-	    -command "$T column configure $C -visible \$Popup(visible,$C)"
+	    -command "$T column configure $C -visible \$Popup(visible,$C)" \
+	    -columnbreak $break
     }
 
     set m $menu.mSpan
@@ -889,14 +910,16 @@ proc ShowPopup {T x y X Y} {
 	set item [lindex $id 1]
 	set column [lindex $id 3]
 	for {set i 1} {$i <= [$T column count] - [$T column order $column]} {incr i} {
+	    set break [expr {!($i % 20)}]
 	    $m add radiobutton -label $i -command "$T item span $item $column $i" \
-		-variable Popup(span) -value $i
+		-variable Popup(span) -value $i -columnbreak $break
 	}
 	set Popup(span) [$T item span $item $column]
     } else {
 	$m add command -label "no item column" -state disabled
     }
 
+    set Popup(rowlabelresize) [$T cget -rowlabelresize]
     set Popup(usetheme) [$T cget -usetheme]
     tk_popup $menu $X $Y
     return
@@ -947,7 +970,8 @@ proc InitDemoList {} {
 	"Textvariable" DemoTextvariable textvariable.tcl \
 	"Big List" DemoBigList biglist.tcl \
 	"Column Spanning" DemoSpan span.tcl \
-	"My Computer" DemoMyComputer mycomputer.tcl
+	"My Computer" DemoMyComputer mycomputer.tcl \
+	"Row Labels" DemoRowLabels rowlabels.tcl
 	] {
 	set item [$t item create]
 	$t item lastchild root $item
@@ -1176,7 +1200,7 @@ proc DemoClear {} {
     $T item delete all
 
     # Clear all bindings on the demo list added by the previous demo.
-    # This is why DontDelete is used for the <Selection> binding.
+    # This is why DontDelete is used for some bindings (see above).
     $T notify unbind $T
 
     # Clear all run-time states
@@ -1188,6 +1212,10 @@ proc DemoClear {} {
     # Delete columns in demo list
     $T column delete all
 
+    # Delete row labels in demo list
+catch {
+    $T rowlabel delete all
+}
     # Delete all styles in demo list
     eval $T style delete [$T style names]
 
@@ -1213,7 +1241,9 @@ proc DemoClear {} {
 	-highlightthickness 3 -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
 	-font [.f4.t cget -font]
-
+catch {
+    $T configure -showrowlabels no
+}
     # Undo "column configure all" in a demo
     $T column configure tail -background \
 	[lindex [$T column configure tail -background] 3]
