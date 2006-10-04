@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.40 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.41 2006/10/04 03:14:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -41,7 +41,7 @@ struct Column
     int squeeze;		/* -squeeze */
     int visible;		/* -visible */
     int resize;			/* -resize */
-    char *tag;			/* -tag */
+    TagInfo *tagInfo;		/* -tags */
     char *imageString;		/* -image */
     PerStateInfo arrowBitmap;	/* -arrowbitmap */
     PerStateInfo arrowImage;	/* -arrowimage */
@@ -92,6 +92,7 @@ struct Column
     int itemBgCount;
     XColor **itemBgColor;
     GC bitmapGC;
+    Column *prev;
     Column *next;
     TextLayout textLayout;	/* multi-line titles */
     int textLayoutWidth;	/* width passed to TextLayout_Compute */
@@ -114,7 +115,7 @@ static char *stateST[] = { "normal", "active", "pressed", (char *) NULL };
 #define COLU_CONF_ITEMBG	0x0010
 #define COLU_CONF_DISPLAY	0x0040
 #define COLU_CONF_JUSTIFY	0x0080
-#define COLU_CONF_TAG		0x0100
+#define COLU_CONF_TAGS		0x0100
 #define COLU_CONF_TEXT		0x0200
 #define COLU_CONF_BITMAP	0x0400
 #define COLU_CONF_RANGES	0x0800
@@ -206,9 +207,9 @@ static Tk_OptionSpec columnSpecs[] = {
      (char *) NULL, Tk_Offset(Column, stepWidthObj),
      Tk_Offset(Column, stepWidth),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_RANGES},
-    {TK_OPTION_STRING, "-tag", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(Column, tag),
-     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TAG},
+    {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Column, tagInfo),
+     TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, COLU_CONF_TAGS},
     {TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, textObj), Tk_Offset(Column, text),
      TK_OPTION_NULL_OK, (ClientData) NULL,
@@ -240,6 +241,8 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, 0, 0}
 };
+
+#define IS_TAIL(C) (((TreeColumn) C) == tree->columnTail)
 
 /*
  *----------------------------------------------------------------------
@@ -378,7 +381,7 @@ Tk_ObjCustomOption columnCustomOption =
     ColumnOptionGet,
     ColumnOptionRestore,
     NULL,
-    (ClientData) (CFO_NOT_ALL | CFO_NOT_NULL)
+    (ClientData) (CFO_NOT_MANY | CFO_NOT_NULL)
 };
 
 /*
@@ -394,7 +397,7 @@ Tk_ObjCustomOption columnCustomOption_NOT_TAIL =
     ColumnOptionGet,
     ColumnOptionRestore,
     NULL,
-    (ClientData) (CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL)
+    (ClientData) (CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL)
 };
 
 static Tk_OptionSpec dragSpecs[] = {
@@ -463,15 +466,25 @@ ImageChangedProc(
     Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
 }
 
+typedef struct Qualifiers {
+    TreeCtrl *tree;
+    int visible;		/* 1 for -visible TRUE,
+				   0 for -visible FALSE,
+				   -1 for unspecified. */
+    int states[3];		/* States that must be on or off. */
+    TagExpr expr;		/* Tag expression. */
+    int exprOK;			/* TRUE if expr is valid. */
+} Qualifiers;
+
 /*
  *----------------------------------------------------------------------
  *
- * Tree_FindColumnByTag --
+ * Qualifiers_Init --
  *
- *	Find a column with a matching -tag option.
+ *	Helper routine for TreeItem_FromObj.
  *
  * Results:
- *	A standard Tcl result.
+ *	None.
  *
  * Side effects:
  *	None.
@@ -479,47 +492,27 @@ ImageChangedProc(
  *----------------------------------------------------------------------
  */
 
-int
-Tree_FindColumnByTag(
+static void
+Qualifiers_Init(
     TreeCtrl *tree,		/* Widget info. */
-    Tcl_Obj *obj,		/* Tag name. */
-    TreeColumn *columnPtr,	/* Returned column. */
-    int flags			/* CFO_NOT_TAIL or 0. */
+    Qualifiers *q		/* Out: Initialized qualifiers. */
     )
 {
-    Column *walk = (Column *) tree->columns;
-    char *string = Tcl_GetString(obj);
-
-    if (!strcmp(string, "tail")) {
-	if (!(flags & CFO_NOT_TAIL)) {
-	    (*columnPtr) = tree->columnTail;
-	    return TCL_OK;
-	}
-	FormatResult(tree->interp, "can't specify \"tail\" for this command");
-	return TCL_ERROR;
-    }
-
-    while (walk != NULL) {
-	if ((walk->tag != NULL) && !strcmp(walk->tag, string)) {
-	    (*columnPtr) = (TreeColumn) walk;
-	    return TCL_OK;
-	}
-	walk = walk->next;
-    }
-    FormatResult(tree->interp, "column with tag \"%s\" doesn't exist",
-	    string);
-    return TCL_ERROR;
+    q->tree = tree;
+    q->visible = -1;
+    q->states[0] = q->states[1] = q->states[2] = 0;
+    q->exprOK = FALSE;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * IndexFromList --
+ * Qualifiers_Scan --
  *
- *	Utility wrapper around Tcl_GetIndexFromObj().
+ *	Helper routine for TreeItem_FromObj.
  *
  * Results:
- *	The result of Tcl_GetIndexFromObj() or -1.
+ *	TCL_OK or TCL_ERROR.
  *
  * Side effects:
  *	None.
@@ -528,42 +521,166 @@ Tree_FindColumnByTag(
  */
 
 static int
-IndexFromList(
-    int listIndex,		/* Index of objv[] to pass to
-				 * Tcl_GetIndexFromObj */
+Qualifiers_Scan(
+    Qualifiers *q,		/* Must call Qualifiers_Init first,
+				 * and Qualifiers_Free if result is TCL_OK. */
     int objc,			/* Number of arguments. */
-    Tcl_Obj **objv,		/* Arguments. */
-    CONST char **indexNames	/* NULL-terminated list of names. */
+    Tcl_Obj **objv,		/* Argument values. */
+    int startIndex,		/* First objv[] index to look at. */
+    int *argsUsed		/* Out: number of objv[] used. */
     )
 {
-    Tcl_Obj *elemPtr;
-    int index;
+    TreeCtrl *tree = q->tree;
+    Tcl_Interp *interp = tree->interp;
+    int qual, j = startIndex;
 
-    if (listIndex >= objc)
-	return -1;
-    elemPtr = objv[listIndex];
-    if (Tcl_GetIndexFromObj(NULL, elemPtr, indexNames, NULL, 0, &index)
-	    != TCL_OK)
-	return -1;
-    return index;
+    static CONST char *qualifiers[] = {
+	"state", "tag", "visible", "!visible", NULL
+    };
+    enum qualEnum {
+	QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_VISIBLE
+    };
+    /* Number of arguments used by qualifiers[]. */
+    static int qualArgs[] = {
+	2, 2, 1, 1
+    };
+
+    *argsUsed = 0;
+
+    for (; j < objc; ) {
+	if (Tcl_GetIndexFromObj(NULL, objv[j], qualifiers, NULL, 0,
+		&qual) != TCL_OK)
+	    break;
+	if (objc - j < qualArgs[qual]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(objv[j]), "\" qualifier", NULL);
+	    goto errorExit;
+	}
+	switch ((enum qualEnum) qual) {
+	    case QUAL_STATE:
+	    {
+/*		if (Tree_StateFromListObj(tree, objv[j + 1], q->states,
+			SFO_NOT_TOGGLE) != TCL_OK)
+		    goto errorExit;*/
+		break;
+	    }
+	    case QUAL_TAG:
+	    {
+		if (q->exprOK)
+		    TagExpr_Free(&q->expr);
+		if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
+		    return TCL_ERROR;
+		q->exprOK = TRUE;
+		break;
+	    }
+	    case QUAL_VISIBLE:
+	    {
+		q->visible = 1;
+		break;
+	    }
+	    case QUAL_NOT_VISIBLE:
+	    {
+		q->visible = 0;
+		break;
+	    }
+	}
+	*argsUsed += qualArgs[qual];
+	j += qualArgs[qual];
+    }
+    return TCL_OK;
+errorExit:
+    if (q->exprOK)
+	TagExpr_Free(&q->expr);
+    return TCL_ERROR;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeColumn_FromObj --
+ * Qualifies --
  *
- *	Convert a Tcl_Obj column description to a column.
+ *	Helper routine for TreeItem_FromObj.
+ *
+ * Results:
+ *	Returns TRUE if the item meets the given criteria.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Qualifies(
+    Qualifiers *q,		/* Qualifiers to check. */
+    Column *column		/* The column to test. May be NULL. */
+    )
+{
+    /* Note: if the column is NULL it is a "match" because we have run
+     * out of columns to check. */
+    if (column == NULL)
+	return 1;
+    if ((q->visible == 1) && !column->visible)
+	return 0;
+    else if ((q->visible == 0) && column->visible)
+	return 0;
+    if (q->states[STATE_OP_OFF] & column->state)
+	return 0;
+    if ((q->states[STATE_OP_ON] & column->state) != q->states[STATE_OP_ON])
+	return 0;
+    if (q->exprOK && !TagExpr_Eval(&q->expr, column->tagInfo))
+	return 0;
+    return 1;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Qualifiers_Free --
+ *
+ *	Helper routine for TreeItem_FromObj.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+Qualifiers_Free(
+    Qualifiers *q		/* Out: Initialized qualifiers. */
+    )
+{
+    if (q->exprOK)
+	TagExpr_Free(&q->expr);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumnList_FromObj --
+ *
+ *	Parse a Tcl_Obj column description to get a list of columns.
  *
  * ID MODIFIERS
- * TAG MODIFIERS
- * all
- * first ?visible? MODIFIERS
- * end|last ?visible? MODIFIERS
- * order N ?visible? MODIFIERS
+ * TAG QUALIFIERS MODIFIERS
+ * all QUALIFIERS
+ * first QUALIFIERS MODIFIERS
+ * end|last QUALIFIERS MODIFIERS
+ * order N QUALIFIERS MODIFIERS
+ *
  * MODIFIERS:
- * next ?visible?
- * prev ?visible?
+ * next QUALIFIERS
+ * prev QUALIFIERS
+ *
+ * QUALIFIERS:
+ * state stateList
+ * tag tagExpr
+ * visible
+ * !visible
  *
  * Results:
  *	A standard Tcl result.
@@ -575,10 +692,12 @@ IndexFromList(
  */
 
 int
-TreeColumn_FromObj(
+TreeColumnList_FromObj(
     TreeCtrl *tree,		/* Widget info. */
     Tcl_Obj *objPtr,		/* Column description. */
-    TreeColumn *columnPtr,	/* Returned column. */
+    TreeColumnList *columns,	/* Uninitialized list. Caller must free
+				 * it with TreeColumnList_Free unless the
+				 * result of this function is TCL_ERROR. */
     int flags			/* CFO_xxx flags. */
     )
 {
@@ -587,6 +706,8 @@ TreeColumn_FromObj(
     int index, listIndex;
     Tcl_Obj **objv, *elemPtr;
     Column *column = NULL;
+    Qualifiers q;
+
     static CONST char *indexName[] = {
 	"all", "end", "first", "last", "order", "tail", "tree", (char *) NULL
     };
@@ -594,15 +715,32 @@ TreeColumn_FromObj(
 	INDEX_ALL, INDEX_END, INDEX_FIRST, INDEX_LAST, INDEX_ORDER, INDEX_TAIL,
 	INDEX_TREE
     } ;
+    /* Number of arguments used by indexName[]. */
+    static int indexArgs[] = {
+	1, 1, 1, 1, 2, 1, 1
+    };
+    /* Boolean: can indexName[] be followed by 1 or more qualifiers. */
+    static int indexQual[] = {
+	1, 0, 1, 1, 1, 0, 0
+    };
+
     static CONST char *modifiers[] = {
-	"next", "prev", "visible", (char *) NULL
+	"next", "prev", (char *) NULL
     };
     enum modEnum {
-	TMOD_NEXT, TMOD_PREV, TMOD_VISIBLE
+	TMOD_NEXT, TMOD_PREV
     };
+    /* Number of arguments used by modifiers[]. */
     static int modArgs[] = {
-	1, 1, 1
+	1, 1
     };
+    /* Boolean: can modifiers[] be followed by 1 or more qualifiers. */
+    static int modQual[] = {
+	1, 1
+    };
+
+    TreeColumnList_Init(tree, columns, 0);
+    Qualifiers_Init(tree, &q);
 
     if (Tcl_ListObjGetElements(NULL, objPtr, &objc, &objv) != TCL_OK)
 	goto badDesc;
@@ -610,85 +748,76 @@ TreeColumn_FromObj(
 	goto badDesc;
 
     listIndex = 0;
-    elemPtr = objv[listIndex++];
+    elemPtr = objv[listIndex];
     if (Tcl_GetIndexFromObj(NULL, elemPtr, indexName, NULL, 0, &index)
 	    == TCL_OK) {
+	int qualArgsTotal = 0;
+
+	if (objc - listIndex < indexArgs[index]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(elemPtr), "\" keyword", NULL);
+	    goto errorExit;
+	}
+	if (indexQual[index]) {
+	    if (Qualifiers_Scan(&q, objc, objv, listIndex + indexArgs[index],
+		    &qualArgsTotal) != TCL_OK) {
+		goto errorExit;
+	    }
+	}
+
 	switch ((enum indexEnum) index) {
 	    case INDEX_ALL:
 	    {
-		if (flags & CFO_NOT_ALL) {
-		    FormatResult(interp,
-			    "can't specify \"all\" for this command");
-		    return TCL_ERROR;
+		if (qualArgsTotal) {
+		    column = (Column *) tree->columns;
+		    while (column != NULL) {
+			if (Qualifies(&q, column)) {
+			    TreeColumnList_Append(columns, (TreeColumn) column);
+			}
+			column = column->next;
+		    }
+		    if (Qualifies(&q, (Column *) tree->columnTail)) {
+			TreeColumnList_Append(columns, tree->columnTail);
+		    }
+		    column = NULL;
+		} else {
+		    column = (Column *) COLUMN_ALL;
 		}
-		if (objc > 1)
-		    goto badDesc;
-		(*columnPtr) = COLUMN_ALL;
-		return TCL_OK;
+		break;
 	    }
 	    case INDEX_FIRST:
 	    {
 		column = (Column *) tree->columns;
-		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == TMOD_VISIBLE) {
-		    while (column && !column->visible)
-			column = column->next;
-		    listIndex++;
-		}
+		while (!Qualifies(&q, column))
+		    column = column->next;
 		break;
 	    }
 	    case INDEX_END:
 	    case INDEX_LAST:
 	    {
-		column = (Column *) tree->columns;
-		if (IndexFromList(listIndex, objc, objv,
-			    modifiers) == TMOD_VISIBLE) {
-		    Column *visible = NULL;
-		    while (column) {
-			if (column->visible)
-			    visible = column;
-			column = column->next;
-		    }
-		    column = visible;
-		    listIndex++;
-		} else if (column) {
-		    while (column->next)
-			column = column->next;
+		column = (Column *) tree->columnLast;
+		while (!Qualifies(&q, column)) {
+		    column = column->prev;
 		}
 		break;
 	    }
 	    case INDEX_ORDER:
 	    {
-		int index = 0, order, visible = FALSE;
+		int order;
 
-		if (objc < 2)
-		    goto badDesc;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex++], &order) != TCL_OK)
-		    goto badDesc;
-		if (IndexFromList(listIndex, objc, objv, modifiers)
-			    == TMOD_VISIBLE) {
-		    visible = TRUE;
-		    listIndex++;
-		}
+		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &order) != TCL_OK)
+		    goto errorExit;
 		column = (Column *) tree->columns;
-		while (column) {
-		    if (!visible && (column->index == order))
-			break;
-		    if (visible && column->visible && (index == order))
-			break;
-		    if (!visible || column->visible)
-			index++;
+		while (column != NULL) {
+		    if (Qualifies(&q, column))
+			if (order-- <= 0)
+			    break;
 		    column = column->next;
 		}
 		break;
 	    }
 	    case INDEX_TAIL:
 	    {
-		if (flags & CFO_NOT_TAIL) {
-		    FormatResult(tree->interp,
-			    "can't specify \"tail\" for this command");
-		    return TCL_ERROR;
-		}
 		column = (Column *) tree->columnTail;
 		break;
 	    }
@@ -698,6 +827,28 @@ TreeColumn_FromObj(
 		break;
 	    }
 	}
+	/* If 1 column, use it and clear the list. */
+	if (TreeColumnList_Count(columns) == 1) {
+	    column = (Column *) TreeColumnList_Nth(columns, 0);
+	    columns->count = 0;
+
+	}
+
+	/* If "all" but only tail column exists, use it. */
+	if ((column == (Column *) COLUMN_ALL) && (tree->columns == NULL) &&
+		!(flags & CFO_NOT_TAIL))
+	    column = (Column *) tree->columnTail;
+
+	/* If > 1 column, no modifiers may follow. */
+	if ((TreeColumnList_Count(columns) > 1) || (column == (Column *) COLUMN_ALL)) {
+	    if (listIndex + indexArgs[index] + qualArgsTotal < objc) {
+		FormatResult(interp,
+		    "unexpected arguments after \"%s\" keyword",
+		    indexName[index]);
+		goto errorExit;
+	    }
+	}
+	listIndex += indexArgs[index] + qualArgsTotal;
     } else {
 	int gotId = FALSE, id = -1;
 
@@ -721,118 +872,357 @@ TreeColumn_FromObj(
 		    break;
 		column = column->next;
 	    }
+	    listIndex++;
 	} else {
-	    char *string = Tcl_GetString(elemPtr);
+	    TagExpr expr;
+	    int qualArgsTotal = 0;
+
+	    if (objc > 1) {
+		if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
+			&qualArgsTotal) != TCL_OK) {
+		    goto errorExit;
+		}
+	    }
+	    if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
+		goto errorExit;
 	    column = (Column *) tree->columns;
-	    while (column) {
-		if ((column->tag != NULL) && !strcmp(column->tag, string)) {
-		    break;
+	    while (column != NULL) {
+		if (TagExpr_Eval(&expr, column->tagInfo) &&
+			Qualifies(&q, column)) {
+		    TreeColumnList_Append(columns, (TreeColumn) column);
 		}
 		column = column->next;
 	    }
+	    TagExpr_Free(&expr);
+	    column = NULL;
+
+	    /* If 1 column, use it and clear the list. */
+	    if (TreeColumnList_Count(columns) == 1) {
+		column = (Column *) TreeColumnList_Nth(columns, 0);
+		columns->count = 0;
+
+	    }
+
+	    /* If > 1 column, no modifiers may follow. */
+	    if (TreeColumnList_Count(columns) > 1) {
+		if (listIndex + 1 + qualArgsTotal < objc) {
+		    FormatResult(interp,
+			"unexpected arguments after \"%s\"",
+			Tcl_GetString(elemPtr));
+		    goto errorExit;
+		}
+	    }
+
+	    listIndex += 1 + qualArgsTotal;
 	}
     }
 
     /* This means a valid specification was given, but there is no such column */
-    if (column == NULL) {
+    if ((TreeColumnList_Count(columns) == 0) && (column == NULL)) {
 	if (flags & CFO_NOT_NULL)
-	    goto noColumn;
-	(*columnPtr) = NULL;
-	return TCL_OK;
+	    goto notNull;
+	/* Empty list returned */
+	goto goodExit;
     }
 
     for (; listIndex < objc; /* nothing */) {
-	int nextIsVisible = FALSE;
+	int qualArgsTotal = 0;
 
 	elemPtr = objv[listIndex];
 	if (Tcl_GetIndexFromObj(interp, elemPtr, modifiers, "modifier", 0,
-		    &index) != TCL_OK)
-	    return TCL_ERROR;
-	if (objc - listIndex < modArgs[index])
-	    goto badDesc;
-	if (IndexFromList(listIndex + modArgs[index], objc, objv,
-		    modifiers) == TMOD_VISIBLE)
-	    nextIsVisible = TRUE;
+		    &index) != TCL_OK) {
+	    goto errorExit;
+	}
+	if (objc - listIndex < modArgs[index]) {
+	    Tcl_AppendResult(interp, "missing arguments to \"",
+		    Tcl_GetString(elemPtr), "\" modifier", NULL);
+	    goto errorExit;
+	}
+	if (modQual[index]) {
+	    Qualifiers_Free(&q);
+	    Qualifiers_Init(tree, &q);
+	    if (Qualifiers_Scan(&q, objc, objv, listIndex + modArgs[index],
+		    &qualArgsTotal) != TCL_OK) {
+		goto errorExit;
+	    }
+	}
 	switch ((enum modEnum) index) {
 	    case TMOD_NEXT:
 	    {
-		int isTail = column == (Column *) tree->columnTail;
+		int isTail = IS_TAIL(column);
 		if (isTail) {
 		    column = NULL;
 		    break;
 		}
 		column = column->next;
-		if (nextIsVisible) {
-		    while (column && !column->visible)
-			column = column->next;
-		}
-		if (column == NULL)
+		while (!Qualifies(&q, column))
+		    column = column->next;
+		if (column == NULL) {
 		    column = (Column *) tree->columnTail;
+		    if (!Qualifies(&q, column))
+			column = NULL;
+		}
 		break;
 	    }
 	    case TMOD_PREV:
 	    {
-		Column *walk = (Column *) tree->columns;
-		int isTail = column == (Column *) tree->columnTail;
-		if (column == (Column *) tree->columns) {
-		    column = NULL;
+		int isTail = IS_TAIL(column);
+		if (isTail) {
+		    column = (Column *) tree->columnLast;
 		    break;
 		}
-		if (isTail && !tree->columnCount) {
-		    column = NULL;
-		    break;
-		}
-		if (nextIsVisible) {
-		    Column *visible = NULL;
-		    while (1) {
-			if (walk->visible)
-			    visible = walk;
-			walk = walk->next;
-			if (walk == (isTail ? NULL : column))
-			    break;
-		    }
-		    column = visible;
-		} else {
-		    while (walk->next != (isTail ? NULL : column))
-			walk = walk->next;
-		    column = walk;
-		}
+		column = column->prev;
+		while (!Qualifies(&q, column))
+		    column = column->prev;
 		break;
 	    }
-	    case TMOD_VISIBLE:
-	    {
-		goto badDesc;
+	}
+	if ((TreeColumnList_Count(columns) == 0) && (column == NULL)) {
+	    if (flags & CFO_NOT_NULL)
+		goto notNull;
+	    /* Empty list returned. */
+	    goto goodExit;
+	}
+	listIndex += modArgs[index] + qualArgsTotal;
+    }
+    if ((flags & CFO_NOT_MANY) && ((column == (Column *) COLUMN_ALL) ||
+	    (TreeColumnList_Count(columns) > 1))) {
+	FormatResult(interp, "can't specify > 1 column for this command");
+	goto errorExit;
+    }
+    if ((flags & CFO_NOT_NULL) && (TreeColumnList_Count(columns) == 0) &&
+	    (column == NULL)) {
+notNull:
+	FormatResult(interp, "column \"%s\" doesn't exist", Tcl_GetString(objPtr));
+	goto errorExit;
+    }
+    if (TreeColumnList_Count(columns)) {
+	if (flags & (CFO_NOT_TAIL)) {
+	    int i;
+	    for (i = 0; i < TreeColumnList_Count(columns); i++) {
+		column = (Column *) TreeColumnList_Nth(columns, i);
+		if ((flags & CFO_NOT_TAIL) && IS_TAIL(column))
+		    goto notTail;
 	    }
 	}
-	if (column == NULL) {
-	    if (flags & CFO_NOT_NULL)
-		goto noColumn;
-	    (*columnPtr) = NULL;
-	    return TCL_OK;
+    } else if (column == (Column *) COLUMN_ALL) {
+	TreeColumnList_Append(columns, COLUMN_ALL);
+    } else {
+	if ((flags & CFO_NOT_TAIL) && IS_TAIL(column)) {
+notTail:
+	    FormatResult(interp, "can't specify \"tail\" for this command");
+	    goto errorExit;
 	}
-	listIndex += modArgs[index];
-	if (nextIsVisible)
-	    listIndex++;
+	TreeColumnList_Append(columns, (TreeColumn) column);
     }
-    if (column == (Column *) tree->columnTail) {
-	if (flags & CFO_NOT_TAIL) {
-	    FormatResult(tree->interp,
-		    "can't specify \"tail\" for this command");
-	    return TCL_ERROR;
-	}
-    }
-    (*columnPtr) = (TreeColumn) column;
+goodExit:
+    Qualifiers_Free(&q);
     return TCL_OK;
 
-    badDesc:
-    Tcl_AppendResult(interp, "bad column description \"", Tcl_GetString(objPtr),
-	    "\"", NULL);
-    return TCL_ERROR;
+badDesc:
+    FormatResult(interp, "bad column description \"%s\"", Tcl_GetString(objPtr));
+    goto errorExit;
 
-    noColumn:
-    Tcl_AppendResult(interp, "column \"", Tcl_GetString(objPtr),
-	    "\" doesn't exist", NULL);
+errorExit:
+    Qualifiers_Free(&q);
+    TreeColumnList_Free(columns);
     return TCL_ERROR;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_FromObj --
+ *
+ *	Parse a Tcl_Obj column description to get a single column.
+ *
+ * Results:
+ *	TCL_OK or TCL_ERROR.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_FromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *objPtr,		/* Object to parse to an item. */
+    TreeColumn *columnPtr,	/* Returned item. */
+    int flags			/* CFO_xxx flags */
+    )
+{
+    TreeColumnList columns;
+
+    if (TreeColumnList_FromObj(tree, objPtr, &columns, flags) != TCL_OK)
+	return TCL_ERROR;
+    /* May be NULL. */
+    (*columnPtr) = TreeColumnList_Nth(&columns, 0);
+    TreeColumnList_Free(&columns);
+    return TCL_OK;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_FirstAndLast --
+ *
+ *	Determine the order of two columns and swap them if needed.
+ *
+ * Results:
+ *	The return value is the number of items in the range between
+ *	first and last.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_FirstAndLast(
+    TreeColumn *first,		/* Column token. */
+    TreeColumn *last		/* Column token. */
+    )
+{
+    int indexFirst, indexLast, index;
+
+    indexFirst = TreeColumn_Index(*first);
+    indexLast = TreeColumn_Index(*last);
+    if (indexFirst > indexLast) {
+	TreeColumn column = *first;
+	*first = *last;
+	*last = column;
+
+	index = indexFirst;
+	indexFirst = indexLast;
+	indexLast = index;
+    }
+    return indexLast - indexFirst + 1;
+}
+
+typedef struct ColumnForEach ColumnForEach;
+struct ColumnForEach {
+    TreeCtrl *tree;
+    int error;
+    int all;
+    TreeColumn last;
+    TreeColumn current;
+    TreeColumnList *list;
+    int index;
+};
+
+#define COLUMN_FOR_EACH(column, columns, column2s, iter) \
+    for (column = ColumnForEach_Start(columns, column2s, iter); \
+	 column != NULL; \
+	 column = ColumnForEach_Next(iter))
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnForEach_Start --
+ *
+ *	Begin iterating over items. A command might accept two item
+ *	descriptions for a range of items, or a single item description
+ *	which may itself refer to multiple items. Either item
+ *	description could be ITEM_ALL.
+ *
+ * Results:
+ *	Returns the first item to iterate over. If an error occurs
+ *	then ColumnForEach.error is set to 1.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumn
+ColumnForEach_Start(
+    TreeColumnList *columns,	/* List of columns. */
+    TreeColumnList *column2s,	/* List of columns or NULL. */
+    ColumnForEach *iter		/* Returned info, pass to
+				   ColumnForEach_Next. */
+    )
+{
+    TreeCtrl *tree = columns->tree;
+    TreeColumn column, column2 = NULL;
+
+    column = TreeColumnList_Nth(columns, 0);
+    if (column2s)
+	column2 = TreeColumnList_Nth(column2s, 0);
+
+    iter->tree = tree;
+    iter->all = FALSE;
+    iter->error = 0;
+    iter->list = NULL;
+
+    if (column == COLUMN_ALL || column2 == COLUMN_ALL) {
+	iter->all = TRUE;
+	if (tree->columns == NULL)
+	    return iter->current = tree->columnTail;
+	return iter->current = tree->columns;
+    }
+
+    if (column2 != NULL) {
+	if (TreeColumn_FirstAndLast(&column, &column2) == 0) {
+	    iter->error = 1;
+	    return NULL;
+	}
+	iter->last = column2;
+	return iter->current = column;
+    }
+
+    iter->list = columns;
+    iter->index = 0;
+    return iter->current = column;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnForEach_Next --
+ *
+ *	Returns the next column to iterate over. Keep calling this until
+ *	the result is NULL.
+ *
+ * Results:
+ *	Returns the next column to iterate over or NULL.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumn
+ColumnForEach_Next(
+    ColumnForEach *iter		/* Initialized by ColumnForEach_Start. */
+    )
+{
+    TreeCtrl *tree = iter->tree;
+    TreeColumn next = TreeColumn_Next(iter->current);
+
+    if (iter->all) {
+	if (iter->current == tree->columnTail)
+	    return iter->current = NULL;
+	if (next == NULL)
+	    return iter->current = tree->columnTail;
+	return iter->current = next;
+    }
+
+    if (iter->list != NULL) {
+	if (iter->index >= TreeColumnList_Count(iter->list))
+	    return iter->current = NULL;
+	return iter->current = TreeColumnList_Nth(iter->list, ++iter->index);
+    }
+
+    if (iter->current == iter->last)
+	return iter->current = NULL;
+    if (next == NULL)
+	return iter->current = tree->columnTail;
+    return iter->current = next;
 }
 
 /*
@@ -921,6 +1311,30 @@ TreeColumn_Next(
     )
 {
     return (TreeColumn) ((Column *) column_)->next;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Prev --
+ *
+ *	Return the column to the left of the given one.
+ *
+ * Results:
+ *	Token for the previous column.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumn
+TreeColumn_Prev(
+    TreeColumn column_		/* Column token. */
+    )
+{
+    return (TreeColumn) ((Column *) column_)->prev;
 }
 
 /*
@@ -1138,8 +1552,6 @@ Column_Config(
 		    mask |= COLU_CONF_ARROWIMG;
 		if (column->border.obj != NULL)
 		    mask |= COLU_CONF_BG;
-		if ((column != (Column *) tree->columnTail) && (column->tag != NULL))
-		    mask |= COLU_CONF_TAG;
 		if (column->imageString != NULL)
 		    mask |= COLU_CONF_IMAGE;
 		if (column->itemBgObj != NULL)
@@ -1227,31 +1639,6 @@ Column_Config(
 		    column->itemBgColor = colors;
 		    column->itemBgCount = listObjc;
 		}
-	    }
-
-	    if ((mask & COLU_CONF_TAG) && (column->tag != NULL)) {
-		if (column == (Column *) tree->columnTail) {
-		    FormatResult(tree->interp,
-			    "can't change tag of tail column");
-		    continue;
-		}
-		if (!strcmp(column->tag, "tail")) {
-		    FormatResult(tree->interp, "column tag \"%s\" is not unique",
-			    column->tag);
-		    continue;
-		}
-		/* Verify -tag is unique */
-		walk = (Column *) tree->columns;
-		while (walk != NULL) {
-		    if ((walk != column) && (walk->tag != NULL) && !strcmp(walk->tag, column->tag)) {
-			FormatResult(tree->interp, "column tag \"%s\" is not unique",
-				column->tag);
-			break;
-		    }
-		    walk = walk->next;
-		}
-		if (walk != NULL)
-		    continue;
 	    }
 
 	    /*
@@ -2487,6 +2874,188 @@ TreeColumn_Index(
 /*
  *----------------------------------------------------------------------
  *
+ * ColumnTagCmd --
+ *
+ *	This procedure is invoked to process the [column tag] widget
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ColumnTagCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
+{
+    TreeCtrl *tree = (TreeCtrl *) clientData;
+    static CONST char *commandNames[] = {
+	"add", "expr", "names", "remove", (char *) NULL
+    };
+    enum {
+	COMMAND_ADD, COMMAND_EXPR, COMMAND_NAMES, COMMAND_REMOVE
+    };
+    int index;
+    ColumnForEach iter;
+    TreeColumnList columns;
+    TreeColumn _column;
+    Column *column;
+    int result = TCL_OK;
+
+    if (objc < 4)
+    {
+	Tcl_WrongNumArgs(interp, 3, objv, "command ?arg arg ...?");
+	return TCL_ERROR;
+    }
+
+    if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
+	&index) != TCL_OK)
+    {
+	return TCL_ERROR;
+    }
+
+    switch (index)
+    {
+	/* T column tag add C tagList */
+	case COMMAND_ADD:
+	{
+	    int i, numTags;
+	    Tcl_Obj **listObjv;
+	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "column tagList");
+		return TCL_ERROR;
+	    }
+	    if (TreeColumnList_FromObj(tree, objv[4], &columns, 0) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    STATIC_ALLOC(tags, Tk_Uid, numTags);
+	    for (i = 0; i < numTags; i++) {
+		tags[i] = Tk_GetUid(Tcl_GetString(listObjv[i]));
+	    }
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		column = (Column *) _column;
+		column->tagInfo = TagInfo_Add(column->tagInfo, tags, numTags);
+	    }
+	    STATIC_FREE(tags, Tk_Uid, numTags);
+	    break;
+	}
+
+	/* T column tag expr C tagExpr */
+	case COMMAND_EXPR:
+	{
+	    TagExpr expr;
+	    int ok = TRUE;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "column tagExpr");
+		return TCL_ERROR;
+	    }
+	    if (TreeColumnList_FromObj(tree, objv[4], &columns, 0) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (TagExpr_Init(tree, objv[5], &expr) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		column = (Column *) _column;
+		if (!TagExpr_Eval(&expr, column->tagInfo)) {
+		    ok = FALSE;
+		    break;
+		}
+	    }
+	    TagExpr_Free(&expr);
+	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(ok));
+	    break;
+	}
+
+	/* T column tag names C */
+	case COMMAND_NAMES:
+	{
+	    Tcl_Obj *listObj;
+	    Tk_Uid *tags = NULL;
+	    int i, tagSpace, numTags = 0;
+
+	    if (objc != 5)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "column");
+		return TCL_ERROR;
+	    }
+	    if (TreeColumnList_FromObj(tree, objv[4], &columns, 0) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		column = (Column *) _column;
+		tags = TagInfo_Names(column->tagInfo, tags, &numTags, &tagSpace);
+	    }
+	    if (numTags) {
+		listObj = Tcl_NewListObj(0, NULL);
+		for (i = 0; i < numTags; i++) {
+		    Tcl_ListObjAppendElement(NULL, listObj,
+			    Tcl_NewStringObj((char *) tags[i], -1));
+		}
+		Tcl_SetObjResult(interp, listObj);
+		ckfree((char *) tags);
+	    }
+	    break;
+	}
+
+	/* T column tag remove C tagList */
+	case COMMAND_REMOVE:
+	{
+	    int i, numTags;
+	    Tcl_Obj **listObjv;
+	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "column tagList");
+		return TCL_ERROR;
+	    }
+	    if (TreeColumnList_FromObj(tree, objv[4], &columns, 0) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    STATIC_ALLOC(tags, Tk_Uid, numTags);
+	    for (i = 0; i < numTags; i++) {
+		tags[i] = Tk_GetUid(Tcl_GetString(listObjv[i]));
+	    }
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		column = (Column *) _column;
+		column->tagInfo = TagInfo_Remove(column->tagInfo, tags, numTags);
+	    }
+	    STATIC_FREE(tags, Tk_Uid, numTags);
+	    break;
+	}
+    }
+
+    TreeColumnList_Free(&columns);
+    return result;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * TreeColumnCmd --
  *
  *	This procedure is invoked to process the [column] widget
@@ -2514,15 +3083,20 @@ TreeColumnCmd(
     static CONST char *commandNames[] = {
 	"bbox", "cget", "compare", "configure", "count", "create", "delete",
 	"dragcget", "dragconfigure", "id", "index", "list", "move",
-	"neededwidth", "order", "width", (char *) NULL
+	"neededwidth", "order", "tag", "width", (char *) NULL
     };
     enum {
 	COMMAND_BBOX, COMMAND_CGET, COMMAND_COMPARE, COMMAND_CONFIGURE,
 	COMMAND_COUNT, COMMAND_CREATE, COMMAND_DELETE, COMMAND_DRAGCGET,
 	COMMAND_DRAGCONF, COMMAND_ID, COMMAND_INDEX, COMMAND_LIST,
-	COMMAND_MOVE, COMMAND_NEEDEDWIDTH, COMMAND_ORDER, COMMAND_WIDTH
+	COMMAND_MOVE, COMMAND_NEEDEDWIDTH, COMMAND_ORDER, COMMAND_TAG,
+	COMMAND_WIDTH
     };
     int index;
+    TreeColumnList columns;
+    TreeColumn _column;
+    Column *column;
+    ColumnForEach iter;
 
     if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
@@ -2546,7 +3120,7 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-			CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
 	    column = (Column *) _column;
 	    if (!tree->showHeader || !column->visible)
@@ -2559,10 +3133,11 @@ TreeColumnCmd(
 		    x += walk->useWidth;
 		walk = walk->next;
 	    }
+	    x -= tree->xOrigin; /* canvas to window */
 	    FormatResult(interp, "%d %d %d %d",
-		    x - tree->xOrigin,
+		    x,
 		    tree->inset,
-		    x - tree->xOrigin + column->useWidth,
+		    x + column->useWidth,
 		    tree->inset + Tree_HeaderHeight(tree));
 	    break;
 	}
@@ -2577,7 +3152,7 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &column,
-			CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+			CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    resultObjPtr = Tk_GetOptionValue(interp, (char *) column,
 		    ((Column *) column)->optionTable, objv[4], tree->tkwin);
@@ -2599,13 +3174,13 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &column1,
-		    CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+		    CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    if (Tcl_GetIndexFromObj(interp, objv[4], opName,
 		    "comparison operator", 0, &op) != TCL_OK)
 		return TCL_ERROR;
 	    if (TreeColumn_FromObj(tree, objv[5], &column2,
-		    CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+		    CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    index1 = TreeColumn_Index(column1);
 	    index2 = TreeColumn_Index(column2);
@@ -2623,51 +3198,40 @@ TreeColumnCmd(
 
 	case COMMAND_CONFIGURE:
 	{
-	    TreeColumn _column;
-	    Column *column;
-
 	    if (objc < 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "column ?option? ?value?");
-		return TCL_ERROR;
-	    }
-	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-		    CFO_NOT_NULL) != TCL_OK)
-		return TCL_ERROR;
-	    column = (Column *) _column;
-	    if (objc <= 5 && (column == (Column *) COLUMN_ALL)) {
-		FormatResult(interp, "can't specify \"all\" without an option-value pair");
+		Tcl_WrongNumArgs(interp, 3, objv, "column ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
 	    }
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
+		if (TreeColumn_FromObj(tree, objv[3], &_column,
+			CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
+		    return TCL_ERROR;
+		column = (Column *) _column;
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) column,
 			column->optionTable,
 			(objc == 4) ? (Tcl_Obj *) NULL : objv[4],
 			tree->tkwin);
 		if (resultObjPtr == NULL)
-		    return TCL_ERROR;
+		    goto errorExit;
 		Tcl_SetObjResult(interp, resultObjPtr);
 		break;
 	    }
-	    if (column == (Column *) COLUMN_ALL) {
-		column = (Column *) tree->columns;
-		while (column != NULL) {
-		    if (Column_Config(column, objc - 4, objv + 4, FALSE) != TCL_OK)
-			return TCL_ERROR;
-		    column = column->next;
-		}
-		if (Column_Config((Column *) tree->columnTail, objc - 4, objv + 4, FALSE) != TCL_OK)
-		    return TCL_ERROR;
-	    } else
-		return Column_Config(column, objc - 4, objv + 4, FALSE);
+	    if (TreeColumnList_FromObj(tree, objv[3], &columns, CFO_NOT_NULL) != TCL_OK)
+		return TCL_ERROR;
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		if (Column_Config((Column *) _column, objc - 4, objv + 4, FALSE) != TCL_OK)
+		    goto errorExit;
+	    }
+	    TreeColumnList_Free(&columns);
 	    break;
 	}
 
 	case COMMAND_CREATE:
 	{
-	    Column *walk = (Column *) tree->columns;
-	    Column *column;
+	    Column *column, *last = (Column *) tree->columnLast;
 
+	    /* FIXME: -count N -tags $tags */
 	    column = Column_Alloc(tree);
 	    if (Column_Config(column, objc - 3, objv + 3, TRUE) != TCL_OK)
 	    {
@@ -2675,27 +3239,27 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 
-	    if (walk == NULL) {
+	    if (tree->columns == NULL) {
 		column->index = 0;
 		tree->columns = (TreeColumn) column;
 	    } else {
-		while (walk->next != NULL) {
-		    walk = walk->next;
-		}
-		walk->next = column;
-		column->index = walk->index + 1;
+		last->next = column;
+		column->prev = last;
+		column->index = last->index + 1;
 	    }
+	    tree->columnLast = (TreeColumn) column;
 	    ((Column *) tree->columnTail)->index++;
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    Tcl_SetObjResult(interp, TreeColumn_ToObj(tree, (TreeColumn) column));
 	    break;
 	}
 
+	/* T column delete first ?last? */
 	case COMMAND_DELETE:
 	{
 	    int firstIndex, lastIndex;
 	    TreeColumn _column;
-	    Column *column, *first, *last = NULL, *prev = NULL, *next = NULL;
+	    Column *column, *first, *last, *prev = NULL, *next = NULL;
 	    TreeItem item;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
@@ -2707,7 +3271,8 @@ TreeColumnCmd(
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
-	    first = last = (Column *) _column;
+	    first = (Column *) _column;
+	    last = first;
 	    if (objc == 5) {
 		if (TreeColumn_FromObj(tree, objv[4], &_column,
 			    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
@@ -2720,12 +3285,11 @@ TreeColumnCmd(
 		    last == (Column *) COLUMN_ALL) {
 		column = (Column *) tree->columns;
 		while (column != NULL) {
-		    Column *next = column->next;
-		    Column_Free(column);
-		    column = next;
+		    column = Column_Free(column);
 		}
 		((Column *) tree->columnTail)->index = 0;
 		tree->columns = NULL;
+		tree->columnLast = NULL;
 
 		/* Delete all TreeItemColumns */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -2752,20 +3316,19 @@ TreeColumnCmd(
 	    firstIndex = first->index;
 	    lastIndex = last->index;
 
-	    column = (Column *) tree->columns;
+	    prev = first->prev;
+	    next = last->next;
+
+	    column = first;
 	    while (column != NULL) {
-		next = column->next;
-		if (next == first)
-		    prev = column;
-		else if (column->index >= firstIndex) {
-		    if (column == (Column *) tree->columnTree)
-			tree->columnTree = NULL;
-		    if (column == (Column *) tree->columnDrag.column)
-			tree->columnDrag.column = NULL;
-		    if (column == (Column *) tree->columnDrag.indColumn)
-			tree->columnDrag.indColumn = NULL;
-		    Column_Free(column);
-		}
+		Column *next;
+		if (column == (Column *) tree->columnTree)
+		    tree->columnTree = NULL;
+		if (column == (Column *) tree->columnDrag.column)
+		    tree->columnDrag.column = NULL;
+		if (column == (Column *) tree->columnDrag.indColumn)
+		    tree->columnDrag.indColumn = NULL;
+		next = Column_Free(column);
 		if (column == last)
 		    break;
 		column = next;
@@ -2775,6 +3338,10 @@ TreeColumnCmd(
 		prev->next = next;
 	    else
 		tree->columns = (TreeColumn) next;
+	    if (next == NULL)
+		tree->columnLast = (TreeColumn) prev;
+	    else
+		next->prev = prev;
 
 	    /* Delete all TreeItemColumns in the range */
 	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -2873,7 +3440,7 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-			CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+			CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    column = (Column *) _column;
 	    /* Update layout if needed */
@@ -2885,17 +3452,21 @@ TreeColumnCmd(
 	case COMMAND_ID:
 	case COMMAND_INDEX:
 	{
-	    TreeColumn column;
+	    Tcl_Obj *listObj;
 
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[3], &column,
-		CFO_NOT_ALL) != TCL_OK)
+	    if (TreeColumnList_FromObj(tree, objv[3], &columns, 0) != TCL_OK)
 		return TCL_ERROR;
-	    if (column != NULL)
-		Tcl_SetObjResult(interp, TreeColumn_ToObj(tree, column));
+	    listObj = Tcl_NewListObj(0, NULL);
+	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
+		Tcl_ListObjAppendElement(interp, listObj,
+			TreeColumn_ToObj(tree, _column));
+	    }
+	    TreeColumnList_Free(&columns);
+	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
 
@@ -2936,7 +3507,7 @@ TreeColumnCmd(
 	case COMMAND_MOVE:
 	{
 	    TreeColumn _move, _before;
-	    Column *move, *before;
+	    Column *move, *before, *prev, *next, *last;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 	    TreeItem item;
@@ -2947,11 +3518,11 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_move,
-		    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		return TCL_ERROR;
 	    move = (Column *) _move;
 	    if (TreeColumn_FromObj(tree, objv[4], &_before,
-		    CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+		    CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    before = (Column *) _before;
 	    if (move == before)
@@ -3029,46 +3600,44 @@ TreeColumnCmd(
 		}
 	    }
 
-	    {
-		Column *prevM = NULL, *prevB = NULL;
-		Column *last = NULL, *prev, *walk;
-		int index;
+	    /* Unlink. */
+	    prev = move->prev;
+	    next = move->next;
+	    if (prev == NULL)
+		tree->columns = (TreeColumn) next;
+	    else
+		prev->next = next;
+	    if (next == NULL)
+		tree->columnLast = (TreeColumn) prev;
+	    else
+		next->prev = prev;
 
-		prev = NULL;
-		walk = (Column *) tree->columns;
-		while (walk != NULL) {
-		    if (walk == move)
-			prevM = prev;
-		    if (walk == before)
-			prevB = prev;
-		    prev = walk;
-		    if (walk->next == NULL)
-			last = walk;
-		    walk = walk->next;
-		}
-		if (prevM == NULL)
-		    tree->columns = (TreeColumn) move->next;
+	    /* Link. */
+	    if (before == (Column *) tree->columnTail) {
+		last = (Column *) tree->columnLast;
+		last->next = move;
+		move->prev = last;
+		move->next = NULL;
+		tree->columnLast = (TreeColumn) move;
+	    } else {
+		prev = before->prev;
+		if (prev == NULL)
+		    tree->columns = (TreeColumn) move;
 		else
-		    prevM->next = move->next;
-		if (before == (Column *) tree->columnTail) {
-		    last->next = move;
-		    move->next = NULL;
-		} else {
-		    if (prevB == NULL)
-			tree->columns = (TreeColumn) move;
-		    else
-			prevB->next = move;
-		    move->next = before;
-		}
-
-		/* Renumber columns */
-		walk = (Column *) tree->columns;
-		index = 0;
-		while (walk != NULL) {
-		    walk->index = index++;
-		    walk = walk->next;
-		}
+		    prev->next = move;
+		before->prev = move;
+		move->prev = prev;
+		move->next = before;
 	    }
+
+	    /* Renumber columns */
+	    index = 0;
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+		column->index = index++;
+		column = column->next;
+	    }
+
 	    if (move->visible) {
 		/* Must update column widths because of expansion. */
 		/* Also update columnTreeLeft. */
@@ -3092,7 +3661,7 @@ TreeColumnCmd(
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-			CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+			CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    column = (Column *) _column;
 	    /* Update layout if needed */
@@ -3127,7 +3696,7 @@ TreeColumnCmd(
 		}
 	    }
 	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-		CFO_NOT_ALL | CFO_NOT_NULL) != TCL_OK)
+		CFO_NOT_MANY | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    column = (Column *) _column;
 	    if (visible) {
@@ -3147,9 +3716,18 @@ TreeColumnCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(index));
 	    break;
 	}
+
+	case COMMAND_TAG:
+	{
+	    return ColumnTagCmd(clientData, interp, objc, objv);
+	}
     }
 
     return TCL_OK;
+
+errorExit:
+    TreeColumnList_Free(&columns);
+    return TCL_ERROR;
 }
 
 /*
@@ -3519,8 +4097,8 @@ Tree_DrawHeader(
     (void) Tree_HeaderHeight(tree);
     (void) Tree_WidthOfColumns(tree);
 
-    minX = tree->inset;
-    maxX = Tk_Width(tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    maxX = Tree_ContentRight(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM)
 	pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
@@ -3554,6 +4132,27 @@ Tree_DrawHeader(
 		    x, y, width, height, column->borderWidth, TK_RELIEF_RAISED);
 	}
     }
+
+#ifdef ROW_LABEL
+    if (Tree_WidthOfRowLabels(tree) > 0) {
+	column = (Column *) tree->columnTail;
+	width = Tree_WidthOfRowLabels(tree);
+	height = tree->headerHeight;
+	if (tree->useTheme &&
+	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, 0, tree->inset, y, width, height) == TCL_OK)) {
+	} else {
+	    Tk_3DBorder border;
+	    border = PerStateBorder_ForState(tree, &column->border,
+		Column_MakeState(column), NULL);
+	    if (border == NULL)
+		border = tree->border;
+	    Tk_Fill3DRectangle(tkwin, pixmap, border,
+		    tree->inset, y, width, height,
+		    column->borderWidth, TK_RELIEF_RAISED);
+	}
+	column = (Column *) tree->columns;
+    }
+#endif
 
     {
 	Tk_Image image = NULL;
@@ -3612,8 +4211,8 @@ Tree_DrawHeader(
 
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
 	XCopyArea(tree->display, pixmap, drawable,
-		tree->copyGC, minX, y,
-		maxX - minX, tree->headerHeight,
+		tree->copyGC, tree->inset, y,
+		maxX - tree->inset, tree->headerHeight,
 		tree->inset, y);
 
 	Tk_FreePixmap(tree->display, pixmap);
@@ -3726,7 +4325,7 @@ Tree_LayoutColumns(
 	column = column->next;
     }
 
-    visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    visWidth = Tree_ContentWidth(tree);
     if (visWidth <= 0) return;
 
     /* Squeeze columns */
@@ -4030,8 +4629,6 @@ Tree_InitColumns(
     Column *column;
 
     column = Column_Alloc(tree);
-    column->tag = ckalloc(5);
-    strcpy(column->tag, "tail");
     column->id = -1;
     tree->columnTail = (TreeColumn) column;
     tree->nextColumnId = 0;
