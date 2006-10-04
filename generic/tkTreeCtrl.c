@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.65 2006/09/24 22:24:50 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.66 2006/10/04 03:25:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -246,6 +246,29 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-yscrollincrement", "yScrollIncrement", "ScrollIncrement",
      "0", -1, Tk_Offset(TreeCtrl, yScrollIncrement),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
+#ifdef ROW_LABEL
+    {TK_OPTION_BOOLEAN, "-rowlabelresize", "rowLabelResize",
+     "RowLabelResize", "1", -1, Tk_Offset(TreeCtrl, rowLabelResize),
+     0, (ClientData) NULL, 0},
+    {TK_OPTION_PIXELS, "-rowlabelwidth", "rowLabelWidth", "RowLabelWidth",
+     (char *) NULL, Tk_Offset(TreeCtrl, rowLabelWidthObj), Tk_Offset(TreeCtrl, rowLabelWidth),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
+    {TK_OPTION_PIXELS, "-minrowlabelwidth", "minRowLabelWidth", "RowLabelWidth",
+     (char *) NULL, Tk_Offset(TreeCtrl, minRowLabelWidthObj), Tk_Offset(TreeCtrl, minRowLabelWidth),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
+    {TK_OPTION_PIXELS, "-maxrowlabelwidth", "maxRowLabelWidth", "RowLabelWidth",
+     (char *) NULL, Tk_Offset(TreeCtrl, maxRowLabelWidthObj), Tk_Offset(TreeCtrl, maxRowLabelWidth),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
+    {TK_OPTION_BOOLEAN, "-showrowlabels", "showRowLabels",
+     "ShowRowLabels", "0", -1, Tk_Offset(TreeCtrl, showRowLabels),
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+    {TK_OPTION_STRING, "-rowlabelprefix", "rowLabelPrefix", "RowLabelPrefix",
+     "", -1, Tk_Offset(TreeCtrl, rowPrefix), 0, (ClientData) NULL, 0},
+    {TK_OPTION_PIXELS, "-rowproxy", "rowProxy", "RowProxy",
+     (char *) NULL, Tk_Offset(TreeCtrl, rowProxy.yObj),
+     Tk_Offset(TreeCtrl, rowProxy.y),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_PROXY},
+#endif /* ROW_LABEL */
     {TK_OPTION_END}
 };
 
@@ -380,9 +403,13 @@ TreeObjCmd(
     Tree_InitColumns(tree);
     TreeItem_Init(tree);
     TreeNotify_Init(tree);
+    (void) TreeStyle_Init(tree);
     TreeMarquee_Init(tree);
     TreeDragImage_Init(tree);
     TreeDInfo_Init(tree);
+#ifdef ROW_LABEL
+    Tree_InitRowLabels(tree);
+#endif
 
     Tk_CreateEventHandler(tree->tkwin,
 	    ExposureMask|StructureNotifyMask|FocusChangeMask|ActivateMask,
@@ -409,11 +436,11 @@ TreeObjCmd(
 
 #define W2Cx(x) ((x) + tree->xOrigin)
 #define C2Wx(x) ((x) - tree->xOrigin)
-#define C2Ox(x) ((x) - tree->inset)
+#define C2Ox(x) ((x) - Tree_ContentLeft(tree))
 
 #define W2Cy(y) ((y) + tree->yOrigin)
 #define C2Wy(y) ((y) - tree->yOrigin)
-#define C2Oy(y) ((y) - tree->inset - Tree_HeaderHeight(tree))
+#define C2Oy(y) ((y) - Tree_ContentTop(tree))
 
 /*
  *--------------------------------------------------------------
@@ -448,8 +475,12 @@ static int TreeWidgetCmd(
 	"debug", "depth", "dragimage",
 	"element", "expand", "identify", "index", "item",
 	"marquee", "notify", "numcolumns", "numitems", "orphans",
-	"range", "scan", "see", "selection", "state", "style",
-	"tag", "toggle", "xview", "yview", (char *) NULL
+	"range",
+#ifdef ROW_LABEL
+	"rowlabel",
+#endif
+	"scan", "see", "selection", "state", "style",
+	"toggle", "xview", "yview", (char *) NULL
     };
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
@@ -458,8 +489,11 @@ static int TreeWidgetCmd(
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
 	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS, COMMAND_ORPHANS, COMMAND_RANGE,
+#ifdef ROW_LABEL
+	COMMAND_ROWLABEL,
+#endif
 	COMMAND_SCAN, COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE,
-	COMMAND_STYLE, COMMAND_TAG, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
+	COMMAND_STYLE, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
     };
     Tcl_Obj *resultObjPtr;
     int index;
@@ -574,9 +608,8 @@ static int TreeWidgetCmd(
 		goto error;
 	    }
 	    FormatResult(interp, "%d %d %d %d",
-		    tree->inset, tree->inset + Tree_HeaderHeight(tree),
-		    Tk_Width(tree->tkwin) - tree->inset,
-		    Tk_Height(tree->tkwin) - tree->inset);
+		    Tree_ContentLeft(tree), Tree_ContentTop(tree),
+		    Tree_ContentRight(tree), Tree_ContentBottom(tree));
 	    break;
 	}
 
@@ -743,6 +776,34 @@ static int TreeWidgetCmd(
 		break;
 	    if ((y < tree->inset) || (y >= Tk_Height(tree->tkwin) - tree->inset))
 		break;
+
+#ifdef ROW_LABEL
+	    /* Point in row labels */
+	    if (x < Tree_ContentLeft(tree)) {
+		TreeRowLabel row;
+		int rx = x, ry = y, w, h;
+
+		/* What to call the dead space at top-left? */
+		if (y < Tree_ContentTop(tree)) {
+		    break;
+		}
+
+		row = Tree_RowLabelUnderPoint(tree, &rx, &ry, &w, &h, FALSE);
+		if (row == NULL)
+		    break;
+		sprintf(buf, "rowlabel %s%d", tree->rowPrefix,
+			TreeRowLabel_GetID(row));
+		TreeRowLabel_Identify(row, rx, ry, buf);
+		if (rx >= w - 4)
+		    strcpy(buf + strlen(buf), " right");
+		else if (ry < 4)
+		    strcpy(buf + strlen(buf), " top");
+		else if (ry >= h - 4)
+		    strcpy(buf + strlen(buf), " bottom");
+		Tcl_SetResult(interp, buf, TCL_VOLATILE);
+		break;
+	    }
+#endif /* ROW_LABEL */
 
 	    /* Point in header */
 	    if (y < tree->inset + Tree_HeaderHeight(tree)) {
@@ -935,7 +996,13 @@ static int TreeWidgetCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
-
+#ifdef ROW_LABEL
+	case COMMAND_ROWLABEL:
+	{
+	    result = TreeRowLabelCmd(clientData, interp, objc, objv);
+	    break;
+	}
+#endif
 	case COMMAND_SCAN:
 	{
 	    static CONST char *optionName[] = { "dragto", "mark",
@@ -991,15 +1058,14 @@ static int TreeWidgetCmd(
 	{
 	    TreeItem item;
 	    int x, y, w, h;
-	    int topInset = tree->inset + Tree_HeaderHeight(tree);
-	    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
-	    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+	    int visWidth = Tree_ContentWidth(tree);
+	    int visHeight = Tree_ContentHeight(tree);
 	    int xOrigin = tree->xOrigin;
 	    int yOrigin = tree->yOrigin;
-	    int minX = tree->inset;
-	    int minY = topInset;
-	    int maxX = minX + visWidth;
-	    int maxY = minY + visHeight;
+	    int minX = Tree_ContentLeft(tree);
+	    int minY = Tree_ContentTop(tree);
+	    int maxX = Tree_ContentRight(tree);
+	    int maxY = Tree_ContentBottom(tree);
 	    int index, offset;
 
 	    if (objc != 3) {
@@ -1067,12 +1133,6 @@ static int TreeWidgetCmd(
 	case COMMAND_STYLE:
 	{
 	    result = TreeStyleCmd(clientData, interp, objc, objv);
-	    break;
-	}
-
-	case COMMAND_TAG:
-	{
-	    result = TreeTagCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
@@ -1346,6 +1406,9 @@ badWrap:
 
     tree->itemPrefixLen = strlen(tree->itemPrefix);
     tree->columnPrefixLen = strlen(tree->columnPrefix);
+#ifdef ROW_LABEL
+    tree->rowPrefixLen = strlen(tree->rowPrefix);
+#endif
 
     Tk_SetWindowBackground(tree->tkwin,
 	    Tk_3DBorderColor(tree->border)->pixel);
@@ -1400,6 +1463,10 @@ badWrap:
     if (mask & TREE_CONF_PROXY) {
 	TreeColumnProxy_Undisplay(tree);
 	TreeColumnProxy_Display(tree);
+#ifdef ROW_LABEL
+	TreeRowLabelProxy_Undisplay(tree);
+	TreeRowLabelProxy_Display(tree);
+#endif
     }
 
     tree->useIndent = MAX(tree->indent, ButtonMaxWidth(tree));
@@ -1630,6 +1697,10 @@ TreeDestroy(
     }
     Tcl_DeleteHashTable(&tree->imageHash);
 
+#ifdef ROW_LABEL
+    /* Before TreeStyle_Free */
+    Tree_FreeRowLabels(tree);
+#endif
     TreeStyle_Free(tree);
 
     TreeDragImage_Free(tree->dragImage);
@@ -2840,7 +2911,7 @@ A_XviewCmd(
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
-	int visWidth = Tk_Width(tree->tkwin) - 2 * tree->inset;
+	int visWidth = Tree_ContentWidth(tree);
 	int totWidth = Tree_TotalWidth(tree);
 	int xIncr = tree->xScrollIncrement;
 
@@ -2875,15 +2946,15 @@ A_XviewCmd(
 		index = Increment_FindX(tree, offset);
 		break;
 	    case TK_SCROLL_PAGES:
-		offset = tree->inset + tree->xOrigin;
+		offset = Tree_ContentLeft(tree) + tree->xOrigin;
 		offset += (int) (count * visWidth * 0.9);
 		index = Increment_FindX(tree, offset);
 		if ((count > 0) && (index ==
-			Increment_FindX(tree, tree->inset + tree->xOrigin)))
+			Increment_FindX(tree, Tree_ContentLeft(tree) + tree->xOrigin)))
 		    index++;
 		break;
 	    case TK_SCROLL_UNITS:
-		offset = tree->inset + tree->xOrigin;
+		offset = Tree_ContentLeft(tree) + tree->xOrigin;
 		index = offset / xIncr;
 		index += count;
 		break;
@@ -2898,8 +2969,8 @@ A_XviewCmd(
 	    index = indexMax;
 
 	offset = Increment_ToOffsetX(tree, index);
-	if (offset - tree->inset != tree->xOrigin) {
-	    tree->xOrigin = offset - tree->inset;
+	if (offset - Tree_ContentLeft(tree) != tree->xOrigin) {
+	    tree->xOrigin = offset - Tree_ContentLeft(tree);
 	    Tree_EventuallyRedraw(tree);
 	}
     }
@@ -2946,8 +3017,7 @@ A_YviewCmd(
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
-	int topInset = tree->inset + Tree_HeaderHeight(tree);
-	int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+	int visHeight = Tree_ContentHeight(tree);
 	int totHeight = Tree_TotalHeight(tree);
 	int yIncr = tree->yScrollIncrement;
 
@@ -2982,15 +3052,15 @@ A_YviewCmd(
 		index = Increment_FindY(tree, offset);
 		break;
 	    case TK_SCROLL_PAGES:
-		offset = topInset + tree->yOrigin;
+		offset = Tree_ContentTop(tree) + tree->yOrigin;
 		offset += (int) (count * visHeight * 0.9);
 		index = Increment_FindY(tree, offset);
 		if ((count > 0) && (index ==
-			Increment_FindY(tree, topInset + tree->yOrigin)))
+			Increment_FindY(tree, Tree_ContentTop(tree) + tree->yOrigin)))
 		    index++;
 		break;
 	    case TK_SCROLL_UNITS:
-		offset = topInset + tree->yOrigin;
+		offset = Tree_ContentTop(tree) + tree->yOrigin;
 		index = offset / yIncr;
 		index += count;
 		break;
@@ -3005,8 +3075,8 @@ A_YviewCmd(
 	    index = indexMax;
 
 	offset = Increment_ToOffsetY(tree, index);
-	if (offset - topInset != tree->yOrigin) {
-	    tree->yOrigin = offset - topInset;
+	if (offset - Tree_ContentTop(tree) != tree->yOrigin) {
+	    tree->yOrigin = offset - Tree_ContentTop(tree);
 	    Tree_EventuallyRedraw(tree);
 	}
     }
@@ -3190,8 +3260,7 @@ TreeDebugCmd(
 
 	case COMMAND_SCROLL:
 	{
-	    int topInset = Tree_HeaderHeight(tree) + tree->inset;
-	    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+	    int visHeight = Tree_ContentHeight(tree);
 	    int totHeight = Tree_TotalHeight(tree);
 	    int yIncr = tree->yScrollIncrement;
 	    if (yIncr <= 0)
@@ -3920,9 +3989,6 @@ Treectrl_Init(
     }
 #endif
     if (TreeElement_Init(interp) != TCL_OK) {
-	return TCL_ERROR;
-    }
-    if (TreeStyle_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
     /* We don't care if this fails */
