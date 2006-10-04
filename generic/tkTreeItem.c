@@ -5,13 +5,12 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.64 2006/09/27 01:47:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.65 2006/10/04 03:43:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
 typedef struct Column Column;
-typedef struct ItemTags ItemTags;
 typedef struct Item Item;
 
 /*
@@ -24,53 +23,9 @@ struct Column {
 #ifdef COLUMN_SPAN
     int span;		/* Number of columns this column's style covers */
 #endif
-    int neededWidth;	/* unused */
-    int neededHeight;	/* unused */
     TreeStyle style;
     Column *next;	/* Column to the right of this one */
 };
-
-/*
- * This structure holds tag information for a single item.
- */
-struct ItemTags {
-    int numTags;			/* Number of tag slots actually used
-					 * at tagPtr. */
-    int tagSpace;			/* Total amount of tag space available
-					 * at tagPtr. */
-#define ITEM_TAG_SPACE 3
-    Tk_Uid tagPtr[ITEM_TAG_SPACE];	/* Array of tags. The actual size will
-					 * be tagSpace. THIS FIELD MUST BE THE
-					 * LAST IN THE STRUCTURE. */
-};
-
-/*
- * This struct holds information about a tag expression.
- */
-typedef struct TagExpr {
-    TreeCtrl *tree;
-
-    Tk_Uid *uids;		/* expresion compiled to an array of uids */
-    Tk_Uid staticUids[15];
-    int allocated;		/* available space for array of uids */
-    int length;			/* number of uids */
-    int index;			/* current position in expression evaluation */
-
-    int simple;			/* TRUE if expr is single tag */
-    Tk_Uid uid;			/* single tag if 'simple' is TRUE */
-
-    char *string;		/* tag expression string */
-    int stringIndex;		/* current position in string scan */
-    int stringLength;		/* length of tag expression string */
-
-    char *rewritebuffer;	/* tag string (after removing escapes) */
-    char staticRWB[100];
-} TagExpr;
-
-static int TagExpr_Init(TreeCtrl *tree, Tcl_Obj *exprObj, TagExpr *expr);
-static int TagExpr_Scan(TagExpr *expr);
-static int TagExpr_Eval(TagExpr *expr, Item *item);
-static void TagExpr_Free(TagExpr *expr);
 
 /*
  * A data structure of the following type is kept for each item.
@@ -78,7 +33,6 @@ static void TagExpr_Free(TagExpr *expr);
 struct Item {
     int id;		/* unique id */
     int depth;		/* tree depth (-1 for the unique root item) */
-    int neededHeight;	/* unused */
     int fixedHeight;	/* -height: desired height of this item (0 for
 			 * no-such-value) */
     int numChildren;
@@ -97,7 +51,7 @@ struct Item {
     Column *columns;
 #define ITEM_FLAG_DELETED	0x0001 /* Item is being deleted */
     int flags;
-    ItemTags *tagInfo;	/* Tags */
+    TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
 
 /*
@@ -124,6 +78,9 @@ static Tk_OptionSpec itemOptionSpecs[] = {
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Item, fixedHeight),
      TK_OPTION_NULL_OK, (ClientData) NULL, ITEM_CONF_SIZE},
+    {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Item, tagInfo),
+     TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, 0},
     {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(Item, isVisible),
      0, (ClientData) NULL, ITEM_CONF_VISIBLE},
@@ -170,8 +127,6 @@ Column_Alloc(
  * TreeItemColumn_InvalidateSize --
  *
  *	Marks the needed height and width of the column as out-of-date.
- *	NOTE: Column.neededWidth and Column.neededHeight are currently
- *	unused.
  *
  * Results:
  *	None.
@@ -188,9 +143,6 @@ TreeItemColumn_InvalidateSize(
     TreeItemColumn column_	/* Column token. */
     )
 {
-    Column *column = (Column *) column_;
-
-    column->neededWidth = column->neededHeight = -1;
 }
 
 /*
@@ -431,7 +383,6 @@ TreeItemColumn_ForgetStyle(
     if (self->style != NULL) {
 	TreeStyle_FreeResources(tree, self->style);
 	self->style = NULL;
-	self->neededWidth = self->neededHeight = 0;
     }
 }
 
@@ -1677,7 +1628,7 @@ Qualifies(
 	return 0;
     if ((q->states[STATE_OP_ON] & item->state) != q->states[STATE_OP_ON])
 	return 0;
-    if (q->exprOK && !TagExpr_Eval(&q->expr, item))
+    if (q->exprOK && !TagExpr_Eval(&q->expr, item->tagInfo))
 	return 0;
     return 1;
 }
@@ -1728,7 +1679,8 @@ Qualifiers_Free(
  *   -- returning multiple items --
  *   list listOfItemDescs
  *   range QUALIFIERS
- *   tag tagExpr
+ *   tag tagExpr QUALIFIERS
+ *   "TAG QUALFIERS"
  *
  *   MODIFIERS:
  *   -- returning a single item --
@@ -1852,8 +1804,6 @@ TreeItemList_FromObj(
 		    Tcl_GetString(elemPtr), "\" keyword", NULL);
 	    goto errorExit;
 	}
-
-	/* Gather up any qualifiers that follow this index. */
 	if (indexQual[index]) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + indexArgs[index],
 		    &qualArgsTotal) != TCL_OK) {
@@ -1881,17 +1831,11 @@ TreeItemList_FromObj(
 			}
 			hPtr = Tcl_NextHashEntry(&search);
 		    }
-		    goto goodExit;
+		    item = NULL;
+		} else {
+		    item = (Item *) ITEM_ALL;
 		}
-		if (!(flags & IFO_ALLOK)) {
-		    Tcl_AppendResult(interp,
-			    "can't specify \"all\" for this command", NULL);
-		    goto errorExit;
-		}
-		if (objc > 1)
-		    goto baditem;
-		TreeItemList_Append(items, ITEM_ALL);
-		goto goodExit;
+		break;
 	    }
 	    case INDEX_ANCHOR:
 	    {
@@ -1934,7 +1878,7 @@ TreeItemList_FromObj(
 		    TreeItemList_Free(&item2s);
 		}
 		/* If any of the item descriptions in the list is "all", then
-		 * clear the list of items and replace it with "all". */
+		 * clear the list of items and use "all". */
 		count = TreeItemList_Count(items);
 		for (i = 0; i < count; i++) {
 		    TreeItem item = TreeItemList_ItemN(items, i);
@@ -1943,10 +1887,10 @@ TreeItemList_FromObj(
 		}
 		if (i < count) {
 		    TreeItemList_Free(items);
-		    TreeItemList_Init(tree, items, 0);
-		    TreeItemList_Append(items, ITEM_ALL);
-		}
-		goto endOfIndexArgs;
+		    item = (Item *) ITEM_ALL;
+		} else
+		    item = NULL;
+		break;
 	    }
 	    case INDEX_NEAREST:
 	    {
@@ -1973,25 +1917,14 @@ TreeItemList_FromObj(
 		    goto errorExit;
 		while (1) {
 		    if (Qualifies(&q, (Item *) itemFirst)) {
-			if (ISROOT((Item *) itemFirst) && (flags & IFO_NOTROOT))
-			    goto notRoot;
-			if (!((Item *) itemFirst)->parent && (flags & IFO_NOTORPHAN))
-			    goto notOrphan;
 			TreeItemList_Append(items, itemFirst);
 		    }
 		    if (itemFirst == itemLast)
 			break;
 		    itemFirst = TreeItem_Next(tree, itemFirst);
 		}
-endOfIndexArgs:
-		if (listIndex + indexArgs[index] + qualArgsTotal < objc) {
-		    Tcl_AppendResult(interp, "unexpected arguments after \"",
-			    indexName[index], "\" index", NULL);
-		    goto errorExit;
-		}
-		if (!TreeItemList_Count(items) && !(flags & IFO_NULLOK))
-		    goto noitem;
-		goto goodExit;
+		item = NULL;
+		break;
 	    }
 	    case INDEX_RNC:
 	    {
@@ -2020,17 +1953,35 @@ endOfIndexArgs:
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (Item *) Tcl_GetHashValue(hPtr);
-		    if (TagExpr_Eval(&expr, item)) {
-			if (Qualifies(&q, item)) {
-			    TreeItemList_Append(items, (TreeItem) item);
-			}
+		    if (TagExpr_Eval(&expr, item->tagInfo) &&
+			    Qualifies(&q, item)) {
+			TreeItemList_Append(items, (TreeItem) item);
 		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
 		TagExpr_Free(&expr);
-		if (TreeItemList_Count(items) == 1)
-		    break;
-		goto endOfIndexArgs;
+		item = NULL;
+		break;
+	    }
+	}
+	/* If 1 item, use it and clear the list. */
+	if (TreeItemList_Count(items) == 1) {
+	    item = (Item *) TreeItemList_ItemN(items, 0);
+	    items->count = 0;
+	}
+
+	/* If "all" but only root exists, use it. */
+	if ((item == (Item *) ITEM_ALL) && (tree->itemCount == 1) &&
+		!(flags & IFO_NOTROOT))
+	    item = (Item *) tree->root;
+
+	/* If > 1 item, no modifiers may follow. */
+	if ((TreeItemList_Count(items) > 1) || (item == (Item *) ITEM_ALL)) {
+	    if (listIndex + indexArgs[index] + qualArgsTotal < objc) {
+		FormatResult(interp,
+		    "unexpected arguments after \"%s\" keyword",
+		    indexName[index]);
+		goto errorExit;
 	    }
 	}
 	listIndex += indexArgs[index] + qualArgsTotal;
@@ -2066,12 +2017,54 @@ endOfIndexArgs:
 	}
 	item = (Item *) Tcl_GetHashValue(hPtr);
 	listIndex++;
+
+    /* Try a tag expression. */
     } else {
-	goto baditem;
+	TagExpr expr;
+	Tcl_HashEntry *hPtr;
+	Tcl_HashSearch search;
+	int qualArgsTotal = 0;
+
+	if (objc > 1) {
+	    if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
+		    &qualArgsTotal) != TCL_OK) {
+		goto errorExit;
+	    }
+	}
+	if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
+	    goto errorExit;
+	hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	while (hPtr != NULL) {
+	    item = (Item *) Tcl_GetHashValue(hPtr);
+	    if (TagExpr_Eval(&expr, item->tagInfo) && Qualifies(&q, item)) {
+		TreeItemList_Append(items, (TreeItem) item);
+	    }
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+	TagExpr_Free(&expr);
+	item = NULL;
+
+	/* If 1 item, use it and clear the list. */
+	if (TreeItemList_Count(items) == 1) {
+	    item = (Item *) TreeItemList_ItemN(items, 0);
+	    items->count = 0;
+	}
+
+	/* If > 1 item, no modifiers may follow. */
+	if (TreeItemList_Count(items) > 1) {
+	    if (listIndex + 1 + qualArgsTotal < objc) {
+		FormatResult(interp,
+		    "unexpected arguments after \"%s\"",
+		    Tcl_GetString(elemPtr));
+		goto errorExit;
+	    }
+	}
+
+	listIndex += 1 + qualArgsTotal;
     }
 
     /* This means a valid specification was given, but there is no such item */
-    if (item == NULL) {
+    if ((TreeItemList_Count(items) == 0) && (item == NULL)) {
 	if (!(flags & IFO_NULLOK))
 	    goto noitem;
 	/* Empty list returned */
@@ -2092,8 +2085,6 @@ endOfIndexArgs:
 		    Tcl_GetString(elemPtr), "\" modifier", NULL);
 	    goto errorExit;
 	}
-
-	/* Gather up any qualifiers that follow this modifier. */
 	if (modQual[index]) {
 	    Qualifiers_Free(&q);
 	    Qualifiers_Init(tree, &q);
@@ -2114,23 +2105,12 @@ endOfIndexArgs:
 		item = item->parent;
 		while (item != NULL) {
 		    if (Qualifies(&q, item)) {
-			if (ISROOT(item) && (flags & IFO_NOTROOT))
-			    goto notRoot;
-			if (!item->parent && (flags & IFO_NOTORPHAN))
-			    goto notOrphan;
 			TreeItemList_Append(items, (TreeItem) item);
 		    }
 		    item = item->parent;
 		}
-endOfModArgs:
-		if (listIndex + modArgs[index] + qualArgsTotal < objc) {
-		    Tcl_AppendResult(interp, "unexpected arguments after \"",
-			    modifiers[index], "\" modifier", NULL);
-		    goto errorExit;
-		}
-		if (!TreeItemList_Count(items) && !(flags & IFO_NULLOK))
-		    goto noitem;
-		goto goodExit;
+		item = NULL;
+		break;
 	    }
 	    case TMOD_BELOW:
 	    {
@@ -2164,15 +2144,12 @@ endOfModArgs:
 		item = item->firstChild;
 		while (item != NULL) {
 		    if (Qualifies(&q, item)) {
-			if (ISROOT(item) && (flags & IFO_NOTROOT))
-			    goto notRoot;
-			if (!item->parent && (flags & IFO_NOTORPHAN))
-			    goto notOrphan;
 			TreeItemList_Append(items, (TreeItem) item);
 		    }
 		    item = item->nextSibling;
 		}
-		goto endOfModArgs;
+		item = NULL;
+		break;
 	    }
 	    case TMOD_DESCENDANTS:
 	    {
@@ -2189,7 +2166,8 @@ endOfModArgs:
 			break;
 		    item = (Item *) TreeItem_Next(tree, (TreeItem) item);
 		}
-		goto endOfModArgs;
+		item = NULL;
+		break;
 	    }
 	    case TMOD_FIRSTCHILD:
 	    {
@@ -2283,7 +2261,14 @@ endOfModArgs:
 		break;
 	    }
 	}
-	if (item == NULL) {
+	if ((TreeItemList_Count(items) > 1) || (item == (Item *) ITEM_ALL)) {
+	    if (listIndex + modArgs[index] + qualArgsTotal < objc) {
+		Tcl_AppendResult(interp, "unexpected arguments after \"",
+			modifiers[index], "\" modifier", NULL);
+		goto errorExit;
+	    }
+	}
+	if ((TreeItemList_Count(items) == 0) && (item == NULL)) {
 	    if (!(flags & IFO_NULLOK))
 		goto noitem;
 	    /* Empty list returned. */
@@ -2291,19 +2276,38 @@ endOfModArgs:
 	}
 	listIndex += modArgs[index] + qualArgsTotal;
     }
-    if (ISROOT(item) && (flags & IFO_NOTROOT)) {
+    if (!(flags & IFO_ALLOK) && ((item == (Item *) ITEM_ALL) ||
+	(TreeItemList_Count(items) > 1))) {
+	FormatResult(interp, "can't specify > 1 item for this command");
+	goto errorExit;
+    }
+    if (TreeItemList_Count(items)) {
+	if (flags & (IFO_NOTROOT | IFO_NOTORPHAN)) {
+	    int i;
+	    for (i = 0; i < TreeItemList_Count(items); i++) {
+		item = (Item *) TreeItemList_ItemN(items, i);
+		if (ISROOT(item) && (flags & IFO_NOTROOT))
+		    goto notRoot;
+		if ((item->parent == NULL) && (flags & IFO_NOTORPHAN))
+		    goto notOrphan;
+	    }
+	}
+    } else if (item == (Item *) ITEM_ALL) {
+	TreeItemList_Append(items, ITEM_ALL);
+    } else {
+	if (ISROOT(item) && (flags & IFO_NOTROOT)) {
 notRoot:
-	Tcl_AppendResult(interp,
-		"can't specify \"root\" for this command", NULL);
-	goto errorExit;
-    }
-    if ((item->parent == NULL) && (flags & IFO_NOTORPHAN)) {
+	    FormatResult(interp, "can't specify \"root\" for this command");
+	    goto errorExit;
+	}
+	if ((item->parent == NULL) && (flags & IFO_NOTORPHAN)) {
 notOrphan:
-	Tcl_AppendResult(interp,
-		"item \"", Tcl_GetString(objPtr), "\" has no parent", NULL);
-	goto errorExit;
+	    FormatResult(interp, "item \"%s\" has no parent",
+		    Tcl_GetString(objPtr));
+	    goto errorExit;
+	}
+	TreeItemList_Append(items, (TreeItem) item);
     }
-    TreeItemList_Append(items, (TreeItem) item);
 goodExit:
     Qualifiers_Free(&q);
     return TCL_OK;
@@ -2357,8 +2361,8 @@ TreeItem_FromObj(
     return TCL_OK;
 }
 
-typedef struct TreeForEach TreeForEach;
-struct TreeForEach {
+typedef struct ItemForEach ItemForEach;
+struct ItemForEach {
     TreeCtrl *tree;
     int error;
     int all;
@@ -2369,15 +2373,15 @@ struct TreeForEach {
     int index;
 };
 
-#define TREE_FOR_EACH(item, items, item2s, iter) \
-    for (item = TreeForEach_Start(items, item2s, iter); \
+#define ITEM_FOR_EACH(item, items, item2s, iter) \
+    for (item = ItemForEach_Start(items, item2s, iter); \
 	 item != NULL; \
-	 item = TreeForEach_Next(iter))
+	 item = ItemForEach_Next(iter))
 
 /*
  *----------------------------------------------------------------------
  *
- * TreeForEach_Start --
+ * ItemForEach_Start --
  *
  *	Begin iterating over items. A command might accept two item
  *	descriptions for a range of items, or a single item description
@@ -2386,7 +2390,7 @@ struct TreeForEach {
  *
  * Results:
  *	Returns the first item to iterate over. If an error occurs
- *	then TreeForEach.error is set to 1.
+ *	then ItemForEach.error is set to 1.
  *
  * Side effects:
  *	None.
@@ -2395,11 +2399,11 @@ struct TreeForEach {
  */
 
 TreeItem
-TreeForEach_Start(
+ItemForEach_Start(
     TreeItemList *items,	/* List of items. */
     TreeItemList *item2s,	/* List of items or NULL. */
-    TreeForEach *iter		/* Returned info, pass to
-				   TreeForEach_Next. */
+    ItemForEach *iter		/* Returned info, pass to
+				   ItemForEach_Next. */
     )
 {
     TreeCtrl *tree = items->tree;
@@ -2437,7 +2441,7 @@ TreeForEach_Start(
 /*
  *----------------------------------------------------------------------
  *
- * TreeForEach_Next --
+ * ItemForEach_Next --
  *
  *	Returns the next item to iterate over. Keep calling this until
  *	the result is NULL.
@@ -2452,8 +2456,8 @@ TreeForEach_Start(
  */
 
 TreeItem
-TreeForEach_Next(
-    TreeForEach *iter		/* Initialized by TreeForEach_Start. */
+ItemForEach_Next(
+    ItemForEach *iter		/* Initialized by ItemForEach_Start. */
     )
 {
     TreeCtrl *tree = iter->tree;
@@ -3043,14 +3047,12 @@ Item_CreateColumn(
     column = self->columns;
     if (column == NULL) {
 	column = Column_Alloc(tree);
-	column->neededWidth = column->neededHeight = -1;
 	self->columns = column;
 	if (isNew != NULL) (*isNew) = TRUE;
     }
     for (i = 0; i < columnIndex; i++) {
 	if (column->next == NULL) {
 	    column->next = Column_Alloc(tree);
-	    column->next->neededWidth = column->next->neededHeight = -1;
 	    if (isNew != NULL) (*isNew) = TRUE;
 	}
 	column = column->next;
@@ -3170,8 +3172,6 @@ TreeItem_FreeResources(
 	Tree_FreeItemDInfo(tree, item_, NULL);
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
-    if (self->tagInfo != NULL)
-	ckfree((char *) self->tagInfo);
 #ifdef ALLOC_HAX
     AllocHax_Free(tree->allocData, (char *) self, sizeof(Item));
 #else
@@ -3311,11 +3311,6 @@ TreeItem_InvalidateHeight(
     TreeItem item_		/* Item token. */
     )
 {
-    Item *self = (Item *) item_;
-
-    if (self->neededHeight < 0)
-	return;
-    self->neededHeight = -1;
 }
 
 /*
@@ -3383,7 +3378,7 @@ Item_FindColumnFromObj(
     TreeColumn treeColumn;
     int columnIndex;
 
-    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
     (*columnPtr) = Item_FindColumn(tree, item, columnIndex);
@@ -3479,7 +3474,7 @@ Item_CreateColumnFromObj(
     TreeColumn treeColumn;
     int columnIndex;
 
-    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
     (*column) = Item_CreateColumn(tree, item, columnIndex, isNew);
@@ -4525,8 +4520,7 @@ ItemCreateCmd(
     Item *item, *parent = NULL, *prevSibling = NULL, *nextSibling = NULL;
     Item *head = NULL, *tail = NULL;
     Tcl_Obj *listObj = NULL, *tagsObj = NULL;
-    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
-    int numTags = 0;
+    TagInfo *tagInfo = NULL;
 
     for (i = 3; i < objc; i += 2) {
 	if (Tcl_GetIndexFromObj(interp, objv[i], optionNames, "option", 0,
@@ -4548,7 +4542,7 @@ ItemCreateCmd(
 	    case OPT_COUNT:
 		if (Tcl_GetIntFromObj(interp, objv[i + 1], &count) != TCL_OK)
 		    return TCL_ERROR;
-		if (count < 0) {
+		if (count <= 0) {
 		    FormatResult(interp, "bad count \"%d\": must be > 0",
 			    count);
 		}
@@ -4609,31 +4603,10 @@ ItemCreateCmd(
 	}
     }
 
-    if (!count)
-	return TCL_OK;
-
+    /* Do it here so I don't have to free it above if an error occurs. */
     if (tagsObj != NULL) {
-	Tcl_Obj **listObjv;
-
-	if (Tcl_ListObjGetElements(interp, tagsObj, &numTags, &listObjv) != TCL_OK) {
+	if (TagInfo_FromObj(interp, tagsObj, &tagInfo) != TCL_OK)
 	    return TCL_ERROR;
-	}
-	if (numTags) {
-	    int j, n = 0;
-
-	    STATIC_ALLOC(tags, Tk_Uid, numTags);
-	    for (i = 0; i < numTags; i++) {
-		Tk_Uid tag = Tk_GetUid(Tcl_GetString(listObjv[i]));
-		for (j = 0; j < n; j++) {
-		    if (tag == tags[j])
-			break;
-		}
-		if (j == n) {
-		    tags[n++] = tag;
-		}
-	    }
-	    numTags = n;
-	}
     }
 
     if (returnId)
@@ -4667,21 +4640,13 @@ ItemCreateCmd(
 	    }
 	}
 
-	if (numTags) {
-	    ItemTags *tagInfo;
-
-	    if (numTags <= ITEM_TAG_SPACE) {
-		tagInfo = (ItemTags *) ckalloc(sizeof(ItemTags));
-		tagInfo->tagSpace = ITEM_TAG_SPACE;
+	if (tagInfo != NULL) {
+	    if (count == 1) {
+		item->tagInfo = tagInfo;
+		tagInfo = NULL;
 	    } else {
-		int tagSpace = numTags;
-		tagInfo = (ItemTags *) ckalloc(sizeof(ItemTags) + 
-		    ((tagSpace - ITEM_TAG_SPACE) * sizeof(Tk_Uid)));
-		tagInfo->tagSpace = tagSpace;
+		item->tagInfo = TagInfo_Copy(tagInfo);
 	    }
-	    memcpy(tagInfo->tagPtr, tags, sizeof(Tk_Uid) * numTags);
-	    tagInfo->numTags = numTags;
-	    item->tagInfo = tagInfo;
 	}
 
 	/* Link the new items together as siblings */
@@ -4736,8 +4701,7 @@ ItemCreateCmd(
 	TreeItem_AddToParent(tree, (TreeItem) head);
     }
 
-    if (numTags)
-	STATIC_FREE(tags, Tk_Uid, numTags);
+    TagInfo_Free(tagInfo);
 
     if (returnId)
 	Tcl_SetObjResult(interp, listObj);
@@ -4834,9 +4798,9 @@ ItemElementCmd(
     if ((_item == ITEM_ALL) && ((index != COMMAND_CONFIGURE) || (objc < 9)))
 	_item = tree->root;
     else if ((index == COMMAND_CONFIGURE) && (objc < 9)) {
-	itemList.items[1] = NULL;
+	itemList.pointers[1] = NULL;
 	itemList.count = 1;
-	_item = itemList.items[0];
+	_item = TreeItemList_ItemN(&itemList, 0);
     }
     item = (Item *) _item;
 
@@ -4898,26 +4862,31 @@ ItemElementCmd(
 		result = TCL_ERROR;
 		break;
 	    }
+#ifdef ROW_LABEL
+	    result = TreeStyle_ElementCget(tree, (TreeItem) item,
+		    (TreeItemColumn) column, NULL, column->style, objv[6], objv[7]);
+#else
 	    result = TreeStyle_ElementCget(tree, (TreeItem) item,
 		    (TreeItemColumn) column, column->style, objv[6], objv[7]);
+#endif
 	    break;
 	}
 
 	/* T item element configure I C E ... */
 	case COMMAND_CONFIGURE:
 	{
-	    TreeForEach iter;
+	    ItemForEach iter;
 	    TreeColumn treeColumn;
 	    int columnIndex0;
 
 	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
-		    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		break;
 	    }
 	    columnIndex0 = TreeColumn_Index(treeColumn);
 
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 
 		/* T item element configure I C E option value \
 		*     + E option value , C E option value */
@@ -4960,9 +4929,15 @@ ItemElementCmd(
 			break;
 		    }
 
+#ifdef ROW_LABEL
+		    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
+			    (TreeItemColumn) column, NULL, column->style, objv[indexElem],
+			    numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
+#else
 		    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
 			    (TreeItemColumn) column, column->style, objv[indexElem],
 			    numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
+#endif
 		    if (result != TCL_OK)
 			break;
 
@@ -5119,14 +5094,14 @@ ItemStyleCmd(
 	    int columnIndex;
 	    int objcM;
 	    Tcl_Obj **objvM;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (objc != 8) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item column style map");
 		return TCL_ERROR;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
-		    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		break;
 	    }
@@ -5145,7 +5120,7 @@ ItemStyleCmd(
 		result = TCL_ERROR;
 		break;
 	    }
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		column = Item_CreateColumn(tree, item, columnIndex, NULL);
 		if (column->style != NULL) {
@@ -5177,7 +5152,7 @@ ItemStyleCmd(
 	    TreeColumn treeColumn;
 	    Column *column;
 	    int i, count = 0, length, changed = FALSE, changedI;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (objc < 5) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item ?column? ?style? ?column style ...?");
@@ -5193,7 +5168,8 @@ ItemStyleCmd(
 		while (treeColumn != NULL) {
 		    if ((column != NULL) && (column->style != NULL))
 			Tcl_ListObjAppendElement(interp, listObj,
-				TreeStyle_ToObj(column->style));
+				TreeStyle_ToObj(TreeStyle_GetMaster(
+				tree, column->style)));
 		    else
 			Tcl_ListObjAppendElement(interp, listObj,
 				Tcl_NewObj());
@@ -5211,14 +5187,15 @@ ItemStyleCmd(
 		if (Item_FindColumnFromObj(tree, item, objv[5], &column, NULL) != TCL_OK)
 		    return TCL_ERROR;
 		if ((column != NULL) && (column->style != NULL))
-		    Tcl_SetObjResult(interp, TreeStyle_ToObj(column->style));
+		    Tcl_SetObjResult(interp, TreeStyle_ToObj(
+			TreeStyle_GetMaster(tree, column->style)));
 		break;
 	    }
 	    /* Get column/style pairs. */
 	    STATIC_ALLOC(cs, struct columnStyle, objc / 2);
 	    for (i = 5; i < objc; i += 2) {
 		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneSET;
 		}
@@ -5242,7 +5219,7 @@ ItemStyleCmd(
 		cs[count].changed = FALSE;
 		count++;
 	    }
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		changedI = FALSE;
 		for (i = 0; i < count; i++) {
@@ -5827,7 +5804,7 @@ ItemSortCmd(
 		break;
 	    case OPT_COLUMN:
 		if (TreeColumn_FromObj(tree, objv[i + 1], &treeColumn,
-			    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+			    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		    return TCL_ERROR;
 		/* The first -column we see is the first column we compare */
 		if (sawColumn) {
@@ -6264,7 +6241,7 @@ ItemStateCmd(
 	    Column *column;
 	    int columnIndex;
 	    int i, states[3], stateOn, stateOff;
-	    TreeForEach iter;
+	    ItemForEach iter;
 	    int result = TCL_OK;
 
 	    if (objc < 6 || objc > 7) {
@@ -6298,7 +6275,7 @@ ItemStateCmd(
 		goto doneFORC;
 	    }
 	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
-		    CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		goto doneFORC;
 	    }
@@ -6309,7 +6286,7 @@ ItemStateCmd(
 	    }
 	    if ((states[0] | states[1] | states[2]) == 0)
 		goto doneFORC;
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		column = Item_CreateColumn(tree, item, columnIndex, NULL);
 		stateOn = states[STATE_OP_ON];
@@ -6322,7 +6299,6 @@ ItemStateCmd(
 doneFORC:
 	    TreeItemList_Free(&itemList);
 	    return result;
-	    break;
 	}
 
 	/* T item state get I ?state? */
@@ -6366,7 +6342,7 @@ doneFORC:
 	    TreeItemList itemList, item2List;
 	    TreeItem item;
 	    int states[3], stateOn, stateOff;
-	    TreeForEach iter;
+	    ItemForEach iter;
 	    int result = TCL_OK;
 
 	    if (objc < 6 || objc > 7) {
@@ -6391,7 +6367,7 @@ doneFORC:
 	    }
 	    if ((states[0] | states[1] | states[2]) == 0)
 		goto doneSET;
-	    TREE_FOR_EACH(item, &itemList, &item2List, &iter) {
+	    ITEM_FOR_EACH(item, &itemList, &item2List, &iter) {
 		stateOn = states[STATE_OP_ON];
 		stateOff = states[STATE_OP_OFF];
 		stateOn |= ~((Item *) item)->state & states[STATE_OP_TOGGLE];
@@ -6404,11 +6380,192 @@ doneSET:
 	    TreeItemList_Free(&itemList);
 	    TreeItemList_Free(&item2List);
 	    return result;
-	    break;
 	}
     }
 
     return TCL_OK;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * ItemTagCmd --
+ *
+ *	This procedure is invoked to process the [item tag] widget
+ *	command.  See the user documentation for details on what
+ *	it does.
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	See the user documentation.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ItemTagCmd(
+    ClientData clientData,	/* Widget info. */
+    Tcl_Interp *interp,		/* Current interpreter. */
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
+    )
+{
+    TreeCtrl *tree = (TreeCtrl *) clientData;
+    static CONST char *commandNames[] = {
+	"add", "expr", "names", "remove", (char *) NULL
+    };
+    enum {
+	COMMAND_ADD, COMMAND_EXPR, COMMAND_NAMES, COMMAND_REMOVE
+    };
+    int index;
+    ItemForEach iter;
+    TreeItemList items;
+    TreeItem _item;
+    Item *item;
+    int result = TCL_OK;
+
+    if (objc < 4)
+    {
+	Tcl_WrongNumArgs(interp, 3, objv, "command ?arg arg ...?");
+	return TCL_ERROR;
+    }
+
+    if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
+	&index) != TCL_OK)
+    {
+	return TCL_ERROR;
+    }
+
+    switch (index)
+    {
+	/* T item tag add I tagList */
+	case COMMAND_ADD:
+	{
+	    int i, numTags;
+	    Tcl_Obj **listObjv;
+	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
+		return TCL_ERROR;
+	    }
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    STATIC_ALLOC(tags, Tk_Uid, numTags);
+	    for (i = 0; i < numTags; i++) {
+		tags[i] = Tk_GetUid(Tcl_GetString(listObjv[i]));
+	    }
+	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		item = (Item *) _item;
+		item->tagInfo = TagInfo_Add(item->tagInfo, tags, numTags);
+	    }
+	    STATIC_FREE(tags, Tk_Uid, numTags);
+	    break;
+	}
+
+	/* T item tag expr I tagExpr */
+	case COMMAND_EXPR:
+	{
+	    TagExpr expr;
+	    int ok = TRUE;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "item tagExpr");
+		return TCL_ERROR;
+	    }
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (TagExpr_Init(tree, objv[5], &expr) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		item = (Item *) _item;
+		if (!TagExpr_Eval(&expr, item->tagInfo)) {
+		    ok = FALSE;
+		    break;
+		}
+	    }
+	    TagExpr_Free(&expr);
+	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(ok));
+	    break;
+	}
+
+	/* T item tag names I */
+	case COMMAND_NAMES:
+	{
+	    Tcl_Obj *listObj;
+	    Tk_Uid *tags = NULL;
+	    int i, tagSpace, numTags = 0;
+
+	    if (objc != 5)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "item");
+		return TCL_ERROR;
+	    }
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		item = (Item *) _item;
+		tags = TagInfo_Names(item->tagInfo, tags, &numTags, &tagSpace);
+	    }
+	    if (numTags) {
+		listObj = Tcl_NewListObj(0, NULL);
+		for (i = 0; i < numTags; i++) {
+		    Tcl_ListObjAppendElement(NULL, listObj,
+			    Tcl_NewStringObj((char *) tags[i], -1));
+		}
+		Tcl_SetObjResult(interp, listObj);
+		ckfree((char *) tags);
+	    }
+	    break;
+	}
+
+	/* T item tag remove I tagList */
+	case COMMAND_REMOVE:
+	{
+	    int i, numTags;
+	    Tcl_Obj **listObjv;
+	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
+
+	    if (objc != 6)
+	    {
+		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
+		return TCL_ERROR;
+	    }
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
+		result = TCL_ERROR;
+		break;
+	    }
+	    STATIC_ALLOC(tags, Tk_Uid, numTags);
+	    for (i = 0; i < numTags; i++) {
+		tags[i] = Tk_GetUid(Tcl_GetString(listObjv[i]));
+	    }
+	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		item = (Item *) _item;
+		item->tagInfo = TagInfo_Remove(item->tagInfo, tags, numTags);
+	    }
+	    STATIC_FREE(tags, Tk_Uid, numTags);
+	    break;
+	}
+    }
+
+    TreeItemList_Free(&items);
+    return result;
 }
 
 #ifdef SELECTION_VISIBLE
@@ -6535,6 +6692,7 @@ TreeItemCmd(
 #endif
 	"state",
 	"style",
+	"tag",
 	"text",
 	"toggle",
 	(char *) NULL
@@ -6577,6 +6735,7 @@ TreeItemCmd(
 #endif
 	COMMAND_STATE,
 	COMMAND_STYLE,
+	COMMAND_TAG,
 	COMMAND_TEXT,
 	COMMAND_TOGGLE
     };
@@ -6630,6 +6789,7 @@ TreeItemCmd(
 #endif
 	{ 0, 0, 0, 0, 0, NULL, ItemStateCmd }, /* state */
 	{ 0, 0, 0, 0, 0, NULL, ItemStyleCmd }, /* style */
+	{ 0, 0, 0, 0, 0, NULL, ItemTagCmd }, /* tag */
 	{ 1, 100000, IFO_ALLOK, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?", NULL }, /* text */
 	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* toggle */
     };
@@ -6827,7 +6987,7 @@ TreeItemCmd(
 	    int mode = 0; /* lint */
 	    int i, count;
 	    TreeItemList items;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (numArgs == 2) {
 		char *s = Tcl_GetString(objv[4]);
@@ -6850,7 +7010,7 @@ TreeItemCmd(
 		    break;
 	    }
 	    TreeItemList_Init(tree, &items, 0);
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		TreeItemList_Append(&items, _item);
 		if (!iter.all && recurse) {
 		    TreeItem_ListDescendants(tree, _item, &items);
@@ -6946,9 +7106,15 @@ TreeItemCmd(
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
+#ifdef ROW_LABEL
+		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item,
+				(TreeItemColumn) column, NULL, column->style,
+				objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK) {
+#else
 		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item,
 				(TreeItemColumn) column, column->style,
 				objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK) {
+#endif
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
@@ -6972,7 +7138,7 @@ TreeItemCmd(
 	/* T item configure I ?option? ?value? ?option value ...? */
 	case COMMAND_CONFIGURE:
 	{
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
@@ -6988,7 +7154,7 @@ TreeItemCmd(
 		Tcl_SetObjResult(interp, resultObjPtr);
 		break;
 	    }
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		result = Item_Configure(tree, (Item *) _item, objc - 4, objv + 4);
 		if (result != TCL_OK)
 		    break;
@@ -7022,7 +7188,7 @@ TreeItemCmd(
 	{
 	    TreeItemList deleted, selected;
 	    int i, count;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    /* The root is never deleted */
 	    if (tree->itemCount == 1)
@@ -7046,7 +7212,7 @@ TreeItemCmd(
 	    TreeItemList_Init(tree, &deleted, tree->itemCount - 1);
 	    TreeItemList_Init(tree, &selected, tree->selectCount);
 
-	    TREE_FOR_EACH(_item, &itemList, &item2List, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, &item2List, &iter) {
 		item = (Item *) _item;
 		if (ISROOT(item))
 		    continue;
@@ -7131,8 +7297,8 @@ TreeItemCmd(
 	{
 	    if (tree->updateIndex)
 		Tree_UpdateItemIndex(tree);
-	    FormatResult(interp, "index %d indexVis %d neededHeight %d",
-		    item->index, item->indexVis, item->neededHeight);
+	    FormatResult(interp, "index %d indexVis %d",
+		    item->index, item->indexVis);
 	    break;
 	}
 	/* T item enabled I ?boolean? */
@@ -7141,7 +7307,7 @@ TreeItemCmd(
 	    int enabled;
 	    TreeItemList newD;
 	    int stateOff, stateOn;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (objc == 4) {
 		if (_item == ITEM_ALL)
@@ -7155,7 +7321,7 @@ TreeItemCmd(
 	    stateOff = enabled ? 0 : STATE_ENABLED;
 	    stateOn = enabled ? STATE_ENABLED : 0;
 	    TreeItemList_Init(tree, &newD, tree->selectCount);
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		if (enabled != TreeItem_GetEnabled(tree, _item)) {
 		    TreeItem_ChangeState(tree, _item, stateOff, stateOn);
 		    /* Disabled items cannot be selected. */
@@ -7199,10 +7365,10 @@ TreeItemCmd(
 	case COMMAND_ID:
 	{
 	    Tcl_Obj *listObj;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    listObj = Tcl_NewListObj(0, NULL);
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		Tcl_ListObjAppendElement(interp, listObj,
 			TreeItem_ToObj(tree, _item));
 	    }
@@ -7345,10 +7511,10 @@ TreeItemCmd(
 	}
 	case COMMAND_REMOVE:
 	{
-	    TreeForEach iter;
+	    ItemForEach iter;
 	    int removed = FALSE;
 
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		if (item->parent != NULL) {
 		    TreeItem_RemoveFromParent(tree, (TreeItem) item);
@@ -7387,7 +7553,7 @@ TreeItemCmd(
 		int changed;
 	    } staticCS[STATIC_SIZE], *cs = staticCS;
 	    int i, count = 0, span, changed = FALSE;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if (objc == 4) {
 		listObj = Tcl_NewListObj(0, NULL);
@@ -7417,7 +7583,7 @@ TreeItemCmd(
 	    STATIC_ALLOC(cs, struct columnSpan, objc / 2);
 	    for (i = 4; i < objc; i += 2) {
 		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneSPAN;
 		}
@@ -7435,7 +7601,7 @@ TreeItemCmd(
 		cs[count].changed = FALSE;
 		count++;
 	    }
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		int changedI = FALSE;
 		for (i = 0; i < count; i++) {
 		    item = (Item *) _item;
@@ -7478,7 +7644,7 @@ doneSPAN:
 		int changed;
 	    } staticCO[STATIC_SIZE], *co = staticCO;
 	    int i, count = 0, changed = FALSE;
-	    TreeForEach iter;
+	    ItemForEach iter;
 
 	    if ((objc < 6) && (_item == ITEM_ALL)) {
 		item = (Item *) tree->root;
@@ -7525,7 +7691,7 @@ doneSPAN:
 	    STATIC_ALLOC(co, struct columnObj, objc / 2);
 	    for (i = 4; i < objc; i += 2) {
 		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_ALL | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneTEXT;
 		}
@@ -7534,7 +7700,7 @@ doneSPAN:
 		co[count].changed = FALSE;
 		count++;
 	    }
-	    TREE_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		int changedI = FALSE;
 		item = (Item *) _item;
 		for (i = 0; i < count; i++) {
@@ -7545,10 +7711,17 @@ doneSPAN:
 			goto doneTEXT;
 		    }
 		    result = isImage ?
+#ifdef ROW_LABEL
+			TreeStyle_SetImage(tree, _item,
+			    (TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj) :
+			TreeStyle_SetText(tree, _item,
+			    (TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj);
+#else
 			TreeStyle_SetImage(tree, _item,
 			    (TreeItemColumn) column, column->style, co[i].obj) :
 			TreeStyle_SetText(tree, _item,
 			    (TreeItemColumn) column, column->style, co[i].obj);
+#endif
 		    if (result != TCL_OK)
 			goto doneTEXT;
 		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
@@ -7789,7 +7962,7 @@ void
 TreeItem_Identify(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-    int x, int y,		/* Window coords to hit-test with. */
+    int x, int y,		/* Item coords to hit-test with. */
     char *buf			/* NULL-terminated string which may be
 				 * appended. */
     )
@@ -8065,835 +8238,6 @@ void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 }
 
 #endif /* not COLUMN_SPAN */
-
-/*
- *----------------------------------------------------------------------
- *
- * TreeTagCmd --
- *
- *	This procedure is invoked to process the [tag] widget
- *	command.  See the user documentation for details on what
- *	it does.
- *
- * Results:
- *	A standard Tcl result.
- *
- * Side effects:
- *	See the user documentation.
- *
- *----------------------------------------------------------------------
- */
-
-int
-TreeTagCmd(
-    ClientData clientData,	/* Widget info. */
-    Tcl_Interp *interp,		/* Current interpreter. */
-    int objc,			/* Number of arguments. */
-    Tcl_Obj *CONST objv[]	/* Argument values. */
-    )
-{
-    TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = {
-	"add", "expr", "names", "remove", (char *) NULL
-    };
-    enum {
-	COMMAND_ADD, COMMAND_EXPR, COMMAND_NAMES, COMMAND_REMOVE
-    };
-    int index;
-    TreeForEach iter;
-    TreeItemList items;
-    TreeItem item;
-    int result = TCL_OK;
-
-    if (objc < 3)
-    {
-	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
-	return TCL_ERROR;
-    }
-
-    if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
-	return TCL_ERROR;
-    }
-
-    switch (index)
-    {
-	/* T tag add I tagList */
-	case COMMAND_ADD:
-	{
-	    int i, j, numTags;
-	    Tcl_Obj **listObjv;
-	    ItemTags *tagInfo;
-	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
-
-	    if (objc != 5)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "item tagList");
-		return TCL_ERROR;
-	    }
-	    if (TreeItemList_FromObj(tree, objv[3], &items, IFO_ALLOK) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    if (Tcl_ListObjGetElements(interp, objv[4], &numTags, &listObjv) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    STATIC_ALLOC(tags, Tk_Uid, numTags);
-	    for (i = 0; i < numTags; i++) {
-		tags[i] = Tk_GetUid(Tcl_GetString(listObjv[i]));
-	    }
-	    TREE_FOR_EACH(item, &items, NULL, &iter) {
-		tagInfo = ((Item *) item)->tagInfo;
-		if (tagInfo == NULL) {
-		    if (numTags <= ITEM_TAG_SPACE) {
-			tagInfo = (ItemTags *) ckalloc(sizeof(ItemTags));
-			tagInfo->tagSpace = ITEM_TAG_SPACE;
-		    } else {
-			int tagSpace = numTags;
-			tagInfo = (ItemTags *) ckalloc(sizeof(ItemTags) + 
-			    ((tagSpace - ITEM_TAG_SPACE) * sizeof(Tk_Uid)));
-			tagInfo->tagSpace = tagSpace;
-		    }
-		    tagInfo->numTags = 0;
-		}
-		for (i = 0; i < numTags; i++) {
-		    for (j = 0; j < tagInfo->numTags; j++) {
-			if (tagInfo->tagPtr[j] == tags[i])
-			    break;
-		    }
-		    if (j >= tagInfo->numTags) {
-			/* Resize existing storage if needed. */
-			if (tagInfo->tagSpace == tagInfo->numTags) {
-			    tagInfo->tagSpace += ITEM_TAG_SPACE + 1;
-			    tagInfo = (ItemTags *) ckrealloc((char *) tagInfo,
-				sizeof(ItemTags) + 
-				((tagInfo->tagSpace - ITEM_TAG_SPACE) * sizeof(Tk_Uid)));
-			}
-			tagInfo->tagPtr[tagInfo->numTags++] = tags[i];
-		    }
-		}
-		((Item *) item)->tagInfo = tagInfo;
-	    }
-	    STATIC_FREE(tags, Tk_Uid, numTags);
-	    break;
-	}
-
-	/* T tag expr I tagExpr */
-	case COMMAND_EXPR:
-	{
-	    TagExpr expr;
-	    int ok = TRUE;
-
-	    if (objc != 5)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "item tagExpr");
-		return TCL_ERROR;
-	    }
-	    if (TreeItemList_FromObj(tree, objv[3], &items, IFO_ALLOK) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    if (TagExpr_Init(tree, objv[4], &expr) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    TREE_FOR_EACH(item, &items, NULL, &iter) {
-		if (!TagExpr_Eval(&expr, (Item *) item)) {
-		    ok = FALSE;
-		    break;
-		}
-	    }
-	    TagExpr_Free(&expr);
-	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(ok));
-	    break;
-	}
-
-	/* T tag names I */
-	case COMMAND_NAMES:
-	{
-	    Tcl_Obj *listObj;
-	    int i, j, tagSpace = STATIC_SIZE, numTags = 0;
-	    ItemTags *tagInfo;
-	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
-
-	    if (objc != 4)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "item");
-		return TCL_ERROR;
-	    }
-	    if (TreeItemList_FromObj(tree, objv[3], &items, IFO_ALLOK) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    TREE_FOR_EACH(item, &items, NULL, &iter) {
-		tagInfo = ((Item *) item)->tagInfo;
-		if (tagInfo == NULL)
-		    continue;
-		for (i = 0; i < tagInfo->numTags; i++) {
-		    for (j = 0; j < numTags; j++) {
-			if (tagInfo->tagPtr[i] == tags[j])
-			    break;
-		    }
-		    if (j >= numTags) {
-			if (numTags == tagSpace) {
-			    tagSpace *= 2;
-			    tags = (Tk_Uid *) ckrealloc((char *) tags,
-				sizeof(Tk_Uid) * tagSpace);
-			}
-			tags[numTags++] = tagInfo->tagPtr[i];
-		    }
-		}
-	    }
-	    if (numTags) {
-		listObj = Tcl_NewListObj(0, NULL);
-		for (i = 0; i < numTags; i++) {
-		    Tcl_ListObjAppendElement(NULL, listObj,
-			    Tcl_NewStringObj((char *) tags[i], -1));
-		}
-		Tcl_SetObjResult(interp, listObj);
-	    }
-	    STATIC_FREE(tags, Tk_Uid, numTags);
-	    break;
-	}
-
-	/* T tag remove I tagList */
-	case COMMAND_REMOVE:
-	{
-	    int i, j, numTags;
-	    Tcl_Obj **listObjv;
-	    ItemTags *tagInfo;
-
-	    if (objc != 5)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "item tagList");
-		return TCL_ERROR;
-	    }
-	    if (TreeItemList_FromObj(tree, objv[3], &items, IFO_ALLOK) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    if (Tcl_ListObjGetElements(interp, objv[4], &numTags, &listObjv) != TCL_OK) {
-		result = TCL_ERROR;
-		break;
-	    }
-	    TREE_FOR_EACH(item, &items, NULL, &iter) {
-		tagInfo = ((Item *) item)->tagInfo;
-		if (tagInfo == NULL)
-		    continue;
-		for (i = 0; i < numTags; i++) {
-		    Tk_Uid tag = Tk_GetUid(Tcl_GetString(listObjv[i]));
-		    for (j = 0; j < tagInfo->numTags; j++) {
-			if (tagInfo->tagPtr[j] == tag) {
-			    tagInfo->tagPtr[j] =
-				tagInfo->tagPtr[tagInfo->numTags - 1];
-			    tagInfo->numTags--;
-			    break;
-			}
-		    }
-		}
-	    }
-	    break;
-	}
-    }
-
-    TreeItemList_Free(&items);
-    return result;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TagExpr_Init --
- *
- *	This procedure initializes a TagExpr struct by parsing a Tcl_Obj
- *	string representation of a tag expression.
- *
- * Results:
- *	A standard Tcl result.
- *
- * Side effects:
- *	Memory may be allocated.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-TagExpr_Init(
-    TreeCtrl *tree,		/* Widget info. */
-    Tcl_Obj *exprObj,		/* Tag expression string. */
-    TagExpr *expr		/* Struct to initialize. */
-    )
-{
-    int i;
-    char *tag;
-
-    expr->tree = tree;
-    expr->index = 0;
-    expr->length = 0;
-    expr->uid = NULL;
-    expr->allocated = sizeof(expr->staticUids) / sizeof(Tk_Uid);
-    expr->uids = expr->staticUids;
-    expr->simple = TRUE;
-    expr->rewritebuffer = expr->staticRWB;
-
-    tag = Tcl_GetStringFromObj(exprObj, &expr->stringLength);
-
-    /* short circuit impossible searches for null tags */
-    if (expr->stringLength == 0) {
-	return TCL_OK;
-    }
-
-    /*
-     * Pre-scan tag for at least one unquoted "&&" "||" "^" "!"
-     *   if not found then use string as simple tag
-     */
-    for (i = 0; i < expr->stringLength ; i++) {
-	if (tag[i] == '"') {
-	    i++;
-	    for ( ; i < expr->stringLength; i++) {
-		if (tag[i] == '\\') {
-		    i++;
-		    continue;
-		}
-		if (tag[i] == '"') {
-		    break;
-		}
-	    }
-	} else {
-	    if ((tag[i] == '&' && tag[i+1] == '&')
-	     || (tag[i] == '|' && tag[i+1] == '|')
-	     || (tag[i] == '^')
-	     || (tag[i] == '!')) {
-		expr->simple = FALSE;
-		break;
-	    }
-	}
-    }
-
-    if (expr->simple) {
-	expr->uid = Tk_GetUid(tag);
-	return TCL_OK;
-    }
-
-    expr->string = tag;
-    expr->stringIndex = 0;
-
-    /* Allocate buffer for rewritten tags (after de-escaping) */
-    if (expr->stringLength >= sizeof(expr->staticRWB))
-	expr->rewritebuffer = ckalloc(expr->stringLength + 1);
-
-    if (TagExpr_Scan(expr) != TCL_OK) {
-	TagExpr_Free(expr);
-	return TCL_ERROR;
-    }
-    expr->length = expr->index;
-    return TCL_OK;
-}
-
-/*
- * Uids for operands in compiled tag expressions.
- * Initialization is done by GetStaticUids().
- */
-typedef struct {
-    Tk_Uid andUid;
-    Tk_Uid orUid;
-    Tk_Uid xorUid;
-    Tk_Uid parenUid;
-    Tk_Uid negparenUid;
-    Tk_Uid endparenUid;
-    Tk_Uid tagvalUid;
-    Tk_Uid negtagvalUid;
-} SearchUids;
-
-static Tcl_ThreadDataKey dataKey;
-
-/*
- *----------------------------------------------------------------------
- *
- * GetStaticUids --
- *
- *	This procedure is invoked to return a structure filled with
- *	the Uids used when doing tag searching. If it was never before
- *	called in the current thread, it initializes the structure for
- *	that thread (uids are only ever local to one thread [Bug
- *	1114977]).
- *
- * Results:
- *	None.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-static SearchUids *
-GetStaticUids()
-{
-    SearchUids *searchUids = (SearchUids *)
-	    Tcl_GetThreadData(&dataKey, sizeof(SearchUids));
-
-    if (searchUids->andUid == NULL) {
-	searchUids->andUid       = Tk_GetUid("&&");
-	searchUids->orUid        = Tk_GetUid("||");
-	searchUids->xorUid       = Tk_GetUid("^");
-	searchUids->parenUid     = Tk_GetUid("(");
-	searchUids->endparenUid  = Tk_GetUid(")");
-	searchUids->negparenUid  = Tk_GetUid("!(");
-	searchUids->tagvalUid    = Tk_GetUid("!!");
-	searchUids->negtagvalUid = Tk_GetUid("!");
-    }
-    return searchUids;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TagExpr_Scan --
- *
- *	This procedure recursively parses a string representation of a
- *	tag expression into an array of Tk_Uids.
- *
- * Results:
- *	The return value indicates if the tag expression
- *	was successfully scanned (syntax).
- *
- * Side effects:
- *	Memory may be allocated.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-TagExpr_Scan(
-    TagExpr *expr		/* Info about a tag expression. */
-    )
-{
-    Tcl_Interp *interp = expr->tree->interp;
-    int looking_for_tag;        /* When true, scanner expects
-				 * next char(s) to be a tag,
-				 * else operand expected */
-    int found_tag;              /* One or more tags found */
-    int found_endquote;         /* For quoted tag string parsing */
-    int negate_result;          /* Pending negation of next tag value */
-    char *tag;                  /* tag from tag expression string */
-    SearchUids *searchUids;	/* Collection of uids for basic search
-				 * expression terms. */
-    char c;
-
-    searchUids = GetStaticUids();
-    negate_result = 0;
-    found_tag = 0;
-    looking_for_tag = 1;
-    while (expr->stringIndex < expr->stringLength) {
-	c = expr->string[expr->stringIndex++];
-
-	if (expr->allocated == expr->index) {
-	    expr->allocated += 15;
-	    if (expr->uids != expr->staticUids) {
-		expr->uids =
-		    (Tk_Uid *) ckrealloc((char *)(expr->uids),
-		    (expr->allocated)*sizeof(Tk_Uid));
-	    } else {
-		expr->uids =
-		(Tk_Uid *) ckalloc((expr->allocated)*sizeof(Tk_Uid));
-		memcpy(expr->uids, expr->staticUids, sizeof(expr->staticUids));
-	    }
-	}
-
-	if (looking_for_tag) {
-
-	    switch (c) {
-		case ' '  :	/* ignore unquoted whitespace */
-		case '\t' :
-		case '\n' :
-		case '\r' :
-		    break;
-
-		case '!'  :	/* negate next tag or subexpr */
-		    if (looking_for_tag > 1) {
-			Tcl_AppendResult(interp,
-				"Too many '!' in tag search expression",
-				(char *) NULL);
-			return TCL_ERROR;
-		    }
-		    looking_for_tag++;
-		    negate_result = 1;
-		    break;
-
-		case '('  :	/* scan (negated) subexpr recursively */
-		    if (negate_result) {
-			expr->uids[expr->index++] = searchUids->negparenUid;
-			negate_result = 0;
-		    } else {
-			expr->uids[expr->index++] = searchUids->parenUid;
-		    }
-		    if (TagExpr_Scan(expr) != TCL_OK) {
-			/* Result string should be already set
-			 * by nested call to tag_expr_scan() */
-			return TCL_ERROR;
-		    }
-		    looking_for_tag = 0;
-		    found_tag = 1;
-		    break;
-
-		case '"'  :	/* quoted tag string */
-		    if (negate_result) {
-			expr->uids[expr->index++] = searchUids->negtagvalUid;
-			negate_result = 0;
-		    } else {
-			expr->uids[expr->index++] = searchUids->tagvalUid;
-		    }
-		    tag = expr->rewritebuffer;
-		    found_endquote = 0;
-		    while (expr->stringIndex < expr->stringLength) {
-			c = expr->string[expr->stringIndex++];
-			if (c == '\\') {
-			    c = expr->string[expr->stringIndex++];
-			}
-			if (c == '"') {
-			    found_endquote = 1;
-			    break;
-			}
-			*tag++ = c;
-		    }
-		    if (! found_endquote) {
-			Tcl_AppendResult(interp,
-				"Missing endquote in tag search expression",
-				(char *) NULL);
-			return TCL_ERROR;
-		    }
-		    if (! (tag - expr->rewritebuffer)) {
-			Tcl_AppendResult(interp,
-			    "Null quoted tag string in tag search expression",
-			    (char *) NULL);
-			return TCL_ERROR;
-		    }
-		    *tag++ = '\0';
-		    expr->uids[expr->index++] =
-			    Tk_GetUid(expr->rewritebuffer);
-		    looking_for_tag = 0;
-		    found_tag = 1;
-		    break;
-
-		case '&'  :	/* illegal chars when looking for tag */
-		case '|'  :
-		case '^'  :
-		case ')'  :
-		    Tcl_AppendResult(interp,
-			    "Unexpected operator in tag search expression",
-			    (char *) NULL);
-		    return TCL_ERROR;
-
-		default :	/* unquoted tag string */
-		    if (negate_result) {
-			expr->uids[expr->index++] = searchUids->negtagvalUid;
-			negate_result = 0;
-		    } else {
-			expr->uids[expr->index++] = searchUids->tagvalUid;
-		    }
-		    tag = expr->rewritebuffer;
-		    *tag++ = c;
-		    /* copy rest of tag, including any embedded whitespace */
-		    while (expr->stringIndex < expr->stringLength) {
-			c = expr->string[expr->stringIndex];
-			if (c == '!' || c == '&' || c == '|' || c == '^'
-				|| c == '(' || c == ')' || c == '"') {
-			    break;
-			}
-			*tag++ = c;
-			expr->stringIndex++;
-		    }
-		    /* remove trailing whitespace */
-		    while (1) {
-			c = *--tag;
-			/* there must have been one non-whitespace char,
-			 *  so this will terminate */
-			if (c != ' ' && c != '\t' && c != '\n' && c != '\r') {
-			    break;
-			}
-		    }
-		    *++tag = '\0';
-		    expr->uids[expr->index++] =
-			    Tk_GetUid(expr->rewritebuffer);
-		    looking_for_tag = 0;
-		    found_tag = 1;
-	    }
-
-	} else {    /* ! looking_for_tag */
-
-	    switch (c) {
-		case ' '  :	/* ignore whitespace */
-		case '\t' :
-		case '\n' :
-		case '\r' :
-		    break;
-
-		case '&'  :	/* AND operator */
-		    c = expr->string[expr->stringIndex++];
-		    if (c != '&') {
-			Tcl_AppendResult(interp,
-				"Singleton '&' in tag search expression",
-				(char *) NULL);
-			return TCL_ERROR;
-		    }
-		    expr->uids[expr->index++] = searchUids->andUid;
-		    looking_for_tag = 1;
-		    break;
-
-		case '|'  :	/* OR operator */
-		    c = expr->string[expr->stringIndex++];
-		    if (c != '|') {
-			Tcl_AppendResult(interp,
-				"Singleton '|' in tag search expression",
-				(char *) NULL);
-			return TCL_ERROR;
-		    }
-		    expr->uids[expr->index++] = searchUids->orUid;
-		    looking_for_tag = 1;
-		    break;
-
-		case '^'  :	/* XOR operator */
-		    expr->uids[expr->index++] = searchUids->xorUid;
-		    looking_for_tag = 1;
-		    break;
-
-		case ')'  :	/* end subexpression */
-		    expr->uids[expr->index++] = searchUids->endparenUid;
-		    goto breakwhile;
-
-		default   :	/* syntax error */
-		    Tcl_AppendResult(interp,
-			    "Invalid boolean operator in tag search expression",
-			    (char *) NULL);
-		    return TCL_ERROR;
-	    }
-	}
-    }
-breakwhile:
-    if (found_tag && ! looking_for_tag) {
-	return TCL_OK;
-    }
-    Tcl_AppendResult(interp, "Missing tag in tag search expression",
-	    (char *) NULL);
-    return TCL_ERROR;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TagExpr_Eval --
- *
- *	This procedure recursively evaluates a compiled tag expression.
- *
- * Results:
- *	The return value indicates if the tag expression
- *	successfully matched the tags of the given item.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-_TagExpr_Eval(
-    TagExpr *expr,		/* Info about a tag expression. */
-    Item *item			/* Item to test. */
-    )
-{
-    int looking_for_tag;        /* When true, scanner expects
-				 * next char(s) to be a tag,
-				 * else operand expected */
-    int negate_result;          /* Pending negation of next tag value */
-    Tk_Uid uid;
-    Tk_Uid *tagPtr;
-    int count;
-    int result;                 /* Value of expr so far */
-    int parendepth;
-    SearchUids *searchUids;	/* Collection of uids for basic search
-				 * expression terms. */
-    ItemTags *tagInfo = item->tagInfo, dummy;
-
-    if (expr->stringLength == 0) /* empty expression (an error?) */
-	return 0;
-
-    /* Item has no tags. */
-    if (tagInfo == NULL) {
-	dummy.numTags = 0;
-	tagInfo = &dummy;
-    }
-
-    /* A single tag. */
-    if (expr->simple) {
-	for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
-	    count > 0; tagPtr++, count--) {
-	    if (*tagPtr == expr->uid) {
-		return 1;
-	    }
-	}
-	return 0;
-    }
-
-    searchUids = GetStaticUids();
-    result = 0;  /* just to keep the compiler quiet */
-
-    negate_result = 0;
-    looking_for_tag = 1;
-    while (expr->index < expr->length) {
-	uid = expr->uids[expr->index++];
-	if (looking_for_tag) {
-	    if (uid == searchUids->tagvalUid) {
-/*
- *              assert(expr->index < expr->length);
- */
-		uid = expr->uids[expr->index++];
-		result = 0;
-		/*
-		 * set result 1 if tag is found in item's tags
-		 */
-		for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
-		    count > 0; tagPtr++, count--) {
-		    if (*tagPtr == uid) {
-			result = 1;
-			break;
-		    }
-		}
-
-	    } else if (uid == searchUids->negtagvalUid) {
-		negate_result = ! negate_result;
-/*
- *              assert(expr->index < expr->length);
- */
-		uid = expr->uids[expr->index++];
-		result = 0;
-		/*
-		 * set result 1 if tag is found in item's tags
-		 */
-		for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
-		    count > 0; tagPtr++, count--) {
-		    if (*tagPtr == uid) {
-			result = 1;
-			break;
-		    }
-		}
-
-	    } else if (uid == searchUids->parenUid) {
-		/*
-		 * evaluate subexpressions with recursion
-		 */
-		result = _TagExpr_Eval(expr, item);
-
-	    } else if (uid == searchUids->negparenUid) {
-		negate_result = ! negate_result;
-		/*
-		 * evaluate subexpressions with recursion
-		 */
-		result = _TagExpr_Eval(expr, item);
-/*
- *          } else {
- *              assert(0);
- */
-	    }
-	    if (negate_result) {
-		result = ! result;
-		negate_result = 0;
-	    }
-	    looking_for_tag = 0;
-	} else {    /* ! looking_for_tag */
-	    if (((uid == searchUids->andUid) && (!result)) ||
-		    ((uid == searchUids->orUid) && result)) {
-		/*
-		 * short circuit expression evaluation
-		 *
-		 * if result before && is 0, or result before || is 1,
-		 *   then the expression is decided and no further
-		 *   evaluation is needed.
-		 */
-
-		    parendepth = 0;
-		while (expr->index < expr->length) {
-		    uid = expr->uids[expr->index++];
-		    if (uid == searchUids->tagvalUid ||
-			    uid == searchUids->negtagvalUid) {
-			expr->index++;
-			continue;
-		    }
-		    if (uid == searchUids->parenUid ||
-			    uid == searchUids->negparenUid) {
-			parendepth++;
-			continue;
-		    } 
-		    if (uid == searchUids->endparenUid) {
-			parendepth--;
-			if (parendepth < 0) {
-			    break;
-			}
-		    }
-		}
-		return result;
-
-	    } else if (uid == searchUids->xorUid) {
-		/*
-		 * if the previous result was 1
-		 *   then negate the next result
-		 */
-		negate_result = result;
-
-	    } else if (uid == searchUids->endparenUid) {
-		return result;
-/*
- *          } else {
- *               assert(0);
- */
-	    }
-	    looking_for_tag = 1;
-	}
-    }
-/*
- *  assert(! looking_for_tag);
- */
-    return result;
-}
-
-static int
-TagExpr_Eval(
-    TagExpr *expr,		/* Info about a tag expression. */
-    Item *item			/* Item to test. */
-    )
-{
-    expr->index = 0;
-    return _TagExpr_Eval(expr, item);
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TagExpr_Free --
- *
- *	This procedure frees the given struct.
- *
- * Results:
- *	None.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-void
-TagExpr_Free(
-    TagExpr *expr
-    )
-{
-    if (expr->rewritebuffer != expr->staticRWB)
-	ckfree(expr->rewritebuffer);
-    if (expr->uids != expr->staticUids)
-	ckfree((char *) expr->uids);
-}
 
 /*
  *----------------------------------------------------------------------
