@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.39 2006/09/27 01:43:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.40 2006/10/04 03:30:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -49,7 +49,9 @@ struct Range
 /* Display information for a TreeItem. */
 struct DItem
 {
-    char magic[4];	/* debug */
+#ifdef TREECTRL_DEBUG
+    char magic[4];
+#endif
     TreeItem item;
     int x, y;			/* Where it should be drawn, window coords. */
     int oldX, oldY;		/* Where it was last drawn, window coords. */
@@ -62,6 +64,16 @@ struct DItem
     int flags;
     DItem *next;
 };
+
+#ifdef ROW_LABEL
+typedef struct DRowLabel DRowLabel;
+struct DRowLabel
+{
+    TreeRowLabel row;
+    int offset;			/* Vertical offset from canvas top. */
+    int height;
+};
+#endif
 
 /* Display information for a TreeCtrl. */
 struct DInfo
@@ -100,6 +112,12 @@ struct DInfo
     DItem *dItemFree;		/* List of unused DItems */
     int requests;		/* Incremented for every call to
 				   Tree_EventuallyRedraw */
+#ifdef ROW_LABEL
+    int rowLabelWidth;		/* Last seen Tree_WidthOfRowLabels */
+    DRowLabel *dRowLabel;	/* Offset and height of each visible row label. */
+    int dRowLabelCnt;		/* Number of visible rows in dRowLabel[] */
+    int dRowLabelAlloc;		/* Size of dRowLabel[] */
+#endif
 };
 
 /*========*/
@@ -150,6 +168,10 @@ Range_Redo(
     int wrapCount = 0, wrapPixels = 0;
     int count, pixels, rItemCount = 0;
     int rangeIndex = 0, itemIndex;
+#ifdef ROW_LABEL
+    DRowLabel *dRowLabel;
+    TreeRowLabel row;
+#endif
 
     if (tree->debug.enable && tree->debug.display)
 	dbwin("Range_Redo %s\n", Tk_PathName(tree->tkwin));
@@ -159,6 +181,35 @@ Range_Redo(
 
     dInfo->rangeFirst = NULL;
     dInfo->rangeLast = NULL;
+
+#ifdef ROW_LABEL
+    /* Calculate the size/position of every row label even if there are no
+     * columns or items. */
+    if (dInfo->dRowLabelAlloc < tree->rowCount) {
+	dInfo->dRowLabel = (DRowLabel *) ckrealloc((char *) dInfo->dRowLabel,
+		tree->rowCount * sizeof(DRowLabel));
+	dInfo->dRowLabelAlloc = tree->rowCount;
+    }
+    dInfo->dRowLabelCnt = 0;
+    if (Tree_WidthOfRowLabels(tree) > 0) {
+	dRowLabel = dInfo->dRowLabel;
+	pixels = 0 /*Tree_HeaderHeight(tree)*/;
+	for (row = tree->rows; row != NULL; row = TreeRowLabel_Next(row)) {
+	    if (TreeRowLabel_Visible(row)) {
+		dRowLabel->row = row;
+		dRowLabel->offset = pixels;
+		if (TreeRowLabel_FixedHeight(row) > 0)
+		    dRowLabel->height = TreeRowLabel_FixedHeight(row);
+		else
+		    dRowLabel->height = TreeRowLabel_NeededHeight(row);
+		pixels += dRowLabel->height;
+		dInfo->dRowLabelCnt++;
+		dRowLabel++;
+	    }
+	}
+    }
+#endif /* ROW_LABEL */
+
     if (tree->columnCountVis < 1)
 	goto freeRanges;
 
@@ -173,8 +224,8 @@ Range_Redo(
 	    break;
 	case TREE_WRAP_WINDOW:
 	    wrapPixels = tree->vertical ?
-		Tk_Height(tree->tkwin) - tree->inset * 2 - Tree_HeaderHeight(tree) :
-		Tk_Width(tree->tkwin) - tree->inset * 2;
+		Tree_ContentHeight(tree) :
+		Tree_ContentWidth(tree);
 	    if (wrapPixels < 0)
 		wrapPixels = 0;
 	    break;
@@ -268,6 +319,20 @@ Range_Redo(
 		rItem->offset = pixels;
 		if (tree->vertical) {
 		    rItem->size = TreeItem_Height(tree, item);
+#ifdef ROW_LABEL
+		    if (dInfo->rangeFirst == NULL) {
+			if (rItem->index < dInfo->dRowLabelCnt) {
+			    dRowLabel = &dInfo->dRowLabel[rItem->index];
+			    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
+				rItem->size = TreeRowLabel_FixedHeight(dRowLabel->row);
+			    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > rItem->size) {
+				rItem->size = TreeRowLabel_NeededHeight(dRowLabel->row);
+			    }
+			    dRowLabel->offset = rItem->offset;
+			    dRowLabel->height = rItem->size;
+			}
+		    }
+#endif
 		} else {
 		    if (fixedWidth != -1) {
 			rItem->size = fixedWidth;
@@ -527,6 +592,9 @@ Range_TotalHeight(
     Range *range		/* Range to return the height of. */
     )
 {
+#ifdef ROW_LABEL
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+#endif
     TreeItem item;
     RItem *rItem;
     int itemHeight;
@@ -541,6 +609,20 @@ Range_TotalHeight(
 	itemHeight = TreeItem_Height(tree, item);
 	if (tree->vertical) {
 	    rItem->offset = range->totalHeight;
+#ifdef ROW_LABEL
+	    if (dInfo->rangeFirst == range) { /* always true? */
+		if (rItem->index < dInfo->dRowLabelCnt) {
+		    DRowLabel *dRowLabel = &dInfo->dRowLabel[rItem->index];
+		    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
+			itemHeight = TreeRowLabel_FixedHeight(dRowLabel->row);
+		    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > itemHeight) {
+			itemHeight = TreeRowLabel_NeededHeight(dRowLabel->row);
+		    }
+		    dRowLabel->offset = rItem->offset;
+		    dRowLabel->height = itemHeight;
+		}
+	    }
+#endif
 	    rItem->size = itemHeight;
 	    range->totalHeight += itemHeight;
 	}
@@ -552,6 +634,20 @@ Range_TotalHeight(
 	    break;
 	rItem++;
     }
+#ifdef ROW_LABEL
+    if (!tree->vertical) {
+	if (range->index < dInfo->dRowLabelCnt) {
+	    DRowLabel *dRowLabel = &dInfo->dRowLabel[range->index];
+	    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
+		range->totalHeight = TreeRowLabel_FixedHeight(dRowLabel->row);
+	    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > range->totalHeight) {
+		range->totalHeight = TreeRowLabel_NeededHeight(dRowLabel->row);
+	    }
+	    dRowLabel->offset = range->offset;
+	    dRowLabel->height = range->totalHeight;
+	}
+    }
+#endif
     return range->totalHeight;
 }
 
@@ -693,22 +789,21 @@ Range_UnderPoint(
     range = dInfo->rangeFirst;
 
     if (nearest) {
-	int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
-	int topInset = tree->inset + Tree_HeaderHeight(tree);
-	int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+	int visWidth = Tree_ContentWidth(tree);
+	int visHeight = Tree_ContentHeight(tree);
 
 	if ((visWidth <= 0) || (visHeight <= 0))
 	    return NULL;
 
 	/* Keep inside borders and header. Perhaps another flag needed. */
-	if (x < tree->inset)
-	    x = tree->inset;
-	if (x >= Tk_Width(tree->tkwin) - tree->inset)
-	    x = Tk_Width(tree->tkwin) - tree->inset - 1;
-	if (y < topInset)
-	    y = topInset;
-	if (y >= Tk_Height(tree->tkwin) - tree->inset)
-	    y = Tk_Height(tree->tkwin) - tree->inset - 1;
+	if (x < Tree_ContentLeft(tree))
+	    x = Tree_ContentLeft(tree);
+	if (x >= Tree_ContentRight(tree))
+	    x = Tree_ContentRight(tree) - 1;
+	if (y < Tree_ContentTop(tree))
+	    y = Tree_ContentTop(tree);
+	if (y >= Tree_ContentBottom(tree))
+	    y = Tree_ContentBottom(tree) - 1;
     }
 
     /* Window -> canvas */
@@ -883,7 +978,7 @@ Increment_AddX(
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    int visWidth = Tree_ContentWidth(tree);
 
     while ((visWidth > 1) &&
 	    (offset - dInfo->xScrollIncrements[dInfo->xScrollIncrementCount - 1]
@@ -926,8 +1021,7 @@ Increment_AddY(
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    int topInset = tree->inset + Tree_HeaderHeight(tree);
-    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+    int visHeight = Tree_ContentHeight(tree);
 
     while ((visHeight > 1) &&
 	    (offset - dInfo->yScrollIncrements[dInfo->yScrollIncrementCount - 1]
@@ -971,7 +1065,7 @@ RItemsToIncrementsX(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
     RItem *rItem;
-    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    int visWidth = Tree_ContentWidth(tree);
     int totalWidth = Tree_TotalWidth(tree);
     int x1, x2, x;
     int size;
@@ -1038,8 +1132,7 @@ RItemsToIncrementsY(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range;
     RItem *rItem;
-    int topInset = tree->inset + Tree_HeaderHeight(tree);
-    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+    int visHeight = Tree_ContentHeight(tree);
     int totalHeight = Tree_TotalHeight(tree);
     int y1, y2, y;
     int size;
@@ -1105,7 +1198,7 @@ RangesToIncrementsX(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
-    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    int visWidth = Tree_ContentWidth(tree);
     int totalWidth = Tree_TotalWidth(tree);
     int size;
 
@@ -1155,8 +1248,7 @@ RangesToIncrementsY(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
-    int topInset = tree->inset + Tree_HeaderHeight(tree);
-    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+    int visHeight = Tree_ContentHeight(tree);
     int totalHeight = Tree_TotalHeight(tree);
     int size;
 
@@ -1429,7 +1521,7 @@ B_XviewCmd(
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
-	int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+	int visWidth = Tree_ContentWidth(tree);
 	int totWidth = Tree_TotalWidth(tree);
 
 	if (visWidth < 0)
@@ -1463,11 +1555,11 @@ B_XviewCmd(
 		index = Increment_FindX(tree, offset);
 		break;
 	    case TK_SCROLL_PAGES:
-		offset = tree->inset + tree->xOrigin;
+		offset = Tree_ContentLeft(tree) + tree->xOrigin;
 		offset += (int) (count * visWidth * 0.9);
 		index = Increment_FindX(tree, offset);
 		if ((count > 0) && (index ==
-			    Increment_FindX(tree, tree->inset + tree->xOrigin)))
+			    Increment_FindX(tree, Tree_ContentLeft(tree) + tree->xOrigin)))
 		    index++;
 		break;
 	    case TK_SCROLL_UNITS:
@@ -1484,9 +1576,9 @@ B_XviewCmd(
 	    index = indexMax;
 
 	offset = Increment_ToOffsetX(tree, index);
-	if ((index != dInfo->incrementLeft) || (tree->xOrigin != offset - tree->inset)) {
+	if ((index != dInfo->incrementLeft) || (tree->xOrigin != offset - Tree_ContentLeft(tree))) {
 	    dInfo->incrementLeft = index;
-	    tree->xOrigin = offset - tree->inset;
+	    tree->xOrigin = offset - Tree_ContentLeft(tree);
 	    Tree_EventuallyRedraw(tree);
 	}
     }
@@ -1535,8 +1627,7 @@ B_YviewCmd(
     else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
-	int topInset = tree->inset + Tree_HeaderHeight(tree);
-	int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+	int visHeight = Tree_ContentHeight(tree);
 	int totHeight = Tree_TotalHeight(tree);
 
 	if (visHeight < 0)
@@ -1571,11 +1662,11 @@ B_YviewCmd(
 		index = Increment_FindY(tree, offset);
 		break;
 	    case TK_SCROLL_PAGES:
-		offset = topInset + tree->yOrigin;
+		offset = Tree_ContentTop(tree) + tree->yOrigin;
 		offset += (int) (count * visHeight * 0.9);
 		index = Increment_FindY(tree, offset);
 		if ((count > 0) && (index ==
-			    Increment_FindY(tree, topInset + tree->yOrigin)))
+			    Increment_FindY(tree, Tree_ContentTop(tree) + tree->yOrigin)))
 		    index++;
 		break;
 	    case TK_SCROLL_UNITS:
@@ -1592,9 +1683,9 @@ B_YviewCmd(
 	    index = indexMax;
 
 	offset = Increment_ToOffsetY(tree, index);
-	if ((index != dInfo->incrementTop) || (tree->yOrigin != offset - topInset)) {
+	if ((index != dInfo->incrementTop) || (tree->yOrigin != offset - Tree_ContentTop(tree))) {
 	    dInfo->incrementTop = index;
-	    tree->yOrigin = offset - topInset;
+	    tree->yOrigin = offset - Tree_ContentTop(tree);
 	    Tree_EventuallyRedraw(tree);
 	}
     }
@@ -1691,6 +1782,149 @@ Tree_ItemBbox(
     }
     return 0;
 }
+
+#ifdef ROW_LABEL
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RowLabelUnderPoint --
+ *
+ *	Return a TreeRowLabel containing the given coordinates.
+ *
+ * Results:
+ *	TreeRowLabel token or NULL if no row label contains the point.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
+TreeRowLabel
+Tree_RowLabelUnderPoint(
+    TreeCtrl *tree,		/* Widget info. */
+    int *x_, int *y_,		/* In: window coordinates.
+				 * Out: coordinates relative to top-left
+				 * corner of the returned row label. */
+    int *w, int *h,		/* Returned width and height. */
+    int nearest			/* TRUE if the row label nearest the coordinates
+				 * should be returned. */
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    DRowLabel *dRowLabel;
+    int x = *x_, y = *y_;
+    int i, l, u;
+    int bottomOfRows;
+
+    Range_RedoIfNeeded(tree);
+    if (dInfo->dRowLabelCnt == 0)
+	return NULL;
+
+    dRowLabel = &dInfo->dRowLabel[dInfo->dRowLabelCnt - 1];
+    bottomOfRows = dRowLabel->offset + dRowLabel->height;
+    bottomOfRows -= tree->yOrigin; /* canvas -> window */
+
+    if (nearest) {
+	if (x < tree->inset)
+	    x = tree->inset;
+	if (x >= Tree_ContentLeft(tree))
+	    x = Tree_ContentLeft(tree) - 1;
+	if (y < Tree_ContentTop(tree))
+	    y = Tree_ContentTop(tree);
+	if (y >= bottomOfRows)
+	    y = bottomOfRows - 1;
+    } else {
+	if (x < tree->inset)
+	    return NULL;
+	if (x >= Tree_ContentLeft(tree))
+	    return NULL;
+	if (y < Tree_ContentTop(tree))
+	    return NULL;
+	if (y >= bottomOfRows)
+	    return NULL;
+    }
+
+    /* Window -> canvas */
+    y += tree->yOrigin;
+
+    /* Binary search */
+    l = 0;
+    u = dInfo->dRowLabelCnt - 1;
+    while (l <= u) {
+	i = (l + u) / 2;
+	dRowLabel = dInfo->dRowLabel + i;
+	if ((y >= dRowLabel->offset) && (y < dRowLabel->offset + dRowLabel->height)) {
+	    (*x_) = x - tree->inset;
+	    (*y_) = y - dRowLabel->offset;
+	    (*w) = Tree_WidthOfRowLabels(tree);
+	    (*h) = dRowLabel->height;
+	    return dRowLabel->row;
+	}
+	if (y < dRowLabel->offset)
+	    u = i - 1;
+	else
+	    l = i + 1;
+    }
+    panic("Tree_RowLabelUnderPoint: can't find any row\n");
+    return NULL;
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_RowLabelBbox --
+ *
+ *	Return the bounding box for a row label.
+ *
+ * Results:
+ *	Return value is -1 if the row label is not visible. The coordinates
+ *	are relative to the top-left corner of the canvas.
+ *
+ * Side effects:
+ *	The list of Ranges will be recalculated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
+int
+Tree_RowLabelBbox(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeRowLabel row,		/* Row label whose bbox is needed. */
+    int *x, int *y,		/* Returned left and top. */
+    int *w, int *h		/* Returned width and height. */
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    DRowLabel *dRowLabel;
+    int i, l, u;
+
+    if (!TreeRowLabel_Visible(row) || !tree->showRowLabels)
+	return -1;
+    Range_RedoIfNeeded(tree);
+
+    /* Binary search */
+    l = 0;
+    u = dInfo->dRowLabelCnt - 1;
+    while (l <= u) {
+	i = (l + u) / 2;
+	dRowLabel = dInfo->dRowLabel + i;
+	if (dRowLabel->row == row) {
+	    (*x) = -Tree_WidthOfRowLabels(tree);
+	    (*y) = dRowLabel->offset;
+	    (*w) = Tree_WidthOfRowLabels(tree);
+	    (*h) = dRowLabel->height;
+	    return 0;
+	}
+	if (TreeRowLabel_Index(row) < TreeRowLabel_Index(dRowLabel->row))
+	    u = i - 1;
+	else
+	    l = i + 1;
+    }
+
+    return -1;
+}
+#endif /* ROW_LABEL */
 
 /*
  *--------------------------------------------------------------
@@ -2061,7 +2295,9 @@ DItem_Alloc(
 	dItem = (DItem *) ckalloc(sizeof(DItem));
     }
     memset(dItem, '\0', sizeof(DItem));
+#ifdef TREECTRL_DEBUG
     strncpy(dItem->magic, "MAGC", 4);
+#endif
     dItem->item = rItem->item;
     dItem->flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
     TreeItem_SetDInfo(tree, rItem->item, (TreeItemDInfo) dItem);
@@ -2132,8 +2368,10 @@ DItem_Free(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *next = dItem->next;
+#ifdef TREECTRL_DEBUG
     if (strncmp(dItem->magic, "MAGC", 4) != 0)
 	panic("DItem_Free: dItem.magic != MAGC");
+#endif
     if (dItem->item != NULL)
 	TreeItem_SetDInfo(tree, dItem->item, (TreeItemDInfo) NULL);
     /* Push unused DItem on the stack */
@@ -2356,8 +2594,8 @@ UpdateDInfoForRange(
     if (tree->backgroundImage != NULL)
 	Tk_SizeOfImage(tree->backgroundImage, &bgImgWidth, &bgImgHeight);
 
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     /* Top-to-bottom */
     if (tree->vertical) {
@@ -2603,10 +2841,10 @@ Tree_UpdateDInfo(
     if (tree->debug.enable && tree->debug.display)
 	dbwin("Tree_UpdateDInfo %s\n", Tk_PathName(tree->tkwin));
 
-    minX = tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     if ((maxX - minX < 1) || (maxY - minY < 1))
 	goto done;
@@ -2853,10 +3091,10 @@ ScrollVerticalComplex(
     int y;
     int numCopy = 0;
 
-    minX = tree->inset;
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     /* Try updating the display by copying items on the screen to their
      * new location */
@@ -3013,86 +3251,92 @@ ScrollHorizontalSimple(
     int minX, minY, maxX, maxY;
     int width, offset;
     int x, y;
+    int dirtyMin, dirtyMax;
 
-    minX = tree->inset;
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    if (dInfo->xOrigin == tree->xOrigin)
+	return;
 
-    /* Horizontal scrolling */
-    if (dInfo->xOrigin != tree->xOrigin) {
-	int dirtyMin, dirtyMax;
+    /* Update oldX */
+    for (dItem = dInfo->dItem;
+	    dItem != NULL;
+	    dItem = dItem->next) {
+	dItem->oldX = dItem->x;
+    }
 
-	offset = dInfo->xOrigin - tree->xOrigin;
-	width = maxX - minX - abs(offset);
-	if (width < 0)
-	    width = maxX - minX;
-	/* Move pixels right */
-	if (offset > 0) {
-	    x = minX;
-	}
-	/* Move pixels left */
-	else {
-	    x = maxX - width;
-	}
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
-	dirtyMin = minX + width;
-	dirtyMax = maxX - width;
+    offset = dInfo->xOrigin - tree->xOrigin;
 
-	/* Update oldX */
-	for (dItem = dInfo->dItem;
-	     dItem != NULL;
-	     dItem = dItem->next) {
-	    dItem->oldX = dItem->x;
-	}
+    /* Simplify if a whole screen was scrolled. */
+    if (abs(offset) >= maxX - minX) {
+	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+	Tree_InvalidateArea(tree, minX, minY, maxX, maxY);
+	return;
+    }
 
-	damageRgn = TkCreateRegion();
+    width = maxX - minX - abs(offset);
 
-	/* Offset and clip the whitespace region */
-	Tk_OffsetRegion(dInfo->wsRgn, offset, 0);
-	rgn = TkCreateRegion();
-	rect.x = minX;
-	rect.y = minY;
-	rect.width = maxX - minX;
-	rect.height = maxY - minY;
-	TkUnionRectWithRegion(&rect, rgn, damageRgn);
-	TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
-	TkDestroyRegion(rgn);
+    /* Move pixels right */
+    if (offset > 0) {
+	x = minX;
+    }
+    /* Move pixels left */
+    else {
+	x = maxX - width;
+    }
 
-	/* We only scroll the content, not the whitespace */
-	y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
-	if (y < maxY)
-	    maxY = y;
+    dirtyMin = minX + width;
+    dirtyMax = maxX - width;
 
-	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	    XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
-		    tree->copyGC,
-		    x, minY, width, maxY - minY,
-		    x + offset, minY);
-	    if (offset < 0)
-		dirtyMax = maxX;
-	    else
-		dirtyMin = minX;
-	    Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
-	    TkDestroyRegion(damageRgn);
-	    return;
-	}
+    damageRgn = TkCreateRegion();
 
-	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
-		    x, minY, width, maxY - minY, offset, 0, damageRgn)) {
-	    DisplayDelay(tree);
-	    Tree_InvalidateRegion(tree, damageRgn);
-	}
-	TkDestroyRegion(damageRgn);
-#ifndef WIN32
+    /* Offset and clip the whitespace region */
+    Tk_OffsetRegion(dInfo->wsRgn, offset, 0);
+    rgn = TkCreateRegion();
+    rect.x = minX;
+    rect.y = minY;
+    rect.width = maxX - minX;
+    rect.height = maxY - minY;
+    TkUnionRectWithRegion(&rect, rgn, damageRgn);
+    TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
+    TkDestroyRegion(rgn);
+
+    /* We only scroll the content, not the whitespace */
+    y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
+    if (y < maxY)
+	maxY = y;
+
+    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
+		tree->copyGC,
+		x, minY, width, maxY - minY,
+		x + offset, minY);
 	if (offset < 0)
 	    dirtyMax = maxX;
 	else
 	    dirtyMin = minX;
-#endif
-	if (dirtyMin < dirtyMax)
-	    Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
+	Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
+	TkDestroyRegion(damageRgn);
+	return;
     }
+
+    if (Tree_ScrollWindow(tree, dInfo->scrollGC,
+		x, minY, width, maxY - minY, offset, 0, damageRgn)) {
+	DisplayDelay(tree);
+	Tree_InvalidateRegion(tree, damageRgn);
+    }
+    TkDestroyRegion(damageRgn);
+#ifndef WIN32
+    if (offset < 0)
+	dirtyMax = maxX;
+    else
+	dirtyMin = minX;
+#endif
+    if (dirtyMin < dirtyMax)
+	Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
 }
 
 /*
@@ -3125,86 +3369,92 @@ ScrollVerticalSimple(
     int minX, minY, maxX, maxY;
     int height, offset;
     int x, y;
+    int dirtyMin, dirtyMax;
 
-    minX = tree->inset;
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    if (dInfo->yOrigin == tree->yOrigin)
+	return;
 
-    /* Vertical scrolling */
-    if (dInfo->yOrigin != tree->yOrigin) {
-	int dirtyMin, dirtyMax;
+    /* Update oldY */
+    for (dItem = dInfo->dItem;
+	    dItem != NULL;
+	    dItem = dItem->next) {
+	dItem->oldY = dItem->y;
+    }
 
-	offset = dInfo->yOrigin - tree->yOrigin;
-	height = maxY - minY - abs(offset);
-	if (height < 0)
-	    height = maxY - minY;
-	/* Move pixels down */
-	if (offset > 0) {
-	    y = minY;
-	}
-	/* Move pixels up */
-	else {
-	    y = maxY - height;
-	}
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
-	dirtyMin = minY + height;
-	dirtyMax = maxY - height;
+    offset = dInfo->yOrigin - tree->yOrigin;
 
-	/* Update oldY */
-	for (dItem = dInfo->dItem;
-	     dItem != NULL;
-	     dItem = dItem->next) {
-	    dItem->oldY = dItem->y;
-	}
+    /* Simplify if a whole screen was scrolled. */
+    if (abs(offset) > maxY - minY) {
+	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+	Tree_InvalidateArea(tree, minX, minY, maxX, maxY);
+	return;
+    }
 
-	damageRgn = TkCreateRegion();
+    height = maxY - minY - abs(offset);
 
-	/* Offset and clip the whitespace region */
-	Tk_OffsetRegion(dInfo->wsRgn, 0, offset);
-	rgn = TkCreateRegion();
-	rect.x = minX;
-	rect.y = minY;
-	rect.width = maxX - minX;
-	rect.height = maxY - minY;
-	TkUnionRectWithRegion(&rect, rgn, damageRgn);
-	TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
-	TkDestroyRegion(rgn);
+    /* Move pixels down */
+    if (offset > 0) {
+	y = minY;
+    }
+    /* Move pixels up */
+    else {
+	y = maxY - height;
+    }
 
-	/* We only scroll the content, not the whitespace */
-	x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
-	if (x < maxX)
-	    maxX = x;
+    dirtyMin = minY + height;
+    dirtyMax = maxY - height;
 
-	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	    XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
-		    tree->copyGC,
-		    minX, y, maxX - minX, height,
-		    minX, y + offset);
-	    if (offset < 0)
-		dirtyMax = maxY;
-	    else
-		dirtyMin = minY;
-	    Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
-	    TkDestroyRegion(damageRgn);
-	    return;
-	}
+    damageRgn = TkCreateRegion();
 
-	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
-		    minX, y, maxX - minX, height, 0, offset, damageRgn)) {
-	    DisplayDelay(tree);
-	    Tree_InvalidateRegion(tree, damageRgn);
-	}
-	TkDestroyRegion(damageRgn);
-#ifndef WIN32
+    /* Offset and clip the whitespace region */
+    Tk_OffsetRegion(dInfo->wsRgn, 0, offset);
+    rgn = TkCreateRegion();
+    rect.x = minX;
+    rect.y = minY;
+    rect.width = maxX - minX;
+    rect.height = maxY - minY;
+    TkUnionRectWithRegion(&rect, rgn, damageRgn);
+    TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
+    TkDestroyRegion(rgn);
+
+    /* We only scroll the content, not the whitespace */
+    x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+    if (x < maxX)
+	maxX = x;
+
+    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
+		tree->copyGC,
+		minX, y, maxX - minX, height,
+		minX, y + offset);
 	if (offset < 0)
 	    dirtyMax = maxY;
 	else
 	    dirtyMin = minY;
-#endif
-	if (dirtyMin < dirtyMax)
-	    Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
+	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
+	TkDestroyRegion(damageRgn);
+	return;
     }
+
+    if (Tree_ScrollWindow(tree, dInfo->scrollGC,
+		minX, y, maxX - minX, height, 0, offset, damageRgn)) {
+	DisplayDelay(tree);
+	Tree_InvalidateRegion(tree, damageRgn);
+    }
+    TkDestroyRegion(damageRgn);
+#ifndef WIN32
+    if (offset < 0)
+	dirtyMax = maxY;
+    else
+	dirtyMin = minY;
+#endif
+    if (dirtyMin < dirtyMax)
+	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
 }
 
 /*
@@ -3240,10 +3490,10 @@ ScrollHorizontalComplex(
     int x;
     int numCopy = 0;
 
-    minX = tree->inset;
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     /* Try updating the display by copying items on the screen to their
      * new location */
@@ -3373,10 +3623,10 @@ ScrollHorizontalComplex(
 /*
  *--------------------------------------------------------------
  *
- * TreeColumnProxy_Draw --
+ * Proxy_Draw --
  *
  *	Draw (or erase) the visual indicator used when the user is
- *	resizing a column (and -columnresizemode is "proxy").
+ *	resizing a column or row (and -columnresizemode is "proxy").
  *
  * Results:
  *	None.
@@ -3388,17 +3638,17 @@ ScrollHorizontalComplex(
  *--------------------------------------------------------------
  */
 
-void
-TreeColumnProxy_Draw(
-    TreeCtrl *tree		/* Widget info. */
+static void
+Proxy_Draw(
+    TreeCtrl *tree,		/* Widget info. */
+    int x1,			/* Vertical or horizontal line window coords. */
+    int y1,
+    int x2,
+    int y2
     )
 {
 #if defined(MAC_OSX_TK)
-    DrawXORLine(tree->display, Tk_WindowId(tree->tkwin),
-	    tree->columnProxy.sx,
-	    tree->inset,
-	    tree->columnProxy.sx,
-	    Tk_Height(tree->tkwin) - tree->inset);
+    DrawXORLine(tree->display, Tk_WindowId(tree->tkwin), x1, y1, x2, y2);
 #else
     XGCValues gcValues;
     unsigned long gcMask;
@@ -3415,17 +3665,10 @@ TreeColumnProxy_Draw(
 
     /* GXinvert doesn't work with XFillRectangle() on Win32 or Mac */
 #if defined(WIN32) || defined(MAC_TCL)
-    XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc,
-	    tree->columnProxy.sx,
-	    tree->inset,
-	    tree->columnProxy.sx,
-	    Tk_Height(tree->tkwin) - tree->inset);
+    XDrawLine(tree->display, Tk_WindowId(tree->tkwin), gc, x1, y1, x2, y2);
 #else
     XFillRectangle(tree->display, Tk_WindowId(tree->tkwin), gc,
-	    tree->columnProxy.sx,
-	    tree->inset,
-	    1,
-	    Tk_Height(tree->tkwin) - tree->inset * 2);
+	    x1, y1, MAX(x2 - x1, 1), MAX(y2 - y1, 1));
 #endif
 
     Tk_FreeGC(tree->display, gc);
@@ -3455,7 +3698,8 @@ TreeColumnProxy_Undisplay(
     )
 {
     if (tree->columnProxy.onScreen) {
-	TreeColumnProxy_Draw(tree);
+	Proxy_Draw(tree, tree->columnProxy.sx, tree->inset,
+		tree->columnProxy.sx, Tk_Height(tree->tkwin) - tree->inset);
 	tree->columnProxy.onScreen = FALSE;
     }
 }
@@ -3485,10 +3729,73 @@ TreeColumnProxy_Display(
 {
     if (!tree->columnProxy.onScreen && (tree->columnProxy.xObj != NULL)) {
 	tree->columnProxy.sx = tree->columnProxy.x;
-	TreeColumnProxy_Draw(tree);
+	Proxy_Draw(tree, tree->columnProxy.x, tree->inset,
+		tree->columnProxy.x, Tk_Height(tree->tkwin) - tree->inset);
 	tree->columnProxy.onScreen = TRUE;
     }
 }
+
+#ifdef ROW_LABEL
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeRowLabelProxy_Display --
+ *
+ *	Display the visual indicator used when the user is
+ *	resizing a row (if it isn't displayed and should be
+ *	displayed).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in the TreeCtrl window.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+TreeRowLabelProxy_Display(
+    TreeCtrl *tree		/* Widget info. */
+    )
+{
+    if (!tree->rowProxy.onScreen && (tree->rowProxy.yObj != NULL)) {
+	tree->rowProxy.sy = tree->rowProxy.y;
+	Proxy_Draw(tree, tree->inset, tree->rowProxy.y,
+		Tk_Width(tree->tkwin) - tree->inset, tree->rowProxy.y);
+	tree->rowProxy.onScreen = TRUE;
+    }
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeRowLabelProxy_Undisplay --
+ *
+ *	Hide the visual indicator used when the user is
+ *	resizing a row (if it is displayed).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is erased in the TreeCtrl window.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+TreeRowLabelProxy_Undisplay(
+    TreeCtrl *tree		/* Widget info. */
+    )
+{
+    if (tree->rowProxy.onScreen) {
+	Proxy_Draw(tree, tree->inset, tree->rowProxy.sy,
+		Tk_Width(tree->tkwin) - tree->inset, tree->rowProxy.sy);
+	tree->rowProxy.onScreen = FALSE;
+    }
+}
+#endif /* ROW_LABEL */
 
 /*
  *--------------------------------------------------------------
@@ -3523,10 +3830,10 @@ CalcWhiteSpaceRegion(
     x = 0 - tree->xOrigin;
     y = 0 - tree->yOrigin;
 
-    minX = tree->inset;
-    maxX = Tk_Width(tree->tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tree->tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     wsRgn = TkCreateRegion();
 
@@ -3543,7 +3850,7 @@ CalcWhiteSpaceRegion(
     else {
 	/* Erase area below last Range */
 	if (y + Tree_TotalHeight(tree) < maxY) {
-	    rect.x = tree->inset;
+	    rect.x = minX;
 	    rect.y = y + Tree_TotalHeight(tree);
 	    rect.width = maxX - minX;
 	    rect.height = maxY - (y + Tree_TotalHeight(tree));
@@ -3768,6 +4075,20 @@ displayRetry:
 	if (tree->vertical && (tree->wrapMode == TREE_WRAP_WINDOW))
 	    dInfo->flags |= DINFO_REDO_RANGES;
     }
+#ifdef ROW_LABEL
+    if (dInfo->rowLabelWidth != Tree_WidthOfRowLabels(tree)) {
+	dInfo->rowLabelWidth = Tree_WidthOfRowLabels(tree);
+	dInfo->flags |=
+	    DINFO_SET_ORIGIN_X |
+	    DINFO_UPDATE_SCROLLBAR_X |
+	    DINFO_OUT_OF_DATE |
+	    DINFO_REDO_RANGES |
+	    DINFO_DRAW_HEADER;
+    }
+    if (dInfo->flags & DINFO_REDO_RANGES) {
+	dInfo->flags |= DINFO_DRAW_ROWLABELS;
+    }
+#endif
     Range_RedoIfNeeded(tree);
     Increment_RedoIfNeeded(tree);
     if (dInfo->xOrigin != tree->xOrigin) {
@@ -3795,6 +4116,19 @@ displayRetry:
 	    DINFO_UPDATE_SCROLLBAR_Y |
 	    DINFO_OUT_OF_DATE;
     }
+#ifdef ROW_LABEL
+    if (dInfo->flags & (
+	    DINFO_SET_ORIGIN_Y |
+	    DINFO_UPDATE_SCROLLBAR_Y)) {
+	/*
+	 * Redraw rowlabels because of:
+	 * 1) vertical scrolling
+	 * 2) redo-ranges
+	 * 3) display change of rowlabel
+	 */
+	dInfo->flags |= DINFO_DRAW_ROWLABELS;
+    }
+#endif
     if (dInfo->flags & DINFO_SET_ORIGIN_X) {
 	Tree_SetOriginX(tree, tree->xOrigin);
 	dInfo->flags &= ~DINFO_SET_ORIGIN_X;
@@ -3912,13 +4246,16 @@ displayRetry:
 	drawable = dInfo->pixmap;
     }
 
-    minX = tree->inset;
-    maxX = Tk_Width(tkwin) - tree->inset;
-    minY = tree->inset + Tree_HeaderHeight(tree);
-    maxY = Tk_Height(tkwin) - tree->inset;
+    minX = Tree_ContentLeft(tree);
+    minY = Tree_ContentTop(tree);
+    maxX = Tree_ContentRight(tree);
+    maxY = Tree_ContentBottom(tree);
 
     /* XOR off */
     TreeColumnProxy_Undisplay(tree);
+#ifdef ROW_LABEL
+    TreeRowLabelProxy_Undisplay(tree);
+#endif
     TreeDragImage_Undisplay(tree->dragImage);
     TreeMarquee_Undisplay(tree->marquee);
 
@@ -3926,7 +4263,7 @@ displayRetry:
 	if (tree->showHeader) {
 	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, tree->inset);
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = minX;
+		dInfo->dirty[LEFT] = tree->inset;
 		dInfo->dirty[TOP] = tree->inset;
 		dInfo->dirty[RIGHT] = maxX;
 		dInfo->dirty[BOTTOM] = minY;
@@ -3934,6 +4271,74 @@ displayRetry:
 	}
 	dInfo->flags &= ~DINFO_DRAW_HEADER;
     }
+
+#ifdef ROW_LABEL
+    {
+	TreeRowLabel row = tree->rows;
+
+	/* Need onscreen/offscreen calls for window elements. */
+	while (row != NULL) {
+	    if (!TreeRowLabel_Visible(row) || (Tree_WidthOfRowLabels(tree) <= 0)) {
+		TreeRowLabel_OnScreen(row, FALSE);
+	    }
+	    row = TreeRowLabel_Next(row);
+	}
+    }
+    if (dInfo->flags & DINFO_DRAW_ROWLABELS) {
+	dInfo->flags &= ~DINFO_DRAW_ROWLABELS;
+	if (Tree_WidthOfRowLabels(tree) > 0) {
+	    DRowLabel *dRowLabel = dInfo->dRowLabel;
+	    int i, y = 0 - tree->yOrigin;
+	    int width = Tree_WidthOfRowLabels(tree);
+	    Drawable pixmap = drawable;
+	    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
+		pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
+			tree->inset + width, Tk_Height(tkwin),
+			Tk_Depth(tkwin));
+	    }
+
+	    /* Erase entire background. */
+	    /* FIXME: background image? */
+	    Tk_Fill3DRectangle(tree->tkwin, pixmap, tree->border,
+		    tree->inset, minY, width,
+		    maxY - minY, 0, TK_RELIEF_FLAT);
+
+	    /* This is needed for updating window positions */
+	    tree->drawableXOrigin = tree->xOrigin;
+	    tree->drawableYOrigin = tree->yOrigin;
+
+	    for (i = 0; i < dInfo->dRowLabelCnt; i++) {
+		int onScreen = FALSE;
+		dRowLabel = &dInfo->dRowLabel[i];
+		if (dRowLabel->height > 0) {
+		    if ((y + dRowLabel->height > minY) && (y < maxY)) {
+			TreeRowLabel_Draw(dRowLabel->row, tree->inset, y,
+				width, dRowLabel->height,
+				pixmap);
+			onScreen = TRUE;
+		    }
+		    y += dRowLabel->height;
+		}
+		TreeRowLabel_OnScreen(dRowLabel->row, onScreen);
+	    }
+
+	    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
+		XCopyArea(tree->display, pixmap, drawable,
+			tree->copyGC, tree->inset, minY,
+			width, maxY - minY,
+			tree->inset, minY);
+		Tk_FreePixmap(tree->display, pixmap);
+	    }
+
+	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], tree->inset);
+		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], minY);
+		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], minX);
+		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], maxY);
+	    }
+	}
+    }
+#endif /* ROW_LABEL */
 
     if (tree->vertical) {
 	numCopy = ScrollVerticalComplex(tree);
@@ -3949,11 +4354,11 @@ displayRetry:
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	if ((dInfo->xOrigin != tree->xOrigin) ||
 		(dInfo->yOrigin != tree->yOrigin)) {
-	    dInfo->dirty[LEFT] = minX;
+	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], minX);
 	    /* might include header */
 	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], minY);
-	    dInfo->dirty[RIGHT] = maxX;
-	    dInfo->dirty[BOTTOM] = maxY;
+	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], maxX);
+	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], maxY);
 	}
     }
 
@@ -4181,6 +4586,9 @@ displayRetry:
     /* XOR on */
     TreeMarquee_Display(tree->marquee);
     TreeDragImage_Display(tree->dragImage);
+#ifdef ROW_LABEL
+    TreeRowLabelProxy_Display(tree);
+#endif
     TreeColumnProxy_Display(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_NONE)
@@ -4411,7 +4819,7 @@ Increment_ToOffsetY(
 	if (index < 0 || index >= dInfo->yScrollIncrementCount) {
 	    panic("Increment_ToOffsetY: bad index %d (must be 0-%d)\ntotHeight %d visHeight %d",
 		    index, dInfo->yScrollIncrementCount - 1,
-		    Tree_TotalHeight(tree), Tk_Height(tree->tkwin) - Tree_HeaderHeight(tree) - tree->inset);
+		    Tree_TotalHeight(tree), Tree_ContentHeight(tree));
 	}
 	return dInfo->yScrollIncrements[index];
     }
@@ -4490,8 +4898,8 @@ Tree_GetScrollFractionsX(
     double fractions[2]		/* Returned values. */
     )
 {
-    int left = tree->xOrigin + tree->inset;
-    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    int left = tree->xOrigin + Tree_ContentLeft(tree);
+    int visWidth = Tree_ContentWidth(tree);
     int totWidth = Tree_TotalWidth(tree);
     int index, offset;
 
@@ -4547,9 +4955,8 @@ Tree_GetScrollFractionsY(
     double fractions[2]		/* Returned values. */
     )
 {
-    int topInset = tree->inset + Tree_HeaderHeight(tree);
-    int top = topInset + tree->yOrigin; /* canvas coords */
-    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+    int top = Tree_ContentTop(tree) + tree->yOrigin; /* canvas coords */
+    int visHeight = Tree_ContentHeight(tree);
     int totHeight = Tree_TotalHeight(tree);
     int index, offset;
 
@@ -4610,14 +5017,14 @@ Tree_SetOriginX(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int totWidth = Tree_TotalWidth(tree);
-    int visWidth = Tk_Width(tree->tkwin) - tree->inset * 2;
+    int visWidth = Tree_ContentWidth(tree);
     int index, indexMax, offset;
 
     /* The tree is empty, or everything fits in the window */
     if (visWidth < 0)
 	visWidth = 0;
     if (totWidth <= visWidth) {
-	xOrigin = 0 - tree->inset;
+	xOrigin = 0 - Tree_ContentLeft(tree);
 	if (xOrigin != tree->xOrigin) {
 	    tree->xOrigin = xOrigin;
 	    dInfo->incrementLeft = 0;
@@ -4642,7 +5049,7 @@ Tree_SetOriginX(
     else
 	indexMax = Increment_FindX(tree, totWidth);
 
-    xOrigin += tree->inset; /* origin -> canvas */
+    xOrigin += Tree_ContentLeft(tree); /* origin -> canvas */
     index = Increment_FindX(tree, xOrigin);
 
     /* Don't scroll too far left */
@@ -4654,7 +5061,7 @@ Tree_SetOriginX(
 	index = indexMax;
 
     offset = Increment_ToOffsetX(tree, index);
-    xOrigin = offset - tree->inset;
+    xOrigin = offset - Tree_ContentLeft(tree);
 
     if (xOrigin == tree->xOrigin)
 	return;
@@ -4692,8 +5099,7 @@ Tree_SetOriginY(
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    int topInset = tree->inset + Tree_HeaderHeight(tree);
-    int visHeight = Tk_Height(tree->tkwin) - topInset - tree->inset;
+    int visHeight = Tree_ContentHeight(tree);
     int totHeight = Tree_TotalHeight(tree);
     int index, indexMax, offset;
 
@@ -4701,7 +5107,7 @@ Tree_SetOriginY(
     if (visHeight < 0)
 	visHeight = 0;
     if (totHeight <= visHeight) {
-	yOrigin = 0 - topInset;
+	yOrigin = 0 - Tree_ContentTop(tree);
 	if (yOrigin != tree->yOrigin) {
 	    tree->yOrigin = yOrigin;
 	    dInfo->incrementTop = 0;
@@ -4726,7 +5132,7 @@ Tree_SetOriginY(
     else
 	indexMax = Increment_FindY(tree, totHeight);
 
-    yOrigin += topInset; /* origin -> canvas */
+    yOrigin += Tree_ContentTop(tree); /* origin -> canvas */
     index = Increment_FindY(tree, yOrigin);
 
     /* Don't scroll too far left */
@@ -4738,7 +5144,7 @@ Tree_SetOriginY(
 	index = indexMax;
 
     offset = Increment_ToOffsetY(tree, index);
-    yOrigin = offset - topInset;
+    yOrigin = offset - Tree_ContentTop(tree);
     if (yOrigin == tree->yOrigin)
 	return;
 
@@ -5142,6 +5548,11 @@ Tree_InvalidateArea(
     if ((y2 > tree->inset) && (y1 < tree->inset + Tree_HeaderHeight(tree)))
 	dInfo->flags |= DINFO_DRAW_HEADER;
 
+#ifdef ROW_LABEL
+    if (x2 > tree->inset && x1 < Tree_ContentLeft(tree))
+	dInfo->flags |= DINFO_DRAW_ROWLABELS;
+#endif
+
     dItem = dInfo->dItem;
     while (dItem != NULL) {
 	if (!(dItem->flags & DITEM_ALL_DIRTY) &&
@@ -5202,7 +5613,7 @@ Tree_InvalidateRegion(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
     int minX = tree->inset, maxX = Tk_Width(tree->tkwin) - tree->inset;
-    int ymin = tree->inset, maxY = Tk_Height(tree->tkwin) - tree->inset;
+    int minY = tree->inset, maxY = Tk_Height(tree->tkwin) - tree->inset;
     XRectangle rect;
     int x1, x2, y1, y2;
 
@@ -5212,8 +5623,16 @@ Tree_InvalidateRegion(
     x1 = rect.x, x2 = rect.x + rect.width;
     y1 = rect.y, y2 = rect.y + rect.height;
 
-    if (TkRectInRegion(region, minX, ymin, maxX - minX, Tree_HeaderHeight(tree)) != RectangleOut)
+    if (TkRectInRegion(region, minX, minY, maxX - minX,
+	    Tree_HeaderHeight(tree)) != RectangleOut)
 	dInfo->flags |= DINFO_DRAW_HEADER;
+
+#ifdef ROW_LABEL
+    if (TkRectInRegion(region, tree->inset, Tree_ContentTop(tree),
+	    Tree_WidthOfRowLabels(tree), Tree_ContentHeight(tree))
+	    != RectangleOut)
+	dInfo->flags |= DINFO_DRAW_ROWLABELS;
+#endif
 
     dItem = dInfo->dItem;
     while (dItem != NULL) {
@@ -5229,7 +5648,7 @@ Tree_InvalidateRegion(
 
     /* Could check border and highlight separately */
     if (tree->inset > 0) {
-	if ((x1 < minX) || (y1 < ymin) || (x2 > maxX) || (y2 > maxY)) {
+	if ((x1 < minX) || (y1 < minY) || (x2 > maxX) || (y2 > maxY)) {
 	    if (tree->highlightWidth > 0)
 		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
 	    if (tree->borderWidth > 0)
@@ -5271,14 +5690,14 @@ Tree_InvalidateItemArea(
 				 * coordinates. */
     )
 {
-    if (x1 < tree->inset)
-	x1 = tree->inset;
-    if (y1 < tree->inset + Tree_HeaderHeight(tree))
-	y1 = tree->inset + Tree_HeaderHeight(tree);
-    if (x2 > Tk_Width(tree->tkwin) - tree->inset)
-	x2 = Tk_Width(tree->tkwin) - tree->inset;
-    if (y2 > Tk_Height(tree->tkwin) - tree->inset)
-	y2 = Tk_Height(tree->tkwin) - tree->inset;
+    if (x1 < Tree_ContentLeft(tree))
+	x1 = Tree_ContentLeft(tree);
+    if (y1 < Tree_ContentTop(tree))
+	y1 = Tree_ContentTop(tree);
+    if (x2 > Tree_ContentRight(tree))
+	x2 = Tree_ContentRight(tree);
+    if (y2 > Tree_ContentBottom(tree))
+	y2 = Tree_ContentBottom(tree);
     Tree_InvalidateArea(tree, x1, y1, x2, y2);
 }
 
@@ -5404,6 +5823,10 @@ TreeDInfo_Free(
     }
     while (range != NULL)
 	range = Range_Free(tree, range);
+#ifdef ROW_LABEL
+    if (dInfo->dRowLabel != NULL)
+	ckfree((char *) dInfo->dRowLabel);
+#endif
     Tk_FreeGC(tree->display, dInfo->scrollGC);
     if (dInfo->flags & DINFO_REDRAW_PENDING)
 	Tcl_CancelIdleCall(Tree_Display, (ClientData) tree);
