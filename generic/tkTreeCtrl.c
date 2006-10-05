@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.66 2006/10/04 03:25:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.67 2006/10/05 22:51:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -79,12 +79,12 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_COLOR, "-buttoncolor", "buttonColor", "ButtonColor",
      "#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
-    {TK_OPTION_STRING, "-buttonbitmap", "buttonBitmap", "ButtonBitmap",
-     (char *) NULL, Tk_Offset(TreeCtrl, buttonBitmap.obj), -1,
+    {TK_OPTION_CUSTOM, "-buttonbitmap", "buttonBitmap", "ButtonBitmap",
+     (char *) NULL, -1, Tk_Offset(TreeCtrl, buttonBitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL,
      TREE_CONF_BUTTON | TREE_CONF_BUTBMP | TREE_CONF_RELAYOUT},
-    {TK_OPTION_STRING, "-buttonimage", "buttonImage", "ButtonImage",
-     (char *) NULL, Tk_Offset(TreeCtrl, buttonImage.obj), -1,
+    {TK_OPTION_CUSTOM, "-buttonimage", "buttonImage", "ButtonImage",
+     (char *) NULL, -1, Tk_Offset(TreeCtrl, buttonImage),
      TK_OPTION_NULL_OK, (ClientData) NULL,
      TREE_CONF_BUTTON | TREE_CONF_BUTIMG | TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-buttonsize", "buttonSize", "ButtonSize",
@@ -1231,10 +1231,6 @@ TreeConfigure(
 
 	    if (mask & TREE_CONF_BG_IMAGE)
 		saved.backgroundImage = tree->backgroundImage;
-	    if (mask & TREE_CONF_BUTBMP)
-		PSTSave(&tree->buttonBitmap, &saved.buttonBitmap);
-	    if (mask & TREE_CONF_BUTIMG)
-		PSTSave(&tree->buttonImage, &saved.buttonImage);
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		saved.defaultStyle.styles = tree->defaultStyle.styles;
 		saved.defaultStyle.numStyles = tree->defaultStyle.numStyles;
@@ -1256,18 +1252,6 @@ TreeConfigure(
 			continue;
 		    tree->backgroundImage = image;
 		}
-	    }
-
-	    if (mask & TREE_CONF_BUTBMP) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBitmap,
-		    &tree->buttonBitmap) != TCL_OK)
-		    continue;
-	    }
-
-	    if (mask & TREE_CONF_BUTIMG) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstImage,
-		    &tree->buttonImage) != TCL_OK)
-		    continue;
 	    }
 
 	    if (mask & TREE_CONF_DEFSTYLE) {
@@ -1366,10 +1350,6 @@ badWrap:
 		if (saved.defaultStyle.styles != NULL)
 		    ckfree((char *) saved.defaultStyle.styles);
 	    }
-	    if (mask & TREE_CONF_BUTBMP)
-		PerStateInfo_Free(tree, &pstBitmap, &saved.buttonBitmap);
-	    if (mask & TREE_CONF_BUTIMG)
-		PerStateInfo_Free(tree, &pstImage, &saved.buttonImage);
 
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
@@ -1380,14 +1360,6 @@ badWrap:
 
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = saved.backgroundImage;
-	    }
-	    if (mask & TREE_CONF_BUTBMP) {
-		PSTRestore(tree, &pstBitmap, &tree->buttonBitmap,
-		    &saved.buttonBitmap);
-	    }
-	    if (mask & TREE_CONF_BUTIMG) {
-		PSTRestore(tree, &pstImage, &tree->buttonImage,
-		    &saved.buttonImage);
 	    }
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		tree->defaultStyle.styles = saved.defaultStyle.styles;
@@ -1726,9 +1698,6 @@ TreeDestroy(
 
     Tk_FreeConfigOptions((char *) tree, tree->debug.optionTable,
 	    tree->tkwin);
-
-    PerStateInfo_Free(tree, &pstBitmap, &tree->buttonBitmap);
-    PerStateInfo_Free(tree, &pstImage, &tree->buttonImage);
 
     Tk_FreeConfigOptions((char *) tree, tree->optionTable, tree->tkwin);
 
@@ -3988,11 +3957,18 @@ Treectrl_Init(
 	return TCL_ERROR;
     }
 #endif
+
+    PerStateCO_Init(optionSpecs, "-buttonbitmap", &pstBitmap, TreeStateFromObj);
+    PerStateCO_Init(optionSpecs, "-buttonimage", &pstImage, TreeStateFromObj);
+
     if (TreeElement_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
     /* We don't care if this fails */
     (void) TreeTheme_Init(interp);
+
+    if (TreeColumn_InitInterp(interp) != TCL_OK)
+	return TCL_ERROR;
 
     /* Hack for editing a text Element */
     Tcl_CreateObjCommand(interp, "textlayout", TextLayoutCmd, NULL, NULL);
