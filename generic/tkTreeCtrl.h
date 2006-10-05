@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.49 2006/10/04 03:20:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.50 2006/10/05 22:50:49 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -378,6 +378,9 @@ struct TreeCtrl
     struct TreeCtrlRowDrag rowDrag;
     int neededWidthOfRows;	/* Max requested width of row labels. */
 #endif /* ROW_LABEL */
+
+    char *optionHax[64];	/* Used by OptionHax_xxx */
+    int optionHaxCnt;		/* Used by OptionHax_xxx */
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -611,6 +614,7 @@ extern void TreeNotify_ItemDeleted(TreeCtrl *tree, TreeItemList *items);
 extern void TreeNotify_ItemVisibility(TreeCtrl *tree, TreeItemList *v, TreeItemList *h);
 
 /* tkTreeColumn.c */
+extern int TreeColumn_InitInterp(Tcl_Interp *interp);
 extern void Tree_InitColumns(TreeCtrl *tree);
 extern TreeColumn Tree_FindColumn(TreeCtrl *tree, int columnIndex);
 #define COLUMN_ALL ((TreeColumn) -1)
@@ -895,6 +899,7 @@ extern ClientData AllocHax_Init(void);
 extern void AllocHax_Finalize(ClientData data);
 extern char *AllocHax_Alloc(ClientData data, int size);
 extern char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp);
+extern char *AllocHax_Realloc(ClientData data, char *ptr, int size1, int size2);
 extern void AllocHax_Free(ClientData data, char *ptr, int size);
 extern void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp);
 #endif
@@ -947,12 +952,12 @@ struct TagInfo {
 				    * LAST IN THE STRUCTURE. */
 };
 
-extern TagInfo *TagInfo_Add(TagInfo *tagInfo, Tk_Uid tags[], int numTags);
-extern TagInfo *TagInfo_Remove(TagInfo *tagInfo, Tk_Uid tags[], int numTags);
-extern Tk_Uid *TagInfo_Names(TagInfo *tagInfo, Tk_Uid *tags, int *numTagsPtr, int *tagSpacePtr);
-extern TagInfo *TagInfo_Copy(TagInfo *tagInfo);
-extern void TagInfo_Free(TagInfo *tagInfo);
-extern int TagInfo_FromObj(Tcl_Interp *interp, Tcl_Obj *objPtr, TagInfo **tagInfoPtr);
+extern TagInfo *TagInfo_Add(TreeCtrl *tree, TagInfo *tagInfo, Tk_Uid tags[], int numTags);
+extern TagInfo *TagInfo_Remove(TreeCtrl *tree, TagInfo *tagInfo, Tk_Uid tags[], int numTags);
+extern Tk_Uid *TagInfo_Names(TreeCtrl *tree, TagInfo *tagInfo, Tk_Uid *tags, int *numTagsPtr, int *tagSpacePtr);
+extern TagInfo *TagInfo_Copy(TreeCtrl *tree, TagInfo *tagInfo);
+extern void TagInfo_Free(TreeCtrl *tree, TagInfo *tagInfo);
+extern int TagInfo_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TagInfo **tagInfoPtr);
 extern Tk_ObjCustomOption TagInfoCO;
 
 /*
@@ -982,6 +987,9 @@ extern int TagExpr_Init(TreeCtrl *tree, Tcl_Obj *exprObj, TagExpr *expr);
 extern int TagExpr_Scan(TagExpr *expr);
 extern int TagExpr_Eval(TagExpr *expr, TagInfo *tags);
 extern void TagExpr_Free(TagExpr *expr);
+
+extern int PerStateCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
+    PerStateType *typePtr, StateFromObjProc proc);
 
 /*****/
 
