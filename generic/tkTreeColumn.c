@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.41 2006/10/04 03:14:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.42 2006/10/05 22:52:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -127,15 +127,15 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-arrow", (char *) NULL, (char *) NULL,
      "none", -1, Tk_Offset(Column, arrow),
      0, (ClientData) arrowST, COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
-    {TK_OPTION_STRING, "-arrowbitmap", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(Column, arrowBitmap.obj), -1,
+    {TK_OPTION_CUSTOM, "-arrowbitmap", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Column, arrowBitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWBMP |
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_STRING_TABLE, "-arrowgravity", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, arrowGravity),
      0, (ClientData) arrowSideST, COLU_CONF_DISPLAY},
-    {TK_OPTION_STRING, "-arrowimage", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(Column, arrowImage.obj), -1,
+    {TK_OPTION_CUSTOM, "-arrowimage", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Column, arrowImage),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWIMG |
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowpadx", (char *) NULL, (char *) NULL,
@@ -149,9 +149,9 @@ static Tk_OptionSpec columnSpecs[] = {
      0, (ClientData) arrowSideST, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
      /* NOTE: -background is a per-state option, so DEF_BUTTON_BG_COLOR
       * must be a list of one element */
-    {TK_OPTION_STRING, "-background", (char *) NULL, (char *) NULL,
-     DEF_BUTTON_BG_COLOR, Tk_Offset(Column, border.obj), -1,
-     0, (ClientData) DEF_BUTTON_BG_MONO, COLU_CONF_BG | COLU_CONF_DISPLAY},
+    {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
+     DEF_BUTTON_BG_COLOR, -1, Tk_Offset(Column, border),
+     0, (ClientData) NULL, COLU_CONF_BG | COLU_CONF_DISPLAY},
     {TK_OPTION_BITMAP, "-bitmap", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Column, bitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL,
@@ -1562,12 +1562,6 @@ Column_Config(
 	     * Step 1: Save old values
 	     */
 
-	    if (mask & COLU_CONF_ARROWBMP)
-		PSTSave(&column->arrowBitmap, &saved.arrowBitmap);
-	    if (mask & COLU_CONF_ARROWIMG)
-		PSTSave(&column->arrowImage, &saved.arrowImage);
-	    if (mask & COLU_CONF_BG)
-		PSTSave(&column->border, &saved.border);
 	    if (mask & COLU_CONF_IMAGE)
 		saved.image = column->image;
 	    if (mask & COLU_CONF_ITEMBG) {
@@ -1578,24 +1572,6 @@ Column_Config(
 	    /*
 	     * Step 2: Process new values
 	     */
-
-	    if (mask & COLU_CONF_ARROWBMP) {
-		if (PerStateInfo_FromObj(tree, ColumnStateFromObj, &pstBitmap,
-		    &column->arrowBitmap) != TCL_OK)
-		    continue;
-	    }
-
-	    if (mask & COLU_CONF_ARROWIMG) {
-		if (PerStateInfo_FromObj(tree, ColumnStateFromObj, &pstImage,
-		    &column->arrowImage) != TCL_OK)
-		    continue;
-	    }
-
-	    if (mask & COLU_CONF_BG) {
-		if (PerStateInfo_FromObj(tree, ColumnStateFromObj, &pstBorder,
-		    &column->border) != TCL_OK)
-		    continue;
-	    }
 
 	    if (mask & COLU_CONF_IMAGE) {
 		column->image = NULL;
@@ -1645,12 +1621,6 @@ Column_Config(
 	     * Step 3: Free saved values
 	     */
 
-	    if (mask & COLU_CONF_ARROWBMP)
-		PerStateInfo_Free(tree, &pstBitmap, &saved.arrowBitmap);
-	    if (mask & COLU_CONF_ARROWIMG)
-		PerStateInfo_Free(tree, &pstImage, &saved.arrowImage);
-	    if (mask & COLU_CONF_BG)
-		PerStateInfo_Free(tree, &pstBorder, &saved.border);
 	    if (mask & COLU_CONF_IMAGE) {
 		if (saved.image != NULL)
 		    Tk_FreeImage(saved.image);
@@ -1664,15 +1634,6 @@ Column_Config(
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (mask & COLU_CONF_ARROWBMP)
-		PSTRestore(tree, &pstBitmap, &column->arrowBitmap,
-		    &saved.arrowBitmap);
-	    if (mask & COLU_CONF_ARROWIMG)
-		PSTRestore(tree, &pstImage, &column->arrowImage,
-		    &saved.arrowImage);
-	    if (mask & COLU_CONF_BG)
-		PSTRestore(tree, &pstBorder, &column->border,
-		    &saved.border);
 	    if (mask & COLU_CONF_IMAGE) {
 		if (column->image != NULL)
 		    Tk_FreeImage(column->image);
@@ -1852,9 +1813,6 @@ Column_Free(
 	Tk_FreeImage(column->image);
     if (column->textLayout != NULL)
 	TextLayout_Free(column->textLayout);
-    PerStateInfo_Free(tree, &pstBitmap, &column->arrowBitmap);
-    PerStateInfo_Free(tree, &pstImage, &column->arrowImage);
-    PerStateInfo_Free(tree, &pstBorder, &column->border);
     Tk_FreeConfigOptions((char *) column, column->optionTable, tree->tkwin);
     WFREE(column, Column);
     tree->columnCount--;
@@ -2950,7 +2908,7 @@ ColumnTagCmd(
 	    }
 	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
 		column = (Column *) _column;
-		column->tagInfo = TagInfo_Add(column->tagInfo, tags, numTags);
+		column->tagInfo = TagInfo_Add(tree, column->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;
@@ -3003,7 +2961,7 @@ ColumnTagCmd(
 	    }
 	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
 		column = (Column *) _column;
-		tags = TagInfo_Names(column->tagInfo, tags, &numTags, &tagSpace);
+		tags = TagInfo_Names(tree, column->tagInfo, tags, &numTags, &tagSpace);
 	    }
 	    if (numTags) {
 		listObj = Tcl_NewListObj(0, NULL);
@@ -3042,7 +3000,7 @@ ColumnTagCmd(
 	    }
 	    COLUMN_FOR_EACH(_column, &columns, NULL, &iter) {
 		column = (Column *) _column;
-		column->tagInfo = TagInfo_Remove(column->tagInfo, tags, numTags);
+		column->tagInfo = TagInfo_Remove(tree, column->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;
@@ -4670,3 +4628,13 @@ void Tree_FreeColumns(
     tree->columnCount = 0;
 }
 
+int
+TreeColumn_InitInterp(
+    Tcl_Interp *interp		/* Current interpreter. */
+    )
+{
+    PerStateCO_Init(columnSpecs, "-arrowbitmap", &pstBitmap, ColumnStateFromObj);
+    PerStateCO_Init(columnSpecs, "-arrowimage", &pstImage, ColumnStateFromObj);
+    PerStateCO_Init(columnSpecs, "-background", &pstBorder, ColumnStateFromObj);
+    return TCL_OK;
+}
