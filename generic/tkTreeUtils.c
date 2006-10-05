@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.40 2006/10/04 03:51:51 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.41 2006/10/05 22:44:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3069,6 +3069,40 @@ AllocHax_Alloc(
 /*
  *----------------------------------------------------------------------
  *
+ * AllocHax_Realloc --
+ *
+ *	Realloc.
+ *
+ * Results:
+ *	The return value is a pointer to memory for the caller's
+ *	use.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+char *
+AllocHax_Realloc(
+    ClientData data,		/* Pointer to AllocData created by
+				 * AllocHax_Init(). */
+    char *ptr,
+    int size1,			/* Number of bytes in ptr. */
+    int size2			/* Number of bytes needed. */
+    )
+{
+    char *ptr2;
+
+    ptr2 = AllocHax_Alloc(data, size2);
+    memcpy(ptr2, ptr, MIN(size1, size2));
+    AllocHax_Free(data, ptr, size1);
+    return ptr2;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * AllocHax_Free --
  *
  *	Mark a piece of memory as free for reuse.
@@ -3415,6 +3449,9 @@ TreePtrList_Free(
     tplPtr->pointers[0] = NULL;
 }
 
+#define TAG_INFO_SIZE(tagSpace) \
+    (sizeof(TagInfo) + (((tagSpace) - TREE_TAG_SPACE) * sizeof(Tk_Uid)))
+
 /*
  *----------------------------------------------------------------------
  *
@@ -3433,6 +3470,7 @@ TreePtrList_Free(
 
 TagInfo *
 TagInfo_Add(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo,		/* Tag list. May be NULL. */
     Tk_Uid tags[],
     int numTags
@@ -3442,12 +3480,23 @@ TagInfo_Add(
 
     if (tagInfo == NULL) {
 	if (numTags <= TREE_TAG_SPACE) {
+#ifdef ALLOC_HAX
+	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, sizeof(TagInfo));
+#else
 	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo));
+#endif
 	    tagInfo->tagSpace = TREE_TAG_SPACE;
 	} else {
-	    int tagSpace = numTags;
-	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) + 
-		((tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
+	    int tagSpace = (numTags / TREE_TAG_SPACE) * TREE_TAG_SPACE +
+		((numTags % TREE_TAG_SPACE) ? TREE_TAG_SPACE : 0);
+if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
+#ifdef ALLOC_HAX
+	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData,
+		TAG_INFO_SIZE(tagSpace));
+#else
+	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) +
+		TAG_INFO_SIZE(tagSpace));
+#endif
 	    tagInfo->tagSpace = tagSpace;
 	}
 	tagInfo->numTags = 0;
@@ -3460,10 +3509,16 @@ TagInfo_Add(
 	if (j >= tagInfo->numTags) {
 	    /* Resize existing storage if needed. */
 	    if (tagInfo->tagSpace == tagInfo->numTags) {
-		tagInfo->tagSpace += TREE_TAG_SPACE + 1;
+		tagInfo->tagSpace += TREE_TAG_SPACE;
+#ifdef ALLOC_HAX
+		tagInfo = (TagInfo *) AllocHax_Realloc(tree->allocData,
+		    (char *) tagInfo,
+		    TAG_INFO_SIZE(tagInfo->tagSpace - TREE_TAG_SPACE),
+		    TAG_INFO_SIZE(tagInfo->tagSpace));
+#else
 		tagInfo = (TagInfo *) ckrealloc((char *) tagInfo,
-		    sizeof(TagInfo) + 
-		    ((tagInfo->tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
+		    TAG_INFO_SIZE(tagSpace));
+#endif
 	    }
 	    tagInfo->tagPtr[tagInfo->numTags++] = tags[i];
 	}
@@ -3489,6 +3544,7 @@ TagInfo_Add(
 
 TagInfo *
 TagInfo_Remove(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo,		/* Tag list. May be NULL. */
     Tk_Uid tags[],
     int numTags
@@ -3509,7 +3565,7 @@ TagInfo_Remove(
 	}
     }
     if (tagInfo->numTags == 0) {
-	ckfree((char *) tagInfo);
+	TagInfo_Free(tree, tagInfo);
 	tagInfo = NULL;
     }
     return tagInfo;
@@ -3533,6 +3589,7 @@ TagInfo_Remove(
 
 Tk_Uid *
 TagInfo_Names(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo,		/* Tag list. May be NULL. */
     Tk_Uid *tags,		/* Current list, may be NULL. */
     int *numTagsPtr,		/* Number of tags in tags[]. */
@@ -3588,16 +3645,20 @@ TagInfo_Names(
 
 TagInfo *
 TagInfo_Copy(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo		/* Tag list. May be NULL. */
     )
 {
     TagInfo *copy = NULL;
 
     if (tagInfo != NULL) {
-	int tagSpace = tagInfo->numTags;
-	copy = (TagInfo *) ckalloc(sizeof(TagInfo) +
-	    ((tagSpace - TREE_TAG_SPACE) * sizeof(Tk_Uid)));
-	memcpy(copy->tagPtr, tagInfo->tagPtr, tagSpace * sizeof(Tk_Uid));
+	int tagSpace = tagInfo->tagSpace;
+#ifdef ALLOC_HAX
+	copy = (TagInfo *) AllocHax_Alloc(tree->allocData, TAG_INFO_SIZE(tagSpace));
+#else
+	copy = (TagInfo *) ckalloc(TAG_INFO_SIZE(tagSpace));
+#endif
+	memcpy(copy->tagPtr, tagInfo->tagPtr, tagInfo->numTags * sizeof(Tk_Uid));
 	copy->numTags = tagInfo->numTags;
 	copy->tagSpace = tagSpace;
     }
@@ -3622,16 +3683,22 @@ TagInfo_Copy(
 
 void
 TagInfo_Free(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo		/* Tag list. May be NULL. */
     )
 {
     if (tagInfo != NULL)
+#ifdef ALLOC_HAX
+	AllocHax_Free(tree->allocData, (char *) tagInfo,
+	    TAG_INFO_SIZE(tagInfo->tagSpace));
+#else
 	ckfree((char *) tagInfo);
+#endif
 }
 
 int
 TagInfo_FromObj(
-    Tcl_Interp *interp,
+    TreeCtrl *tree,		/* Widget info. */
     Tcl_Obj *objPtr,
     TagInfo **tagInfoPtr
     )
@@ -3640,7 +3707,7 @@ TagInfo_FromObj(
     Tcl_Obj **listObjv;
     TagInfo *tagInfo = NULL;
 
-    if (Tcl_ListObjGetElements(interp, objPtr, &numTags, &listObjv) != TCL_OK) {
+    if (Tcl_ListObjGetElements(tree->interp, objPtr, &numTags, &listObjv) != TCL_OK) {
 	return TCL_ERROR;
     }
     if (numTags == 0) {
@@ -3649,7 +3716,7 @@ TagInfo_FromObj(
     }
     for (i = 0; i < numTags; i++) {
 	Tk_Uid tag = Tk_GetUid(Tcl_GetString(listObjv[i]));
-	tagInfo = TagInfo_Add(tagInfo, &tag, 1);
+	tagInfo = TagInfo_Add(tree, tagInfo, &tag, 1);
     }
     *tagInfoPtr = tagInfo;
     return TCL_OK;
@@ -3657,6 +3724,7 @@ TagInfo_FromObj(
 
 Tcl_Obj *
 TagInfo_ToObj(
+    TreeCtrl *tree,		/* Widget info. */
     TagInfo *tagInfo
     )
 {
@@ -3686,6 +3754,7 @@ TagInfoCO_Set(
     int flags
     )
 {
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
     int objEmpty;
     TagInfo *new, **internalPtr;
 
@@ -3699,7 +3768,7 @@ TagInfoCO_Set(
     if ((flags & TK_OPTION_NULL_OK) && objEmpty)
 	(*value) = NULL;
     else {
-	if (TagInfo_FromObj(interp, (*value), &new) != TCL_OK)
+	if (TagInfo_FromObj(tree, (*value), &new) != TCL_OK)
 	    return TCL_ERROR;
     }
     if (internalPtr != NULL) {
@@ -3720,8 +3789,9 @@ TagInfoCO_Get(
     int internalOffset
     )
 {
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
     TagInfo *value = *(TagInfo **) (recordPtr + internalOffset);
-    return TagInfo_ToObj(value);
+    return TagInfo_ToObj(tree, value);
 }
 
 static void
@@ -3743,7 +3813,9 @@ TagInfoCO_Free(
 				 * form resides. */
     )
 {
-    TagInfo_Free(*(TagInfo **)internalPtr);
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+
+    TagInfo_Free(tree, *(TagInfo **)internalPtr);
 }
 
 Tk_ObjCustomOption TagInfoCO =
@@ -4349,3 +4421,203 @@ TagExpr_Free(
 	ckfree((char *) expr->uids);
 }
 
+void
+OptionHax_Remember(
+    TreeCtrl *tree,
+    char *ptr
+    )
+{
+#ifdef TREECTRL_DEBUG
+    int i;
+    for (i = 0; i < tree->optionHaxCnt; i++) {
+	if (ptr == tree->optionHax[i]) {
+	    panic("OptionHax_Remember: ptr is not new");
+	}
+    }
+#endif
+    tree->optionHax[tree->optionHaxCnt++] = ptr;
+/*dbwin("OptionHax_Remember %p\n", ptr);*/
+}
+
+int
+OptionHax_Forget(
+    TreeCtrl *tree,
+    char *ptr
+    )
+{
+    int i;
+
+    for (i = 0; tree->optionHaxCnt; i++) {
+	if (ptr == tree->optionHax[i]) {
+	    tree->optionHax[i] = tree->optionHax[--tree->optionHaxCnt];
+/*dbwin("OptionHax_Forget %p\n", ptr);*/
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+typedef struct PerStateCOClientData
+{
+    PerStateType *typePtr;
+    StateFromObjProc proc;
+} PerStateCOClientData;
+
+static int
+PerStateCO_Set(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **value,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags
+    )
+{
+    PerStateCOClientData *cd = (PerStateCOClientData *) clientData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    int objEmpty;
+    PerStateInfo new, *internalPtr, *hax;
+
+    if (internalOffset >= 0)
+	internalPtr = (PerStateInfo *) (recordPtr + internalOffset);
+    else
+	internalPtr = NULL;
+
+    objEmpty = ObjectIsEmpty((*value));
+
+    if ((flags & TK_OPTION_NULL_OK) && objEmpty)
+	(*value) = NULL;
+    else {
+if ((*value) == NULL) panic("PerStateCO_Set: *value == NULL");
+	new.obj = (*value);
+	new.data = NULL;
+	new.count = 0;
+	Tcl_IncrRefCount((*value));
+	if (PerStateInfo_FromObj(tree, cd->proc, cd->typePtr, &new) != TCL_OK) {
+	    Tcl_DecrRefCount((*value));
+	    return TCL_ERROR;
+	}
+    }
+    if (internalPtr != NULL) {
+	if ((*value) == NULL) {
+	    new.obj = NULL;
+	    new.data = NULL;
+	    new.count = 0;
+	}
+	OptionHax_Remember(tree, saveInternalPtr);
+	if (internalPtr->obj != NULL) {
+	    hax = (PerStateInfo *) ckalloc(sizeof(PerStateInfo));
+	    *hax = *internalPtr;
+	    *((PerStateInfo **) saveInternalPtr) = hax;
+	} else {
+	    *((PerStateInfo **) saveInternalPtr) = NULL;
+	}
+	*internalPtr = new;
+/*dbwin("PerStateCO_Set %p %s\n", internalPtr, cd->typePtr->name);*/
+    }
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+PerStateCO_Get(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset
+    )
+{
+    PerStateInfo *value = (PerStateInfo *) (recordPtr + internalOffset);
+    return value->obj; /* May be NULL. */
+}
+
+static void
+PerStateCO_Restore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr
+    )
+{
+    PerStateInfo *psi, *hax = *(PerStateInfo **) saveInternalPtr;
+/*dbwin("PerStateCO_Restore\n");*/
+    if (hax != NULL) {
+	*(PerStateInfo *) internalPtr = *hax;
+    } else {
+	psi = (PerStateInfo *) internalPtr;
+	psi->obj = NULL;
+	psi->data = NULL;
+	psi->count = 0;
+    }
+}
+
+static void
+PerStateCO_Free(
+    ClientData clientData,	/* unused. */
+    Tk_Window tkwin,		/* A window; unused */
+    char *internalPtr		/* Pointer to the place, where the internal
+				 * form resides. */
+    )
+{
+    PerStateCOClientData *cd = (PerStateCOClientData *) clientData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    PerStateInfo *hax;
+    Tcl_Obj *objPtr = NULL;
+
+    if (OptionHax_Forget(tree, internalPtr)) {
+	hax = *(PerStateInfo **) internalPtr;
+	if (hax != NULL) {
+	    objPtr = hax->obj;
+	    PerStateInfo_Free(tree, cd->typePtr, hax);
+	    ckfree((char *) hax);
+	}
+    } else {
+/*dbwin("PerStateCO_Free %p %s\n", internalPtr, cd->typePtr->name);*/
+	objPtr = ((PerStateInfo *) internalPtr)->obj;
+	PerStateInfo_Free(tree, cd->typePtr, (PerStateInfo *) internalPtr);
+    }
+    if (objPtr != NULL)
+	Tcl_DecrRefCount(objPtr);
+}
+
+int
+PerStateCO_Init(
+    Tk_OptionSpec *optionTable,
+    CONST char *optionName,
+    PerStateType *typePtr,
+    StateFromObjProc proc
+    )
+{
+    PerStateCOClientData *cd;
+    Tk_ObjCustomOption *co;
+    int i;
+
+    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+	if (strcmp(optionTable[i].optionName, optionName))
+	    continue;
+
+	if (optionTable[i].clientData != NULL)
+	    return TCL_OK;
+
+	/* ClientData for the Tk custom option record */
+	cd = (PerStateCOClientData *) ckalloc(sizeof(PerStateCOClientData));
+	cd->typePtr = typePtr;
+	cd->proc = proc;
+
+	/* The Tk custom option record */
+	co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+	co->name = (char *) optionName + 1;
+	co->setProc = PerStateCO_Set;
+	co->getProc = PerStateCO_Get;
+	co->restoreProc = PerStateCO_Restore;
+	co->freeProc = PerStateCO_Free;
+	co->clientData = (ClientData) cd;
+
+	/* Update the option table */
+	optionTable[i].clientData = (ClientData) co;
+	return TCL_OK;
+    }
+    return TCL_ERROR;
+}
