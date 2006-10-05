@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.65 2006/10/04 03:43:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.66 2006/10/05 22:45:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4605,7 +4605,7 @@ ItemCreateCmd(
 
     /* Do it here so I don't have to free it above if an error occurs. */
     if (tagsObj != NULL) {
-	if (TagInfo_FromObj(interp, tagsObj, &tagInfo) != TCL_OK)
+	if (TagInfo_FromObj(tree, tagsObj, &tagInfo) != TCL_OK)
 	    return TCL_ERROR;
     }
 
@@ -4645,7 +4645,7 @@ ItemCreateCmd(
 		item->tagInfo = tagInfo;
 		tagInfo = NULL;
 	    } else {
-		item->tagInfo = TagInfo_Copy(tagInfo);
+		item->tagInfo = TagInfo_Copy(tree, tagInfo);
 	    }
 	}
 
@@ -4701,7 +4701,7 @@ ItemCreateCmd(
 	TreeItem_AddToParent(tree, (TreeItem) head);
     }
 
-    TagInfo_Free(tagInfo);
+    TagInfo_Free(tree, tagInfo);
 
     if (returnId)
 	Tcl_SetObjResult(interp, listObj);
@@ -6465,7 +6465,7 @@ ItemTagCmd(
 	    }
 	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
 		item = (Item *) _item;
-		item->tagInfo = TagInfo_Add(item->tagInfo, tags, numTags);
+		item->tagInfo = TagInfo_Add(tree, item->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;
@@ -6518,7 +6518,7 @@ ItemTagCmd(
 	    }
 	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
 		item = (Item *) _item;
-		tags = TagInfo_Names(item->tagInfo, tags, &numTags, &tagSpace);
+		tags = TagInfo_Names(tree, item->tagInfo, tags, &numTags, &tagSpace);
 	    }
 	    if (numTags) {
 		listObj = Tcl_NewListObj(0, NULL);
@@ -6557,7 +6557,7 @@ ItemTagCmd(
 	    }
 	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
 		item = (Item *) _item;
-		item->tagInfo = TagInfo_Remove(item->tagInfo, tags, numTags);
+		item->tagInfo = TagInfo_Remove(tree, item->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;

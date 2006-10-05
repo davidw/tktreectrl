@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeRowLabel.c,v 1.1 2006/10/04 03:52:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeRowLabel.c,v 1.2 2006/10/05 22:44:56 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2011,7 +2011,7 @@ RowTagCmd(
 	    }
 	    ROW_FOR_EACH(_row, &rows, &iter) {
 		row = (RowLabel *) _row;
-		row->tagInfo = TagInfo_Add(row->tagInfo, tags, numTags);
+		row->tagInfo = TagInfo_Add(tree, row->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;
@@ -2064,7 +2064,7 @@ RowTagCmd(
 	    }
 	    ROW_FOR_EACH(_row, &rows, &iter) {
 		row = (RowLabel *) _row;
-		tags = TagInfo_Names(row->tagInfo, tags, &numTags, &tagSpace);
+		tags = TagInfo_Names(tree, row->tagInfo, tags, &numTags, &tagSpace);
 	    }
 	    if (numTags) {
 		listObj = Tcl_NewListObj(0, NULL);
@@ -2103,7 +2103,7 @@ RowTagCmd(
 	    }
 	    ROW_FOR_EACH(_row, &rows, &iter) {
 		row = (RowLabel *) _row;
-		row->tagInfo = TagInfo_Remove(row->tagInfo, tags, numTags);
+		row->tagInfo = TagInfo_Remove(tree, row->tagInfo, tags, numTags);
 	    }
 	    STATIC_FREE(tags, Tk_Uid, numTags);
 	    break;
