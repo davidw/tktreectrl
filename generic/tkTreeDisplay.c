@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.40 2006/10/04 03:30:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.41 2006/10/05 22:47:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -643,7 +643,6 @@ Range_TotalHeight(
 	    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > range->totalHeight) {
 		range->totalHeight = TreeRowLabel_NeededHeight(dRowLabel->row);
 	    }
-	    dRowLabel->offset = range->offset;
 	    dRowLabel->height = range->totalHeight;
 	}
     }
@@ -744,6 +743,16 @@ Tree_TotalHeight(
 	}
 	range = range->next;
     }
+#ifdef ROW_LABEL
+    if (!tree->vertical) {
+	int i, offset = 0;
+	for (i =  0; i < dInfo->dRowLabelCnt; i++) {
+	    DRowLabel *dRowLabel = &dInfo->dRowLabel[i];
+	    dRowLabel->offset = offset;
+	    offset += dRowLabel->height;
+	}
+    }
+#endif
     return tree->totalHeight;
 }
 
