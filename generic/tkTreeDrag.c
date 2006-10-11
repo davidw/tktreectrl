@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.16 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.17 2006/10/11 01:26:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -456,7 +456,11 @@ DragImageCmd(
 		}
 	    }
 
+#ifdef COLUMN_LOCK
+	    if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
+#else
 	    if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) < 0)
+#endif
 		return TCL_OK;
 	    if (w < 1 || h < 1)
 		return TCL_OK;
