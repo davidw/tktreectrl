@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.8 2006/09/05 21:56:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.9 2006/10/11 01:34:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -468,7 +468,7 @@ TreeMarqueeCmd(
 	    int x1, y1, x2, y2, n = 0;
 	    int totalWidth = Tree_TotalWidth(tree);
 	    int totalHeight = Tree_TotalHeight(tree);
-	    TreeItem *items;
+	    TreeItemList items;
 	    Tcl_Obj *listObj;
 
 	    if (objc != 3)
@@ -502,21 +502,23 @@ TreeMarqueeCmd(
 	    if (y2 > totalHeight)
 		y2 = totalHeight;
 
-	    items = Tree_ItemsInArea(tree, x1, y1, x2, y2);
-	    if (items == NULL)
+	    Tree_ItemsInArea(tree, &items, x1, y1, x2, y2);
+	    if (TreeItemList_Count(&items) == 0) {
+		TreeItemList_Free(&items);
 		break;
+	    }
 
 	    listObj = Tcl_NewListObj(0, NULL);
-	    while (items[n] != NULL)
+	    for (n = 0; n < TreeItemList_Count(&items); n++)
 	    {
 		Tcl_Obj *subListObj = Tcl_NewListObj(0, NULL);
+		TreeItem item = TreeItemList_ItemN(&items, n);
 		Tcl_ListObjAppendElement(interp, subListObj,
-		    TreeItem_ToObj(tree, items[n]));
-		TreeItem_Identify2(tree, items[n], x1, y1, x2, y2, subListObj);
+		    TreeItem_ToObj(tree, item));
+		TreeItem_Identify2(tree, item, x1, y1, x2, y2, subListObj);
 		Tcl_ListObjAppendElement(interp, listObj, subListObj);
-		n++;
 	    }
-	    ckfree((char *) items);
+	    TreeItemList_Free(&items);
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
