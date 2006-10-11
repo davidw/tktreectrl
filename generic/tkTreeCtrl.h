@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.50 2006/10/05 22:50:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.51 2006/10/11 01:18:21 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -37,6 +37,7 @@
 #define ALLOC_HAX
 #define COLUMN_SPAN
 #define ROW_LABEL
+#define COLUMN_LOCK
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -123,6 +124,8 @@ struct TreeCtrlDebug
     int displayDelay;		/* Delay between copy/draw operations */
     XColor *eraseColor;		/* Erase "invalidated" areas */
     GC gcErase;			/* for eraseColor */
+    XColor *drawColor;		/* Erase about-to-be-drawn areas */
+    GC gcDraw;			/* for eraseColor */
 };
 
 struct TreeCtrlColumnDrag
@@ -286,6 +289,19 @@ struct TreeCtrl
     int columnTreeVis;		/* TRUE if columnTree is visible */
     int columnBgCnt;		/* Max -itembackground colors */
 
+#ifdef COLUMN_LOCK
+#define COLUMN_LOCK_LEFT 0
+#define COLUMN_LOCK_NONE 1
+#define COLUMN_LOCK_RIGHT 2
+    TreeColumn columnLockLeft;	/* First left-locked column */
+    TreeColumn columnLockNone;	/* First unlocked column */
+    TreeColumn columnLockRight;	/* First right-locked column */
+    int widthOfColumnsLeft;	/* Sum of left-locked column widths */
+    int widthOfColumnsRight;	/* Sum of right-locked column widths */
+    int columnCountVisLeft;	/* Number of visible left-locked columns */
+    int columnCountVisRight;	/* Number of visible right-locked columns */
+#endif
+
     TreeItem root;
     TreeItem activeItem;
     TreeItem anchorItem;
@@ -346,7 +362,6 @@ struct TreeCtrl
     TreeItemList preserveItemList;	/* List of items to be deleted when
 				 * preserveItemRefCnt==0. */
 
-#ifdef ROW_LABEL
     struct {
 	Tcl_Obj *yObj;
 	int y;			/* Window coords */
@@ -354,6 +369,7 @@ struct TreeCtrl
 	int onScreen;
     } rowProxy;
 
+#ifdef ROW_LABEL
     int rowLabelResize;		/* -rowlabelresize */
 
     int rowLabelWidth;		/* -rowlabelwidth */
@@ -419,19 +435,39 @@ extern void Tree_ReleaseItems(TreeCtrl *tree);
 extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *indexPtr, int flags);
 extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int flags);
 
-#ifdef ROW_LABEL
+#define Tree_BorderLeft(tree) \
+    tree->inset
+#define Tree_BorderTop(tree) \
+    tree->inset
+#define Tree_BorderRight(tree) \
+    (Tk_Width(tree->tkwin) - tree->inset)
+#define Tree_BorderBottom(tree) \
+    (Tk_Height(tree->tkwin) - tree->inset)
+
+#if defined(ROW_LABEL) && defined(COLUMN_LOCK)
 #define Tree_ContentLeft(tree) \
-    (tree->inset + Tree_WidthOfRowLabels(tree))
+    (Tree_BorderLeft(tree) + Tree_WidthOfRowLabels(tree) + Tree_WidthOfLeftColumns(tree))
+#elif defined(ROW_LABEL)
+#define Tree_ContentLeft(tree) \
+    (Tree_BorderLeft(tree) + Tree_WidthOfRowLabels(tree))
+#elif defined(COLUMN_LOCK)
+#define Tree_ContentLeft(tree) \
+    (Tree_BorderLeft(tree) + Tree_WidthOfLeftColumns(tree))
 #else
 #define Tree_ContentLeft(tree) \
-    (tree->inset)
+    Tree_BorderLeft(tree)
 #endif
 #define Tree_ContentTop(tree) \
     (tree->inset + Tree_HeaderHeight(tree))
+#if defined(COLUMN_LOCK)
 #define Tree_ContentRight(tree) \
-    (Tk_Width(tree->tkwin) - tree->inset)
+    (Tree_BorderRight(tree) - Tree_WidthOfRightColumns(tree))
+#else
+#define Tree_ContentRight(tree) \
+    Tree_BorderRight(tree)
+#endif
 #define Tree_ContentBottom(tree) \
-    (Tk_Height(tree->tkwin) - tree->inset)
+    Tree_BorderBottom(tree)
 
 #define Tree_ContentWidth(tree) \
     (Tree_ContentRight(tree) - Tree_ContentLeft(tree))
@@ -490,7 +526,11 @@ extern int TreeItem_FirstAndLast(TreeCtrl *tree, TreeItem *first, TreeItem *last
 extern int TreeItem_Height(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
+#ifdef COLUMN_LOCK
+extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
+#else
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
+#endif
 extern void TreeItem_DrawLines(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
 extern void TreeItem_DrawButton(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
 extern int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem self);
@@ -503,7 +543,11 @@ extern TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_NextVisible(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_Prev(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item);
+#ifdef COLUMN_LOCK
+extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int lock, int x, int y, char *buf);
+#else
 extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf);
+#endif
 extern void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	int x1, int y1, int x2, int y2, Tcl_Obj *listObj);
 extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
@@ -530,6 +574,7 @@ extern void TreeItem_MoveColumn(TreeCtrl *tree, TreeItem item_, int columnIndex,
 /* tkTreeElem.c */
 extern int TreeElement_Init(Tcl_Interp *interp);
 extern int TreeStateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn);
+extern int StringTableCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName, CONST char **tablePtr);
 
 typedef struct StyleDrawArgs StyleDrawArgs;
 struct StyleDrawArgs
@@ -544,6 +589,7 @@ struct StyleDrawArgs
     Drawable drawable;
     int state;		/* STATE_xxx */
     Tk_Justify justify;
+    int bounds[4];
 };
 
 /* tkTreeStyle.c */
@@ -634,6 +680,7 @@ extern int TreeColumn_MaxWidth(TreeColumn column_);
 extern int TreeColumn_StepWidth(TreeColumn column_);
 extern int TreeColumn_NeededWidth(TreeColumn column_);
 extern int TreeColumn_UseWidth(TreeColumn column_);
+extern int TreeColumn_Offset(TreeColumn column_);
 extern Tk_Justify TreeColumn_Justify(TreeColumn column_);
 extern int TreeColumn_WidthHack(TreeColumn column_);
 extern int TreeColumn_Visible(TreeColumn column_);
@@ -644,10 +691,17 @@ extern int TreeColumn_WidthOfItems(TreeColumn column_);
 extern void TreeColumn_InvalidateWidth(TreeColumn column_);
 extern void TreeColumn_Init(TreeCtrl *tree);
 extern void Tree_FreeColumns(TreeCtrl *tree);
-extern void Tree_InvalidateColumnWidth(TreeCtrl *tree, int columnIndex);
-extern void Tree_InvalidateColumnHeight(TreeCtrl *tree, int columnIndex);
+extern void Tree_InvalidateColumnWidth(TreeCtrl *tree, TreeColumn column);
+extern void Tree_InvalidateColumnHeight(TreeCtrl *tree, TreeColumn column);
 extern int Tree_HeaderHeight(TreeCtrl *tree);
+extern int TreeColumn_Bbox(TreeColumn column, int *x, int *y, int *w, int *h);
+extern TreeColumn Tree_HeaderUnderPoint(TreeCtrl *tree, int *x_, int *y_, int *w, int *h, int nearest);
 extern int Tree_WidthOfColumns(TreeCtrl *tree);
+#ifdef COLUMN_LOCK
+extern int TreeColumn_Lock(TreeColumn column_);
+extern int Tree_WidthOfLeftColumns(TreeCtrl *tree);
+extern int Tree_WidthOfRightColumns(TreeCtrl *tree);
+#endif
 extern void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT);
 
 /* tkTreeDrag.c */
@@ -671,7 +725,11 @@ extern int Tree_TotalWidth(TreeCtrl *tree);
 extern int Tree_TotalHeight(TreeCtrl *tree);
 extern TreeItem Tree_ItemUnderPoint(TreeCtrl *tree, int *x, int *y, int nearest);
 extern void Tree_FreeItemRInfo(TreeCtrl *tree, TreeItem item);
+#ifdef COLUMN_LOCK
+extern int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int lock, int *x, int *y, int *w, int *h);
+#else
 extern int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h);
+#endif
 extern TreeItem Tree_ItemAbove(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemBelow(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemLeft(TreeCtrl *tree, TreeItem item);
@@ -682,6 +740,20 @@ extern TreeItem Tree_ItemLeftMost(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemRightMost(TreeCtrl *tree, TreeItem item);
 extern int Tree_ItemToRNC(TreeCtrl *tree, TreeItem item, int *row, int *col);
 extern TreeItem Tree_RNCToItem(TreeCtrl *tree, int row, int col);
+
+enum {
+TREE_HIT_NONE = 0,
+TREE_HIT_HEADER,
+TREE_HIT_CONTENT,
+#ifdef ROW_LABEL
+TREE_HIT_ROWLABEL,
+#endif
+#ifdef COLUMN_LOCK
+TREE_HIT_LEFT,
+TREE_HIT_RIGHT
+#endif
+};
+extern int Tree_HitTest(TreeCtrl *tree, int x, int y);
 
 extern void TreeDInfo_Init(TreeCtrl *tree);
 extern void TreeDInfo_Free(TreeCtrl *tree);
@@ -698,7 +770,7 @@ extern void Tree_SetOriginX(TreeCtrl *tree, int xOrigin);
 extern void Tree_SetOriginY(TreeCtrl *tree, int yOrigin);
 extern void Tree_RelayoutWindow(TreeCtrl *tree);
 extern void Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
-extern void Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
+extern void Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeColumn column, TreeItem item1, TreeItem item2);
 extern void TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item);
 extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
@@ -706,16 +778,16 @@ extern void Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region);
 extern void Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
 extern void Tree_Activate(TreeCtrl *tree, int isActive);
-extern TreeItem *Tree_ItemsInArea(TreeCtrl *tree, int minX, int minY, int maxX, int maxY);
+extern void Tree_ItemsInArea(TreeCtrl *tree, TreeItemList *items, int minX, int minY, int maxX, int maxY);
 extern void TreeColumnProxy_Undisplay(TreeCtrl *tree);
 extern void TreeColumnProxy_Display(TreeCtrl *tree);
+extern void TreeRowProxy_Undisplay(TreeCtrl *tree);
+extern void TreeRowProxy_Display(TreeCtrl *tree);
 extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image, 
     int x1, int y1, int x2, int y2, int xOffset, int yOffset);
 #ifdef ROW_LABEL
 extern int Tree_RowLabelBbox(TreeCtrl *tree, TreeRowLabel row, int *x, int *y, int *w, int *h);
 extern TreeRowLabel Tree_RowLabelUnderPoint(TreeCtrl *tree, int *x, int *y, int *w, int *h, int nearest);
-extern void TreeRowLabelProxy_Undisplay(TreeCtrl *tree);
-extern void TreeRowLabelProxy_Display(TreeCtrl *tree);
 #endif
 
 #define DINFO_OUT_OF_DATE 0x0001
