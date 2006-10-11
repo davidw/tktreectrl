@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: rowlabels.tcl,v 1.1 2006/10/04 04:11:27 treectrl Exp $
+# RCS: @(#) $Id: rowlabels.tcl,v 1.2 2006/10/11 01:37:59 treectrl Exp $
 
 proc DemoRowLabels {} {
 
@@ -90,7 +90,7 @@ proc DemoRowLabels {} {
     # Create elements
     #
 
-    $T element create eRect rect -outline gray -outlinewidth 1
+    $T element create eRect rect -outline gray -outlinewidth 1 -open wn
 
     #
     # Create styles using the elements
@@ -109,6 +109,9 @@ proc DemoRowLabels {} {
 	$T item style set [list list $ids] $C s1
     }
 
+    bind DemoRowLabels <Button1-Motion> {
+	# no-op
+    }
     bind DemoRowLabels <Motion> {
 	RowLabelMotion %W %x %y
     }
