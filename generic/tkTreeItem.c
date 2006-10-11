@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.66 2006/10/05 22:45:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.67 2006/10/11 01:32:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -695,7 +695,7 @@ Column_ChangeState(
     TreeCtrl *tree,		/* Widget info. */
     Item *item,			/* Item containing the column. */
     Column *column,		/* Column to modify the state of. */
-    int columnIndex,		/* 0-based column index. */
+    TreeColumn treeColumn,	/* Tree column. */
     int stateOff,		/* STATE_xxx flags to turn off. */
     int stateOn			/* STATE_xxx flags to turn on. */
     )
@@ -719,20 +719,18 @@ Column_ChangeState(
 		item->state | column->cstate, state);
 	if (sMask) {
 	    if (sMask & CS_LAYOUT)
-		Tree_InvalidateColumnWidth(tree, columnIndex);
+		Tree_InvalidateColumnWidth(tree, treeColumn);
 	    iMask |= sMask;
 	}
 
 	if (iMask & CS_LAYOUT) {
 	    TreeItem_InvalidateHeight(tree, (TreeItem) item);
-#if 1
 	    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 	    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+	} else if (iMask & CS_DISPLAY) {
+	    Tree_InvalidateItemDInfo(tree, treeColumn, (TreeItem) item, NULL);
 	}
-	if (iMask & CS_DISPLAY)
-	    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
     }
 
     column->cstate = cstate;
@@ -768,6 +766,7 @@ TreeItem_ChangeState(
 {
     Item *item = (Item *) item_;
     Column *column;
+    TreeColumn treeColumn;
     int columnIndex = 0, state, cstate;
     int sMask, iMask = 0;
 
@@ -778,6 +777,7 @@ TreeItem_ChangeState(
     if (state == item->state)
 	return 0;
 
+    treeColumn = tree->columns;
     column = item->columns;
     while (column != NULL) {
 	if (column->style != NULL) {
@@ -788,16 +788,17 @@ TreeItem_ChangeState(
 		    item->state | column->cstate, cstate);
 	    if (sMask) {
 		if (sMask & CS_LAYOUT) {
-		    Tree_InvalidateColumnWidth(tree, columnIndex);
-#if 1
+		    Tree_InvalidateColumnWidth(tree, treeColumn);
 		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-#endif
+		} else if (sMask & CS_DISPLAY) {
+		    Tree_InvalidateItemDInfo(tree, treeColumn, item_, NULL);
 		}
 		iMask |= sMask;
 	    }
 	}
 	columnIndex++;
 	column = column->next;
+	treeColumn = TreeColumn_Next(treeColumn);
     }
 
     /* This item has a button */
@@ -871,18 +872,16 @@ TreeItem_ChangeState(
 	    iMask |= CS_LAYOUT | CS_DISPLAY;
 	} else if (ptr1 != ptr2) {
 	    iMask |= CS_DISPLAY;
+	    if (tree->columnTree != NULL)
+		Tree_InvalidateItemDInfo(tree, tree->columnTree, item_, NULL);
 	}
     }
 
     if (iMask & CS_LAYOUT) {
 	TreeItem_InvalidateHeight(tree, item_);
-#if 1
 	Tree_FreeItemDInfo(tree, item_, NULL);
-#endif
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
     }
-    if (iMask & CS_DISPLAY)
-	Tree_InvalidateItemDInfo(tree, item_, NULL);
 
     item->state = state;
 
@@ -2527,7 +2526,7 @@ Item_ToggleOpen(
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 
 	/* Hiding/showing children may change the width of any column */
-	Tree_InvalidateColumnWidth(tree, -1);
+	Tree_InvalidateColumnWidth(tree, NULL);
     }
 
     /* If this item was previously onscreen, this call is repetitive. */
@@ -2615,7 +2614,7 @@ TreeItem_Delete(
     Item *self = (Item *) item_;
 
     if (TreeItem_ReallyVisible(tree, item_))
-	Tree_InvalidateColumnWidth(tree, -1);
+	Tree_InvalidateColumnWidth(tree, NULL);
 
     while (self->numChildren > 0)
 	TreeItem_Delete(tree, (TreeItem) self->firstChild);
@@ -2794,12 +2793,12 @@ TreeItem_AddToParent(
      * sibling reaches this item */
     if ((self->prevSibling != NULL) &&
 	    (self->nextSibling == NULL) &&
-	    tree->showLines) {
+	    tree->showLines && (tree->columnTree != NULL)) {
 	last = self->prevSibling;
 	while (last->lastChild != NULL)
 	    last = last->lastChild;
-	Tree_InvalidateItemDInfo(tree, (TreeItem) self->prevSibling,
-		(TreeItem) last);
+	Tree_InvalidateItemDInfo(tree, tree->columnTree,
+		(TreeItem) self->prevSibling, (TreeItem) last);
     }
 
     tree->updateIndex = 1;
@@ -2810,7 +2809,7 @@ TreeItem_AddToParent(
      * is slow I will keep depth up-to-date here. */
     TreeItem_UpdateDepth(tree, item_);
 
-    Tree_InvalidateColumnWidth(tree, -1);
+    Tree_InvalidateColumnWidth(tree, NULL);
 
     if (tree->debug.enable && tree->debug.data)
 	Tree_Debug(tree);
@@ -2845,7 +2844,7 @@ RemoveFromParentAux(
      * moving the item to a new parent. FIXME: if it is being moved,
      * it might not actually need to be redrawn (just copied) */
     if (self->dInfo != NULL)
-	Tree_InvalidateItemDInfo(tree, (TreeItem) self, NULL);
+	Tree_InvalidateItemDInfo(tree, NULL, (TreeItem) self, NULL);
 
     if (self->parent != NULL)
 	self->depth = self->parent->depth + 1;
@@ -2895,12 +2894,12 @@ TreeItem_RemoveFromParent(
      * the previous sibling to us is now gone */
     if ((self->prevSibling != NULL) &&
 	    (self->nextSibling == NULL) &&
-	    tree->showLines) {
+	    tree->showLines && (tree->columnTree != NULL)) {
 	last = self->prevSibling;
 	while (last->lastChild != NULL)
 	    last = last->lastChild;
-	Tree_InvalidateItemDInfo(tree, (TreeItem) self->prevSibling,
-		(TreeItem) last);
+	Tree_InvalidateItemDInfo(tree, tree->columnTree,
+		(TreeItem) self->prevSibling, (TreeItem) last);
     }
 
     /*
@@ -3066,7 +3065,7 @@ Item_CreateColumn(
  *
  * TreeItem_MoveColumn --
  *
- *	Rearranges an Item''s list of Column records by moving one
+ *	Rearranges an Item's list of Column records by moving one
  *	in front of another.
  *
  * Results:
@@ -3605,6 +3604,42 @@ typedef struct SpanInfo {
  *----------------------------------------------------------------------
  */
 
+#ifdef COLUMN_LOCK
+static void
+Item_GetSpans(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int lock,			/* Which columns. */
+    SpanInfo spans[]		/* Returned span records. */
+    )
+{
+    Item *self = (Item *) item_;
+    TreeColumn treeColumn = tree->columns;
+    Column *column = self->columns;
+    int columnIndex = 0, itemColumnIndex = 0, span = 1;
+
+    while (treeColumn != NULL) {
+	if (TreeColumn_Lock(treeColumn) == lock) {
+	    if (--span == 0) {
+		if (TreeColumn_Visible(treeColumn))
+		    span = column ? column->span : 1;
+		else
+		    span = 1;
+		itemColumnIndex = columnIndex;
+	    }
+	    spans[columnIndex].treeColumn = treeColumn;
+	    spans[columnIndex].itemColumn = (TreeItemColumn) column;
+	    spans[columnIndex].itemColumnIndex = itemColumnIndex;
+	    spans[columnIndex].width = TreeColumn_UseWidth(treeColumn);
+	} else
+	    spans[columnIndex].itemColumnIndex = -1;
+	++columnIndex;
+	treeColumn = TreeColumn_Next(treeColumn);
+	if (column != NULL)
+	    column = column->next;
+    }
+}
+#else
 static void
 Item_GetSpans(
     TreeCtrl *tree,		/* Widget info. */
@@ -3635,6 +3670,7 @@ Item_GetSpans(
 	    column = column->next;
     }
 }
+#endif
 
 /*
  *----------------------------------------------------------------------
@@ -3656,6 +3692,9 @@ void
 TreeItem_Draw(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
+#ifdef COLUMN_LOCK
+    int lock,			/* Which columns. */
+#endif
     int x, int y,		/* Drawable coordinates of the item. */
     int width, int height,	/* Total size of the item. */
     Drawable drawable,		/* Where to draw. */
@@ -3673,10 +3712,33 @@ TreeItem_Draw(
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
-    Item_GetSpans(tree, item_, spans);
+#ifdef COLUMN_LOCK
+    Item_GetSpans(tree, item_, lock, spans);
 
+    switch (lock) {
+	case COLUMN_LOCK_LEFT:
+	    drawArgs.bounds[0] = Tree_BorderLeft(tree);
+	    drawArgs.bounds[2] = Tree_ContentLeft(tree);
+	    break;
+	case COLUMN_LOCK_NONE:
+	    drawArgs.bounds[0] = Tree_ContentLeft(tree);
+	    drawArgs.bounds[2] = Tree_ContentRight(tree);
+	    break;
+	case COLUMN_LOCK_RIGHT:
+	    drawArgs.bounds[0] = Tree_ContentRight(tree);
+	    drawArgs.bounds[2] = Tree_BorderRight(tree);
+	    break;
+    }
+#else
+    Item_GetSpans(tree, item_, spans);
+    drawArgs.bounds[0] = Tree_ContentLeft(tree);
+    drawArgs.bounds[2] = Tree_ContentRight(tree);
+#endif
     drawArgs.tree = tree;
     drawArgs.drawable = drawable;
+
+    drawArgs.bounds[1] = Tree_ContentTop(tree);
+    drawArgs.bounds[3] = Tree_ContentBottom(tree);
 
     totalWidth = 0;
     for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
@@ -4116,10 +4178,33 @@ TreeItem_UpdateWindowPositions(
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+#ifdef COLUMN_LOCK
+    Item_GetSpans(tree, item_, COLUMN_LOCK_NONE, spans);
+    switch (COLUMN_LOCK_NONE) {
+	case COLUMN_LOCK_LEFT:
+	    drawArgs.bounds[0] = Tree_BorderLeft(tree);
+	    drawArgs.bounds[2] = Tree_ContentLeft(tree);
+	    break;
+	case COLUMN_LOCK_NONE:
+	    drawArgs.bounds[0] = Tree_ContentLeft(tree);
+	    drawArgs.bounds[2] = Tree_ContentRight(tree);
+	    break;
+	case COLUMN_LOCK_RIGHT:
+	    drawArgs.bounds[0] = Tree_ContentRight(tree);
+	    drawArgs.bounds[2] = Tree_BorderRight(tree);
+	    break;
+    }
+#else
     Item_GetSpans(tree, item_, spans);
+    drawArgs.bounds[0] = Tree_ContentLeft(tree);
+    drawArgs.bounds[2] = Tree_ContentRight(tree);
+#endif
 
     drawArgs.tree = tree;
     drawArgs.drawable = None;
+
+    drawArgs.bounds[1] = Tree_ContentTop(tree);
+    drawArgs.bounds[3] = Tree_ContentBottom(tree);
 
     totalWidth = 0;
     for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
@@ -4453,22 +4538,23 @@ static int Item_Configure(
     }
 
     if (mask & ITEM_CONF_BUTTON)
-	Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+	if (tree->columnTree != NULL)
+	    Tree_InvalidateItemDInfo(tree, tree->columnTree, (TreeItem) item, NULL);
 
     if ((mask & ITEM_CONF_VISIBLE) && (item->isVisible != lastVisible)) {
 	/* May change the width of any column */
-	Tree_InvalidateColumnWidth(tree, -1);
+	Tree_InvalidateColumnWidth(tree, NULL);
 
 	/* If this is the last child, redraw the lines of the previous
 	 * sibling and all of its descendants because the line from
 	 * the previous sibling to us is appearing/disappearing */
 	if ((item->prevSibling != NULL) &&
 		(item->nextSibling == NULL) &&
-		tree->showLines) {
+		tree->showLines && (tree->columnTree != NULL)) {
 	    Item *last = item->prevSibling;
 	    while (last->lastChild != NULL)
 		last = last->lastChild;
-	    Tree_InvalidateItemDInfo(tree,
+	    Tree_InvalidateItemDInfo(tree, tree->columnTree,
 		    (TreeItem) item->prevSibling,
 		    (TreeItem) last);
 	}
@@ -4876,15 +4962,15 @@ ItemElementCmd(
 	case COMMAND_CONFIGURE:
 	{
 	    ItemForEach iter;
-	    TreeColumn treeColumn;
-	    int columnIndex0;
+	    TreeColumn treeColumn0, treeColumn;
+	    int columnIndex0, columnIndex;
 
-	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
+	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn0,
 		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		break;
 	    }
-	    columnIndex0 = TreeColumn_Index(treeColumn);
+	    columnIndex0 = TreeColumn_Index(treeColumn0);
 
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 
@@ -4893,10 +4979,13 @@ ItemElementCmd(
 		int eMask, cMask = 0, iMask = 0;
 		int indexElem = 6;
 
+		treeColumn = treeColumn0;
+		columnIndex = columnIndex0;
+
 		item = (Item *) _item;
-		column = Item_FindColumn(tree, item, columnIndex0);
+		column = Item_FindColumn(tree, item, columnIndex);
 		if ((column == NULL) || (column->style == NULL)) {
-		    NoStyleMsg(tree, item, columnIndex0);
+		    NoStyleMsg(tree, item, columnIndex);
 		    result = TCL_ERROR;
 		    break;
 		}
@@ -4942,9 +5031,13 @@ ItemElementCmd(
 			break;
 
 		    cMask |= eMask;
+		    /* FIXME: do this after all elements in this column have
+		     * been configured. */
 		    if (cMask & CS_LAYOUT) {
 			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-			Tree_InvalidateColumnWidth(tree, columnIndex);
+			Tree_InvalidateColumnWidth(tree, treeColumn);
+		    } else if (cMask & CS_DISPLAY) {
+			Tree_InvalidateItemDInfo(tree, treeColumn, (TreeItem) item, NULL);
 		    }
 		    iMask |= cMask;
 
@@ -4965,11 +5058,14 @@ ItemElementCmd(
 
 			/* , indicates start of another column */
 			else if (breakChar == ',') {
-			    if (Item_FindColumnFromObj(tree, item, objv[index + 1],
-				    &column, &columnIndex) != TCL_OK) {
+			    if (TreeColumn_FromObj(tree, objv[index + 1],
+				    &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL |
+				    CFO_NOT_TAIL) != TCL_OK) {
 				result = TCL_ERROR;
 				break;
 			    }
+			    columnIndex = TreeColumn_Index(treeColumn);
+			    column = Item_FindColumn(tree, item, columnIndex);
 			    if ((column == NULL) || (column->style == NULL)) {
 				NoStyleMsg(tree, item, columnIndex);
 				result = TCL_ERROR;
@@ -4984,6 +5080,8 @@ ItemElementCmd(
 				result = TCL_ERROR;
 				break;
 			    }
+
+			    cMask = 0;
 			}
 		    } else if (index == objc)
 			break;
@@ -4993,8 +5091,8 @@ ItemElementCmd(
 		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
 		    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 		}
-		else if (iMask & CS_DISPLAY)
-		    Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+		else if (iMask & CS_DISPLAY) {
+		}
 		if (result != TCL_OK)
 		    break;
 	    }
@@ -5135,7 +5233,7 @@ ItemStyleCmd(
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
 		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 	    }
-	    Tree_InvalidateColumnWidth(tree, columnIndex);
+	    Tree_InvalidateColumnWidth(tree, treeColumn);
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 	    break;
 	}
@@ -5144,6 +5242,7 @@ ItemStyleCmd(
 	case COMMAND_SET:
 	{
 	    struct columnStyle {
+		TreeColumn treeColumn;
 		int columnIndex;
 		TreeStyle style;
 		int changed;
@@ -5199,6 +5298,7 @@ ItemStyleCmd(
 		    result = TCL_ERROR;
 		    goto doneSET;
 		}
+		cs[count].treeColumn = treeColumn;
 		cs[count].columnIndex = TreeColumn_Index(treeColumn);
 		if (i + 1 == objc) {
 		    FormatResult(interp, "missing style for column \"%s\"",
@@ -5239,7 +5339,7 @@ ItemStyleCmd(
 		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		    changedI = TRUE;
 		    if (!cs[i].changed) {
-			Tree_InvalidateColumnWidth(tree, cs[i].columnIndex);
+			Tree_InvalidateColumnWidth(tree, cs[i].treeColumn);
 			cs[i].changed = TRUE;
 		    }
 		}
@@ -6152,12 +6252,14 @@ ItemSortCmd(
 	item->lastChild = sortData.items[indexL].item;
 
     /* Redraw the lines of the old/new lastchild */
-    if ((item->lastChild != lastChild) && tree->showLines) {
+    if ((item->lastChild != lastChild) && tree->showLines && (tree->columnTree != NULL)) {
 	if (lastChild->dInfo != NULL)
-	    Tree_InvalidateItemDInfo(tree, (TreeItem) lastChild,
+	    Tree_InvalidateItemDInfo(tree, tree->columnTree,
+		    (TreeItem) lastChild,
 		    (TreeItem) NULL);
 	if (item->lastChild->dInfo != NULL)
-	    Tree_InvalidateItemDInfo(tree, (TreeItem) item->lastChild,
+	    Tree_InvalidateItemDInfo(tree, tree->columnTree,
+		    (TreeItem) item->lastChild,
 		    (TreeItem) NULL);
     }
 
@@ -6293,7 +6395,7 @@ ItemStateCmd(
 		stateOff = states[STATE_OP_OFF];
 		stateOn |= ~column->cstate & states[STATE_OP_TOGGLE];
 		stateOff |= column->cstate & states[STATE_OP_TOGGLE];
-		Column_ChangeState(tree, item, column, columnIndex,
+		Column_ChangeState(tree, item, column, treeColumn,
 			stateOff, stateOn);
 	    }
 doneFORC:
@@ -6899,6 +7001,21 @@ TreeItemCmd(
 	    TreeItem item_ = (TreeItem) item;
 	    XRectangle rect;
 
+#ifdef COLUMN_LOCK
+	    if (objc == 4) {
+		if (Tree_ItemBbox(tree, item_, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
+		    break;
+	    } else {
+		if (TreeColumn_FromObj(tree, objv[4], &treeColumn,
+			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+		    goto errorExit;
+		if (Tree_ItemBbox(tree, item_, TreeColumn_Lock(treeColumn),
+			&x, &y, &w, &h) < 0)
+		    break;
+		totalWidth = TreeColumn_Offset(treeColumn);
+		columnIndex = TreeColumn_Index(treeColumn);
+		itemColumn = Item_FindColumn(tree, item, columnIndex);
+#else
 	    if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
 		break;
 	    if (objc > 4) {
@@ -6911,6 +7028,7 @@ TreeItemCmd(
 		    totalWidth += TreeColumn_UseWidth(treeColumn);
 		    treeColumn = TreeColumn_Next(treeColumn);
 		}
+#endif
 		if (treeColumn == tree->columnTree)
 		    indent = TreeItem_Indent(tree, item_);
 		else
@@ -7126,9 +7244,9 @@ TreeItemCmd(
 	    }
 	    doneComplex:
 	    if (iMask & CS_DISPLAY)
-		Tree_InvalidateItemDInfo(tree, (TreeItem) item, NULL);
+		Tree_InvalidateItemDInfo(tree, NULL, (TreeItem) item, NULL);
 	    if (iMask & CS_LAYOUT) {
-		Tree_InvalidateColumnWidth(tree, -1);
+		Tree_InvalidateColumnWidth(tree, NULL);
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
@@ -7526,7 +7644,7 @@ TreeItemCmd(
 		break;
 	    if (tree->debug.enable && tree->debug.data)
 		Tree_Debug(tree);
-	    Tree_InvalidateColumnWidth(tree, -1);
+	    Tree_InvalidateColumnWidth(tree, NULL);
 #ifdef SELECTION_VISIBLE
 	    Tree_DeselectHidden(tree);
 #endif
@@ -7548,6 +7666,7 @@ TreeItemCmd(
 	    Column *column = item->columns;
 	    Tcl_Obj *listObj;
 	    struct columnSpan {
+		TreeColumn treeColumn;
 		int columnIndex;
 		int span;
 		int changed;
@@ -7596,6 +7715,7 @@ TreeItemCmd(
 		    result = TCL_ERROR;
 		    goto doneSPAN;
 		}
+		cs[count].treeColumn = treeColumn;
 		cs[count].columnIndex = TreeColumn_Index(treeColumn);
 		cs[count].span = span;
 		cs[count].changed = FALSE;
@@ -7611,7 +7731,7 @@ TreeItemCmd(
 			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 			changedI = TRUE;
 			if (!cs[i].changed) {
-			    Tree_InvalidateColumnWidth(tree, cs[i].columnIndex);
+			    Tree_InvalidateColumnWidth(tree, cs[i].treeColumn);
 			    cs[i].changed = TRUE;
 			}
 		    }
@@ -7639,6 +7759,7 @@ doneSPAN:
 	    Tcl_Obj *objPtr;
 	    int isImage = (index == COMMAND_IMAGE);
 	    struct columnObj {
+		TreeColumn treeColumn;
 		int columnIndex;
 		Tcl_Obj *obj;
 		int changed;
@@ -7695,6 +7816,7 @@ doneSPAN:
 		    result = TCL_ERROR;
 		    goto doneTEXT;
 		}
+		co[count].treeColumn = treeColumn;
 		co[count].columnIndex = TreeColumn_Index(treeColumn);
 		co[count].obj = objv[i + 1];
 		co[count].changed = FALSE;
@@ -7727,7 +7849,7 @@ doneSPAN:
 		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
 		    changedI = TRUE;
 		    if (!co[i].changed) {
-			Tree_InvalidateColumnWidth(tree, co[i].columnIndex);
+			Tree_InvalidateColumnWidth(tree, co[i].treeColumn);
 			co[i].changed = TRUE;
 		    }
 		}
@@ -7962,6 +8084,9 @@ void
 TreeItem_Identify(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
+#ifdef COLUMN_LOCK
+    int lock,			/* Columns to hit-test. */
+#endif
     int x, int y,		/* Item coords to hit-test with. */
     char *buf			/* NULL-terminated string which may be
 				 * appended. */
@@ -7977,11 +8102,19 @@ TreeItem_Identify(
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
     char *elem;
 
+#ifdef COLUMN_LOCK
+    if (Tree_ItemBbox(tree, item_, lock, &left, &top, &width, &height) < 0)
+#else
     if (Tree_ItemBbox(tree, item_, &left, &top, &width, &height) < 0)
+#endif
 	return;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+#ifdef COLUMN_LOCK
+    Item_GetSpans(tree, item_, lock, spans);
+#else
     Item_GetSpans(tree, item_, spans);
+#endif
 
     drawArgs.tree = tree;
     drawArgs.drawable = None;
@@ -8070,11 +8203,19 @@ TreeItem_Identify2(
     int i, columnIndex;
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
 
+#ifdef COLUMN_LOCK
+    if (Tree_ItemBbox(tree, item_, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
+#else
     if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
+#endif
 	return;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
+#ifdef COLUMN_LOCK
+    Item_GetSpans(tree, item_, COLUMN_LOCK_NONE, spans);
+#else
     Item_GetSpans(tree, item_, spans);
+#endif
 
     drawArgs.tree = tree;
     drawArgs.drawable = None;
