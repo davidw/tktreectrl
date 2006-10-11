@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.50 2006/10/04 03:47:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.51 2006/10/11 01:35:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2135,6 +2135,7 @@ void TreeStyle_Draw(
     IStyle *style = (IStyle *) drawArgs->style;
     MStyle *masterStyle = style->master;
     TreeCtrl *tree = drawArgs->tree;
+    int *bounds = drawArgs->bounds;
     ElementArgs args;
     int i, x, y;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
@@ -2146,12 +2147,10 @@ void TreeStyle_Draw(
      * the item-column(s) and inside the header/borders. */
     x = drawArgs->x + tree->drawableXOrigin - tree->xOrigin;
     y = drawArgs->y + tree->drawableYOrigin - tree->yOrigin;
-    args.display.bounds[0] = MAX(tree->inset, x);
-    args.display.bounds[1] = MAX(tree->inset + Tree_HeaderHeight(tree), y);
-    args.display.bounds[2] = MIN(x + drawArgs->width,
-	    Tk_Width(tree->tkwin) - tree->inset);
-    args.display.bounds[3] = MIN(y + drawArgs->height,
-	    Tk_Height(tree->tkwin) - tree->inset);
+    args.display.bounds[0] = MAX(bounds[0], x);
+    args.display.bounds[1] = MAX(bounds[1], y);
+    args.display.bounds[2] = MIN(bounds[2], x + drawArgs->width);
+    args.display.bounds[3] = MIN(bounds[3], y + drawArgs->height);
 
     /* We never lay out the style at less than the minimum size */
     if (drawArgs->width < style->minWidth + drawArgs->indent)
@@ -2296,6 +2295,7 @@ TreeStyle_UpdateWindowPositions(
 {
     IStyle *style = (IStyle *) drawArgs->style;
     TreeCtrl *tree = drawArgs->tree;
+    int *bounds = drawArgs->bounds;
     ElementArgs args;
     int i, x, y;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
@@ -2307,12 +2307,10 @@ TreeStyle_UpdateWindowPositions(
      * the item-column(s) and inside the header/borders. */
     x = drawArgs->x + tree->drawableXOrigin - tree->xOrigin;
     y = drawArgs->y + tree->drawableYOrigin - tree->yOrigin;
-    args.display.bounds[0] = MAX(tree->inset, x);
-    args.display.bounds[1] = MAX(tree->inset + Tree_HeaderHeight(tree), y);
-    args.display.bounds[2] = MIN(x + drawArgs->width,
-	    Tk_Width(tree->tkwin) - tree->inset);
-    args.display.bounds[3] = MIN(y + drawArgs->height,
-	    Tk_Height(tree->tkwin) - tree->inset);
+    args.display.bounds[0] = MAX(bounds[0], x);
+    args.display.bounds[1] = MAX(bounds[1], y);
+    args.display.bounds[2] = MIN(bounds[2], x + drawArgs->width);
+    args.display.bounds[3] = MIN(bounds[3], y + drawArgs->height);
 
     /* We never lay out the style at less than the minimum size */
     if (drawArgs->width < style->minWidth + drawArgs->indent)
@@ -3219,6 +3217,7 @@ Style_Changed(
 {
     TreeItem item;
     TreeItemColumn column;
+    TreeColumn treeColumn;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
     int i, columnIndex, layout;
@@ -3229,6 +3228,7 @@ Style_Changed(
     while (hPtr != NULL)
     {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
+	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	layout = FALSE;
@@ -3244,12 +3244,13 @@ Style_Changed(
 		    eLink->neededWidth = eLink->neededHeight = -1;
 		}
 		style->neededWidth = style->neededHeight = -1;
-		Tree_InvalidateColumnWidth(tree, columnIndex);
+		Tree_InvalidateColumnWidth(tree, treeColumn);
 		TreeItemColumn_InvalidateSize(tree, column);
 		layout = TRUE;
 	    }
 	    columnIndex++;
 	    column = TreeItemColumn_GetNext(tree, column);
+	    treeColumn = TreeColumn_Next(treeColumn);
 	}
 	if (layout)
 	{
@@ -3486,6 +3487,7 @@ Style_ChangeElements(
 {
     TreeItem item;
     TreeItemColumn column;
+    TreeColumn treeColumn;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
     int columnIndex, layout;
@@ -3554,6 +3556,7 @@ Style_ChangeElements(
     while (hPtr != NULL)
     {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
+	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	layout = FALSE;
@@ -3564,12 +3567,13 @@ Style_ChangeElements(
 	    {
 		IStyle_ChangeElementsAux(tree, style, count, elemList, map);
 		style->neededWidth = style->neededHeight = -1;
-		Tree_InvalidateColumnWidth(tree, columnIndex);
+		Tree_InvalidateColumnWidth(tree, treeColumn);
 		TreeItemColumn_InvalidateSize(tree, column);
 		layout = TRUE;
 	    }
 	    columnIndex++;
 	    column = TreeItemColumn_GetNext(tree, column);
+	    treeColumn = TreeColumn_Next(treeColumn);
 	}
 	if (layout)
 	{
@@ -3638,13 +3642,14 @@ Style_ElemChanged(
 {
     TreeItem item;
     TreeItemColumn column;
+    TreeColumn treeColumn;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
     IElementLink *eLink;
     int i, columnIndex;
     ElementArgs args;
     IStyle *style;
-    int eMask, iMask;
+    int eMask, cMask, iMask;
     int updateDInfo = FALSE;
 
     args.tree = tree;
@@ -3656,11 +3661,13 @@ Style_ElemChanged(
     while (hPtr != NULL)
     {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
+	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	iMask = 0;
 	while (column != NULL)
 	{
+	    cMask = 0;
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	    if ((style != NULL) && (style->master == masterStyle))
 	    {
@@ -3671,6 +3678,7 @@ Style_ElemChanged(
 		    {
 			if (csM & CS_LAYOUT)
 			    eLink->neededWidth = eLink->neededHeight = -1;
+			cMask |= csM;
 			break;
 		    }
 		    /* Instance element */
@@ -3680,20 +3688,25 @@ Style_ElemChanged(
 			eMask = (*masterElem->typePtr->changeProc)(&args);
 			if (eMask & CS_LAYOUT)
 			    eLink->neededWidth = eLink->neededHeight = -1;
-			iMask |= eMask;
+			cMask |= eMask;
 			break;
 		    }
 		}
-		iMask |= csM;
-		if (iMask & CS_LAYOUT)
+		iMask |= cMask;
+		if (cMask & CS_LAYOUT)
 		{
 		    style->neededWidth = style->neededHeight = -1;
-		    Tree_InvalidateColumnWidth(tree, columnIndex);
+		    Tree_InvalidateColumnWidth(tree, treeColumn);
 		    TreeItemColumn_InvalidateSize(tree, column);
+		}
+		else if (cMask & CS_DISPLAY)
+		{
+		    Tree_InvalidateItemDInfo(tree, treeColumn, item, NULL);
 		}
 	    }
 	    columnIndex++;
 	    column = TreeItemColumn_GetNext(tree, column);
+	    treeColumn = TreeColumn_Next(treeColumn);
 	}
 	if (iMask & CS_LAYOUT)
 	{
@@ -3701,8 +3714,9 @@ Style_ElemChanged(
 	    Tree_FreeItemDInfo(tree, item, NULL);
 	    updateDInfo = TRUE;
 	}
-	if (iMask & CS_DISPLAY)
-	    Tree_InvalidateItemDInfo(tree, item, NULL);
+	else if (iMask & CS_DISPLAY)
+	{
+	}
 	hPtr = Tcl_NextHashEntry(&search);
     }
     if (updateDInfo)
@@ -4072,9 +4086,10 @@ Style_Deleted(
     )
 {
     TreeItem item;
+    TreeItemColumn column;
+    TreeColumn treeColumn;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
-    TreeItemColumn column;
     IStyle *style;
     int columnIndex;
 
@@ -4082,6 +4097,7 @@ Style_Deleted(
     while (hPtr != NULL)
     {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
+	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	while (column != NULL)
@@ -4089,13 +4105,14 @@ Style_Deleted(
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	    if ((style != NULL) && (style->master == masterStyle))
 	    {
-		Tree_InvalidateColumnWidth(tree, columnIndex);
+		Tree_InvalidateColumnWidth(tree, treeColumn);
 		TreeItemColumn_ForgetStyle(tree, column);
 		TreeItem_InvalidateHeight(tree, item);
 		Tree_FreeItemDInfo(tree, item, NULL);
 	    }
 	    columnIndex++;
 	    column = TreeItemColumn_GetNext(tree, column);
+	    treeColumn = TreeColumn_Next(treeColumn);
 	}
 	hPtr = Tcl_NextHashEntry(&search);
     }
@@ -4285,7 +4302,7 @@ Tree_RedrawElement(
     /* Instance element */
     else
     {
-	Tree_InvalidateItemDInfo(tree, item, NULL);
+	Tree_InvalidateItemDInfo(tree, NULL, item, NULL);
     }
 }
 
@@ -4430,8 +4447,7 @@ Tree_ElementChangedItself(
 	IStyle *style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	int i;
 	IElementLink *eLink = NULL;
-	TreeItemColumn column2;
-	int columnIndex = 0;
+	int columnIndex;
 
 	if (style == NULL)
 	    panic("Tree_ElementChangedItself but style is NULL\n");
@@ -4446,28 +4462,24 @@ Tree_ElementChangedItself(
 	if (eLink == NULL)
 	    panic("Tree_ElementChangedItself but eLink is NULL\n");
 
-	column2 = TreeItem_GetFirstColumn(tree, item);
-	while (column2 != NULL)
-	{
-	    if (column2 == column)
-		break;
-	    columnIndex++;
-	    column2 = TreeItemColumn_GetNext(tree, column2);
-	}
-	if (column2 == NULL)
-	    panic("Tree_ElementChangedItself but column2 is NULL\n");
+	columnIndex = TreeItemColumn_Index(tree, item, column);
 
 	eLink->neededWidth = eLink->neededHeight = -1;
 	style->neededWidth = style->neededHeight = -1;
 
-	Tree_InvalidateColumnWidth(tree, columnIndex);
+	Tree_InvalidateColumnWidth(tree, Tree_FindColumn(tree, columnIndex));
 	TreeItemColumn_InvalidateSize(tree, column);
 	TreeItem_InvalidateHeight(tree, item);
 	Tree_FreeItemDInfo(tree, item, NULL);
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
     }
-    if (csM & CS_DISPLAY)
-	Tree_InvalidateItemDInfo(tree, item, NULL);
+    else if (csM & CS_DISPLAY) {
+	int columnIndex;
+
+	columnIndex = TreeItemColumn_Index(tree, item, column);
+	Tree_InvalidateItemDInfo(tree, Tree_FindColumn(tree, columnIndex),
+		item, NULL);
+    }
 }
 
 void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
@@ -4478,14 +4490,15 @@ void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
     {
 	iter->eLink->neededWidth = iter->eLink->neededHeight = -1;
 	iter->style->neededWidth = iter->style->neededHeight = -1;
-	Tree_InvalidateColumnWidth(iter->tree, iter->columnIndex);
+	Tree_InvalidateColumnWidth(iter->tree,
+	    Tree_FindColumn(iter->tree, iter->columnIndex));
 	TreeItemColumn_InvalidateSize(iter->tree, iter->column);
 	TreeItem_InvalidateHeight(iter->tree, iter->item);
 	Tree_FreeItemDInfo(iter->tree, iter->item, NULL);
 	Tree_DInfoChanged(iter->tree, DINFO_REDO_RANGES);
     }
     if (mask & CS_DISPLAY)
-	Tree_InvalidateItemDInfo(iter->tree, iter->item, NULL);
+	Tree_InvalidateItemDInfo(iter->tree, NULL, iter->item, NULL);
 }
 
 Element *Tree_ElementIterateGet(TreeIterate iter_)
@@ -6755,7 +6768,7 @@ Tree_UndefineState(
 	TreeItem_UndefineState(tree, item, state);
 	hPtr = Tcl_NextHashEntry(&search);
     }
-    Tree_InvalidateColumnWidth(tree, -1);
+    Tree_InvalidateColumnWidth(tree, NULL);
     Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 
 #ifdef ROW_LABEL
