@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.41 2006/10/05 22:47:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.42 2006/10/11 01:28:51 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3148,18 +3148,29 @@ WinItemLostSlaveProc(clientData, tkwin)
     TreeCtrl *tree = elemX->tree;
 
 #ifdef CLIP_WINDOW
-    if (tkwin == elemX->child) {
+    /* If either window is lost to another geometry manager, forget
+     * about both windows. */
+    if (elemX->child != NULL) {
 	Tk_DeleteEventHandler(elemX->child, StructureNotifyMask,
 		WinItemStructureProc, (ClientData) elemX);
-	Tk_UnmapWindow(elemX->child);
+	if (tkwin != elemX->child) {
+	    Tk_ManageGeometry(elemX->child, (Tk_GeomMgr *) NULL,
+		    (ClientData) NULL);
+	    Tk_UnmapWindow(elemX->child);
+	}
 	elemX->child = NULL;
-    } else {
+    }
+    if (elemX->tkwin != NULL) {
 	Tk_DeleteEventHandler(elemX->tkwin, StructureNotifyMask,
 		WinItemStructureProc, (ClientData) elemX);
-	if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
-	    Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	if (tkwin != elemX->tkwin) {
+	    Tk_ManageGeometry(elemX->tkwin, (Tk_GeomMgr *) NULL,
+		    (ClientData) NULL);
+	    if (tree->tkwin != Tk_Parent(elemX->tkwin)) {
+		Tk_UnmaintainGeometry(elemX->tkwin, tree->tkwin);
+	    }
+	    Tk_UnmapWindow(elemX->tkwin);
 	}
-	Tk_UnmapWindow(elemX->tkwin);
 	elemX->tkwin = NULL;
     }
 #else
