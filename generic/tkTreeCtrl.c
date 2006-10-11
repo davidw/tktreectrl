@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.67 2006/10/05 22:51:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.68 2006/10/11 01:16:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -201,10 +201,10 @@ static Tk_OptionSpec optionSpecs[] = {
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-showlines", "showLines",
      "ShowLines", "1", -1, Tk_Offset(TreeCtrl, showLines),
-     0, (ClientData) NULL, TREE_CONF_REDISPLAY},
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-showrootlines", "showRootLines",
      "ShowRootLines", "1", -1, Tk_Offset(TreeCtrl, showRootLines),
-     0, (ClientData) NULL, TREE_CONF_REDISPLAY},
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-showroot", "showRoot",
      "ShowRoot", "1", -1, Tk_Offset(TreeCtrl, showRoot),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
@@ -282,6 +282,9 @@ static Tk_OptionSpec debugSpecs[] = {
     {TK_OPTION_BOOLEAN, "-display", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(TreeCtrl, debug.display),
      0, (ClientData) NULL, 0},
+    {TK_OPTION_COLOR, "-drawcolor", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(TreeCtrl, debug.drawColor),
+     TK_OPTION_NULL_OK, (ClientData) NULL, 0},
     {TK_OPTION_BOOLEAN, "-enable", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(TreeCtrl, debug.enable),
      0, (ClientData) NULL, 0},
@@ -530,7 +533,12 @@ static int TreeWidgetCmd(
 		TreeItem_ChangeState(tree, tree->activeItem, STATE_ACTIVE, 0);
 		tree->activeItem = item;
 		TreeItem_ChangeState(tree, tree->activeItem, 0, STATE_ACTIVE);
+#ifdef COLUMN_LOCK
+		/* FIXME: is it onscreen? */
+		if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) >= 0) {
+#else
 		if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) >= 0) {
+#endif
 		    Tk_SetCaretPos(tree->tkwin, x - tree->xOrigin,
 			    y - tree->yOrigin, h);
 		}
@@ -750,9 +758,14 @@ static int TreeWidgetCmd(
 
 	case COMMAND_IDENTIFY:
 	{
-	    int x, y, depth;
+	    int x, y, width, height, depth;
+	    TreeColumn treeColumn;
 	    TreeItem item;
 	    char buf[64];
+	    int hit;
+#ifdef COLUMN_LOCK
+	    int lock;
+#endif
 /*
   set id [$tree identify $x $y]
   "item I column C" : mouse is in column C of item I
@@ -771,15 +784,15 @@ static int TreeWidgetCmd(
 	    if (Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)
 		goto error;
 
+	    hit = Tree_HitTest(tree, x, y);
+
 	    /* Require point inside borders */
-	    if ((x < tree->inset) || (x >= Tk_Width(tree->tkwin) - tree->inset))
-		break;
-	    if ((y < tree->inset) || (y >= Tk_Height(tree->tkwin) - tree->inset))
+	    if (hit == TREE_HIT_NONE)
 		break;
 
 #ifdef ROW_LABEL
 	    /* Point in row labels */
-	    if (x < Tree_ContentLeft(tree)) {
+	    if (hit == TREE_HIT_ROWLABEL) {
 		TreeRowLabel row;
 		int rx = x, ry = y, w, h;
 
@@ -805,31 +818,25 @@ static int TreeWidgetCmd(
 	    }
 #endif /* ROW_LABEL */
 
-	    /* Point in header */
-	    if (y < tree->inset + Tree_HeaderHeight(tree)) {
-		int left = 0 - tree->xOrigin;
-		TreeColumn column = tree->columns;
-
-		while (column != NULL) {
-		    int width = TreeColumn_UseWidth(column);
-		    if ((x >= left) && (x < left + width)) {
-			sprintf(buf, "header %s%d", tree->columnPrefix,
-			    TreeColumn_GetID(column));
-			if (x < left + 4)
-			    sprintf(buf + strlen(buf), " left");
-			else if (x >= left + width - 4)
-			    sprintf(buf + strlen(buf), " right");
-			Tcl_SetResult(interp, buf, TCL_VOLATILE);
-			goto done;
-		    }
-		    left += width;
-		    column = TreeColumn_Next(column);
+	    if (hit == TREE_HIT_HEADER) {
+		treeColumn = Tree_HeaderUnderPoint(tree, &x, &y, &width, &height,
+			FALSE);
+		if (treeColumn == tree->columnTail) {
+		    strcpy(buf, "header tail");
+		    if (x < 4)
+			sprintf(buf + strlen(buf), " left");
+		    Tcl_SetResult(interp, buf, TCL_VOLATILE);
+		    break;
+		} else if (treeColumn != NULL) {
+		    sprintf(buf, "header %s%d", tree->columnPrefix,
+			TreeColumn_GetID(treeColumn));
+		    if (x < 4)
+			sprintf(buf + strlen(buf), " left");
+		    else if (x >= width - 4)
+			sprintf(buf + strlen(buf), " right");
+		    Tcl_SetResult(interp, buf, TCL_VOLATILE);
+		    break;
 		}
-		strcpy(buf, "header tail");
-		if (x < left + 4)
-		    sprintf(buf + strlen(buf), " left");
-		Tcl_SetResult(interp, buf, TCL_VOLATILE);
-		break;
 	    }
 
 	    item = Tree_ItemUnderPoint(tree, &x, &y, FALSE);
@@ -845,8 +852,19 @@ static int TreeWidgetCmd(
 	    if (item == tree->root)
 		depth = (tree->showButtons && tree->showRootButton) ? 1 : 0;
 
+#ifdef COLUMN_LOCK
+	    lock = (hit == TREE_HIT_LEFT) ? COLUMN_LOCK_LEFT :
+		(hit == TREE_HIT_RIGHT) ? COLUMN_LOCK_RIGHT :
+		COLUMN_LOCK_NONE;
+
+	    /* Point is in a line or button */
+	    if (tree->columnTreeVis &&
+		    (TreeColumn_Lock(tree->columnTree) == lock) &&
+		    (x >= tree->columnTreeLeft) &&
+#else
 	    /* Point is in a line or button */
 	    if (tree->columnTreeVis && (x >= tree->columnTreeLeft) &&
+#endif
 		    (x < tree->columnTreeLeft + TreeColumn_UseWidth(tree->columnTree)) &&
 		    (x < tree->columnTreeLeft + depth * tree->useIndent)) {
 		int column = (x - tree->columnTreeLeft) / tree->useIndent + 1;
@@ -867,7 +885,11 @@ static int TreeWidgetCmd(
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
 	    } else {
+#ifdef COLUMN_LOCK
+		TreeItem_Identify(tree, item, lock, x, y, buf);
+#else
 		TreeItem_Identify(tree, item, x, y, buf);
+#endif
 	    }
 	    Tcl_SetResult(interp, buf, TCL_VOLATILE);
 	    break;
@@ -1076,7 +1098,11 @@ static int TreeWidgetCmd(
 		goto error;
 
 	    /* Canvas coords */
+#ifdef COLUMN_LOCK
+	    if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
+#else
 	    if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) < 0)
+#endif
 		break;
 
 	    if ((C2Wx(x) > maxX) || (C2Wx(x + w) <= minX) || (w <= visWidth)) {
@@ -1435,10 +1461,8 @@ badWrap:
     if (mask & TREE_CONF_PROXY) {
 	TreeColumnProxy_Undisplay(tree);
 	TreeColumnProxy_Display(tree);
-#ifdef ROW_LABEL
-	TreeRowLabelProxy_Undisplay(tree);
-	TreeRowLabelProxy_Display(tree);
-#endif
+	TreeRowProxy_Undisplay(tree);
+	TreeRowProxy_Display(tree);
     }
 
     tree->useIndent = MAX(tree->indent, ButtonMaxWidth(tree));
@@ -1457,8 +1481,8 @@ badWrap:
 
     if (mask & TREE_CONF_RELAYOUT) {
 	TreeComputeGeometry(tree);
-	Tree_InvalidateColumnWidth(tree, -1);
-	Tree_InvalidateColumnHeight(tree, -1); /* In case -usetheme changes */
+	Tree_InvalidateColumnWidth(tree, NULL);
+	Tree_InvalidateColumnHeight(tree, NULL); /* In case -usetheme changes */
 	Tree_RelayoutWindow(tree);
     } else if (mask & TREE_CONF_REDISPLAY) {
 	Tree_RelayoutWindow(tree);
@@ -1506,7 +1530,7 @@ TreeWorldChanged(
     TreeColumn_TreeChanged(tree, TREE_CONF_FONT | TREE_CONF_RELAYOUT);
 
     TreeComputeGeometry(tree);
-    Tree_InvalidateColumnWidth(tree, -1);
+    Tree_InvalidateColumnWidth(tree, NULL);
     Tree_RelayoutWindow(tree);
 }
 
@@ -1551,6 +1575,9 @@ TreeEventProc(
 	    if ((tree->prevWidth != Tk_Width(tree->tkwin)) ||
 		    (tree->prevHeight != Tk_Height(tree->tkwin))) {
 		tree->widthOfColumns = -1;
+#ifdef COLUMN_LOCK
+		tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
+#endif
 		Tree_RelayoutWindow(tree);
 		tree->prevWidth = Tk_Width(tree->tkwin);
 		tree->prevHeight = Tk_Height(tree->tkwin);
@@ -3151,9 +3178,11 @@ TreeDebugCmd(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = { "cget", "configure", "dinfo",
-					  "scroll", (char *) NULL };
-    enum { COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_DINFO, COMMAND_SCROLL };
+    static CONST char *commandNames[] = {
+	"cget", "configure", "dinfo", "expose", "scroll", (char *) NULL
+    };
+    enum { COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_DINFO,
+	COMMAND_EXPOSE, COMMAND_SCROLL };
     int index;
 
     if (objc < 3) {
@@ -3217,6 +3246,10 @@ TreeDebugCmd(
 		tree->debug.gcErase = Tk_GCForColor(tree->debug.eraseColor,
 			Tk_WindowId(tree->tkwin));
 	    }
+	    if (tree->debug.drawColor != NULL) {
+		tree->debug.gcDraw = Tk_GCForColor(tree->debug.drawColor,
+			Tk_WindowId(tree->tkwin));
+	    }
 	    break;
 	}
 
@@ -3224,6 +3257,28 @@ TreeDebugCmd(
 	{
 	    extern void DumpDInfo(TreeCtrl *tree);
 	    DumpDInfo(tree);
+	    break;
+	}
+
+	/* T debug expose x1 y1 x2 y2 */
+	case COMMAND_EXPOSE:
+	{
+	    int x1, y1, x2, y2;
+
+	    if (objc != 7) {
+		Tcl_WrongNumArgs(interp, 3, objv, "x1 y1 x2 y2");
+		return TCL_ERROR;
+	    }
+	    if (Tcl_GetIntFromObj(interp, objv[3], &x1) != TCL_OK)
+		return TCL_ERROR;
+	    if (Tcl_GetIntFromObj(interp, objv[4], &y1) != TCL_OK)
+		return TCL_ERROR;
+	    if (Tcl_GetIntFromObj(interp, objv[5], &x2) != TCL_OK)
+		return TCL_ERROR;
+	    if (Tcl_GetIntFromObj(interp, objv[6], &y2) != TCL_OK)
+		return TCL_ERROR;
+	    Tree_RedrawArea(tree, MIN(x1, x2), MIN(y1, y2),
+		    MAX(x1, x2), MAX(y1, y2));
 	    break;
 	}
 
