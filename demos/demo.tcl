@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.45 2006/10/04 04:07:02 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.46 2006/10/11 01:42:07 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -164,6 +164,7 @@ switch -- $::thisPlatform {
 foreach file {
     biglist
     bitmaps
+    column-lock
     explorer
     firefox
     help
@@ -199,11 +200,11 @@ proc MakeMenuBar {} {
     set m [menu .menubar]
     . configure -menu $m
     set m2 [menu $m.mFile -tearoff no]
-    if {$::thisPlatform ne "unix"} {
+    if {$::thisPlatform ne "unix" && [info commands console] ne ""} {
 	console eval {
 	    wm title . "TkTreeCtrl Console"
 	    .console configure -font {Courier 9} -height 8
-	    ::tk::ConsolePrompt
+#	    ::tk::ConsolePrompt
 	    wm geometry . +0-100
 	}
 	$m2 add command -label "Console" -command {
@@ -218,6 +219,7 @@ proc MakeMenuBar {} {
     $m2 add command -label "Identify" -command ToggleIdentifyWindow
     $m2 add command -label "Style Editor" -command ToggleStyleEditorWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
+    $m2 add command -label "Magnifier" -command ToggleLoupeWindow
     $m2 add command -label Quit -command exit
     $m add cascade -label File -menu $m2
     return
@@ -556,6 +558,24 @@ proc TreePlusScrollbarsInAFrame {f h v} {
 	grid configure $f.sv -row 0 -column 1 -sticky ns
     }
 
+    bind $f.t <Control-Shift-ButtonPress-1> {
+	TreeCtrl::MarqueeBegin %W %x %y
+	set DebugExpose(x1) %x
+	set DebugExpose(y1) %y
+	break
+    }
+    bind $f.t <Control-Shift-Button1-Motion> {
+	TreeCtrl::MarqueeUpdate %W %x %y
+	set DebugExpose(x2) %x
+	set DebugExpose(y2) %y
+	break
+    }
+    bind $f.t <Control-Shift-ButtonRelease-1> {
+	TreeCtrl::MarqueeEnd %W %x %y
+	%W debug expose $DebugExpose(x1) $DebugExpose(y1) $DebugExpose(x2) $DebugExpose(y2)
+	break
+    }
+
     MakeListPopup $f.t
     MakeHeaderPopup $f.t
     bind $f.t <ButtonPress-3> {
@@ -614,7 +634,8 @@ proc MakeMainWindow {} {
     # Tree + scrollbars
     TreePlusScrollbarsInAFrame .f2.f1 1 1
     .f2.f1.t configure -indent 19
-    .f2.f1.t debug configure -enable no -display yes -erasecolor pink -displaydelay 30
+    .f2.f1.t debug configure -enable no -display yes -erasecolor pink \
+	-drawcolor orange -displaydelay 20
 
     # Give it a big border to debug drawing
     .f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
@@ -711,6 +732,12 @@ proc MakeListPopup {T} {
     set m2 [menu $m.mDebug -tearoff no]
     $m2 add checkbutton -label Data -variable Popup(debug,data) \
 	-command {$Popup(T) debug configure -data $Popup(debug,data)}
+	set m3 [menu $m2.mDelay -tearoff no]
+	foreach n {0 10 20 30 40 50 60 70 80 90 100} {
+	    $m3 add radiobutton -label $n -variable Popup(debug,displaydelay) -value $n \
+		-command {$Popup(T) debug configure -displaydelay $Popup(debug,displaydelay)}
+	}
+	$m2 add cascade -label "Display Delay" -menu $m3
     $m2 add checkbutton -label Display -variable Popup(debug,display) \
 	-command {$Popup(T) debug configure -display $Popup(debug,display)}
     $m2 add checkbutton -label "Text Layout" -variable Popup(debug,textlayout) \
@@ -814,6 +841,15 @@ proc MakeHeaderPopup {T} {
     $m2 add radiobutton -label "Right" -variable Popup(justify) -value right \
 	-command {$Popup(T) column configure $Popup(column) -justify right}
 
+    set m2 [menu $m.mLock -tearoff no]
+    $m add cascade -label Lock -menu $m2
+    $m2 add radiobutton -label "Left" -variable Popup(lock) -value left \
+	-command {$Popup(T) column configure $Popup(column) -lock left}
+    $m2 add radiobutton -label "None" -variable Popup(lock) -value none \
+	-command {$Popup(T) column configure $Popup(column) -lock none}
+    $m2 add radiobutton -label "Right" -variable Popup(lock) -value right \
+	-command {$Popup(T) column configure $Popup(column) -lock right}
+
     $m add checkbutton -label "Squeeze" -variable Popup(squeeze) \
 	-command {$Popup(T) column configure $Popup(column) -squeeze $Popup(squeeze)}
     $m add checkbutton -label "Tree Column" -variable Popup(treecolumn) \
@@ -850,6 +886,7 @@ proc ShowPopup {T x y X Y} {
 	    set Popup(expand) [$T column cget $Popup(column) -expand]
 	    set Popup(squeeze) [$T column cget $Popup(column) -squeeze]
 	    set Popup(justify) [$T column cget $Popup(column) -justify]
+	    set Popup(lock) [$T column cget $Popup(column) -lock]
 	    set Popup(treecolumn) [expr {[$T column id tree] eq $Popup(column)}]
 	    tk_popup $T.mHeader $X $Y
 	    return
@@ -876,7 +913,7 @@ proc ShowPopup {T x y X Y} {
 	    $m add command -label "Item $item (recurse)" -command "$T item expand $item -recurse"
 	}
     }
-    foreach option {data display enable textlayout} {
+    foreach option {data display displaydelay enable textlayout} {
 	set Popup(debug,$option) [$T debug cget -$option]
     }
     set Popup(bgimg) [$T cget -backgroundimage]
@@ -971,7 +1008,8 @@ proc InitDemoList {} {
 	"Big List" DemoBigList biglist.tcl \
 	"Column Spanning" DemoSpan span.tcl \
 	"My Computer" DemoMyComputer mycomputer.tcl \
-	"Row Labels" DemoRowLabels rowlabels.tcl
+	"Row Labels" DemoRowLabels rowlabels.tcl \
+	"Column Locking" DemoColumnLock column-lock.tcl
 	] {
 	set item [$t item create]
 	$t item lastchild root $item
@@ -1463,11 +1501,11 @@ if {[llength [info commands loupe]]} {
     set Loupe(x) 0
     set Loupe(y) 0
     set Loupe(auto) 1
+    set Loupe(afterId) ""
 
     proc LoupeAfter {} {
 
 	global Loupe
-
 	set x [winfo pointerx .]
 	set y [winfo pointery .]
 	if {$Loupe(auto) || ($Loupe(x) != $x) || ($Loupe(y) != $y)} {
@@ -1477,7 +1515,7 @@ if {[llength [info commands loupe]]} {
 	    set Loupe(x) $x
 	    set Loupe(y) $y
 	}
-	after $Loupe(delay) LoupeAfter
+	set Loupe(afterId) [after $Loupe(delay) LoupeAfter]
 	return
     }
 
@@ -1486,6 +1524,7 @@ if {[llength [info commands loupe]]} {
 	global Loupe
 
 	set w [toplevel .loupe]
+	wm withdraw $w
 	wm geometry $w -0+0
 	image create photo ImageLoupe -width 150 -height 150
 	pack [label $w.label -image ImageLoupe -borderwidth 0]
@@ -1500,12 +1539,29 @@ if {[llength [info commands loupe]]} {
 	}
 	bindtags .loupe [concat [bindtags .loupe] LoupeWindow]
 
+	wm protocol $w WM_DELETE_WINDOW "ToggleLoupeWindow"
+
 	set Loupe(image) ImageLoupe
 	set Loupe(delay) 500
-	after $Loupe(delay) LoupeAfter
 	return
     }
-    MakeLoupeWindow
 
+    proc ToggleLoupeWindow {} {
+
+	global Loupe
+
+	set w .loupe
+	if {![winfo exists $w]} {
+	    MakeLoupeWindow
+	}
+	if {[winfo ismapped $w]} {
+	    after cancel $Loupe(afterId)
+	    wm withdraw $w
+	} else {
+	    LoupeAfter
+	    wm deiconify $w
+	}
+	return
+    }
 }
 
