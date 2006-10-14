@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.51 2006/10/11 01:18:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.52 2006/10/14 19:44:11 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -38,6 +38,7 @@
 #define COLUMN_SPAN
 #define ROW_LABEL
 #define COLUMN_LOCK
+#define DEPRECATED
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -139,6 +140,7 @@ struct TreeCtrlColumnDrag
     int alpha;			/* -imagealpha */
     TreeColumn indColumn;	/* -indicatorcolumn */
     XColor *indColor;		/* -indicatorcolor */
+    int indSide;		/* -indicatorside */
 };
 
 #ifdef ROW_LABEL
@@ -477,12 +479,32 @@ extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], in
 /* tkTreeItem.c */
 
 #define ITEM_ALL ((TreeItem) -1)
-#define IFO_ALLOK	0x0001	/* ItemFromObj flag: "all" is acceptable */
-#define IFO_NULLOK	0x0002	/* ItemFromObj flag: can be NULL */
-#define IFO_NOTROOT	0x0004	/* ItemFromObj flag: "root" is forbidden */
-#define IFO_NOTORPHAN	0x0008	/* ItemFromObj flag: item must have a parent */
+#define IFO_NOT_MANY	0x0001	/* ItemFromObj flag: > 1 item is not ok */
+#define IFO_NOT_NULL	0x0002	/* ItemFromObj flag: can't be NULL */
+#define IFO_NOT_ROOT	0x0004	/* ItemFromObj flag: "root" is forbidden */
+#define IFO_NOT_ORPHAN	0x0008	/* ItemFromObj flag: item must have a parent */
+#define IFO_LIST_ALL	0x0010	/* ItemFromObj flag: return "all" as list */
 extern int TreeItemList_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItemList *items, int flags);
 extern int TreeItem_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeItem *itemPtr, int flags);
+
+typedef struct ItemForEach ItemForEach;
+struct ItemForEach {
+    TreeCtrl *tree;
+    int error;
+    int all;
+    Tcl_HashSearch search;
+    TreeItem last;
+    TreeItem item;
+    TreeItemList *items;
+    int index;
+};
+extern TreeItem ItemForEach_Start(TreeItemList *items, TreeItemList *item2s,
+    ItemForEach *iter);
+extern TreeItem ItemForEach_Next(ItemForEach *iter);
+#define ITEM_FOR_EACH(item, items, item2s, iter) \
+    for (item = ItemForEach_Start(items, item2s, iter); \
+	 item != NULL; \
+	 item = ItemForEach_Next(iter))
 
 extern void FormatResult(Tcl_Interp *interp, char *fmt, ...);
 extern void Tree_Debug(TreeCtrl *tree);
@@ -523,10 +545,12 @@ extern TreeItemRInfo TreeItem_GetRInfo(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_AppendChild(TreeCtrl *tree, TreeItem self, TreeItem child);
 extern void TreeItem_RemoveFromParent(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_FirstAndLast(TreeCtrl *tree, TreeItem *first, TreeItem *last);
+extern void TreeItem_ListDescendants(TreeCtrl *tree, TreeItem item_, TreeItemList *items);
 extern int TreeItem_Height(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
 #ifdef COLUMN_LOCK
+extern void TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_, int *spans);
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
 #else
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
@@ -554,8 +578,13 @@ extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
 extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+#ifdef COLUMN_LOCK
+extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
+    int lock, int x, int y, int width, int height);
+#else
 extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
     int x, int y, int width, int height);
+#endif
 extern void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen);
 
 extern TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item);
@@ -663,11 +692,34 @@ extern void TreeNotify_ItemVisibility(TreeCtrl *tree, TreeItemList *v, TreeItemL
 extern int TreeColumn_InitInterp(Tcl_Interp *interp);
 extern void Tree_InitColumns(TreeCtrl *tree);
 extern TreeColumn Tree_FindColumn(TreeCtrl *tree, int columnIndex);
+
 #define COLUMN_ALL ((TreeColumn) -1)
 #define CFO_NOT_MANY 0x01
 #define CFO_NOT_NULL 0x02
 #define CFO_NOT_TAIL 0x04
+#define CFO_LIST_ALL 0x08
+extern int TreeColumnList_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumnList *columns, int flags);
 extern int TreeColumn_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeColumn *columnPtr, int flags);
+
+typedef struct ColumnForEach ColumnForEach;
+struct ColumnForEach {
+    TreeCtrl *tree;
+    int error;
+    int all;
+    TreeColumn current;
+    TreeColumn next;
+    TreeColumn last;
+    TreeColumnList *list;
+    int index;
+};
+extern TreeColumn ColumnForEach_Start(TreeColumnList *columns,
+    TreeColumnList *column2s, ColumnForEach *iter);
+extern TreeColumn ColumnForEach_Next(ColumnForEach *iter);
+#define COLUMN_FOR_EACH(column, columns, column2s, iter) \
+    for (column = ColumnForEach_Start(columns, column2s, iter); \
+	 column != NULL; \
+	 column = ColumnForEach_Next(iter))
+    
 extern Tcl_Obj *TreeColumn_ToObj(TreeCtrl *tree, TreeColumn column_);
 extern int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeColumn_GetID(TreeColumn column_);
@@ -740,17 +792,18 @@ extern TreeItem Tree_ItemLeftMost(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemRightMost(TreeCtrl *tree, TreeItem item);
 extern int Tree_ItemToRNC(TreeCtrl *tree, TreeItem item, int *row, int *col);
 extern TreeItem Tree_RNCToItem(TreeCtrl *tree, int row, int col);
+extern int Tree_AreaBbox(TreeCtrl *tree, int area, int *x1_, int *y1_, int *x2_, int *y2_);
 
 enum {
-TREE_HIT_NONE = 0,
-TREE_HIT_HEADER,
-TREE_HIT_CONTENT,
+TREE_AREA_NONE = 0,
+TREE_AREA_HEADER,
+TREE_AREA_CONTENT,
 #ifdef ROW_LABEL
-TREE_HIT_ROWLABEL,
+TREE_AREA_ROWLABEL,
 #endif
 #ifdef COLUMN_LOCK
-TREE_HIT_LEFT,
-TREE_HIT_RIGHT
+TREE_AREA_LEFT,
+TREE_AREA_RIGHT
 #endif
 };
 extern int Tree_HitTest(TreeCtrl *tree, int x, int y);
@@ -988,7 +1041,7 @@ extern void TreePtrList_Free(TreePtrList *tilPtr);
 #define TreeItemList_Concat TreePtrList_Concat
 #define TreeItemList_Free TreePtrList_Free
 #define TreeItemList_Items(L) ((TreeItem *) (L)->pointers)
-#define TreeItemList_ItemN(L,n) ((TreeItem) (L)->pointers[n])
+#define TreeItemList_Nth(L,n) ((TreeItem) (L)->pointers[n])
 #define TreeItemList_Count(L) ((L)->count)
 
 #define TreeColumnList_Init TreePtrList_Init
