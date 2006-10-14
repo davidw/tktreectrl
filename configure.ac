@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.17 2006/10/04 04:11:02 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.18 2006/10/14 21:19:25 treectrl Exp $
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.
@@ -69,8 +69,7 @@ TEA_SETUP_COMPILER
 
 TEA_ADD_SOURCES([qebind.c tkTreeColumn.c tkTreeCtrl.c tkTreeDisplay.c
 		tkTreeDrag.c tkTreeElem.c tkTreeItem.c tkTreeMarquee.c
-		tkTreeNotify.c tkTreeRowLabel.c tkTreeStyle.c tkTreeTheme.c
-		tkTreeUtils.c])
+		tkTreeNotify.c tkTreeStyle.c tkTreeTheme.c tkTreeUtils.c])
 TEA_ADD_HEADERS([])
 #TEA_ADD_INCLUDES([-I. -I\"`${CYGPATH} ${srcdir}/generic`\"])
 TEA_ADD_CFLAGS([])
