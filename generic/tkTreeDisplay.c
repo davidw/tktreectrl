@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.42 2006/10/11 01:26:11 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.43 2006/10/14 19:58:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -46,6 +46,15 @@ struct Range
     Range *next;
 };
 
+typedef struct DItemArea {
+    int x;			/* Where it should be drawn, window coords. */
+    int width;			/* Current width. */
+    int dirty[4];		/* Dirty area in item coords. */
+#define DITEM_DIRTY 0x0001
+#define DITEM_ALL_DIRTY 0x0002
+    int flags;
+} DItemArea;
+
 /* Display information for a TreeItem. */
 struct DItem
 {
@@ -53,21 +62,20 @@ struct DItem
     char magic[4];
 #endif
     TreeItem item;
-    int x, y;			/* Where it should be drawn, window coords. */
+    int y;			/* Where it should be drawn, window coords. */
+    int height;			/* Current height. */
+    DItemArea area;
     int oldX, oldY;		/* Where it was last drawn, window coords. */
-    int width, height;		/* Current width and height. */
-    int dirty[4];		/* Dirty area in item coords. */
     Range *range;		/* Range the TreeItem is in. */
     int index;			/* Used for alternating background colors. */
-#define DITEM_DIRTY 0x0001
-#define DITEM_ALL_DIRTY 0x0002
-    int flags;
     DItem *next;
 #ifdef COLUMN_LOCK
-    struct {
-	int dirty[4];
-	int flags;
-    } left, right;
+    DItemArea left, right;
+#endif
+#ifdef COLUMN_SPAN
+    int *spans;			/* span[n] is the column index of the item
+				 * column displayed at the n'th tree column. */
+    int spanAlloc;		/* Size of spans[] */
 #endif
 };
 
@@ -124,6 +132,7 @@ struct DInfo
     DItem *dItemFree;		/* List of unused DItems */
     int requests;		/* Incremented for every call to
 				   Tree_EventuallyRedraw */
+    int bounds[4], empty;	/* Bounds of TREE_AREA_CONTENT */
 #ifdef ROW_LABEL
     int rowLabelWidth;		/* Last seen Tree_WidthOfRowLabels */
     DRowLabel *dRowLabel;	/* Offset and height of each visible row label. */
@@ -131,14 +140,14 @@ struct DInfo
     int dRowLabelAlloc;		/* Size of dRowLabel[] */
 #endif
 #ifdef COLUMN_LOCK
+    int boundsL[4], emptyL;	/* Bounds of TREE_AREA_LEFT */
+    int boundsR[4], emptyR;	/* Bounds of TREE_AREA_RIGHT */
     int widthOfColumnsLeft;
     int widthOfColumnsRight;
     Range *rangeLock;		/* If there is no Range for non-locked
 				 * columns, this range holds the vertical
 				 * offset and height of each ReallyVisible
 				 * item for displaying locked columns. */
-    int nonLockedDItems;	/* TRUE if DItems exist for non-locked
-				 * columns. */
 #endif
 };
 
@@ -884,21 +893,20 @@ Range_UnderPoint(
     range = dInfo->rangeFirst;
 
     if (nearest) {
-	int visWidth = Tree_ContentWidth(tree);
-	int visHeight = Tree_ContentHeight(tree);
+	int minX, minY, maxX, maxY;
 
-	if ((visWidth <= 0) || (visHeight <= 0))
+	if (!Tree_AreaBbox(tree, TREE_AREA_CONTENT, &minX, &minY, &maxX, &maxY))
 	    return NULL;
 
 	/* Keep inside borders and header. Perhaps another flag needed. */
-	if (x < Tree_ContentLeft(tree))
-	    x = Tree_ContentLeft(tree);
-	if (x >= Tree_ContentRight(tree))
-	    x = Tree_ContentRight(tree) - 1;
-	if (y < Tree_ContentTop(tree))
-	    y = Tree_ContentTop(tree);
-	if (y >= Tree_ContentBottom(tree))
-	    y = Tree_ContentBottom(tree) - 1;
+	if (x < minX)
+	    x = minX;
+	if (x >= maxX)
+	    x = maxX - 1;
+	if (y < minY)
+	    y = minY;
+	if (y >= maxY)
+	    y = maxY - 1;
     }
 
     /* Window -> canvas */
@@ -1833,13 +1841,13 @@ Tree_ItemUnderPoint(
     int hit;
 
     hit = Tree_HitTest(tree, *x_, *y_);
-    if (!nearest && ((hit == TREE_HIT_LEFT) || (hit == TREE_HIT_RIGHT))) {
+    if (!nearest && ((hit == TREE_AREA_LEFT) || (hit == TREE_AREA_RIGHT))) {
 	DInfo *dInfo = (DInfo *) tree->dInfo;
 
 	Range_RedoIfNeeded(tree);
 	range = dInfo->rangeFirst;
 
-	/* If range is NULL use dInfo->rItemLock */
+	/* If range is NULL use dInfo->rangeLock */
 	if (range == NULL) {
 	    if (dInfo->rangeLock == NULL)
 		return NULL;
@@ -1850,7 +1858,7 @@ Tree_ItemUnderPoint(
 	    int x = *x_;
 	    int y = *y_;
 
-	    if (hit == TREE_HIT_RIGHT) {
+	    if (hit == TREE_AREA_RIGHT) {
 		x -= Tree_ContentRight(tree);
 	    } else {
 		x -= Tree_BorderLeft(tree);
@@ -1880,12 +1888,92 @@ Tree_ItemUnderPoint(
 /*
  *--------------------------------------------------------------
  *
+ * Tree_AreaBbox --
+ *
+ *	Return the bounding box of a visible area.
+ *
+ * Results:
+ *	Return value is TRUE if the area is non-empty.
+ *
+ * Side effects:
+ *	Column and item layout will be updated if needed.
+ *
+ *--------------------------------------------------------------
+ */
+
+int
+Tree_AreaBbox(
+    TreeCtrl *tree,
+    int area,
+    int *x1_,
+    int *y1_,
+    int *x2_,
+    int *y2_
+    )
+{
+    int x1 = 0, y1 = 0, x2 = 0, y2 = 0;
+
+    switch (area) {
+	case TREE_AREA_HEADER:
+	    x1 = Tree_BorderLeft(tree);
+	    y1 = Tree_BorderTop(tree);
+	    x2 = Tree_BorderRight(tree);
+	    y2 = Tree_ContentTop(tree);
+	    break;
+	case TREE_AREA_CONTENT:
+	    x1 = Tree_ContentLeft(tree);
+	    y1 = Tree_ContentTop(tree);
+	    x2 = Tree_ContentRight(tree);
+	    y2 = Tree_ContentBottom(tree);
+	    break;
+#ifdef COLUMN_LOCK
+	case TREE_AREA_LEFT:
+	    x1 = Tree_BorderLeft(tree);
+	    y1 = Tree_ContentTop(tree);
+	    x2 = Tree_ContentLeft(tree);
+	    y2 = Tree_ContentBottom(tree);
+	    /* Don't overlap right-locked columns. */
+	    if (x2 > Tree_ContentRight(tree))
+		x2 = Tree_ContentRight(tree);
+	    break;
+	case TREE_AREA_RIGHT:
+	    x1 = Tree_ContentRight(tree);
+	    y1 = Tree_ContentTop(tree);
+	    x2 = Tree_BorderRight(tree);
+	    y2 = Tree_ContentBottom(tree);
+	    break;
+#endif
+    }
+
+    if (x2 <= x1 || y2 <= y1)
+	return FALSE;
+
+    if (x1 < Tree_BorderLeft(tree))
+	x1 = Tree_BorderLeft(tree);
+    if (x2 > Tree_BorderRight(tree))
+	x2 = Tree_BorderRight(tree);
+
+    if (y1 < Tree_BorderTop(tree))
+	y1 = Tree_BorderTop(tree);
+    if (y2 > Tree_BorderBottom(tree))
+	y2 = Tree_BorderBottom(tree);
+
+    *x1_ = x1;
+    *y1_ = y1;
+    *x2_ = x2;
+    *y2_ = y2;
+    return (x2 > x1) && (y2 > y1);
+}
+
+/*
+ *--------------------------------------------------------------
+ *
  * Tree_HitTest --
  *
  *	Determine which are of the window contains the given point.
  *
  * Results:
- *	Return value is one of the TREE_HIT_xxx constants.
+ *	Return value is one of the TREE_AREA_xxx constants.
  *
  * Side effects:
  *	Column layout will be updated if needed.
@@ -1901,27 +1989,28 @@ Tree_HitTest(
     )
 {
     if ((x < Tree_BorderLeft(tree)) || (x >= Tree_BorderRight(tree)))
-	return TREE_HIT_NONE;
+	return TREE_AREA_NONE;
     if ((y < Tree_BorderTop(tree)) || (y >= Tree_BorderBottom(tree)))
-	return TREE_HIT_NONE;
+	return TREE_AREA_NONE;
 
 #ifdef ROW_LABEL
     if (x < Tree_WidthOfRowLabels(tree))
-	return TREE_HIT_ROWLABEL;
+	return TREE_AREA_ROWLABEL;
 #endif
 
     if (y < tree->inset + Tree_HeaderHeight(tree)) {
-	return TREE_HIT_HEADER;
+	return TREE_AREA_HEADER;
     }
 #ifdef COLUMN_LOCK
-    if (x < Tree_ContentLeft(tree)) {
-	return TREE_HIT_LEFT;
+    /* Right-locked columns are drawn over the left. */
+    if (x >= Tree_ContentRight(tree)) {
+	return TREE_AREA_RIGHT;
     }
-
-    if (x >= Tree_ContentRight(tree))
-	return TREE_HIT_RIGHT;
+    if (x < Tree_ContentLeft(tree)) {
+	return TREE_AREA_LEFT;
+    }
 #endif
-    return TREE_HIT_CONTENT;
+    return TREE_AREA_CONTENT;
 }
 
 /*
@@ -2524,7 +2613,7 @@ DItem_Alloc(
     strncpy(dItem->magic, "MAGC", 4);
 #endif
     dItem->item = rItem->item;
-    dItem->flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
+    dItem->area.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
 #ifdef COLUMN_LOCK
     dItem->left.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
     dItem->right.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
@@ -2772,7 +2861,28 @@ Tree_ItemsInArea(
     }
 }
 
-#define DCOLUMN
+#ifdef COLUMN_SPAN
+static void
+UpdateSpansForItem(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItem		/* Display info for an item. */
+    )
+{
+    int *spans = dItem->spans;
+
+    if (spans == NULL) {
+	spans = (int *) ckalloc(sizeof(int) * tree->columnCount);
+	dItem->spanAlloc = tree->columnCount;
+    } else if (dItem->spanAlloc < tree->columnCount) {
+	spans = (int *) ckrealloc((char *) spans, sizeof(int) * tree->columnCount);
+	dItem->spanAlloc = tree->columnCount;
+    }
+    TreeItem_GetSpans(tree, dItem->item, spans);
+    dItem->spans = spans;
+}
+#endif
+
+#define DCOLUMNxxx
 #ifdef DCOLUMN
 static void
 UpdateDColumnsForItem(
@@ -2783,7 +2893,7 @@ UpdateDColumnsForItem(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     int minX, maxX, columnIndex, x = 0;
     TreeColumn column, first = NULL, last = NULL;
-return;
+
     minX = MAX(dItem->x, Tree_ContentLeft(tree));
     maxX = MIN(dItem->x + dItem->width, Tree_ContentRight(tree));
 
@@ -2841,6 +2951,7 @@ UpdateDInfoForRange(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
+    DItemArea *area;
     TreeItem item;
     int maxX, maxY;
     int index, indexVis;
@@ -2872,35 +2983,36 @@ UpdateDInfoForRange(
 	    }
 
 	    dItem = (DItem *) TreeItem_GetDInfo(tree, item);
+	    area = &dItem->area;
 
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
 
 		/* This item is already marked for total redraw */
-		if (dItem->flags & DITEM_ALL_DIRTY)
+		if (area->flags & DITEM_ALL_DIRTY)
 		    ; /* nothing */
 
 		/* All display info is marked as invalid */
 		else if (dInfo->flags & DINFO_INVALIDATE)
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* The range may have changed size */
-		else if ((dItem->width != range->totalWidth) ||
+		else if ((area->width != range->totalWidth) ||
 			(dItem->height != rItem->size))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* Items may have alternating background colors. */
 		else if ((tree->columnBgCnt > 1) &&
 			((index % tree->columnBgCnt) !=
 				(dItem->index % tree->columnBgCnt)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We don't copy items horizontally to their new position,
 		 * except for horizontal scrolling which moves the whole
 		 * range */
 		else if (x != dItem->oldX + (dInfo->xOrigin - tree->xOrigin))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* If we are displaying dotted lines and the item has moved
 		 * from odd-top to non-odd-top or vice versa, must redraw
@@ -2909,35 +3021,39 @@ UpdateDInfoForRange(
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
 			((dItem->oldY & 1) != (y & 1)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
 		 * has the same part of the background image behind it */
 		else if ((tree->backgroundImage != NULL) &&
 			(((dItem->oldY + dInfo->yOrigin) % bgImgHeight) !=
 				((y + tree->yOrigin) % bgImgHeight)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 	    }
 
 	    /* Make a new DItem */
 	    else {
 		dItem = DItem_Alloc(tree, rItem);
+		area = &dItem->area;
 	    }
 
-	    dItem->x = x;
+	    area->x = x;
 	    dItem->y = y;
-	    dItem->width = Range_TotalWidth(tree, range);
+	    area->width = Range_TotalWidth(tree, range);
 	    dItem->height = rItem->size;
 	    dItem->range = range;
 	    dItem->index = index;
 
+#ifdef COLUMN_SPAN
+	    UpdateSpansForItem(tree, dItem);
+#endif
 #ifdef DCOLUMN
 	    UpdateDColumnsForItem(tree, dItem);
 #endif
 
 	    /* Keep track of the maximum item size */
-	    if (dItem->width > dInfo->itemWidth)
-		dInfo->itemWidth = dItem->width;
+	    if (area->width > dInfo->itemWidth)
+		dInfo->itemWidth = area->width;
 	    if (dItem->height > dInfo->itemHeight)
 		dInfo->itemHeight = dItem->height;
 
@@ -2981,33 +3097,34 @@ UpdateDInfoForRange(
 	    }
 
 	    dItem = (DItem *) TreeItem_GetDInfo(tree, item);
+	    area = &dItem->area;
 
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
 
 		/* This item is already marked for total redraw */
-		if (dItem->flags & DITEM_ALL_DIRTY)
+		if (area->flags & DITEM_ALL_DIRTY)
 		    ; /* nothing */
 
 		/* All display info is marked as invalid */
 		else if (dInfo->flags & DINFO_INVALIDATE)
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* The range may have changed size */
-		else if ((dItem->width != rItem->size) ||
+		else if ((area->width != rItem->size) ||
 			(dItem->height != range->totalHeight))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* Items may have alternating background colors. */
 		else if ((tree->columnBgCnt > 1) && ((index % tree->columnBgCnt) !=
 				 (dItem->index % tree->columnBgCnt)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We don't copy items vertically to their new position,
 		 * except for vertical scrolling which moves the whole range */
 		else if (y != dItem->oldY + (dInfo->yOrigin - tree->yOrigin))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* If we are displaying dotted lines and the item has moved
 		 * from odd-top to non-odd-top or vice versa, must redraw
@@ -3016,35 +3133,39 @@ UpdateDInfoForRange(
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
 			((dItem->oldY & 1) != (y & 1)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
 		 * has the same part of the background image behind it */
 		else if ((tree->backgroundImage != NULL) &&
 			(((dItem->oldX + dInfo->xOrigin) % bgImgWidth) !=
 				((x + tree->xOrigin) % bgImgWidth)))
-		    dItem->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 	    }
 
 	    /* Make a new DItem */
 	    else {
 		dItem = DItem_Alloc(tree, rItem);
+		area = &dItem->area;
 	    }
 
-	    dItem->x = x;
+	    area->x = x;
 	    dItem->y = y;
-	    dItem->width = rItem->size;
+	    area->width = rItem->size;
 	    dItem->height = Range_TotalHeight(tree, range);
 	    dItem->range = range;
 	    dItem->index = index;
 
+#ifdef COLUMN_SPAN
+	    UpdateSpansForItem(tree, dItem);
+#endif
 #ifdef DCOLUMN
 	    UpdateDColumnsForItem(tree, dItem);
 #endif
 
 	    /* Keep track of the maximum item size */
-	    if (dItem->width > dInfo->itemWidth)
-		dInfo->itemWidth = dItem->width;
+	    if (area->width > dInfo->itemWidth)
+		dInfo->itemWidth = area->width;
 	    if (dItem->height > dInfo->itemHeight)
 		dInfo->itemHeight = dItem->height;
 
@@ -3062,7 +3183,7 @@ UpdateDInfoForRange(
 	    rItem++;
 
 	    /* Stop when out of bounds */
-	    x += dItem->width;
+	    x += area->width;
 	    if (x >= maxX)
 		break;
 	}
@@ -3111,13 +3232,24 @@ Tree_UpdateDInfo(
     dInfo->rangeFirstD = dInfo->rangeLastD = NULL;
     dInfo->itemWidth = dInfo->itemHeight = 0;
 
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
-
-    if ((maxX - minX < 1) || (maxY - minY < 1))
+    dInfo->empty = !Tree_AreaBbox(tree, TREE_AREA_CONTENT,
+	&dInfo->bounds[0], &dInfo->bounds[1],
+	&dInfo->bounds[2], &dInfo->bounds[3]);
+#ifdef COLUMN_LOCK
+    dInfo->emptyL = !Tree_AreaBbox(tree, TREE_AREA_LEFT,
+	&dInfo->boundsL[0], &dInfo->boundsL[1],
+	&dInfo->boundsL[2], &dInfo->boundsL[3]);
+    dInfo->emptyR = !Tree_AreaBbox(tree, TREE_AREA_RIGHT,
+	&dInfo->boundsR[0], &dInfo->boundsR[1],
+	&dInfo->boundsR[2], &dInfo->boundsR[3]);
+#endif
+    if (dInfo->empty)
 	goto done;
+
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
 
     range = dInfo->rangeFirst;
     if (tree->vertical) {
@@ -3193,24 +3325,17 @@ Tree_UpdateDInfo(
 done:
 
 #ifdef COLUMN_LOCK
-    /* This variable tells us whether the list of DItems is valid for
-     * the non-locked columns. */
-    dInfo->nonLockedDItems = dInfo->dItem != NULL;
-
-    if (dInfo->nonLockedDItems)
+    if (dInfo->dItem != NULL)
 	goto skipLock;
     if (!tree->itemVisCount)
 	goto skipLock;
-    if (Tk_Width(tree->tkwin) - tree->inset * 2 <= 0)
-	goto skipLock;
-    if (maxY - minY <= 0)
+    if (dInfo->emptyL && dInfo->emptyR)
 	goto skipLock;
     range = dInfo->rangeFirst;
     if ((range != NULL) && !range->totalHeight)
 	goto skipLock;
-    if (Tree_WidthOfLeftColumns(tree) || Tree_WidthOfRightColumns(tree)) {
-
-	int y = minY + tree->yOrigin; /* Window -> Canvas */
+    {
+	int y = Tree_ContentTop(tree) + tree->yOrigin; /* Window -> Canvas */
 	int index, indexVis;
 
 	/* If no non-locked columns are displayed, we have no Range and
@@ -3226,7 +3351,6 @@ done:
 	y -= tree->yOrigin; /* Canvas -> Window */
 
 	while (1) {
-
 	    DItem *dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
 
 	    /* Re-use a previously allocated DItem */
@@ -3251,6 +3375,10 @@ done:
 	    dItem->height = rItem->size;
 	    dItem->index = index;
 
+#ifdef COLUMN_SPAN
+	    UpdateSpansForItem(tree, dItem);
+#endif
+
 	    /* Keep track of the maximum item size */
 	    if (dItem->height > dInfo->itemHeight)
 		dInfo->itemHeight = dItem->height;
@@ -3265,57 +3393,73 @@ done:
 	    if (rItem == range->last)
 		break;
 	    y += rItem->size;
-	    if (y >= maxY)
+	    if (y >= Tree_ContentBottom(tree))
 		break;
 	    rItem++;
 	}
     }
 skipLock:
-    if (dInfo->widthOfColumnsLeft || dInfo->widthOfColumnsRight) {
+    if (!dInfo->emptyL || !dInfo->emptyR) {
 	int bgImgWidth, bgImgHeight;
+	DItemArea *area;
+
+	if (!dInfo->emptyL) {
+	    /* Keep track of the maximum item size */
+	    if (dInfo->widthOfColumnsLeft > dInfo->itemWidth)
+		dInfo->itemWidth = dInfo->widthOfColumnsLeft;
+	}
+	if (!dInfo->emptyR) {
+	    /* Keep track of the maximum item size */
+	    if (dInfo->widthOfColumnsRight > dInfo->itemWidth)
+		dInfo->itemWidth = dInfo->widthOfColumnsRight;
+	}
 
 	if (tree->backgroundImage != NULL)
 	    Tk_SizeOfImage(tree->backgroundImage, &bgImgWidth, &bgImgHeight);
 
 	for (dItem = dInfo->dItem; dItem != NULL; dItem = dItem->next) {
-	    if (dInfo->widthOfColumnsLeft &&
-		    !(dItem->left.flags & DITEM_ALL_DIRTY)) {
 
-		/* All display info is marked as invalid */
-		if (dInfo->flags & DINFO_INVALIDATE) {
-		    dItem->left.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+	    if (!dInfo->emptyL) {
 
-		/* FIXME: This redraws everything when scrolling */
-		} else if (dItem->y != dItem->oldY) {
-		    dItem->left.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		area = &dItem->left;
+		area->x = Tree_BorderLeft(tree);
+		area->width = dInfo->widthOfColumnsLeft;
 
-		/* We can't copy the item to its new position unless it
-		 * has the same part of the background image behind it */
-		} else if ((tree->backgroundImage != NULL) &&
-			((dInfo->xOrigin % bgImgWidth) !=
-				(tree->xOrigin % bgImgWidth))) {
-		    dItem->left.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		if (!(area->flags & DITEM_ALL_DIRTY)) {
+
+		    /* All display info is marked as invalid */
+		    if (dInfo->flags & DINFO_INVALIDATE) {
+			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		    /* We can't copy the item to its new position unless it
+		    * has the same part of the background image behind it */
+		    } else if ((tree->backgroundImage != NULL) &&
+			    ((dInfo->xOrigin % bgImgWidth) !=
+				    (tree->xOrigin % bgImgWidth))) {
+			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    }
 		}
 	    }
-	    if (dInfo->widthOfColumnsRight &&
-		    !(dItem->right.flags & DITEM_ALL_DIRTY)) {
 
-		x = Tree_ContentRight(tree);
+	    if (!dInfo->emptyR) {
 
-		/* All display info is marked as invalid */
-		if (dInfo->flags & DINFO_INVALIDATE) {
-		    dItem->right.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		area = &dItem->right;
+		area->x = Tree_ContentRight(tree);
+		area->width = dInfo->widthOfColumnsRight;
 
-		/* FIXME: This redraws everything when scrolling */
-		} else if (dItem->y != dItem->oldY) {
-		    dItem->right.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		if (!(area->flags & DITEM_ALL_DIRTY)) {
 
-		/* We can't copy the item to its new position unless it
-		 * has the same part of the background image behind it */
-		} else if ((tree->backgroundImage != NULL) &&
-			((dInfo->xOrigin % bgImgWidth) !=
-				(tree->xOrigin % bgImgWidth))) {
-		    dItem->right.flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    /* All display info is marked as invalid */
+		    if (dInfo->flags & DINFO_INVALIDATE) {
+			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		    /* We can't copy the item to its new position unless it
+		    * has the same part of the background image behind it */
+		    } else if ((tree->backgroundImage != NULL) &&
+			    ((dInfo->xOrigin % bgImgWidth) !=
+				    (tree->xOrigin % bgImgWidth))) {
+			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		    }
 		}
 	    }
 	}
@@ -3327,65 +3471,6 @@ skipLock:
 
     dInfo->flags &= ~DINFO_INVALIDATE;
 }
-
-#ifdef COLUMN_LOCK
-static void
-InvalidateDItemX2(
-    int dirty[4],		/* Item to mark dirty. */
-    int flags,
-    int itemX,			/* x-coordinate of item. */
-    int itemWidth,
-    int dirtyX,			/* Left edge of area to mark as dirty. */
-    int dirtyWidth		/* Width of area to mark as dirty. */
-    )
-{
-    int x1, x2;
-
-    if (dirtyX <= itemX)
-	dirty[LEFT] = 0;
-    else {
-	x1 = dirtyX - itemX;
-	if (!(flags & DITEM_DIRTY) || (x1 < dirty[LEFT]))
-	    dirty[LEFT] = x1;
-    }
-
-    if (dirtyX + dirtyWidth >= itemX + itemWidth)
-	dirty[RIGHT] = itemWidth;
-    else {
-	x2 = dirtyX + dirtyWidth - itemX;
-	if (!(flags & DITEM_DIRTY) || (x2 > dirty[RIGHT]))
-	    dirty[RIGHT] = x2;
-    }
-}
-static void
-InvalidateDItemY2(
-    int dirty[4],		/* Item to mark dirty. */
-    int flags,
-    int itemY,			/* y-coordinate of item. */
-    int itemHeight,
-    int dirtyY,			/* Top edge of area to mark as dirty. */
-    int dirtyHeight		/* Height of area to mark as dirty. */
-    )
-{
-    int y1, y2;
-
-    if (dirtyY <= itemY)
-	dirty[TOP] = 0;
-    else {
-	y1 = dirtyY - itemY;
-	if (!(flags & DITEM_DIRTY) || (y1 < dirty[TOP]))
-	    dirty[TOP] = y1;
-    }
-
-    if (dirtyY + dirtyHeight >= itemY + itemHeight)
-	dirty[BOTTOM] = itemHeight;
-    else {
-	y2 = dirtyY + dirtyHeight - itemY;
-	if (!(flags & DITEM_DIRTY) || (y2 > dirty[BOTTOM]))
-	    dirty[BOTTOM] = y2;
-    }
-}
-#endif /* COLUMN_LOCK */
 
 /*
  *--------------------------------------------------------------
@@ -3407,6 +3492,7 @@ InvalidateDItemY2(
 static void
 InvalidateDItemX(
     DItem *dItem,		/* Item to mark dirty. */
+    DItemArea *area,
     int itemX,			/* x-coordinate of item. */
     int dirtyX,			/* Left edge of area to mark as dirty. */
     int dirtyWidth		/* Width of area to mark as dirty. */
@@ -3415,19 +3501,19 @@ InvalidateDItemX(
     int x1, x2;
 
     if (dirtyX <= itemX)
-	dItem->dirty[LEFT] = 0;
+	area->dirty[LEFT] = 0;
     else {
 	x1 = dirtyX - itemX;
-	if (!(dItem->flags & DITEM_DIRTY) || (x1 < dItem->dirty[LEFT]))
-	    dItem->dirty[LEFT] = x1;
+	if (!(area->flags & DITEM_DIRTY) || (x1 < area->dirty[LEFT]))
+	    area->dirty[LEFT] = x1;
     }
 
-    if (dirtyX + dirtyWidth >= itemX + dItem->width)
-	dItem->dirty[RIGHT] = dItem->width;
+    if (dirtyX + dirtyWidth >= itemX + area->width)
+	area->dirty[RIGHT] = area->width;
     else {
 	x2 = dirtyX + dirtyWidth - itemX;
-	if (!(dItem->flags & DITEM_DIRTY) || (x2 > dItem->dirty[RIGHT]))
-	    dItem->dirty[RIGHT] = x2;
+	if (!(area->flags & DITEM_DIRTY) || (x2 > area->dirty[RIGHT]))
+	    area->dirty[RIGHT] = x2;
     }
 }
 
@@ -3451,6 +3537,7 @@ InvalidateDItemX(
 static void
 InvalidateDItemY(
     DItem *dItem,		/* Item to mark dirty. */
+    DItemArea *area,
     int itemY,			/* y-coordinate of item. */
     int dirtyY,			/* Top edge of area to mark as dirty. */
     int dirtyHeight		/* Height of area to mark as dirty. */
@@ -3459,19 +3546,19 @@ InvalidateDItemY(
     int y1, y2;
 
     if (dirtyY <= itemY)
-	dItem->dirty[TOP] = 0;
+	area->dirty[TOP] = 0;
     else {
 	y1 = dirtyY - itemY;
-	if (!(dItem->flags & DITEM_DIRTY) || (y1 < dItem->dirty[TOP]))
-	    dItem->dirty[TOP] = y1;
+	if (!(area->flags & DITEM_DIRTY) || (y1 < area->dirty[TOP]))
+	    area->dirty[TOP] = y1;
     }
 
     if (dirtyY + dirtyHeight >= itemY + dItem->height)
-	dItem->dirty[BOTTOM] = dItem->height;
+	area->dirty[BOTTOM] = dItem->height;
     else {
 	y2 = dirtyY + dirtyHeight - itemY;
-	if (!(dItem->flags & DITEM_DIRTY) || (y2 > dItem->dirty[BOTTOM]))
-	    dItem->dirty[BOTTOM] = y2;
+	if (!(area->flags & DITEM_DIRTY) || (y2 > area->dirty[BOTTOM]))
+	    area->dirty[BOTTOM] = y2;
     }
 }
 
@@ -3514,6 +3601,26 @@ Range_RedoIfNeeded(
     }
 }
 
+static int
+DItemAllDirty(
+    TreeCtrl *tree,
+    DItem *dItem
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    
+#ifdef COLUMN_LOCK
+    if ((!dInfo->empty && !(dItem->area.flags & DITEM_ALL_DIRTY)) ||
+	    (!dInfo->emptyL && !(dItem->left.flags & DITEM_ALL_DIRTY)) ||
+	    (!dInfo->emptyR && !(dItem->right.flags & DITEM_ALL_DIRTY)))
+	return 0;
+#else
+    if (!dInfo->empty && !(dItem->area.flags & DITEM_ALL_DIRTY))
+	return 0;
+#endif
+    return 1;
+}
+
 /*
  *--------------------------------------------------------------
  *
@@ -3548,14 +3655,15 @@ ScrollVerticalComplex(
     int numCopy = 0;
 
 #ifdef COLUMN_LOCK
-    /* Have DItems but only for locked columns. */
-    if (!dInfo->nonLockedDItems)
+    if (dInfo->empty && dInfo->emptyL && dInfo->emptyR)
+	return 0;
+#else
+    if (dInfo->empty)
 	return 0;
 #endif
-
-    minX = Tree_ContentLeft(tree);
+    minX = Tree_BorderLeft(tree);
     minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
+    maxX = Tree_BorderRight(tree);
     maxY = Tree_ContentBottom(tree);
 
     /* Try updating the display by copying items on the screen to their
@@ -3566,7 +3674,7 @@ ScrollVerticalComplex(
 	/* Copy an item to its new location unless:
 	 * (a) item display info is invalid
 	 * (b) item is in same location as last draw */
-	if ((dItem->flags & DITEM_ALL_DIRTY) ||
+	if (DItemAllDirty(tree, dItem) ||
 		(dItem->oldY == dItem->y))
 	    continue;
 
@@ -3582,7 +3690,7 @@ ScrollVerticalComplex(
 	     dItem2 != NULL;
 	     dItem2 = dItem2->next) {
 	    if ((dItem2->range != range) ||
-		    (dItem2->flags & DITEM_ALL_DIRTY) ||
+		    DItemAllDirty(tree, dItem2) ||
 		    (dItem2->oldY + offset != dItem2->y))
 		break;
 	    numCopy++;
@@ -3608,8 +3716,18 @@ ScrollVerticalComplex(
 	if (oldY + offset + height > maxY)
 	    height = maxY - (oldY + offset);
 
+#ifdef COLUMN_LOCK
+	if (!dInfo->emptyL || !dInfo->emptyR) {
+	    oldX = minX;
+	    width = maxX - minX;
+	} else {
+	    oldX = dItem->oldX;
+	    width = dItem->area.width;
+	}
+#else
 	oldX = dItem->oldX;
-	width = dItem->width;
+	width = dItem->area.width;
+#endif
 	if (oldX < minX) {
 	    width -= minX - oldX;
 	    oldX = minX;
@@ -3621,16 +3739,43 @@ ScrollVerticalComplex(
 	while (1) {
 	    /* If an item was partially visible, invalidate the exposed area */
 	    if ((dItem->oldY < minY) && (offset > 0)) {
-		InvalidateDItemX(dItem, oldX, oldX, width);
-		InvalidateDItemY(dItem, dItem->oldY, dItem->oldY, minY - dItem->oldY);
-		dItem->flags |= DITEM_DIRTY;
+		if (!dInfo->empty) {
+		    InvalidateDItemX(dItem, &dItem->area, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->area, dItem->oldY, dItem->oldY, minY - dItem->oldY);
+		    dItem->area.flags |= DITEM_DIRTY;
+		}
+#ifdef COLUMN_LOCK
+		if (!dInfo->emptyL) {
+		    InvalidateDItemX(dItem, &dItem->left, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->left, dItem->oldY, dItem->oldY, minY - dItem->oldY);
+		    dItem->left.flags |= DITEM_DIRTY;
+		}
+		if (!dInfo->emptyR) {
+		    InvalidateDItemX(dItem, &dItem->right, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->right, dItem->oldY, dItem->oldY, minY - dItem->oldY);
+		    dItem->right.flags |= DITEM_DIRTY;
+		}
+#endif
 	    }
 	    if ((dItem->oldY + dItem->height > maxY) && (offset < 0)) {
-		InvalidateDItemX(dItem, oldX, oldX, width);
-		InvalidateDItemY(dItem, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
-		dItem->flags |= DITEM_DIRTY;
+		if (!dInfo->empty) {
+		    InvalidateDItemX(dItem, &dItem->area, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->area, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
+		    dItem->area.flags |= DITEM_DIRTY;
+		}
+#ifdef COLUMN_LOCK
+		if (!dInfo->emptyL) {
+		    InvalidateDItemX(dItem, &dItem->left, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->left, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
+		    dItem->left.flags |= DITEM_DIRTY;
+		}
+		if (!dInfo->emptyR) {
+		    InvalidateDItemX(dItem, &dItem->right, oldX, oldX, width);
+		    InvalidateDItemY(dItem, &dItem->right, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
+		    dItem->right.flags |= DITEM_DIRTY;
+		}
+#endif
 	    }
-
 	    dItem->oldY = dItem->y;
 	    if (dItem->next == dItem2)
 		break;
@@ -3641,12 +3786,26 @@ ScrollVerticalComplex(
 	for ( ; dItem2 != NULL; dItem2 = dItem2->next) {
 	    if (dItem2->range != range)
 		break;
-	    if (!(dItem2->flags & DITEM_ALL_DIRTY) &&
+	    if (!DItemAllDirty(tree, dItem2) &&
 		    (dItem2->oldY + dItem2->height > y) &&
 		    (dItem2->oldY < y + height)) {
-		InvalidateDItemX(dItem2, oldX, oldX, width);
-		InvalidateDItemY(dItem2, dItem2->oldY, y, height);
-		dItem2->flags |= DITEM_DIRTY;
+		if (!dInfo->empty) {
+		    InvalidateDItemX(dItem2, &dItem2->area, oldX, oldX, width);
+		    InvalidateDItemY(dItem2, &dItem2->area, dItem2->oldY, y, height);
+		    dItem2->area.flags |= DITEM_DIRTY;
+		}
+#ifdef COLUMN_LOCK
+		if (!dInfo->emptyL) {
+		    InvalidateDItemX(dItem2, &dItem2->left, oldX, oldX, width);
+		    InvalidateDItemY(dItem2, &dItem2->left, dItem2->oldY, y, height);
+		    dItem2->left.flags |= DITEM_DIRTY;
+		}
+		if (!dInfo->emptyR) {
+		    InvalidateDItemX(dItem2, &dItem2->right, oldX, oldX, width);
+		    InvalidateDItemY(dItem2, &dItem2->right, dItem2->oldY, y, height);
+		    dItem2->right.flags |= DITEM_DIRTY;
+		}
+#endif
 	    }
 	}
 
@@ -3708,42 +3867,46 @@ ScrollHorizontalSimple(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
-    TkRegion rgn, damageRgn;
-    XRectangle rect;
+    TkRegion damageRgn;
     int minX, minY, maxX, maxY;
     int width, offset;
     int x, y;
     int dirtyMin, dirtyMax;
 
-#ifdef COLUMN_LOCK
-    /* Have DItems but only for locked columns. */
-    if (!dInfo->nonLockedDItems)
-	return;
-#endif
-
     if (dInfo->xOrigin == tree->xOrigin)
 	return;
+
+    if (dInfo->empty)
+	return;
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
 
     /* Update oldX */
     for (dItem = dInfo->dItem;
 	    dItem != NULL;
 	    dItem = dItem->next) {
-	dItem->oldX = dItem->x;
+	dItem->oldX = dItem->area.x;
     }
-
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
 
     offset = dInfo->xOrigin - tree->xOrigin;
 
+    /* We only scroll the content, not the whitespace */
+    y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
+    if (y < maxY)
+	maxY = y;
+
     /* Simplify if a whole screen was scrolled. */
     if (abs(offset) >= maxX - minX) {
-	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
 	Tree_InvalidateArea(tree, minX, minY, maxX, maxY);
 	return;
     }
+
+    /* We only scroll the content, not the whitespace */
+    x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+    if (x < maxX)
+	maxX = x;
 
     width = maxX - minX - abs(offset);
 
@@ -3760,22 +3923,6 @@ ScrollHorizontalSimple(
     dirtyMax = maxX - width;
 
     damageRgn = TkCreateRegion();
-
-    /* Offset and clip the whitespace region */
-    Tk_OffsetRegion(dInfo->wsRgn, offset, 0);
-    rgn = TkCreateRegion();
-    rect.x = minX;
-    rect.y = minY;
-    rect.width = maxX - minX;
-    rect.height = maxY - minY;
-    TkUnionRectWithRegion(&rect, rgn, damageRgn);
-    TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
-    TkDestroyRegion(rgn);
-
-    /* We only scroll the content, not the whitespace */
-    y = 0 - tree->yOrigin + Tree_TotalHeight(tree);
-    if (y < maxY)
-	maxY = y;
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
@@ -3832,18 +3979,11 @@ ScrollVerticalSimple(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
-    TkRegion rgn, damageRgn;
-    XRectangle rect;
+    TkRegion damageRgn;
     int minX, minY, maxX, maxY;
     int height, offset;
     int x, y;
     int dirtyMin, dirtyMax;
-
-#ifdef COLUMN_LOCK
-    /* Have DItems but only for locked columns. */
-    if (!dInfo->nonLockedDItems)
-	return;
-#endif
 
     if (dInfo->yOrigin == tree->yOrigin)
 	return;
@@ -3855,16 +3995,18 @@ ScrollVerticalSimple(
 	dItem->oldY = dItem->y;
     }
 
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
+    if (!Tree_AreaBbox(tree, TREE_AREA_CONTENT, &minX, &minY, &maxX, &maxY))
+	return;
 
     offset = dInfo->yOrigin - tree->yOrigin;
 
+    /* We only scroll the content, not the whitespace */
+    x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
+    if (x < maxX)
+	maxX = x;
+
     /* Simplify if a whole screen was scrolled. */
     if (abs(offset) > maxY - minY) {
-	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
 	Tree_InvalidateArea(tree, minX, minY, maxX, maxY);
 	return;
     }
@@ -3884,22 +4026,6 @@ ScrollVerticalSimple(
     dirtyMax = maxY - height;
 
     damageRgn = TkCreateRegion();
-
-    /* Offset and clip the whitespace region */
-    Tk_OffsetRegion(dInfo->wsRgn, 0, offset);
-    rgn = TkCreateRegion();
-    rect.x = minX;
-    rect.y = minY;
-    rect.width = maxX - minX;
-    rect.height = maxY - minY;
-    TkUnionRectWithRegion(&rect, rgn, damageRgn);
-    TkIntersectRegion(dInfo->wsRgn, damageRgn, dInfo->wsRgn);
-    TkDestroyRegion(rgn);
-
-    /* We only scroll the content, not the whitespace */
-    x = 0 - tree->xOrigin + Tree_TotalWidth(tree);
-    if (x < maxX)
-	maxX = x;
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
@@ -3964,16 +4090,8 @@ ScrollHorizontalComplex(
     int x;
     int numCopy = 0;
 
-#ifdef COLUMN_LOCK
-    /* Have DItems but only for locked columns. */
-    if (!dInfo->nonLockedDItems)
+    if (!Tree_AreaBbox(tree, TREE_AREA_CONTENT, &minX, &minY, &maxX, &maxY))
 	return 0;
-#endif
-
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
 
     /* Try updating the display by copying items on the screen to their
      * new location */
@@ -3983,8 +4101,8 @@ ScrollHorizontalComplex(
 	/* Copy an item to its new location unless:
 	 * (a) item display info is invalid
 	 * (b) item is in same location as last draw */
-	if ((dItem->flags & DITEM_ALL_DIRTY) ||
-		(dItem->oldX == dItem->x))
+	if ((dItem->area.flags & DITEM_ALL_DIRTY) ||
+		(dItem->oldX == dItem->area.x))
 	    continue;
 
 	numCopy++;
@@ -3993,20 +4111,20 @@ ScrollHorizontalComplex(
 
 	/* This item was previously displayed so it only needs to be
 	 * copied to the new location. Copy all such items as one */
-	offset = dItem->x - dItem->oldX;
-	width = dItem->width;
+	offset = dItem->area.x - dItem->oldX;
+	width = dItem->area.width;
 	for (dItem2 = dItem->next;
 	     dItem2 != NULL;
 	     dItem2 = dItem2->next) {
 	    if ((dItem2->range != range) ||
-		    (dItem2->flags & DITEM_ALL_DIRTY) ||
-		    (dItem2->oldX + offset != dItem2->x))
+		    (dItem2->area.flags & DITEM_ALL_DIRTY) ||
+		    (dItem2->oldX + offset != dItem2->area.x))
 		break;
 	    numCopy++;
-	    width += dItem2->width;
+	    width += dItem2->area.width;
 	}
 
-	x = dItem->x;
+	x = dItem->area.x;
 	oldX = dItem->oldX;
 
 	/* Don't copy part of the window border */
@@ -4038,17 +4156,16 @@ ScrollHorizontalComplex(
 	while (1) {
 	    /* If an item was partially visible, invalidate the exposed area */
 	    if ((dItem->oldX < minX) && (offset > 0)) {
-		InvalidateDItemX(dItem, dItem->oldX, dItem->oldX, minX - dItem->oldX);
-		InvalidateDItemY(dItem, oldY, oldY, height);
-		dItem->flags |= DITEM_DIRTY;
+		InvalidateDItemX(dItem, &dItem->area, dItem->oldX, dItem->oldX, minX - dItem->oldX);
+		InvalidateDItemY(dItem, &dItem->area, oldY, oldY, height);
+		dItem->area.flags |= DITEM_DIRTY;
 	    }
-	    if ((dItem->oldX + dItem->width > maxX) && (offset < 0)) {
-		InvalidateDItemX(dItem, dItem->oldX, maxX, maxX - dItem->oldX + dItem->width);
-		InvalidateDItemY(dItem, oldY, oldY, height);
-		dItem->flags |= DITEM_DIRTY;
+	    if ((dItem->oldX + dItem->area.width > maxX) && (offset < 0)) {
+		InvalidateDItemX(dItem, &dItem->area, dItem->oldX, maxX, maxX - dItem->oldX + dItem->area.width);
+		InvalidateDItemY(dItem, &dItem->area, oldY, oldY, height);
+		dItem->area.flags |= DITEM_DIRTY;
 	    }
-
-	    dItem->oldX = dItem->x;
+	    dItem->oldX = dItem->area.x;
 	    if (dItem->next == dItem2)
 		break;
 	    dItem = dItem->next;
@@ -4058,12 +4175,12 @@ ScrollHorizontalComplex(
 	for ( ; dItem2 != NULL; dItem2 = dItem2->next) {
 	    if (dItem2->range != range)
 		break;
-	    if (!(dItem2->flags & DITEM_ALL_DIRTY) &&
-		    (dItem2->oldX + dItem2->width > x) &&
+	    if (!(dItem2->area.flags & DITEM_ALL_DIRTY) &&
+		    (dItem2->oldX + dItem2->area.width > x) &&
 		    (dItem2->oldX < x + width)) {
-		InvalidateDItemX(dItem2, dItem2->oldX, x, width);
-		InvalidateDItemY(dItem2, oldY, oldY, height);
-		dItem2->flags |= DITEM_DIRTY;
+		InvalidateDItemX(dItem2, &dItem2->area, dItem2->oldX, x, width);
+		InvalidateDItemY(dItem2, &dItem2->area, oldY, oldY, height);
+		dItem2->area.flags |= DITEM_DIRTY;
 	    }
 	}
 
@@ -4308,19 +4425,53 @@ CalcWhiteSpaceRegion(
     x = 0 - tree->xOrigin;
     y = 0 - tree->yOrigin;
 
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
-
     wsRgn = TkCreateRegion();
+
+#ifdef COLUMN_LOCK
+    /* Erase area below left columns */
+    if (!dInfo->emptyL) {
+	minX = dInfo->boundsL[0];
+	minY = dInfo->boundsL[1];
+	maxX = dInfo->boundsL[2];
+	maxY = dInfo->boundsL[3];
+	if (y + Tree_TotalHeight(tree) < maxY) {
+	    rect.x = minX;
+	    rect.y = y + Tree_TotalHeight(tree);
+	    rect.width = maxX - minX;
+	    rect.height = maxY - (y + Tree_TotalHeight(tree));
+	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+	}
+    }
+
+    /* Erase area below right columns */
+    if (!dInfo->emptyR) {
+	minX = dInfo->boundsR[0];
+	minY = dInfo->boundsR[1];
+	maxX = dInfo->boundsR[2];
+	maxY = dInfo->boundsR[3];
+	if (y + Tree_TotalHeight(tree) < maxY) {
+	    rect.x = minX;
+	    rect.y = y + Tree_TotalHeight(tree);
+	    rect.width = maxX - minX;
+	    rect.height = maxY - (y + Tree_TotalHeight(tree));
+	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+	}
+    }
+#endif
+
+    if (dInfo->empty)
+	return wsRgn;
+	minX = dInfo->bounds[0];
+	minY = dInfo->bounds[1];
+	maxX = dInfo->bounds[2];
+	maxY = dInfo->bounds[3];
 
     if (tree->vertical) {
 	/* Erase area to right of last Range */
 	if (x + Tree_TotalWidth(tree) < maxX) {
 	    rect.x = x + Tree_TotalWidth(tree);
 	    rect.y = minY;
-	    rect.width = maxX - (x + Tree_TotalWidth(tree));
+	    rect.width = maxX - rect.x;
 	    rect.height = maxY - minY;
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
@@ -4331,7 +4482,7 @@ CalcWhiteSpaceRegion(
 	    rect.x = minX;
 	    rect.y = y + Tree_TotalHeight(tree);
 	    rect.width = maxX - minX;
-	    rect.height = maxY - (y + Tree_TotalHeight(tree));
+	    rect.height = maxY - rect.y;
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
     }
@@ -4441,6 +4592,119 @@ Tree_DrawTiledImage(
 }
 
 /*
+ *----------------------------------------------------------------------
+ *
+ * DisplayDItem --
+ *
+ *	Draw a single item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+DisplayDItem(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItem,
+    DItemArea *area,
+#ifdef COLUMN_LOCK
+    int lock,			/* Which set of columns. */
+#endif
+    int bounds[4],		/* TREE_AREA_xxx bounds of drawing. */
+    Drawable pixmap,		/* Where to draw. */
+    Drawable drawable		/* Where to copy to. */
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    Tk_Window tkwin = tree->tkwin;
+    int left, top, right, bottom;
+
+    left = area->x;
+    right = left + area->width;
+    top = dItem->y;
+    bottom = top + dItem->height;
+
+    if (!(area->flags & DITEM_ALL_DIRTY)) {
+	left += area->dirty[LEFT];
+	right = area->x + area->dirty[RIGHT];
+	top += area->dirty[TOP];
+	bottom = dItem->y + area->dirty[BOTTOM];
+    }
+
+    area->flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
+
+    if (left < bounds[0])
+	left = bounds[0];
+    if (right > bounds[2])
+	right = bounds[2];
+    if (top < bounds[1])
+	top = bounds[1];
+    if (bottom > bounds[3])
+	bottom = bounds[3];
+
+    if (right <= left || bottom <= top)
+	return 0;
+
+    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
+	XFillRectangle(tree->display, Tk_WindowId(tkwin),
+		tree->debug.gcDraw, left, top, right - left, bottom - top);
+	DisplayDelay(tree);
+    }
+
+    if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
+
+	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], left);
+	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], top);
+	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], right);
+	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], bottom);
+	}
+
+	/* The top-left corner of the drawable is at this
+	* point in the canvas */
+	tree->drawableXOrigin = left + tree->xOrigin;
+	tree->drawableYOrigin = top + tree->yOrigin;
+
+	TreeItem_Draw(tree, dItem->item,
+#ifdef COLUMN_LOCK
+		lock,
+#endif
+		area->x - left, dItem->y - top,
+		area->width, dItem->height,
+		pixmap,
+		0, right - left,
+		dItem->index);
+	XCopyArea(tree->display, pixmap, drawable,
+		tree->copyGC,
+		0, 0,
+		right - left, bottom - top,
+		left, top);
+    } else {
+
+	/* The top-left corner of the drawable is at this
+	* point in the canvas */
+	tree->drawableXOrigin = tree->xOrigin;
+	tree->drawableYOrigin = tree->yOrigin;
+
+	TreeItem_Draw(tree, dItem->item,
+		lock,
+		area->x,
+		dItem->y,
+		area->width, dItem->height,
+		drawable,
+		left, right,
+		dItem->index);
+    }
+
+    return 1;
+}
+
+/*
  *--------------------------------------------------------------
  *
  * Tree_Display --
@@ -4469,7 +4733,6 @@ Tree_Display(
     Tk_Window tkwin = tree->tkwin;
     Drawable drawable = Tk_WindowId(tkwin);
     int minX, minY, maxX, maxY, height, width;
-    int left, right, top, bottom;
     int count;
     int numCopy = 0, numDraw = 0;
     TkRegion wsRgnNew, wsRgnDif;
@@ -4703,7 +4966,7 @@ displayRetry:
 	/* Remove newly-hidden items from itemVisHash */
 	count = TreeItemList_Count(&newH);
 	for (i = 0; i < count; i++) {
-	    item = TreeItemList_ItemN(&newH, i);
+	    item = TreeItemList_Nth(&newH, i);
 	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
 	    Tcl_DeleteHashEntry(hPtr);
 	}
@@ -4711,7 +4974,7 @@ displayRetry:
 	/* Add newly-visible items to itemVisHash */
 	count = TreeItemList_Count(&newV);
 	for (i = 0; i < count; i++) {
-	    item = TreeItemList_ItemN(&newV, i);
+	    item = TreeItemList_Nth(&newV, i);
 	    hPtr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) item, &isNew);
 	}
 
@@ -4744,11 +5007,6 @@ displayRetry:
 	drawable = dInfo->pixmap;
     }
 
-    minX = Tree_ContentLeft(tree);
-    minY = Tree_ContentTop(tree);
-    maxX = Tree_ContentRight(tree);
-    maxY = Tree_ContentBottom(tree);
-
     /* XOR off */
     TreeColumnProxy_Undisplay(tree);
     TreeRowProxy_Undisplay(tree);
@@ -4756,13 +5014,13 @@ displayRetry:
     TreeMarquee_Undisplay(tree->marquee);
 
     if (dInfo->flags & DINFO_DRAW_HEADER) {
-	if (tree->showHeader) {
+	if (Tree_AreaBbox(tree, TREE_AREA_HEADER, &minX, &minY, &maxX, &maxY)) {
 	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, tree->inset);
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = tree->inset;
-		dInfo->dirty[TOP] = tree->inset;
+		dInfo->dirty[LEFT] = minX;
+		dInfo->dirty[TOP] = minY;
 		dInfo->dirty[RIGHT] = maxX;
-		dInfo->dirty[BOTTOM] = minY;
+		dInfo->dirty[BOTTOM] = maxY;
 	    }
 	}
 	dInfo->flags &= ~DINFO_DRAW_HEADER;
@@ -4796,8 +5054,8 @@ displayRetry:
 	    /* Erase entire background. */
 	    /* FIXME: background image? */
 	    Tk_Fill3DRectangle(tree->tkwin, pixmap, tree->border,
-		    tree->inset, minY, width,
-		    maxY - minY, 0, TK_RELIEF_FLAT);
+		    tree->inset, Tree_ContentTop(tree), width,
+		    Tree_ContentHeight(tree), 0, TK_RELIEF_FLAT);
 
 	    /* This is needed for updating window positions */
 	    tree->drawableXOrigin = tree->xOrigin;
@@ -4807,7 +5065,8 @@ displayRetry:
 		int onScreen = FALSE;
 		dRowLabel = &dInfo->dRowLabel[i];
 		if (dRowLabel->height > 0) {
-		    if ((y + dRowLabel->height > minY) && (y < maxY)) {
+		    if ((y + dRowLabel->height > Tree_ContentTop(tree)) &&
+			    (y < Tree_ContentBottom(tree))) {
 			TreeRowLabel_Draw(dRowLabel->row, tree->inset, y,
 				width, dRowLabel->height,
 				pixmap);
@@ -4820,17 +5079,17 @@ displayRetry:
 
 	    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
 		XCopyArea(tree->display, pixmap, drawable,
-			tree->copyGC, tree->inset, minY,
-			width, maxY - minY,
-			tree->inset, minY);
+			tree->copyGC, tree->inset, Tree_ContentTop(tree),
+			width, Tree_ContentHeight(tree),
+			tree->inset, Tree_ContentTop(tree));
 		Tk_FreePixmap(tree->display, pixmap);
 	    }
 
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], tree->inset);
-		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], minY);
-		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], minX);
-		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], maxY);
+		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], Tree_ContentTop(tree));
+		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], tree->inset);
+		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], Tree_ContentBottom(tree));
 	    }
 	}
     }
@@ -4850,11 +5109,11 @@ displayRetry:
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	if ((dInfo->xOrigin != tree->xOrigin) ||
 		(dInfo->yOrigin != tree->yOrigin)) {
-	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], minX);
+	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], Tree_BorderLeft(tree));
 	    /* might include header */
-	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], minY);
-	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], maxX);
-	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], maxY);
+	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], Tree_ContentTop(tree));
+	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], Tree_BorderRight(tree));
+	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], Tree_ContentBottom(tree));
 	}
     }
 
@@ -4955,361 +5214,88 @@ displayRetry:
     for (dItem = dInfo->dItem;
 	 dItem != NULL;
 	 dItem = dItem->next) {
-#ifdef COLUMN_LOCK
-	/* Have DItems but only for locked columns. */
-	if (!dInfo->nonLockedDItems)
-	    break;
-#endif
-	if (dItem->flags & DITEM_DIRTY) {
+	if (!dInfo->empty && (dItem->area.flags & DITEM_DIRTY)) {
 	    count++;
 	    break;
 	}
-    }
-
 #ifdef COLUMN_LOCK
-    if ((dInfo->dItem != NULL) && (dInfo->widthOfColumnsLeft ||
-	    dInfo->widthOfColumnsRight)) {
-
-	Drawable pixmap = drawable;
-
-	if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
-	    width = MAX(dInfo->widthOfColumnsLeft, dInfo->widthOfColumnsRight);
-	    height = MIN(maxY - minY, dInfo->itemHeight);
-	    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-		    width, height, Tk_Depth(tkwin));
+	if (!dInfo->emptyL && (dItem->left.flags & DITEM_DIRTY)) {
+	    count++;
+	    break;
 	}
-
-	for (dItem = dInfo->dItem;
-	    dItem != NULL;
-	    dItem = dItem->next) {
-
-	    if (!(dItem->left.flags & DITEM_DIRTY) &&
-		    !(dItem->right.flags & DITEM_DIRTY))
-		continue;
-		    
-	    if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
-		int dItemX;
-
-		if (dInfo->widthOfColumnsLeft &&
-			(dItem->left.flags & DITEM_DIRTY)) {
-		    dItemX = tree->inset;
-
-		    left = dItemX;
-		    right = minX;
-		    top = dItem->y;
-		    bottom = top + dItem->height;
-
-		    if (!(dItem->left.flags & DITEM_ALL_DIRTY)) {
-			left += dItem->left.dirty[LEFT];
-			right = dItemX + dItem->left.dirty[RIGHT];
-			top += dItem->left.dirty[TOP];
-			bottom = dItem->y + dItem->left.dirty[BOTTOM];
-		    }
-
-		    if (right > Tree_BorderRight(tree))
-			right = Tree_BorderRight(tree);
-		    if (top < minY)
-			top = minY;
-		    if (bottom > maxY)
-			bottom = maxY;
-
-		    if (right <= left || bottom <= top) {
-			dItem->left.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-			continue;
-		    }
-
-		    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], left);
-			dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], top);
-			dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], right);
-			dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], bottom);
-		    }
-
-		    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-			XFillRectangle(tree->display, Tk_WindowId(tkwin),
-				tree->debug.gcDraw, left, top, right - left, bottom - top);
-			DisplayDelay(tree);
-		    }
-
-		    /* The top-left corner of the drawable is at this
-		    * point in the canvas */
-		    tree->drawableXOrigin = left + tree->xOrigin;
-		    tree->drawableYOrigin = top + tree->yOrigin;
-
-		    TreeItem_Draw(tree, dItem->item,
-			    COLUMN_LOCK_LEFT,
-			    dItemX - left, dItem->y - top,
-			    dInfo->widthOfColumnsLeft, dItem->height,
-			    pixmap,
-			    0, right - left,
-			    dItem->index);
-		    XCopyArea(tree->display, pixmap, drawable,
-			    tree->copyGC,
-			    0, 0,
-			    right - left, bottom - top,
-			    left, top);
-
-		    dItem->left.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-		}
-
-		if (dInfo->widthOfColumnsRight &&
-			(dItem->right.flags & DITEM_DIRTY)) {
-		    dItemX = maxX;
-
-		    left = dItemX;
-		    right = Tree_BorderRight(tree);
-		    top = dItem->y;
-		    bottom = top + dItem->height;
-
-		    if (!(dItem->right.flags & DITEM_ALL_DIRTY)) {
-			left += dItem->right.dirty[LEFT];
-			right = dItemX + dItem->right.dirty[RIGHT];
-			top += dItem->right.dirty[TOP];
-			bottom = dItem->y + dItem->right.dirty[BOTTOM];
-		    }
-
-		    if (left < tree->inset)
-			left = tree->inset;
-		    if (top < minY)
-			top = minY;
-		    if (bottom > maxY)
-			bottom = maxY;
-
-		    if (right <= left || bottom <= top) {
-			dItem->right.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-			continue;
-		    }
-
-		    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-			dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], left);
-			dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], top);
-			dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], right);
-			dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], bottom);
-		    }
-
-		    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-			XFillRectangle(tree->display, Tk_WindowId(tkwin),
-				tree->debug.gcDraw, left, top, right - left, bottom - top);
-			DisplayDelay(tree);
-		    }
-
-		    /* The top-left corner of the drawable is at this
-		    * point in the canvas */
-		    tree->drawableXOrigin = left + tree->xOrigin;
-		    tree->drawableYOrigin = top + tree->yOrigin;
-
-		    TreeItem_Draw(tree, dItem->item,
-			    COLUMN_LOCK_RIGHT,
-			    dItemX - left, dItem->y - top,
-			    dInfo->widthOfColumnsRight, dItem->height,
-			    pixmap,
-			    0, right - left,
-			    dItem->index);
-		    XCopyArea(tree->display, pixmap, drawable,
-			    tree->copyGC,
-			    0, 0,
-			    right - left, bottom - top,
-			    left, top);
-
-		    dItem->right.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-		}
-	    } else {
-
-		/* The top-left corner of the drawable is at this
-		* point in the canvas */
-		tree->drawableXOrigin = tree->xOrigin;
-		tree->drawableYOrigin = tree->yOrigin;
-
-		if (dInfo->widthOfColumnsLeft &&
-			(dItem->left.flags & DITEM_DIRTY)) {
-		    TreeItem_Draw(tree, dItem->item,
-			    COLUMN_LOCK_LEFT,
-			    tree->inset,
-			    dItem->y,
-			    dInfo->widthOfColumnsLeft, dItem->height,
-			    drawable,
-			    tree->inset, tree->inset + dInfo->widthOfColumnsLeft,
-			    dItem->index);
-		    dItem->left.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY); 
-		}
-
-		if (dInfo->widthOfColumnsRight &&
-			(dItem->right.flags & DITEM_DIRTY)) {
-		    TreeItem_Draw(tree, dItem->item,
-			    COLUMN_LOCK_RIGHT,
-			    maxX,
-			    dItem->y,
-			    dInfo->widthOfColumnsRight, dItem->height,
-			    drawable,
-			    maxX, Tree_BorderRight(tree),
-			    dItem->index);
-		    dItem->right.flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-		}
-	    }
+	if (!dInfo->emptyR && (dItem->right.flags & DITEM_DIRTY)) {
+	    count++;
+	    break;
 	}
-
-	if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
-	    Tk_FreePixmap(tree->display, pixmap);
-	}
-
-	/* Erase background below the last item. */
-	top = dInfo->dItemLast->y + dInfo->dItemLast->height;
-	bottom = Tree_BorderBottom(tree);
-	if (top < bottom) {
-	    if (dInfo->widthOfColumnsLeft) {
-		left = Tree_BorderLeft(tree);
-		width = dInfo->widthOfColumnsLeft;
-		if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-		    XFillRectangle(tree->display, Tk_WindowId(tkwin),
-			    tree->debug.gcDraw, left, top, width, bottom - top);
-		    DisplayDelay(tree);
-		}
-		if (tree->backgroundImage != NULL) {
-		    Tree_DrawTiledImage(tree, drawable, tree->backgroundImage,
-			    left, top, left + width, bottom,
-			    tree->xOrigin, tree->yOrigin);
-		} else {
-		    GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
-		    XFillRectangle(tree->display, drawable,
-			    gc, left, top, width, bottom - top);
-		}
-	    }
-	    if (dInfo->widthOfColumnsRight) {
-		left = maxX;
-		width = dInfo->widthOfColumnsRight;
-		if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-		    XFillRectangle(tree->display, Tk_WindowId(tkwin),
-			    tree->debug.gcDraw, left, top, width, bottom - top);
-		    DisplayDelay(tree);
-		}
-		if (tree->backgroundImage != NULL) {
-		    Tree_DrawTiledImage(tree, drawable, tree->backgroundImage,
-			    left, top, left + width, bottom,
-			    tree->xOrigin, tree->yOrigin);
-		} else {
-		    GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
-		    XFillRectangle(tree->display, drawable,
-			    gc, left, top, width, bottom - top);
-		}
-	    }
-	}
+#endif
     }
-#endif /* COLUMN_LOCK */
 
     /* Display dirty items */
     if (count > 0) {
 	Drawable pixmap = drawable;
+
 	if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
 	    /* Allocate pixmap for largest item */
-	    width = MIN(maxX - minX, dInfo->itemWidth);
-	    height = MIN(maxY - minY, dInfo->itemHeight);
+	    width = MIN(Tk_Width(tkwin), dInfo->itemWidth);
+	    height = MIN(Tk_Height(tkwin), dInfo->itemHeight);
 	    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
 		    width, height, Tk_Depth(tkwin));
 	}
+
 	for (dItem = dInfo->dItem;
 	     dItem != NULL;
 	     dItem = dItem->next) {
 
-	    /*
-	     * FIXME.
-	     */
-	    tree->drawableXOrigin = tree->xOrigin;
-	    tree->drawableYOrigin = tree->yOrigin;
-	    TreeItem_UpdateWindowPositions(tree, dItem->item,
-		dItem->x, dItem->y, dItem->width, dItem->height);
-
-	    if (!(dItem->flags & DITEM_DIRTY)) {
-		continue;
-	    }
-
-	    if (dItem->flags & DITEM_ALL_DIRTY) {
-		left = dItem->x;
-		right = dItem->x + dItem->width;
-		top = dItem->y;
-		bottom = dItem->y + dItem->height;
-	    }
-	    else {
-		left = dItem->x + dItem->dirty[LEFT];
-		right = dItem->x + dItem->dirty[RIGHT];
-		top = dItem->y + dItem->dirty[TOP];
-		bottom = dItem->y + dItem->dirty[BOTTOM];
-	    }
-
-	    if (left < minX)
-		left = minX;
-	    if (right > maxX)
-		right = maxX;
-	    if (top < minY)
-		top = minY;
-	    if (bottom > maxY)
-		bottom = maxY;
-
-	    if (right <= left || bottom <= top) {
-		dItem->oldX = dItem->x;
-		dItem->oldY = dItem->y;
-		dItem->flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
-		continue;
-	    }
-
-	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], left);
-		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], top);
-		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], right);
-		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], bottom);
-	    }
-
-	    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-		XFillRectangle(tree->display, Tk_WindowId(tkwin),
-			tree->debug.gcDraw, left, top, right - left, bottom - top);
-		DisplayDelay(tree);
-	    }
-
-	    if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
-		/* The top-left corner of the drawable is at this
-		 * point in the canvas */
-		tree->drawableXOrigin = left + tree->xOrigin;
-		tree->drawableYOrigin = top + tree->yOrigin;
-
-		TreeItem_Draw(tree, dItem->item,
 #ifdef COLUMN_LOCK
-			COLUMN_LOCK_NONE,
-#endif
-			dItem->x - left,
-			dItem->y - top,
-			dItem->width, dItem->height,
-			pixmap,
-			0, right - left,
-			dItem->index);
-		XCopyArea(tree->display, pixmap, drawable,
-			tree->copyGC,
-			0, 0,
-			right - left, bottom - top,
-			left, top);
-	    }
-	    /* DOUBLEBUFFER_NONE */
-	    else {
-		/* The top-left corner of the drawable is at this
-		 * point in the canvas */
+	    if (!dInfo->empty) {
+		/* FIXME: may "draw" window elements twice. */
 		tree->drawableXOrigin = tree->xOrigin;
 		tree->drawableYOrigin = tree->yOrigin;
-
-		TreeItem_Draw(tree, dItem->item,
-#ifdef COLUMN_LOCK
-			COLUMN_LOCK_NONE,
-#endif
-			dItem->x,
-			dItem->y,
-			dItem->width, dItem->height,
-			pixmap,
-			minX, maxX,
-			dItem->index);
+		TreeItem_UpdateWindowPositions(tree, dItem->item, COLUMN_LOCK_NONE,
+		    dItem->area.x, dItem->y, dItem->area.width, dItem->height);
+		if (dItem->area.flags & DITEM_DIRTY) {
+		    numDraw += DisplayDItem(tree, dItem, &dItem->area,
+			    COLUMN_LOCK_NONE, dInfo->bounds, pixmap, drawable);
+		}
 	    }
-	    DisplayDelay(tree);
-	    numDraw++;
+	    if (!dInfo->emptyL) {
+		tree->drawableXOrigin = tree->xOrigin;
+		tree->drawableYOrigin = tree->yOrigin;
+		TreeItem_UpdateWindowPositions(tree, dItem->item,
+		    COLUMN_LOCK_LEFT, dItem->left.x, dItem->y,
+		    dItem->left.width, dItem->height);
+		if (dItem->left.flags & DITEM_DIRTY) {
+		    DisplayDItem(tree, dItem, &dItem->left, COLUMN_LOCK_LEFT,
+			    dInfo->boundsL, pixmap, drawable);
+		}
+	    }
+	    if (!dInfo->emptyR) {
+		tree->drawableXOrigin = tree->xOrigin;
+		tree->drawableYOrigin = tree->yOrigin;
+		TreeItem_UpdateWindowPositions(tree, dItem->item,
+		    COLUMN_LOCK_RIGHT, dItem->right.x, dItem->y,
+		    dItem->right.width, dItem->height);
+		if (dItem->right.flags & DITEM_DIRTY) {
+		    DisplayDItem(tree, dItem, &dItem->right, COLUMN_LOCK_RIGHT,
+			    dInfo->boundsR, pixmap, drawable);
+		}
+	    }
+#else
+	    if (!dInfo->empty) {
+		/* FIXME: may "draw" window elements twice. */
+		tree->drawableXOrigin = tree->xOrigin;
+		tree->drawableYOrigin = tree->yOrigin;
+		TreeItem_UpdateWindowPositions(tree, dItem->item, COLUMN_LOCK_NONE,
+		    dItem->area.x, dItem->y, dItem->area.width, dItem->height);
+		if (dItem->area.flags & DITEM_DIRTY) {
+		    numDraw += DisplayDItem(tree, dItem, &dItem->area,
+			    COLUMN_LOCK_NONE, bounds, pixmap, drawable);
+		}
+	    }
+#endif
 
-	    dItem->oldX = dItem->x;
+	    dItem->oldX = dItem->area.x;
 	    dItem->oldY = dItem->y;
-	    dItem->flags &= ~(DITEM_DIRTY | DITEM_ALL_DIRTY);
 	}
 	if (tree->doubleBuffer != DOUBLEBUFFER_NONE)
 	    Tk_FreePixmap(tree->display, pixmap);
@@ -6193,7 +6179,7 @@ Tree_InvalidateItemDInfo(
 	dItem = (DItem *) TreeItem_GetDInfo(tree, item);
 	if (dItem != NULL) {
 	    if (column == NULL) {
-		dItem->flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
+		dItem->area.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
 #ifdef COLUMN_LOCK
 		dItem->left.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
 		dItem->right.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
@@ -6205,12 +6191,10 @@ Tree_InvalidateItemDInfo(
 		 * is currently being invalidated. */
 		int columnIndex = TreeColumn_Index(column);
 		int i, left = dInfo->columns[columnIndex].offset;
-		/* FIXME: is this the actual display width if only one
-		 * column is visible? */
+		/* This may not be the actual display width if this is the
+		 * only visible non-locked column. */
 		int width = dInfo->columns[columnIndex].width;
-#ifdef COLUMN_LOCK
-		int itemWidth;
-#endif
+
 		/* If a hidden column was moved we can't rely on
 		 * dInfo->columns[] being in the right order. */
 		if (dInfo->flags & DINFO_CHECK_COLUMN_WIDTH) {
@@ -6225,24 +6209,33 @@ Tree_InvalidateItemDInfo(
 		    width = dInfo->columns[i].width;
 		}
 
-#ifdef COLUMN_LOCK
+#ifdef COLUMN_SPAN
+		width = 0;
+		i = dItem->spans[columnIndex];
+		while (dItem->spans[i] == dItem->spans[columnIndex]) {
+		    width += dInfo->columns[i].width;
+		    if (++i == tree->columnCount)
+			break;
+		}
+#endif
 
+#ifdef COLUMN_LOCK
 		switch (TreeColumn_Lock(column)) {
 		    case COLUMN_LOCK_NONE:
-			InvalidateDItemX(dItem, 0, left, width);
-			InvalidateDItemY(dItem, dItem->y, dItem->y, dItem->height);
-			dItem->flags |= DITEM_DIRTY;
+			if (tree->columnCountVis == 1)
+			    width = dItem->area.width;
+			InvalidateDItemX(dItem, &dItem->area, 0, left, width);
+			InvalidateDItemY(dItem, &dItem->area, dItem->y, dItem->y, dItem->height);
+			dItem->area.flags |= DITEM_DIRTY;
 			break;
 		    case COLUMN_LOCK_LEFT:
-			itemWidth = dInfo->widthOfColumnsLeft;
-			InvalidateDItemX2(dItem->left.dirty, dItem->left.flags, 0, itemWidth, left, width);
-			InvalidateDItemY2(dItem->left.dirty, dItem->left.flags, 0, dItem->height, 0, dItem->height);
+			InvalidateDItemX(dItem, &dItem->left, 0, left, width);
+			InvalidateDItemY(dItem, &dItem->left, 0, 0, dItem->height);
 			dItem->left.flags |= DITEM_DIRTY;
 			break;
 		    case COLUMN_LOCK_RIGHT:
-			itemWidth = dInfo->widthOfColumnsRight;
-			InvalidateDItemX2(dItem->right.dirty, dItem->right.flags, 0, itemWidth, left, width);
-			InvalidateDItemY2(dItem->right.dirty, dItem->right.flags, 0, dItem->height, 0, dItem->height);
+			InvalidateDItemX(dItem, &dItem->right, 0, left, width);
+			InvalidateDItemY(dItem, &dItem->right, 0, 0, dItem->height);
 			dItem->right.flags |= DITEM_DIRTY;
 			break;
 		}
@@ -6397,32 +6390,26 @@ Tree_InvalidateArea(
 
     dItem = dInfo->dItem;
     while (dItem != NULL) {
-#ifdef COLUMN_LOCK
-	if (!(dItem->flags & DITEM_ALL_DIRTY) && dInfo->nonLockedDItems &&
-#else
-	if (!(dItem->flags & DITEM_ALL_DIRTY) &&
-#endif
-		(x2 > dItem->x) && (x1 < dItem->x + dItem->width) &&
+	if (!(dItem->area.flags & DITEM_ALL_DIRTY) && !dInfo->empty &&
+		(x2 > dItem->area.x) && (x1 < dItem->area.x + dItem->area.width) &&
 		(y2 > dItem->y) && (y1 < dItem->y + dItem->height)) {
-	    InvalidateDItemX(dItem, dItem->x, x1, x2 - x1);
-	    InvalidateDItemY(dItem, dItem->y, y1, y2 - y1);
-	    dItem->flags |= DITEM_DIRTY;
+	    InvalidateDItemX(dItem, &dItem->area, dItem->area.x, x1, x2 - x1);
+	    InvalidateDItemY(dItem, &dItem->area, dItem->y, y1, y2 - y1);
+	    dItem->area.flags |= DITEM_DIRTY;
 	}
 #ifdef COLUMN_LOCK
-	if (dInfo->widthOfColumnsLeft && 
-		!(dItem->left.flags & DITEM_ALL_DIRTY) &&
-		(x2 > Tree_BorderLeft(tree)) && (x1 < Tree_ContentLeft(tree)) &&
+	if (!dInfo->emptyL && !(dItem->left.flags & DITEM_ALL_DIRTY) &&
+		(x2 > dInfo->boundsL[0]) && (x1 < dInfo->boundsL[2]) &&
 		(y2 > dItem->y) && (y1 < dItem->y + dItem->height)) {
-	    InvalidateDItemX2(dItem->left.dirty, dItem->left.flags, tree->inset, dInfo->widthOfColumnsLeft, x1, x2 - x1);
-	    InvalidateDItemY2(dItem->left.dirty, dItem->left.flags, dItem->y, dItem->height, y1, y2 - y1);
+	    InvalidateDItemX(dItem, &dItem->left, dItem->left.x, x1, x2 - x1);
+	    InvalidateDItemY(dItem, &dItem->left, dItem->y, y1, y2 - y1);
 	    dItem->left.flags |= DITEM_DIRTY;
 	}
-	if (dInfo->widthOfColumnsRight && 
-		!(dItem->right.flags & DITEM_ALL_DIRTY) &&
-		(x2 > Tree_ContentRight(tree)) && (x1 < Tree_BorderRight(tree)) &&
+	if (!dInfo->emptyR && !(dItem->right.flags & DITEM_ALL_DIRTY) &&
+		(x2 > dInfo->boundsR[0]) && (x1 < dInfo->boundsR[2]) &&
 		(y2 > dItem->y) && (y1 < dItem->y + dItem->height)) {
-	    InvalidateDItemX2(dItem->right.dirty, dItem->right.flags, Tree_ContentRight(tree), dInfo->widthOfColumnsRight, x1, x2 - x1);
-	    InvalidateDItemY2(dItem->right.dirty, dItem->right.flags, dItem->y, dItem->height, y1, y2 - y1);
+	    InvalidateDItemX(dItem, &dItem->right, dItem->right.x, x1, x2 - x1);
+	    InvalidateDItemY(dItem, &dItem->right, dItem->y, y1, y2 - y1);
 	    dItem->right.flags |= DITEM_DIRTY;
 	}
 #endif
@@ -6440,6 +6427,21 @@ Tree_InvalidateArea(
 	    if (tree->borderWidth > 0)
 		dInfo->flags |= DINFO_DRAW_BORDER;
 	}
+    }
+
+    /* Invalidate part of the whitespace */
+    if ((x1 < x2 && y1 < y2) && TkRectInRegion(dInfo->wsRgn, x1, y1,
+	    x2 - x1, y2 - y1)) {
+	XRectangle rect;
+	TkRegion rgn = TkCreateRegion();
+
+	rect.x = x1;
+	rect.y = y1;
+	rect.width = x2 - x1;
+	rect.height = y2 - y1;
+	TkUnionRectWithRegion(&rect, rgn, rgn);
+	TkSubtractRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
+	TkDestroyRegion(rgn);
     }
 
     if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
@@ -6485,13 +6487,10 @@ Tree_InvalidateRegion(
     TkClipBox(region, &rect);
     if (!rect.width || !rect.height)
 	return;
-    x1 = rect.x, x2 = rect.x + rect.width;
-    y1 = rect.y, y2 = rect.y + rect.height;
 
-    rgn = TkCreateRegion();
-
-    if (TkRectInRegion(region, minX, minY, maxX - minX,
-	    Tree_HeaderHeight(tree)) != RectangleOut)
+    if (Tree_AreaBbox(tree, TREE_AREA_HEADER, &minX, &minY, &maxX, &maxY) && 
+	    TkRectInRegion(region, minX, minY, maxX - minX, maxY - minY)
+		!= RectangleOut)
 	dInfo->flags |= DINFO_DRAW_HEADER;
 
 #ifdef ROW_LABEL
@@ -6501,61 +6500,53 @@ Tree_InvalidateRegion(
 	dInfo->flags |= DINFO_DRAW_ROWLABELS;
 #endif
 
+    rgn = TkCreateRegion();
+
     dItem = dInfo->dItem;
     while (dItem != NULL) {
-#ifdef COLUMN_LOCK
-	if (!(dItem->flags & DITEM_ALL_DIRTY) && dInfo->nonLockedDItems) {
-#else
-	if (!(dItem->flags & DITEM_ALL_DIRTY)) {
-#endif
-	    rect.x = dItem->x;
+	if (!dInfo->empty && !(dItem->area.flags & DITEM_ALL_DIRTY)) {
+	    rect.x = dItem->area.x;
 	    rect.y = dItem->y;
-	    rect.width = dItem->width;
+	    rect.width = dItem->area.width;
 	    rect.height = dItem->height;
 	    TkSubtractRegion(rgn, rgn, rgn);
 	    TkUnionRectWithRegion(&rect, rgn, rgn);
 	    TkIntersectRegion(region, rgn, rgn);
 	    TkClipBox(rgn, &rect);
 	    if (rect.width > 0 && rect.height > 0) {
-		InvalidateDItemX(dItem, dItem->x, rect.x, rect.width);
-		InvalidateDItemY(dItem, dItem->y, rect.y, rect.height);
-		dItem->flags |= DITEM_DIRTY;
+		InvalidateDItemX(dItem, &dItem->area, dItem->area.x, rect.x, rect.width);
+		InvalidateDItemY(dItem, &dItem->area, dItem->y, rect.y, rect.height);
+		dItem->area.flags |= DITEM_DIRTY;
 	    }
 	}
 #ifdef COLUMN_LOCK
-	if (!(dItem->left.flags & DITEM_ALL_DIRTY) &&
-		dInfo->widthOfColumnsLeft) {
-	    int x = tree->inset, w = dInfo->widthOfColumnsLeft;
-
-	    rect.x = x;
+	if (!dInfo->emptyL && !(dItem->left.flags & DITEM_ALL_DIRTY)) {
+	    rect.x = dItem->left.x;
 	    rect.y = dItem->y;
-	    rect.width = w;
+	    rect.width = dItem->left.width;
 	    rect.height = dItem->height;
 	    TkSubtractRegion(rgn, rgn, rgn);
 	    TkUnionRectWithRegion(&rect, rgn, rgn);
 	    TkIntersectRegion(region, rgn, rgn);
 	    TkClipBox(rgn, &rect);
 	    if (rect.width > 0 && rect.height > 0) {
-		InvalidateDItemX2(dItem->left.dirty, dItem->left.flags, x, w, rect.x, rect.width);
-		InvalidateDItemY2(dItem->left.dirty, dItem->left.flags, dItem->y, dItem->height, rect.y, rect.height);
+		InvalidateDItemX(dItem, &dItem->left, dItem->left.x, rect.x, rect.width);
+		InvalidateDItemY(dItem, &dItem->left, dItem->y, rect.y, rect.height);
 		dItem->left.flags |= DITEM_DIRTY;
 	    }
 	}
-	if (!(dItem->right.flags & DITEM_ALL_DIRTY) &&
-		dInfo->widthOfColumnsRight) {
-	    int x = Tree_ContentRight(tree), w = dInfo->widthOfColumnsRight;
-
-	    rect.x = x;
+	if (!dInfo->emptyR && !(dItem->right.flags & DITEM_ALL_DIRTY)) {
+	    rect.x = dItem->right.x;
 	    rect.y = dItem->y;
-	    rect.width = w;
+	    rect.width = dItem->right.width;
 	    rect.height = dItem->height;
 	    TkSubtractRegion(rgn, rgn, rgn);
 	    TkUnionRectWithRegion(&rect, rgn, rgn);
 	    TkIntersectRegion(region, rgn, rgn);
 	    TkClipBox(rgn, &rect);
 	    if (rect.width > 0 && rect.height > 0) {
-		InvalidateDItemX2(dItem->right.dirty, dItem->right.flags, x, w, rect.x, rect.width);
-		InvalidateDItemY2(dItem->right.dirty, dItem->right.flags, dItem->y, dItem->height, rect.y, rect.height);
+		InvalidateDItemX(dItem, &dItem->right, dItem->right.x, rect.x, rect.width);
+		InvalidateDItemY(dItem, &dItem->right, dItem->y, rect.y, rect.height);
 		dItem->right.flags |= DITEM_DIRTY;
 	    }
 	}
@@ -6565,6 +6556,8 @@ Tree_InvalidateRegion(
 
     /* Could check border and highlight separately */
     if (tree->inset > 0) {
+	x1 = rect.x, x2 = rect.x + rect.width;
+	y1 = rect.y, y2 = rect.y + rect.height;
 	if ((x1 < minX) || (y1 < minY) || (x2 > maxX) || (y2 > maxY)) {
 	    if (tree->highlightWidth > 0)
 		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
@@ -6572,6 +6565,9 @@ Tree_InvalidateRegion(
 		dInfo->flags |= DINFO_DRAW_BORDER;
 	}
     }
+
+    /* Invalidate part of the whitespace */
+    TkSubtractRegion(dInfo->wsRgn, region, dInfo->wsRgn);
 
     TkDestroyRegion(rgn);
 
@@ -6648,21 +6644,6 @@ Tree_RedrawArea(
 				 * coordinates. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
-
-    if (x1 < x2 && y1 < y2) {
-	XRectangle rect;
-	TkRegion rgn = TkCreateRegion();
-
-	rect.x = x1;
-	rect.y = y1;
-	rect.width = x2 - x1;
-	rect.height = y2 - y1;
-	TkUnionRectWithRegion(&rect, rgn, rgn);
-	TkSubtractRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
-	TkDestroyRegion(rgn);
-    }
-
     Tree_InvalidateArea(tree, x1, y1, x2, y2);
     Tree_EventuallyRedraw(tree);
 }
@@ -6736,6 +6717,10 @@ TreeDInfo_Free(
 #endif
     while (dInfo->dItem != NULL) {
 	DItem *next = dInfo->dItem->next;
+#ifdef COLUMN_SPAN
+	if (dInfo->dItem->spans != NULL)
+	    ckfree((char *) dInfo->dItem->spans);
+#endif
 	WFREE(dInfo->dItem, DItem);
 	dInfo->dItem = next;
     }
@@ -6785,10 +6770,10 @@ DumpDInfo(
 	} else {
 	    dbwin("    item %d x,y,w,h %d,%d,%d,%d dirty %d,%d,%d,%d flags %0X\n",
 		    TreeItem_GetID(tree, dItem->item),
-		    dItem->x, dItem->y, dItem->width, dItem->height,
-		    dItem->dirty[LEFT], dItem->dirty[TOP],
-		    dItem->dirty[RIGHT], dItem->dirty[BOTTOM],
-		    dItem->flags);
+		    dItem->area.x, dItem->y, dItem->area.width, dItem->height,
+		    dItem->area.dirty[LEFT], dItem->area.dirty[TOP],
+		    dItem->area.dirty[RIGHT], dItem->area.dirty[BOTTOM],
+		    dItem->area.flags);
 	}
 	dItem = dItem->next;
     }
