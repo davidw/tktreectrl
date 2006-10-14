@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.52 2006/10/14 19:44:11 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.53 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -36,7 +36,6 @@
 #define SELECTION_VISIBLE
 #define ALLOC_HAX
 #define COLUMN_SPAN
-#define ROW_LABEL
 #define COLUMN_LOCK
 #define DEPRECATED
 
@@ -51,9 +50,6 @@ typedef struct TreeMarquee_ *TreeMarquee;
 typedef struct TreeItemRInfo_ *TreeItemRInfo;
 typedef struct TreeStyle_ *TreeStyle;
 typedef struct TreeElement_ *TreeElement;
-#ifdef ROW_LABEL
-typedef struct TreeRowLabel_ *TreeRowLabel;
-#endif
 
 /*****/
 
@@ -142,21 +138,6 @@ struct TreeCtrlColumnDrag
     XColor *indColor;		/* -indicatorcolor */
     int indSide;		/* -indicatorside */
 };
-
-#ifdef ROW_LABEL
-struct TreeCtrlRowDrag
-{
-    Tk_OptionTable optionTable;
-    int enable;			/* -enable */
-    TreeRowLabel row;		/* -imagerow */
-    Tcl_Obj *offsetObj;		/* -imageoffset */
-    int offset;			/* -imageoffset */
-    XColor *color;		/* -imagecolor */
-    int alpha;			/* -imagealpha */
-    TreeRowLabel indRow;	/* -indicatorrow */
-    XColor *indColor;		/* -indicatorcolor */
-};
-#endif
 
 struct TreeCtrl
 {
@@ -371,32 +352,6 @@ struct TreeCtrl
 	int onScreen;
     } rowProxy;
 
-#ifdef ROW_LABEL
-    int rowLabelResize;		/* -rowlabelresize */
-
-    int rowLabelWidth;		/* -rowlabelwidth */
-    Tcl_Obj *rowLabelWidthObj;	/* -rowlabelwidth */
-
-    int minRowLabelWidth;		/* -minrowlabelwidth */
-    Tcl_Obj *minRowLabelWidthObj;	/* -minrowlabelwidth */
-
-    int maxRowLabelWidth;		/* -maxrowlabelwidth */
-    Tcl_Obj *maxRowLabelWidthObj;	/* -maxrowlabelwidth */
-
-    int showRowLabels;		/* -showrowlabels */
-
-    char *rowPrefix;		/* -rowlabelprefix */
-    int rowPrefixLen;		/* -rowlabelprefix */
-
-    TreeRowLabel rows;		/* List of row labels. */
-    TreeRowLabel rowLabelLast;	/* Last in list of row labels. */
-    int nextRowId;		/* Next unique id for a row. */
-    int rowCount;		/* Number of created row labels. */
-    Tcl_HashTable rowIDHash;	/* Key: row id, Value: row */
-    struct TreeCtrlRowDrag rowDrag;
-    int neededWidthOfRows;	/* Max requested width of row labels. */
-#endif /* ROW_LABEL */
-
     char *optionHax[64];	/* Used by OptionHax_xxx */
     int optionHaxCnt;		/* Used by OptionHax_xxx */
 };
@@ -446,13 +401,7 @@ extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], in
 #define Tree_BorderBottom(tree) \
     (Tk_Height(tree->tkwin) - tree->inset)
 
-#if defined(ROW_LABEL) && defined(COLUMN_LOCK)
-#define Tree_ContentLeft(tree) \
-    (Tree_BorderLeft(tree) + Tree_WidthOfRowLabels(tree) + Tree_WidthOfLeftColumns(tree))
-#elif defined(ROW_LABEL)
-#define Tree_ContentLeft(tree) \
-    (Tree_BorderLeft(tree) + Tree_WidthOfRowLabels(tree))
-#elif defined(COLUMN_LOCK)
+#if defined(COLUMN_LOCK)
 #define Tree_ContentLeft(tree) \
     (Tree_BorderLeft(tree) + Tree_WidthOfLeftColumns(tree))
 #else
@@ -635,23 +584,13 @@ extern int TreeStyle_FromObj(TreeCtrl *tree, Tcl_Obj *obj, TreeStyle *stylePtr);
 extern Tcl_Obj *TreeStyle_ToObj(TreeStyle style_);
 extern Tcl_Obj *TreeStyle_GetImage(TreeCtrl *tree, TreeStyle style_);
 extern Tcl_Obj *TreeStyle_GetText(TreeCtrl *tree, TreeStyle style_);
-#ifdef ROW_LABEL
-extern int TreeStyle_SetImage(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeRowLabel row, TreeStyle style_, Tcl_Obj *textObj);
-extern int TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeRowLabel row, TreeStyle style_, Tcl_Obj *textObj);
-#else
 extern int TreeStyle_SetImage(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *textObj);
 extern int TreeStyle_SetText(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *textObj);
-#endif
 extern int TreeStyle_FindElement(TreeCtrl *tree, TreeStyle style_, TreeElement elem_, int *index);
 extern TreeStyle TreeStyle_NewInstance(TreeCtrl *tree, TreeStyle master);
 extern int TreeStyle_ElementActual(TreeCtrl *tree, TreeStyle style_, int state, Tcl_Obj *elemObj, Tcl_Obj *obj);
-#ifdef ROW_LABEL
-extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeRowLabel row, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
-extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeRowLabel row, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
-#else
 extern int TreeStyle_ElementCget(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, Tcl_Obj *obj);
 extern int TreeStyle_ElementConfigure(TreeCtrl *tree, TreeItem item, TreeItemColumn column, TreeStyle style_, Tcl_Obj *elemObj, int objc, Tcl_Obj **objv, int *eMask);
-#endif
 extern void TreeStyle_ListElements(TreeCtrl *tree, TreeStyle style_);
 extern TreeStyle TreeStyle_GetMaster(TreeCtrl *tree, TreeStyle style_);
 extern char *TreeStyle_Identify(StyleDrawArgs *drawArgs, int x, int y);
@@ -798,9 +737,6 @@ enum {
 TREE_AREA_NONE = 0,
 TREE_AREA_HEADER,
 TREE_AREA_CONTENT,
-#ifdef ROW_LABEL
-TREE_AREA_ROWLABEL,
-#endif
 #ifdef COLUMN_LOCK
 TREE_AREA_LEFT,
 TREE_AREA_RIGHT
@@ -838,10 +774,6 @@ extern void TreeRowProxy_Undisplay(TreeCtrl *tree);
 extern void TreeRowProxy_Display(TreeCtrl *tree);
 extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image image, 
     int x1, int y1, int x2, int y2, int xOffset, int yOffset);
-#ifdef ROW_LABEL
-extern int Tree_RowLabelBbox(TreeCtrl *tree, TreeRowLabel row, int *x, int *y, int *w, int *h);
-extern TreeRowLabel Tree_RowLabelUnderPoint(TreeCtrl *tree, int *x, int *y, int *w, int *h, int nearest);
-#endif
 
 #define DINFO_OUT_OF_DATE 0x0001
 #define DINFO_CHECK_COLUMN_WIDTH 0x0002
@@ -858,38 +790,9 @@ extern TreeRowLabel Tree_RowLabelUnderPoint(TreeCtrl *tree, int *x, int *y, int 
 #define DINFO_REDO_INCREMENTS 0x1000
 #define DINFO_REDO_COLUMN_WIDTH 0x2000
 #define DINFO_REDO_SELECTION 0x4000
-#ifdef ROW_LABEL
-#define DINFO_DRAW_ROWLABELS 0x8000
-#endif
 extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
 
 extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
-
-#ifdef ROW_LABEL
-/* tkTreeRowLabel.c */
-extern void Tree_InitRowLabels(TreeCtrl *tree);
-extern void Tree_FreeRowLabels(TreeCtrl *tree);
-extern int TreeRowLabelCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-extern int Tree_WidthOfRowLabels(TreeCtrl *tree);
-extern void TreeRowLabel_Draw(TreeRowLabel row_, int x, int y, int width, int height, Drawable drawable);
-extern void TreeRowLabel_Identify(TreeRowLabel row_, int x, int y, char *buf);
-extern int TreeRowLabel_GetID(TreeRowLabel row);
-extern int TreeRowLabel_Index(TreeRowLabel row);
-extern int TreeRowLabel_Visible(TreeRowLabel row);
-extern int TreeRowLabel_FixedHeight(TreeRowLabel row);
-extern int TreeRowLabel_NeededHeight(TreeRowLabel row);
-extern TreeStyle TreeRowLabel_GetStyle(TreeRowLabel row);
-extern void TreeRowLabel_ForgetStyle(TreeRowLabel row);
-extern TreeRowLabel TreeRowLabel_Next(TreeRowLabel row);
-extern void TreeRowLabel_OnScreen(TreeRowLabel row, int onScreen);
-
-#define ROW_ALL ((TreeRowLabel) -1)
-#define RFO_NOT_MANY 0x01
-#define RFO_NOT_NULL 0x02
-extern int TreeRowLabelList_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeRowLabelList *rows, int flags);
-extern int TreeRowLabel_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeRowLabel *rowPtr, int flags);
-extern Tcl_Obj *TreeRowLabel_ToObj(TreeCtrl *tree, TreeRowLabel row);
-#endif /* ROW_LABEL */
 
 /* tkTreeTheme.c */
 extern int TreeTheme_Init(Tcl_Interp *interp);
@@ -1050,15 +953,6 @@ extern void TreePtrList_Free(TreePtrList *tilPtr);
 #define TreeColumnList_Free TreePtrList_Free
 #define TreeColumnList_Nth(L,n) ((TreeColumn) (L)->pointers[n])
 #define TreeColumnList_Count(L) ((L)->count)
-
-#ifdef ROW_LABEL
-#define TreeRowLabelList_Init TreePtrList_Init
-#define TreeRowLabelList_Append TreePtrList_Append
-#define TreeRowLabelList_Concat TreePtrList_Concat
-#define TreeRowLabelList_Free TreePtrList_Free
-#define TreeRowLabelList_Nth(L,n) ((TreeRowLabel) (L)->pointers[n])
-#define TreeRowLabelList_Count(L) ((L)->count)
-#endif
 
 /*****/
 

@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.47 2006/10/14 20:23:28 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.48 2006/10/14 21:20:08 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -175,7 +175,6 @@ foreach file {
     outlook-folders
     outlook-newgroup
     random
-    rowlabels
     span
     textvariable
     www-options
@@ -791,15 +790,11 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) configure -showroot $Popup(showroot)}
     $m2 add checkbutton -label "Root Button" -variable Popup(showrootbutton) \
 	-command {$Popup(T) configure -showrootbutton $Popup(showrootbutton)}
-    $m2 add checkbutton -label "Row Labels" -variable Popup(showrowlabels) \
-	-command {$Popup(T) configure -showrowlabels $Popup(showrowlabels)}
     $m add cascade -label Show -menu $m2
 
     set m2 [menu $m.mSpan -tearoff no]
     $m add cascade -label Span -menu $m2
 
-    $m add checkbutton -label "Row Label Resize" -variable Popup(rowlabelresize) \
-	-command {$Popup(T) configure -rowlabelresize $Popup(rowlabelresize)}
     $m add checkbutton -label "Use Theme" -variable Popup(usetheme) \
 	-command {$Popup(T) configure -usetheme $Popup(usetheme)}
 
@@ -931,7 +926,6 @@ proc ShowPopup {T x y X Y} {
     set Popup(showrootlines) [$T cget -showrootlines]
     set Popup(showroot) [$T cget -showroot]
     set Popup(showrootbutton) [$T cget -showrootbutton]
-    set Popup(showrowlabels) [$T cget -showrowlabels]
     set m $menu.mVisible
     $m delete 0 end
     foreach C [$T column list] {
@@ -957,7 +951,6 @@ proc ShowPopup {T x y X Y} {
 	$m add command -label "no item column" -state disabled
     }
 
-    set Popup(rowlabelresize) [$T cget -rowlabelresize]
     set Popup(usetheme) [$T cget -usetheme]
     tk_popup $menu $X $Y
     return
@@ -1009,7 +1002,6 @@ proc InitDemoList {} {
 	"Big List" DemoBigList biglist.tcl \
 	"Column Spanning" DemoSpan span.tcl \
 	"My Computer" DemoMyComputer mycomputer.tcl \
-	"Row Labels" DemoRowLabels rowlabels.tcl \
 	"Column Locking" DemoColumnLock column-lock.tcl
 	] {
 	set item [$t item create]
@@ -1251,10 +1243,6 @@ proc DemoClear {} {
     # Delete columns in demo list
     $T column delete all
 
-    # Delete row labels in demo list
-catch {
-    $T rowlabel delete all
-}
     # Delete all styles in demo list
     eval $T style delete [$T style names]
 
@@ -1280,9 +1268,7 @@ catch {
 	-highlightthickness 3 -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
 	-font [.f4.t cget -font]
-catch {
-    $T configure -showrowlabels no
-}
+
     # Undo "column configure all" in a demo
     $T column configure tail -background \
 	[lindex [$T column configure tail -background] 3]

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.43 2006/10/14 19:58:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.44 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -79,16 +79,6 @@ struct DItem
 #endif
 };
 
-#ifdef ROW_LABEL
-typedef struct DRowLabel DRowLabel;
-struct DRowLabel
-{
-    TreeRowLabel row;
-    int offset;			/* Vertical offset from canvas top. */
-    int height;
-};
-#endif
-
 typedef struct ColumnInfo {
     TreeColumn column;
     int offset;			/* Last seen x-offset */
@@ -133,17 +123,11 @@ struct DInfo
     int requests;		/* Incremented for every call to
 				   Tree_EventuallyRedraw */
     int bounds[4], empty;	/* Bounds of TREE_AREA_CONTENT */
-#ifdef ROW_LABEL
-    int rowLabelWidth;		/* Last seen Tree_WidthOfRowLabels */
-    DRowLabel *dRowLabel;	/* Offset and height of each visible row label. */
-    int dRowLabelCnt;		/* Number of visible rows in dRowLabel[] */
-    int dRowLabelAlloc;		/* Size of dRowLabel[] */
-#endif
 #ifdef COLUMN_LOCK
     int boundsL[4], emptyL;	/* Bounds of TREE_AREA_LEFT */
     int boundsR[4], emptyR;	/* Bounds of TREE_AREA_RIGHT */
-    int widthOfColumnsLeft;
-    int widthOfColumnsRight;
+    int widthOfColumnsLeft;	/* Last seen Tree_WidthOfLeftColumns() */
+    int widthOfColumnsRight;	/* Last seen Tree_WidthOfRightColumns() */
     Range *rangeLock;		/* If there is no Range for non-locked
 				 * columns, this range holds the vertical
 				 * offset and height of each ReallyVisible
@@ -199,10 +183,6 @@ Range_Redo(
     int wrapCount = 0, wrapPixels = 0;
     int count, pixels, rItemCount = 0;
     int rangeIndex = 0, itemIndex;
-#ifdef ROW_LABEL
-    DRowLabel *dRowLabel;
-    TreeRowLabel row;
-#endif
 
     if (tree->debug.enable && tree->debug.display)
 	dbwin("Range_Redo %s\n", Tk_PathName(tree->tkwin));
@@ -212,34 +192,6 @@ Range_Redo(
 
     dInfo->rangeFirst = NULL;
     dInfo->rangeLast = NULL;
-
-#ifdef ROW_LABEL
-    /* Calculate the size/position of every row label even if there are no
-     * columns or items. */
-    if (dInfo->dRowLabelAlloc < tree->rowCount) {
-	dInfo->dRowLabel = (DRowLabel *) ckrealloc((char *) dInfo->dRowLabel,
-		tree->rowCount * sizeof(DRowLabel));
-	dInfo->dRowLabelAlloc = tree->rowCount;
-    }
-    dInfo->dRowLabelCnt = 0;
-    if (Tree_WidthOfRowLabels(tree) > 0) {
-	dRowLabel = dInfo->dRowLabel;
-	pixels = 0 /*Tree_HeaderHeight(tree)*/;
-	for (row = tree->rows; row != NULL; row = TreeRowLabel_Next(row)) {
-	    if (TreeRowLabel_Visible(row)) {
-		dRowLabel->row = row;
-		dRowLabel->offset = pixels;
-		if (TreeRowLabel_FixedHeight(row) > 0)
-		    dRowLabel->height = TreeRowLabel_FixedHeight(row);
-		else
-		    dRowLabel->height = TreeRowLabel_NeededHeight(row);
-		pixels += dRowLabel->height;
-		dInfo->dRowLabelCnt++;
-		dRowLabel++;
-	    }
-	}
-    }
-#endif /* ROW_LABEL */
 
     if (tree->columnCountVis < 1)
 	goto freeRanges;
@@ -350,20 +302,6 @@ Range_Redo(
 		rItem->offset = pixels;
 		if (tree->vertical) {
 		    rItem->size = TreeItem_Height(tree, item);
-#ifdef ROW_LABEL
-		    if (dInfo->rangeFirst == NULL) {
-			if (rItem->index < dInfo->dRowLabelCnt) {
-			    dRowLabel = &dInfo->dRowLabel[rItem->index];
-			    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
-				rItem->size = TreeRowLabel_FixedHeight(dRowLabel->row);
-			    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > rItem->size) {
-				rItem->size = TreeRowLabel_NeededHeight(dRowLabel->row);
-			    }
-			    dRowLabel->offset = rItem->offset;
-			    dRowLabel->height = rItem->size;
-			}
-		    }
-#endif
 		} else {
 		    if (fixedWidth != -1) {
 			rItem->size = fixedWidth;
@@ -679,9 +617,6 @@ Range_TotalHeight(
     Range *range		/* Range to return the height of. */
     )
 {
-#ifdef ROW_LABEL
-    DInfo *dInfo = (DInfo *) tree->dInfo;
-#endif
     TreeItem item;
     RItem *rItem;
     int itemHeight;
@@ -696,20 +631,6 @@ Range_TotalHeight(
 	itemHeight = TreeItem_Height(tree, item);
 	if (tree->vertical) {
 	    rItem->offset = range->totalHeight;
-#ifdef ROW_LABEL
-	    if (dInfo->rangeFirst == range) { /* always true? */
-		if (rItem->index < dInfo->dRowLabelCnt) {
-		    DRowLabel *dRowLabel = &dInfo->dRowLabel[rItem->index];
-		    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
-			itemHeight = TreeRowLabel_FixedHeight(dRowLabel->row);
-		    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > itemHeight) {
-			itemHeight = TreeRowLabel_NeededHeight(dRowLabel->row);
-		    }
-		    dRowLabel->offset = rItem->offset;
-		    dRowLabel->height = itemHeight;
-		}
-	    }
-#endif
 	    rItem->size = itemHeight;
 	    range->totalHeight += itemHeight;
 	}
@@ -721,19 +642,6 @@ Range_TotalHeight(
 	    break;
 	rItem++;
     }
-#ifdef ROW_LABEL
-    if (!tree->vertical) {
-	if (range->index < dInfo->dRowLabelCnt) {
-	    DRowLabel *dRowLabel = &dInfo->dRowLabel[range->index];
-	    if (TreeRowLabel_FixedHeight(dRowLabel->row) > 0) {
-		range->totalHeight = TreeRowLabel_FixedHeight(dRowLabel->row);
-	    } else if (TreeRowLabel_NeededHeight(dRowLabel->row) > range->totalHeight) {
-		range->totalHeight = TreeRowLabel_NeededHeight(dRowLabel->row);
-	    }
-	    dRowLabel->height = range->totalHeight;
-	}
-    }
-#endif
     return range->totalHeight;
 }
 
@@ -830,16 +738,6 @@ Tree_TotalHeight(
 	}
 	range = range->next;
     }
-#ifdef ROW_LABEL
-    if (!tree->vertical) {
-	int i, offset = 0;
-	for (i =  0; i < dInfo->dRowLabelCnt; i++) {
-	    DRowLabel *dRowLabel = &dInfo->dRowLabel[i];
-	    dRowLabel->offset = offset;
-	    offset += dRowLabel->height;
-	}
-    }
-#endif
 #ifdef COLUMN_LOCK
     /* If dInfo->rangeLock is not NULL, then we are displaying some items
      * in locked columns but no non-locked columns. */
@@ -1993,11 +1891,6 @@ Tree_HitTest(
     if ((y < Tree_BorderTop(tree)) || (y >= Tree_BorderBottom(tree)))
 	return TREE_AREA_NONE;
 
-#ifdef ROW_LABEL
-    if (x < Tree_WidthOfRowLabels(tree))
-	return TREE_AREA_ROWLABEL;
-#endif
-
     if (y < tree->inset + Tree_HeaderHeight(tree)) {
 	return TREE_AREA_HEADER;
     }
@@ -2096,149 +1989,6 @@ Tree_ItemBbox(
     }
     return 0;
 }
-
-#ifdef ROW_LABEL
-/*
- *--------------------------------------------------------------
- *
- * Tree_RowLabelUnderPoint --
- *
- *	Return a TreeRowLabel containing the given coordinates.
- *
- * Results:
- *	TreeRowLabel token or NULL if no row label contains the point.
- *
- * Side effects:
- *	The list of Ranges will be recalculated if needed.
- *
- *--------------------------------------------------------------
- */
-
-TreeRowLabel
-Tree_RowLabelUnderPoint(
-    TreeCtrl *tree,		/* Widget info. */
-    int *x_, int *y_,		/* In: window coordinates.
-				 * Out: coordinates relative to top-left
-				 * corner of the returned row label. */
-    int *w, int *h,		/* Returned width and height. */
-    int nearest			/* TRUE if the row label nearest the coordinates
-				 * should be returned. */
-    )
-{
-    DInfo *dInfo = (DInfo *) tree->dInfo;
-    DRowLabel *dRowLabel;
-    int x = *x_, y = *y_;
-    int i, l, u;
-    int bottomOfRows;
-
-    Range_RedoIfNeeded(tree);
-    if (dInfo->dRowLabelCnt == 0)
-	return NULL;
-
-    dRowLabel = &dInfo->dRowLabel[dInfo->dRowLabelCnt - 1];
-    bottomOfRows = dRowLabel->offset + dRowLabel->height;
-    bottomOfRows -= tree->yOrigin; /* canvas -> window */
-
-    if (nearest) {
-	if (x < tree->inset)
-	    x = tree->inset;
-	if (x >= Tree_ContentLeft(tree))
-	    x = Tree_ContentLeft(tree) - 1;
-	if (y < Tree_ContentTop(tree))
-	    y = Tree_ContentTop(tree);
-	if (y >= bottomOfRows)
-	    y = bottomOfRows - 1;
-    } else {
-	if (x < tree->inset)
-	    return NULL;
-	if (x >= Tree_ContentLeft(tree))
-	    return NULL;
-	if (y < Tree_ContentTop(tree))
-	    return NULL;
-	if (y >= bottomOfRows)
-	    return NULL;
-    }
-
-    /* Window -> canvas */
-    y += tree->yOrigin;
-
-    /* Binary search */
-    l = 0;
-    u = dInfo->dRowLabelCnt - 1;
-    while (l <= u) {
-	i = (l + u) / 2;
-	dRowLabel = dInfo->dRowLabel + i;
-	if ((y >= dRowLabel->offset) && (y < dRowLabel->offset + dRowLabel->height)) {
-	    (*x_) = x - tree->inset;
-	    (*y_) = y - dRowLabel->offset;
-	    (*w) = Tree_WidthOfRowLabels(tree);
-	    (*h) = dRowLabel->height;
-	    return dRowLabel->row;
-	}
-	if (y < dRowLabel->offset)
-	    u = i - 1;
-	else
-	    l = i + 1;
-    }
-    panic("Tree_RowLabelUnderPoint: can't find any row\n");
-    return NULL;
-}
-
-/*
- *--------------------------------------------------------------
- *
- * Tree_RowLabelBbox --
- *
- *	Return the bounding box for a row label.
- *
- * Results:
- *	Return value is -1 if the row label is not visible. The coordinates
- *	are relative to the top-left corner of the canvas.
- *
- * Side effects:
- *	The list of Ranges will be recalculated if needed.
- *
- *--------------------------------------------------------------
- */
-
-int
-Tree_RowLabelBbox(
-    TreeCtrl *tree,		/* Widget info. */
-    TreeRowLabel row,		/* Row label whose bbox is needed. */
-    int *x, int *y,		/* Returned left and top. */
-    int *w, int *h		/* Returned width and height. */
-    )
-{
-    DInfo *dInfo = (DInfo *) tree->dInfo;
-    DRowLabel *dRowLabel;
-    int i, l, u;
-
-    if (!TreeRowLabel_Visible(row) || !tree->showRowLabels)
-	return -1;
-    Range_RedoIfNeeded(tree);
-
-    /* Binary search */
-    l = 0;
-    u = dInfo->dRowLabelCnt - 1;
-    while (l <= u) {
-	i = (l + u) / 2;
-	dRowLabel = dInfo->dRowLabel + i;
-	if (dRowLabel->row == row) {
-	    (*x) = -Tree_WidthOfRowLabels(tree);
-	    (*y) = dRowLabel->offset;
-	    (*w) = Tree_WidthOfRowLabels(tree);
-	    (*h) = dRowLabel->height;
-	    return 0;
-	}
-	if (TreeRowLabel_Index(row) < TreeRowLabel_Index(dRowLabel->row))
-	    u = i - 1;
-	else
-	    l = i + 1;
-    }
-
-    return -1;
-}
-#endif /* ROW_LABEL */
 
 /*
  *--------------------------------------------------------------
@@ -4836,20 +4586,6 @@ displayRetry:
 	    DINFO_DRAW_HEADER*/;
     }
 #endif /* COLUMN_LOCK */
-#ifdef ROW_LABEL
-    if (dInfo->rowLabelWidth != Tree_WidthOfRowLabels(tree)) {
-	dInfo->rowLabelWidth = Tree_WidthOfRowLabels(tree);
-	dInfo->flags |=
-	    DINFO_SET_ORIGIN_X |
-	    DINFO_UPDATE_SCROLLBAR_X |
-	    DINFO_OUT_OF_DATE |
-	    DINFO_REDO_RANGES |
-	    DINFO_DRAW_HEADER;
-    }
-    if (dInfo->flags & DINFO_REDO_RANGES) {
-	dInfo->flags |= DINFO_DRAW_ROWLABELS;
-    }
-#endif
     Range_RedoIfNeeded(tree);
     Increment_RedoIfNeeded(tree);
     if (dInfo->xOrigin != tree->xOrigin) {
@@ -4877,19 +4613,6 @@ displayRetry:
 	    DINFO_UPDATE_SCROLLBAR_Y |
 	    DINFO_OUT_OF_DATE;
     }
-#ifdef ROW_LABEL
-    if (dInfo->flags & (
-	    DINFO_SET_ORIGIN_Y |
-	    DINFO_UPDATE_SCROLLBAR_Y)) {
-	/*
-	 * Redraw rowlabels because of:
-	 * 1) vertical scrolling
-	 * 2) redo-ranges
-	 * 3) display change of rowlabel
-	 */
-	dInfo->flags |= DINFO_DRAW_ROWLABELS;
-    }
-#endif
     if (dInfo->flags & DINFO_SET_ORIGIN_X) {
 	Tree_SetOriginX(tree, tree->xOrigin);
 	dInfo->flags &= ~DINFO_SET_ORIGIN_X;
@@ -5025,75 +4748,6 @@ displayRetry:
 	}
 	dInfo->flags &= ~DINFO_DRAW_HEADER;
     }
-
-#ifdef ROW_LABEL
-    {
-	TreeRowLabel row = tree->rows;
-
-	/* Need onscreen/offscreen calls for window elements. */
-	while (row != NULL) {
-	    if (!TreeRowLabel_Visible(row) || (Tree_WidthOfRowLabels(tree) <= 0)) {
-		TreeRowLabel_OnScreen(row, FALSE);
-	    }
-	    row = TreeRowLabel_Next(row);
-	}
-    }
-    if (dInfo->flags & DINFO_DRAW_ROWLABELS) {
-	dInfo->flags &= ~DINFO_DRAW_ROWLABELS;
-	if (Tree_WidthOfRowLabels(tree) > 0) {
-	    DRowLabel *dRowLabel = dInfo->dRowLabel;
-	    int i, y = 0 - tree->yOrigin;
-	    int width = Tree_WidthOfRowLabels(tree);
-	    Drawable pixmap = drawable;
-	    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
-		pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-			tree->inset + width, Tk_Height(tkwin),
-			Tk_Depth(tkwin));
-	    }
-
-	    /* Erase entire background. */
-	    /* FIXME: background image? */
-	    Tk_Fill3DRectangle(tree->tkwin, pixmap, tree->border,
-		    tree->inset, Tree_ContentTop(tree), width,
-		    Tree_ContentHeight(tree), 0, TK_RELIEF_FLAT);
-
-	    /* This is needed for updating window positions */
-	    tree->drawableXOrigin = tree->xOrigin;
-	    tree->drawableYOrigin = tree->yOrigin;
-
-	    for (i = 0; i < dInfo->dRowLabelCnt; i++) {
-		int onScreen = FALSE;
-		dRowLabel = &dInfo->dRowLabel[i];
-		if (dRowLabel->height > 0) {
-		    if ((y + dRowLabel->height > Tree_ContentTop(tree)) &&
-			    (y < Tree_ContentBottom(tree))) {
-			TreeRowLabel_Draw(dRowLabel->row, tree->inset, y,
-				width, dRowLabel->height,
-				pixmap);
-			onScreen = TRUE;
-		    }
-		    y += dRowLabel->height;
-		}
-		TreeRowLabel_OnScreen(dRowLabel->row, onScreen);
-	    }
-
-	    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
-		XCopyArea(tree->display, pixmap, drawable,
-			tree->copyGC, tree->inset, Tree_ContentTop(tree),
-			width, Tree_ContentHeight(tree),
-			tree->inset, Tree_ContentTop(tree));
-		Tk_FreePixmap(tree->display, pixmap);
-	    }
-
-	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], tree->inset);
-		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], Tree_ContentTop(tree));
-		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], tree->inset);
-		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], Tree_ContentBottom(tree));
-	    }
-	}
-    }
-#endif /* ROW_LABEL */
 
     if (tree->vertical) {
 	numCopy = ScrollVerticalComplex(tree);
@@ -6383,14 +6037,9 @@ Tree_InvalidateArea(
     if ((y2 > tree->inset) && (y1 < tree->inset + Tree_HeaderHeight(tree)))
 	dInfo->flags |= DINFO_DRAW_HEADER;
 
-#ifdef ROW_LABEL
-    if (x2 > tree->inset && x1 < Tree_ContentLeft(tree))
-	dInfo->flags |= DINFO_DRAW_ROWLABELS;
-#endif
-
     dItem = dInfo->dItem;
     while (dItem != NULL) {
-	if (!(dItem->area.flags & DITEM_ALL_DIRTY) && !dInfo->empty &&
+	if (!dInfo->empty && !(dItem->area.flags & DITEM_ALL_DIRTY) &&
 		(x2 > dItem->area.x) && (x1 < dItem->area.x + dItem->area.width) &&
 		(y2 > dItem->y) && (y1 < dItem->y + dItem->height)) {
 	    InvalidateDItemX(dItem, &dItem->area, dItem->area.x, x1, x2 - x1);
@@ -6492,13 +6141,6 @@ Tree_InvalidateRegion(
 	    TkRectInRegion(region, minX, minY, maxX - minX, maxY - minY)
 		!= RectangleOut)
 	dInfo->flags |= DINFO_DRAW_HEADER;
-
-#ifdef ROW_LABEL
-    if (TkRectInRegion(region, tree->inset, Tree_ContentTop(tree),
-	    Tree_WidthOfRowLabels(tree), Tree_ContentHeight(tree))
-	    != RectangleOut)
-	dInfo->flags |= DINFO_DRAW_ROWLABELS;
-#endif
 
     rgn = TkCreateRegion();
 
@@ -6731,10 +6373,6 @@ TreeDInfo_Free(
     }
     while (range != NULL)
 	range = Range_Free(tree, range);
-#ifdef ROW_LABEL
-    if (dInfo->dRowLabel != NULL)
-	ckfree((char *) dInfo->dRowLabel);
-#endif
     Tk_FreeGC(tree->display, dInfo->scrollGC);
     if (dInfo->flags & DINFO_REDRAW_PENDING)
 	Tcl_CancelIdleCall(Tree_Display, (ClientData) tree);

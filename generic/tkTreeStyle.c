@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.51 2006/10/11 01:35:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.52 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2789,9 +2789,6 @@ Element_CreateAndConfig(
 				 * be NULL for a master element. */
     TreeItemColumn column,	/* Item-column containing the element.
 				 * Should be NULL for a master element. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using element, or NULL. */
-#endif
     Element *masterElem,	/* Master element if creating an instance. */
     ElementType *type,		/* Element type. Should be NULL when
 				 * creating an instance. */
@@ -2824,9 +2821,6 @@ Element_CreateAndConfig(
     args.elem = elem;
     args.create.item = item;
     args.create.column = column;
-#ifdef ROW_LABEL
-    args.create.row = row;
-#endif
     if ((*type->createProc)(&args) != TCL_OK)
     {
 #ifdef ALLOC_HAX
@@ -2901,9 +2895,6 @@ Style_CreateElem(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using element, or NULL. */
-#endif
     IStyle *style,		/* Style to search/add the element to. */
     Element *masterElem,	/* Element to find or create and instance of. */
     int *isNew)			/* If non-NULL, set to TRUE if a new instance
@@ -2937,11 +2928,7 @@ Style_CreateElem(
     if (i == masterStyle->numElements)
 	return NULL;
 
-#ifdef ROW_LABEL
-    elem = Element_CreateAndConfig(tree, item, column, row, masterElem, NULL, NULL, 0, NULL);
-#else
     elem = Element_CreateAndConfig(tree, item, column, masterElem, NULL, NULL, 0, NULL);
-#endif
     if (elem == NULL)
 	return NULL;
 
@@ -3262,31 +3249,6 @@ Style_Changed(
     }
     if (updateDInfo)
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-#ifdef ROW_LABEL
-    updateDInfo = FALSE;
-    hPtr = Tcl_FirstHashEntry(&tree->rowIDHash, &search);
-    while (hPtr != NULL)
-    {
-	TreeRowLabel row = (TreeRowLabel) Tcl_GetHashValue(hPtr);
-	style = (IStyle *) TreeRowLabel_GetStyle(row);
-	if ((style != NULL) && (style->master == masterStyle))
-	{
-	    for (i = 0; i < masterStyle->numElements; i++)
-	    {
-		IElementLink *eLink = &style->elements[i];
-		/* This is needed if the -width/-height layout options change */
-		eLink->neededWidth = eLink->neededHeight = -1;
-	    }
-	    style->neededWidth = style->neededHeight = -1;
-	    updateDInfo = TRUE;
-	}
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-    if (updateDInfo) {
-	tree->neededWidthOfRows = -1;
-	Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-    }
-#endif /* ROW_LABEL */
 }
 
 /*
@@ -3585,26 +3547,6 @@ Style_ChangeElements(
     }
     if (updateDInfo)
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-#ifdef ROW_LABEL
-    updateDInfo = FALSE;
-    hPtr = Tcl_FirstHashEntry(&tree->rowIDHash, &search);
-    while (hPtr != NULL)
-    {
-	TreeRowLabel row = (TreeRowLabel) Tcl_GetHashValue(hPtr);
-	style = (IStyle *) TreeRowLabel_GetStyle(row);
-	if ((style != NULL) && (style->master == masterStyle))
-	{
-	    IStyle_ChangeElementsAux(tree, style, count, elemList, map);
-	    style->neededWidth = style->neededHeight = -1;
-	    updateDInfo = TRUE;
-	}
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-    if (updateDInfo) {
-	tree->neededWidthOfRows = -1;
-	Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-    }
-#endif
 }
 
 /*
@@ -3721,47 +3663,6 @@ Style_ElemChanged(
     }
     if (updateDInfo)
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-#ifdef ROW_LABEL
-    updateDInfo = FALSE;
-    hPtr = Tcl_FirstHashEntry(&tree->rowIDHash, &search);
-    while (hPtr != NULL)
-    {
-	TreeRowLabel row = (TreeRowLabel) Tcl_GetHashValue(hPtr);
-	style = (IStyle *) TreeRowLabel_GetStyle(row);
-	if ((style != NULL) && (style->master == masterStyle))
-	{
-	    iMask = csM;
-	    for (i = 0; i < masterStyle->numElements; i++)
-	    {
-		eLink = &style->elements[i];
-		if (eLink->elem == masterElem)
-		{
-		    if (csM & CS_LAYOUT)
-			eLink->neededWidth = eLink->neededHeight = -1;
-		    break;
-		}
-		/* Instance element */
-		if (eLink->elem->master == masterElem)
-		{
-		    args.elem = eLink->elem;
-		    eMask = (*masterElem->typePtr->changeProc)(&args);
-		    if (eMask & CS_LAYOUT)
-			eLink->neededWidth = eLink->neededHeight = -1;
-		    iMask |= eMask;
-		    break;
-		}
-	    }
-	    if (iMask & CS_LAYOUT) {
-		tree->neededWidthOfRows = -1;
-		updateDInfo = TRUE;
-	    }
-	}
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-    if (updateDInfo) {
-	Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-    }
-#endif /* ROW_LABEL */
 }
 
 /*
@@ -3925,9 +3826,6 @@ Style_SetImageOrText(
     TreeItem item,		/* Item containing the style. Needed if
 				 * a new instance Element is created. */
     TreeItemColumn column,	/* Item-column containing the style */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using element, or NULL. */
-#endif
     IStyle *style,		/* The style */
     ElementType *typePtr,	/* Element type to look for. */
     CONST char *optionName,	/* NULL-terminated config option name. */
@@ -3954,11 +3852,8 @@ Style_SetImageOrText(
 	    Tcl_Obj *objv[2];
 	    ElementArgs args;
 
-#ifdef ROW_LABEL
-	    eLink = Style_CreateElem(tree, item, column, row, style, masterElem, NULL);
-#else
 	    eLink = Style_CreateElem(tree, item, column, style, masterElem, NULL);
-#endif
+
 	    objv[0] = *optionNameObj;
 	    objv[1] = valueObj;
 	    args.tree = tree;
@@ -4005,20 +3900,12 @@ TreeStyle_SetImage(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the style. */
     TreeItemColumn column,	/* Item-column containing the style. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using the style, or NULL. */
-#endif
     TreeStyle style_,		/* The instance style. */
     Tcl_Obj *valueObj		/* New value for -image option. */
     )
 {
-#ifdef ROW_LABEL
-    return Style_SetImageOrText(tree, item, column, row, (IStyle *) style_,
-	&elemTypeImage, "-image", &confImageObj, valueObj);
-#else
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
 	&elemTypeImage, "-image", &confImageObj, valueObj);
-#endif
 }
 
 /*
@@ -4044,20 +3931,12 @@ TreeStyle_SetText(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the style. */
     TreeItemColumn column,	/* Item-column containing the style. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using the style, or NULL. */
-#endif
     TreeStyle style_,		/* The instance style. */
     Tcl_Obj *valueObj		/* New value for -text option. */
     )
 {
-#ifdef ROW_LABEL
-    return Style_SetImageOrText(tree, item, column, row, (IStyle *) style_,
-	&elemTypeText, "-text", &confTextObj, valueObj);
-#else
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
 	&elemTypeText, "-text", &confTextObj, valueObj);
-#endif
 }
 
 /*
@@ -4116,21 +3995,6 @@ Style_Deleted(
 	}
 	hPtr = Tcl_NextHashEntry(&search);
     }
-#ifdef ROW_LABEL
-    hPtr = Tcl_FirstHashEntry(&tree->rowIDHash, &search);
-    while (hPtr != NULL)
-    {
-	TreeRowLabel row = (TreeRowLabel) Tcl_GetHashValue(hPtr);
-	style = (IStyle *) TreeRowLabel_GetStyle(row);
-	if ((style != NULL) && (style->master == masterStyle))
-	{
-	    TreeRowLabel_ForgetStyle(row);
-	    tree->neededWidthOfRows = -1;
-	    Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-	}
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-#endif
 
     /* Update -defaultstyle option */
     if (tree->defaultStyle.stylesObj != NULL)
@@ -4408,40 +4272,11 @@ Tree_ElementChangedItself(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using element, or NULL. */
-#endif
     Element *elem,		/* The element that changed. */
     int csM			/* CS_xxx flags detailing the effects of
 				 * the change. */
     )
 {
-#ifdef ROW_LABEL
-    if ((row != NULL) && (csM & CS_LAYOUT)) {
-	IStyle *style = (IStyle *) TreeRowLabel_GetStyle(row);
-	IElementLink *eLink = NULL;
-	int i;
-
-	if (style == NULL)
-	    panic("Tree_ElementChangedItself but style is NULL\n");
-
-	for (i = 0; i < style->master->numElements; i++)
-	{
-	    eLink = &style->elements[i];
-	    if (eLink->elem == elem)
-		break;
-	}
-
-	if (eLink == NULL)
-	    panic("Tree_ElementChangedItself but eLink is NULL\n");
-
-	eLink->neededWidth = eLink->neededHeight = -1;
-	style->neededWidth = style->neededHeight = -1;
-	tree->neededWidthOfRows = -1;
-	Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-	return;
-    }
-#endif
     if (csM & CS_LAYOUT)
     {
 	IStyle *style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
@@ -4580,9 +4415,6 @@ TreeStyle_ElementCget(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using style or NULL */
-#endif
     TreeStyle style_,		/* Style containing the element. */
     Tcl_Obj *elemObj,		/* Name of the element. */
     Tcl_Obj *optionNameObj	/* Name of the config option. */
@@ -4599,21 +4431,6 @@ TreeStyle_ElementCget(
     eLink = IStyle_FindElem(tree, style, elem, NULL);
     if ((eLink != NULL) && (eLink->elem == elem))
     {
-#ifdef ROW_LABEL
-	if (row != NULL) {
-	    FormatResult(tree->interp,
-		"element %s is not configured in row %s%d",
-		elem->name, tree->rowPrefix, TreeRowLabel_GetID(row));
-	} else {
-	    int index = TreeItemColumn_Index(tree, item, column);
-	    TreeColumn treeColumn = Tree_FindColumn(tree, index);
-
-	    FormatResult(tree->interp,
-		"element %s is not configured in item %s%d column %s%d",
-		elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
-		tree->columnPrefix, TreeColumn_GetID(treeColumn));
-	}
-#else
 	int index = TreeItemColumn_Index(tree, item, column);
 	TreeColumn treeColumn = Tree_FindColumn(tree, index);
 
@@ -4621,7 +4438,6 @@ TreeStyle_ElementCget(
 	    "element %s is not configured in item %s%d column %s%d",
 	    elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
 	    tree->columnPrefix, TreeColumn_GetID(treeColumn));
-#endif
 	return TCL_ERROR;
     }
     if (eLink == NULL)
@@ -4662,9 +4478,6 @@ TreeStyle_ElementConfigure(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
-#ifdef ROW_LABEL
-    TreeRowLabel row,		/* Row using style or NULL */
-#endif
     TreeStyle style_,		/* Style containing the element. */
     Tcl_Obj *elemObj,		/* Name of the element. */
     int objc,			/* Number of arguments. */
@@ -4689,21 +4502,6 @@ TreeStyle_ElementConfigure(
 	eLink = IStyle_FindElem(tree, style, elem, NULL);
 	if ((eLink != NULL) && (eLink->elem == elem))
 	{
-#ifdef ROW_LABEL
-	    if (row != NULL) {
-		FormatResult(tree->interp,
-		    "element %s is not configured in row %s%d",
-		    elem->name, tree->rowPrefix, TreeRowLabel_GetID(row));
-	    } else {
-		int index = TreeItemColumn_Index(tree, item, column);
-		TreeColumn treeColumn = Tree_FindColumn(tree, index);
-
-		FormatResult(tree->interp,
-		    "element %s is not configured in item %s%d column %s%d",
-		    elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
-		    tree->columnPrefix, TreeColumn_GetID(treeColumn));
-	    }
-#else
 	    int index = TreeItemColumn_Index(tree, item, column);
 	    TreeColumn treeColumn = Tree_FindColumn(tree, index);
 
@@ -4711,7 +4509,6 @@ TreeStyle_ElementConfigure(
 		"element %s is not configured in item %s%d column %s%d",
 		elem->name, tree->itemPrefix, TreeItem_GetID(tree, item),
 		tree->columnPrefix, TreeColumn_GetID(treeColumn));
-#endif
 	    return TCL_ERROR;
 	}
 	if (eLink == NULL)
@@ -4733,11 +4530,7 @@ TreeStyle_ElementConfigure(
     {
 	int isNew;
 
-#ifdef ROW_LABEL
-	eLink = Style_CreateElem(tree, item, column, row, style, elem, &isNew);
-#else
 	eLink = Style_CreateElem(tree, item, column, style, elem, &isNew);
-#endif
 	if (eLink == NULL)
 	{
 	    FormatResult(tree->interp, "style %s does not use element %s",
@@ -4968,11 +4761,7 @@ TreeElementCmd(
 	    }
 	    if (TreeElement_TypeFromObj(tree, objv[4], &typePtr) != TCL_OK)
 		return TCL_ERROR;
-#ifdef ROW_LABEL
-	    elem = Element_CreateAndConfig(tree, NULL, NULL, NULL, NULL, typePtr, name, objc - 5, objv + 5);
-#else
 	    elem = Element_CreateAndConfig(tree, NULL, NULL, NULL, typePtr, name, objc - 5, objv + 5);
-#endif
 	    if (elem == NULL)
 		return TCL_ERROR;
 	    hPtr = Tcl_CreateHashEntry(&tree->elementHash, name, &isNew);
@@ -6770,32 +6559,6 @@ Tree_UndefineState(
     }
     Tree_InvalidateColumnWidth(tree, NULL);
     Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-
-#ifdef ROW_LABEL
-    hPtr = Tcl_FirstHashEntry(&tree->rowIDHash, &search);
-    while (hPtr != NULL)
-    {
-	TreeRowLabel row = (TreeRowLabel) Tcl_GetHashValue(hPtr);
-	IStyle *style = (IStyle *) TreeRowLabel_GetStyle(row);
-	if (style != NULL)
-	{
-	    for (i = 0; i < style->master->numElements; i++)
-	    {
-		eLink = &style->elements[i];
-		/* Instance element */
-		if (eLink->elem->master != NULL) {
-		    args.elem = eLink->elem;
-		    (*args.elem->typePtr->undefProc)(&args);
-		}
-		eLink->neededWidth = eLink->neededHeight = -1;
-	    }
-	    style->neededWidth = style->neededHeight = -1;
-	    tree->neededWidthOfRows = -1;
-	}
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-    Tree_DInfoChanged(tree, DINFO_DRAW_ROWLABELS);
-#endif
 
     hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
     while (hPtr != NULL)

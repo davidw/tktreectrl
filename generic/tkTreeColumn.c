@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.44 2006/10/14 19:52:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.45 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4609,27 +4609,6 @@ Tree_DrawHeader(
 		    x, y, width, height, column->borderWidth, TK_RELIEF_RAISED);
 	}
     }
-
-#ifdef ROW_LABEL
-    if (Tree_WidthOfRowLabels(tree) > 0) {
-	column = (Column *) tree->columnTail;
-	width = Tree_WidthOfRowLabels(tree);
-	height = tree->headerHeight;
-	if (tree->useTheme &&
-	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, 0, tree->inset, y, width, height) == TCL_OK)) {
-	} else {
-	    Tk_3DBorder border;
-	    border = PerStateBorder_ForState(tree, &column->border,
-		Column_MakeState(column), NULL);
-	    if (border == NULL)
-		border = tree->border;
-	    Tk_Fill3DRectangle(tkwin, pixmap, border,
-		    tree->inset, y, width, height,
-		    column->borderWidth, TK_RELIEF_RAISED);
-	}
-	column = (Column *) tree->columns;
-    }
-#endif
 
 #ifdef COLUMN_LOCK
     DrawHeaderLeft(tree, pixmap);

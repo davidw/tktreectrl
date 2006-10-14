@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.69 2006/10/14 19:47:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.70 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -187,6 +187,10 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_RELIEF, "-relief", "relief", "Relief",
      "sunken", -1, Tk_Offset(TreeCtrl, relief),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
+    {TK_OPTION_PIXELS, "-rowproxy", "rowProxy", "RowProxy",
+     (char *) NULL, Tk_Offset(TreeCtrl, rowProxy.yObj),
+     Tk_Offset(TreeCtrl, rowProxy.y),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_PROXY},
     {TK_OPTION_STRING, "-scrollmargin", "scrollMargin", "ScrollMargin",
      "0", Tk_Offset(TreeCtrl, scrollMargin), -1,
      0, (ClientData) NULL, 0},
@@ -246,29 +250,6 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-yscrollincrement", "yScrollIncrement", "ScrollIncrement",
      "0", -1, Tk_Offset(TreeCtrl, yScrollIncrement),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
-#ifdef ROW_LABEL
-    {TK_OPTION_BOOLEAN, "-rowlabelresize", "rowLabelResize",
-     "RowLabelResize", "1", -1, Tk_Offset(TreeCtrl, rowLabelResize),
-     0, (ClientData) NULL, 0},
-    {TK_OPTION_PIXELS, "-rowlabelwidth", "rowLabelWidth", "RowLabelWidth",
-     (char *) NULL, Tk_Offset(TreeCtrl, rowLabelWidthObj), Tk_Offset(TreeCtrl, rowLabelWidth),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
-    {TK_OPTION_PIXELS, "-minrowlabelwidth", "minRowLabelWidth", "RowLabelWidth",
-     (char *) NULL, Tk_Offset(TreeCtrl, minRowLabelWidthObj), Tk_Offset(TreeCtrl, minRowLabelWidth),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
-    {TK_OPTION_PIXELS, "-maxrowlabelwidth", "maxRowLabelWidth", "RowLabelWidth",
-     (char *) NULL, Tk_Offset(TreeCtrl, maxRowLabelWidthObj), Tk_Offset(TreeCtrl, maxRowLabelWidth),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_RELAYOUT},
-    {TK_OPTION_BOOLEAN, "-showrowlabels", "showRowLabels",
-     "ShowRowLabels", "0", -1, Tk_Offset(TreeCtrl, showRowLabels),
-     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
-    {TK_OPTION_STRING, "-rowlabelprefix", "rowLabelPrefix", "RowLabelPrefix",
-     "", -1, Tk_Offset(TreeCtrl, rowPrefix), 0, (ClientData) NULL, 0},
-    {TK_OPTION_PIXELS, "-rowproxy", "rowProxy", "RowProxy",
-     (char *) NULL, Tk_Offset(TreeCtrl, rowProxy.yObj),
-     Tk_Offset(TreeCtrl, rowProxy.y),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_PROXY},
-#endif /* ROW_LABEL */
     {TK_OPTION_END}
 };
 
@@ -410,9 +391,6 @@ TreeObjCmd(
     TreeMarquee_Init(tree);
     TreeDragImage_Init(tree);
     TreeDInfo_Init(tree);
-#ifdef ROW_LABEL
-    Tree_InitRowLabels(tree);
-#endif
 
     Tk_CreateEventHandler(tree->tkwin,
 	    ExposureMask|StructureNotifyMask|FocusChangeMask|ActivateMask,
@@ -478,11 +456,7 @@ static int TreeWidgetCmd(
 	"debug", "depth", "dragimage",
 	"element", "expand", "identify", "index", "item",
 	"marquee", "notify", "numcolumns", "numitems", "orphans",
-	"range",
-#ifdef ROW_LABEL
-	"rowlabel",
-#endif
-	"scan", "see", "selection", "state", "style",
+	"range", "scan", "see", "selection", "state", "style",
 	"toggle", "xview", "yview", (char *) NULL
     };
     enum {
@@ -492,9 +466,6 @@ static int TreeWidgetCmd(
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
 	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS, COMMAND_ORPHANS, COMMAND_RANGE,
-#ifdef ROW_LABEL
-	COMMAND_ROWLABEL,
-#endif
 	COMMAND_SCAN, COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE,
 	COMMAND_STYLE, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
     };
@@ -806,34 +777,6 @@ static int TreeWidgetCmd(
 	    if (hit == TREE_AREA_NONE)
 		break;
 
-#ifdef ROW_LABEL
-	    /* Point in row labels */
-	    if (hit == TREE_AREA_ROWLABEL) {
-		TreeRowLabel row;
-		int rx = x, ry = y, w, h;
-
-		/* What to call the dead space at top-left? */
-		if (y < Tree_ContentTop(tree)) {
-		    break;
-		}
-
-		row = Tree_RowLabelUnderPoint(tree, &rx, &ry, &w, &h, FALSE);
-		if (row == NULL)
-		    break;
-		sprintf(buf, "rowlabel %s%d", tree->rowPrefix,
-			TreeRowLabel_GetID(row));
-		TreeRowLabel_Identify(row, rx, ry, buf);
-		if (rx >= w - 4)
-		    strcpy(buf + strlen(buf), " right");
-		else if (ry < 4)
-		    strcpy(buf + strlen(buf), " top");
-		else if (ry >= h - 4)
-		    strcpy(buf + strlen(buf), " bottom");
-		Tcl_SetResult(interp, buf, TCL_VOLATILE);
-		break;
-	    }
-#endif /* ROW_LABEL */
-
 	    if (hit == TREE_AREA_HEADER) {
 		treeColumn = Tree_HeaderUnderPoint(tree, &x, &y, &width, &height,
 			FALSE);
@@ -1034,13 +977,7 @@ static int TreeWidgetCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
-#ifdef ROW_LABEL
-	case COMMAND_ROWLABEL:
-	{
-	    result = TreeRowLabelCmd(clientData, interp, objc, objv);
-	    break;
-	}
-#endif
+
 	case COMMAND_SCAN:
 	{
 	    static CONST char *optionName[] = { "dragto", "mark",
@@ -1190,7 +1127,6 @@ static int TreeWidgetCmd(
 	    break;
 	}
     }
-done:
     Tree_ReleaseItems(tree);
     Tcl_Release((ClientData) tree);
     return result;
@@ -1420,9 +1356,6 @@ badWrap:
 
     tree->itemPrefixLen = strlen(tree->itemPrefix);
     tree->columnPrefixLen = strlen(tree->columnPrefix);
-#ifdef ROW_LABEL
-    tree->rowPrefixLen = strlen(tree->rowPrefix);
-#endif
 
     Tk_SetWindowBackground(tree->tkwin,
 	    Tk_3DBorderColor(tree->border)->pixel);
@@ -1712,10 +1645,6 @@ TreeDestroy(
     }
     Tcl_DeleteHashTable(&tree->imageHash);
 
-#ifdef ROW_LABEL
-    /* Before TreeStyle_Free */
-    Tree_FreeRowLabels(tree);
-#endif
     TreeStyle_Free(tree);
 
     TreeDragImage_Free(tree->dragImage);

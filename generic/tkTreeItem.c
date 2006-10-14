@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.68 2006/10/14 20:16:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.69 2006/10/14 21:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4973,13 +4973,8 @@ ItemElementCmd(
 		result = TCL_ERROR;
 		break;
 	    }
-#ifdef ROW_LABEL
-	    result = TreeStyle_ElementCget(tree, (TreeItem) item,
-		    (TreeItemColumn) column, NULL, column->style, objv[6], objv[7]);
-#else
 	    result = TreeStyle_ElementCget(tree, (TreeItem) item,
 		    (TreeItemColumn) column, column->style, objv[6], objv[7]);
-#endif
 	    break;
 	}
 
@@ -5121,15 +5116,9 @@ if (!co[index].isColumn) panic("isColumn == FALSE");
 			    int eMask, index2;
 
 if (co[indexElem].numArgs == -1) panic("indexElem=%d (%s) objc=%d numArgs == -1", indexElem, Tcl_GetString(objv[indexElem]), objc);
-#ifdef ROW_LABEL
-			    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
-				    (TreeItemColumn) column, NULL, column->style, objv[indexElem],
-				    co[indexElem].numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
-#else
 			    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
 				    (TreeItemColumn) column, column->style, objv[indexElem],
 				    co[indexElem].numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
-#endif
 			    if (result != TCL_OK)
 				break;
 
@@ -7328,15 +7317,9 @@ TreeItemCmd(
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
-#ifdef ROW_LABEL
-		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item,
-				(TreeItemColumn) column, NULL, column->style,
-				objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK) {
-#else
 		    if (TreeStyle_ElementConfigure(tree, (TreeItem) item,
 				(TreeItemColumn) column, column->style,
 				objv2[0], objc2 - 1, objv2 + 1, &eMask) != TCL_OK) {
-#endif
 			result = TCL_ERROR;
 			goto doneComplex;
 		    }
@@ -7950,17 +7933,10 @@ doneSPAN:
 			    goto doneTEXT;
 			}
 			result = isImage ?
-#ifdef ROW_LABEL
-			    TreeStyle_SetImage(tree, _item,
-				(TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj) :
-			    TreeStyle_SetText(tree, _item,
-				(TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj);
-#else
 			    TreeStyle_SetImage(tree, _item,
 				(TreeItemColumn) column, column->style, co[i].obj) :
 			    TreeStyle_SetText(tree, _item,
 				(TreeItemColumn) column, column->style, co[i].obj);
-#endif
 			if (result != TCL_OK)
 			    goto doneTEXT;
 			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
