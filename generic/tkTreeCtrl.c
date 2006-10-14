@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.68 2006/10/11 01:16:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.69 2006/10/14 19:47:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -523,7 +523,7 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "item");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK) {
+	    if (TreeItem_FromObj(tree, objv[2], &item, IFO_NOT_NULL) != TCL_OK) {
 		goto error;
 	    }
 	    if (item != tree->activeItem) {
@@ -611,63 +611,79 @@ static int TreeWidgetCmd(
 
 	case COMMAND_CONTENTBOX:
 	{
+	    int x1, y1, x2, y2;
+
 	    if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
 		goto error;
 	    }
-	    FormatResult(interp, "%d %d %d %d",
-		    Tree_ContentLeft(tree), Tree_ContentTop(tree),
-		    Tree_ContentRight(tree), Tree_ContentBottom(tree));
+	    if (Tree_AreaBbox(tree, TREE_AREA_CONTENT, &x1, &y1, &x2, &y2)) {
+		FormatResult(interp, "%d %d %d %d", x1, y1, x2, y2);
+	    }
 	    break;
 	}
 
+#ifdef DEPRECATED
+	/* T expand ?-recurse? I */
 	case COMMAND_COLLAPSE:
 	case COMMAND_EXPAND:
 	case COMMAND_TOGGLE:
 	{
-	    char *s;
-	    int i;
 	    int recurse = 0;
-	    TreeItem item;
+	    int mode = 0; /* lint */
+	    int i, count;
+	    TreeItemList items, item2s;
+	    TreeItem _item;
+	    ItemForEach iter;
 
-	    if (objc == 2)
-		break;
-	    s = Tcl_GetString(objv[2]);
-	    if (!strcmp(s, "-recurse")) {
+	    if (objc < 3 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?-recurse? item");
+		goto error;
+	    }
+	    if (objc == 4) {
+		char *s = Tcl_GetString(objv[3]);
+		if (strcmp(s, "-recurse")) {
+		    FormatResult(interp, "bad option \"%s\": must be -recurse",
+			    s);
+		    goto error;
+		}
 		recurse = 1;
-		if (objc == 3)
+	    }
+	    if (TreeItemList_FromObj(tree, objv[objc - 1], &items,
+		    IFO_NOT_NULL) != TCL_OK) {
+		goto error;
+	    }
+	    switch (index) {
+		case COMMAND_COLLAPSE:
+		    mode = 0;
+		    break;
+		case COMMAND_EXPAND:
+		    mode = 1;
+		    break;
+		case COMMAND_TOGGLE:
+		    mode = -1;
 		    break;
 	    }
-	    for (i = 2 + recurse; i < objc; i++) {
-		int oldRecurse = recurse;
-		if (TreeItem_FromObj(tree, objv[i], &item, IFO_ALLOK) != TCL_OK)
-		    goto error;
-		if (item == ITEM_ALL) {
-		    item = tree->root;
-		    recurse = 1;
+	    TreeItemList_Init(tree, &item2s, 0);
+	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		TreeItemList_Append(&item2s, _item);
+		if (!iter.all && recurse) {
+		    TreeItem_ListDescendants(tree, _item, &item2s);
 		}
-		switch (index) {
-		    case COMMAND_COLLAPSE:
-			TreeItem_OpenClose(tree, item, 0, recurse);
-			break;
-		    case COMMAND_EXPAND:
-			TreeItem_OpenClose(tree, item, 1, recurse);
-			break;
-		    case COMMAND_TOGGLE:
-			TreeItem_OpenClose(tree, item, -1, recurse);
-			break;
-		}
-		recurse = oldRecurse;
 	    }
+	    count = TreeItemList_Count(&item2s);
+	    for (i = 0; i < count; i++) {
+		_item = TreeItemList_Nth(&item2s, i);
+		TreeItem_OpenClose(tree, _item, mode, FALSE);
+	    }
+	    TreeItemList_Free(&items);
+	    TreeItemList_Free(&item2s);
 #ifdef SELECTION_VISIBLE
 	    Tree_DeselectHidden(tree);
 #endif
-#if 0
-	    if (tree->debug.enable)
-		Tree_Debug(tree);
-#endif
 	    break;
 	}
+#endif /* DEPRECATED */
 
 	case COMMAND_COLUMN:
 	{
@@ -685,12 +701,12 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "item1 op item2");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &item1, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[2], &item1, IFO_NOT_NULL) != TCL_OK)
 		goto error;
 	    if (Tcl_GetIndexFromObj(interp, objv[3], opName, "comparison operator", 0,
 		    &op) != TCL_OK)
 		goto error;
-	    if (TreeItem_FromObj(tree, objv[4], &item2, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[4], &item2, IFO_NOT_NULL) != TCL_OK)
 		goto error;
 	    if (TreeItem_RootAncestor(tree, item1) !=
 		    TreeItem_RootAncestor(tree, item2)) {
@@ -730,7 +746,7 @@ static int TreeWidgetCmd(
 		goto error;
 	    }
 	    if (objc == 3) {
-		if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
+		if (TreeItem_FromObj(tree, objv[2], &item, IFO_NOT_NULL) != TCL_OK)
 		    goto error;
 		depth = TreeItem_GetDepth(tree, item);
 		if (TreeItem_RootAncestor(tree, item) == tree->root)
@@ -787,12 +803,12 @@ static int TreeWidgetCmd(
 	    hit = Tree_HitTest(tree, x, y);
 
 	    /* Require point inside borders */
-	    if (hit == TREE_HIT_NONE)
+	    if (hit == TREE_AREA_NONE)
 		break;
 
 #ifdef ROW_LABEL
 	    /* Point in row labels */
-	    if (hit == TREE_HIT_ROWLABEL) {
+	    if (hit == TREE_AREA_ROWLABEL) {
 		TreeRowLabel row;
 		int rx = x, ry = y, w, h;
 
@@ -818,7 +834,7 @@ static int TreeWidgetCmd(
 	    }
 #endif /* ROW_LABEL */
 
-	    if (hit == TREE_HIT_HEADER) {
+	    if (hit == TREE_AREA_HEADER) {
 		treeColumn = Tree_HeaderUnderPoint(tree, &x, &y, &width, &height,
 			FALSE);
 		if (treeColumn == tree->columnTail) {
@@ -853,8 +869,8 @@ static int TreeWidgetCmd(
 		depth = (tree->showButtons && tree->showRootButton) ? 1 : 0;
 
 #ifdef COLUMN_LOCK
-	    lock = (hit == TREE_HIT_LEFT) ? COLUMN_LOCK_LEFT :
-		(hit == TREE_HIT_RIGHT) ? COLUMN_LOCK_RIGHT :
+	    lock = (hit == TREE_AREA_LEFT) ? COLUMN_LOCK_LEFT :
+		(hit == TREE_AREA_RIGHT) ? COLUMN_LOCK_RIGHT :
 		COLUMN_LOCK_NONE;
 
 	    /* Point is in a line or button */
@@ -903,7 +919,7 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "item");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &item, IFO_NULLOK) != TCL_OK) {
+	    if (TreeItem_FromObj(tree, objv[2], &item, IFO_NOT_NULL) != TCL_OK) {
 		goto error;
 	    }
 	    if (item != NULL)
@@ -987,9 +1003,9 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "first last");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &itemFirst, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[2], &itemFirst, IFO_NOT_NULL) != TCL_OK)
 		goto error;
-	    if (TreeItem_FromObj(tree, objv[3], &itemLast, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[3], &itemLast, IFO_NOT_NULL) != TCL_OK)
 		goto error;
 	    if (TreeItem_RootAncestor(tree, itemFirst) !=
 		    TreeItem_RootAncestor(tree, itemLast)) {
@@ -1094,7 +1110,7 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "item");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[2], &item, IFO_NOT_NULL) != TCL_OK)
 		goto error;
 
 	    /* Canvas coords */
@@ -2454,16 +2470,16 @@ TreeSelectionCmd(
 		Tcl_WrongNumArgs(interp, 3, objv, "first ?last?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_ALLOK) != TCL_OK)
+	    if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
-	    itemFirst = TreeItemList_ItemN(&itemsFirst, 0);
+	    itemFirst = TreeItemList_Nth(&itemsFirst, 0);
 	    itemLast = NULL;
 	    if (objc == 5) {
-		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_ALLOK) != TCL_OK) {
+		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_NOT_NULL) != TCL_OK) {
 		    TreeItemList_Free(&itemsFirst);
 		    return TCL_ERROR;
 		}
-		itemLast = TreeItemList_ItemN(&itemsLast, 0);
+		itemLast = TreeItemList_Nth(&itemsLast, 0);
 	    }
 	    if ((itemFirst == ITEM_ALL) || (itemLast == ITEM_ALL)) {
 		if (objc == 5) TreeItemList_Free(&itemsLast);
@@ -2517,7 +2533,7 @@ TreeSelectionCmd(
 	    count = TreeItemList_Count(&itemsFirst);
 	    TreeItemList_Init(tree, &items, count);
 	    for (i = 0; i < count; i++) {
-		item = TreeItemList_ItemN(&itemsFirst, i);
+		item = TreeItemList_Nth(&itemsFirst, i);
 #ifdef SELECTION_VISIBLE
 		if (!TreeItem_GetSelected(tree, item) &&
 			TreeItem_GetEnabled(tree, item) &&
@@ -2546,7 +2562,7 @@ doneADD:
 		return TCL_ERROR;
 	    }
 	    if (objc == 4) {
-		if (TreeItem_FromObj(tree, objv[3], &item, 0) != TCL_OK) {
+		if (TreeItem_FromObj(tree, objv[3], &item, IFO_NOT_NULL) != TCL_OK) {
 		    return TCL_ERROR;
 		}
 		tree->anchorItem = item;
@@ -2568,16 +2584,16 @@ doneADD:
 	    }
 	    itemFirst = itemLast = NULL;
 	    if (objc >= 4) {
-		if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_ALLOK) != TCL_OK)
+		if (TreeItemList_FromObj(tree, objv[3], &itemsFirst, IFO_NOT_NULL) != TCL_OK)
 		    return TCL_ERROR;
-		itemFirst = TreeItemList_ItemN(&itemsFirst, 0);
+		itemFirst = TreeItemList_Nth(&itemsFirst, 0);
 	    }
 	    if (objc == 5) {
-		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_ALLOK) != TCL_OK) {
+		if (TreeItemList_FromObj(tree, objv[4], &itemsLast, IFO_NOT_NULL) != TCL_OK) {
 		    TreeItemList_Free(&itemsFirst);
 		    return TCL_ERROR;
 		}
-		itemLast = TreeItemList_ItemN(&itemsLast, 0);
+		itemLast = TreeItemList_Nth(&itemsLast, 0);
 	    }
 	    if (tree->selectCount < 1) {
 		if (objc >= 4) TreeItemList_Free(&itemsFirst);
@@ -2596,7 +2612,7 @@ doneADD:
 		}
 		count = TreeItemList_Count(&items);
 		for (i = 0; i < count; i++)
-		    Tree_RemoveFromSelection(tree, TreeItemList_ItemN(&items, i));
+		    Tree_RemoveFromSelection(tree, TreeItemList_Nth(&items, i));
 		goto doneCLEAR;
 	    }
 	    if (objc == 5) {
@@ -2620,7 +2636,7 @@ doneADD:
 	    count = TreeItemList_Count(&itemsFirst);
 	    TreeItemList_Init(tree, &items, count);
 	    for (i = 0; i < count; i++) {
-		item = TreeItemList_ItemN(&itemsFirst, i);
+		item = TreeItemList_Nth(&itemsFirst, i);
 		if (TreeItem_GetSelected(tree, item)) {
 		    Tree_RemoveFromSelection(tree, item);
 		    TreeItemList_Append(&items, item);
@@ -2676,7 +2692,7 @@ doneCLEAR:
 		Tcl_WrongNumArgs(interp, 3, objv, "item");
 		return TCL_ERROR;
 	    }
-	    if (TreeItem_FromObj(tree, objv[3], &item, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[3], &item, IFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(
 		TreeItem_GetSelected(tree, item)));
@@ -2715,20 +2731,20 @@ doneCLEAR:
 
 	    /* List of items to select */
 	    for (i = 0; i < objcS; i++) {
-		if (TreeItemList_FromObj(tree, objvS[i], &items, IFO_ALLOK) != TCL_OK) {
+		if (TreeItemList_FromObj(tree, objvS[i], &items, IFO_NOT_NULL) != TCL_OK) {
 		    TreeItemList_Free(&itemS);
 		    return TCL_ERROR;
 		}
 
 		/* Add unique items to itemS */
 		for (k = 0; k < TreeItemList_Count(&items); k++) {
-		    item = TreeItemList_ItemN(&items, k);
+		    item = TreeItemList_Nth(&items, k);
 		    if (item == ITEM_ALL) {
 			allS = TRUE;
 			break;
 		    }
 		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
-			if (TreeItemList_ItemN(&itemS, j) == item)
+			if (TreeItemList_Nth(&itemS, j) == item)
 			    break;
 		    }
 		    if (j == TreeItemList_Count(&itemS)) {
@@ -2741,7 +2757,7 @@ doneCLEAR:
 
 	    /* List of items to deselect */
 	    for (i = 0; i < objcD; i++) {
-		if (TreeItemList_FromObj(tree, objvD[i], &items, IFO_ALLOK) != TCL_OK) {
+		if (TreeItemList_FromObj(tree, objvD[i], &items, IFO_NOT_NULL) != TCL_OK) {
 		    TreeItemList_Free(&itemS);
 		    TreeItemList_Free(&itemD);
 		    return TCL_ERROR;
@@ -2749,13 +2765,13 @@ doneCLEAR:
 
 		/* Add unique items to itemD */
 		for (k = 0; k < TreeItemList_Count(&items); k++) {
-		    item = TreeItemList_ItemN(&items, k);
+		    item = TreeItemList_Nth(&items, k);
 		    if (item == ITEM_ALL) {
 			allD = TRUE;
 			break;
 		    }
 		    for (j = 0; j < TreeItemList_Count(&itemD); j++) {
-			if (TreeItemList_ItemN(&itemD, j) == item)
+			if (TreeItemList_Nth(&itemD, j) == item)
 			    break;
 		    }
 		    if (j == TreeItemList_Count(&itemD)) {
@@ -2800,7 +2816,7 @@ doneCLEAR:
 	    if (objcS > 0) {
 		TreeItemList_Init(tree, &newS, objcS);
 		for (i = 0; i < TreeItemList_Count(&itemS); i++) {
-		    item = TreeItemList_ItemN(&itemS, i);
+		    item = TreeItemList_Nth(&itemS, i);
 		    if (TreeItem_GetSelected(tree, item))
 			continue;
 		    if (!TreeItem_GetEnabled(tree, item))
@@ -2821,7 +2837,7 @@ doneCLEAR:
 		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
 		    /* Don't deselect an item in the select list */
 		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
-			if (item == TreeItemList_ItemN(&itemS, j))
+			if (item == TreeItemList_Nth(&itemS, j))
 			    break;
 		    }
 		    if (j == TreeItemList_Count(&itemS)) {
@@ -2835,12 +2851,12 @@ doneCLEAR:
 	    if ((objcD > 0) && !allD) {
 		TreeItemList_Init(tree, &newD, objcD);
 		for (i = 0; i < TreeItemList_Count(&itemD); i++) {
-		    item = TreeItemList_ItemN(&itemD, i);
+		    item = TreeItemList_Nth(&itemD, i);
 		    if (!TreeItem_GetSelected(tree, item))
 			continue;
 		    /* Don't deselect an item in the select list */
 		    for (j = 0; j < TreeItemList_Count(&itemS); j++) {
-			if (item == TreeItemList_ItemN(&itemS, j))
+			if (item == TreeItemList_Nth(&itemS, j))
 			    break;
 		    }
 		    if (j == TreeItemList_Count(&itemS)) {
@@ -2850,9 +2866,9 @@ doneCLEAR:
 	    }
 modifyDONE:
 	    for (i = 0; i < TreeItemList_Count(&newS); i++)
-		Tree_AddToSelection(tree, TreeItemList_ItemN(&newS, i));
+		Tree_AddToSelection(tree, TreeItemList_Nth(&newS, i));
 	    for (i = 0; i < TreeItemList_Count(&newD); i++)
-		Tree_RemoveFromSelection(tree, TreeItemList_ItemN(&newD, i));
+		Tree_RemoveFromSelection(tree, TreeItemList_Nth(&newD, i));
 	    if (TreeItemList_Count(&newS) || TreeItemList_Count(&newD)) {
 		TreeNotify_Selection(tree, &newS, &newD);
 	    }
@@ -3326,12 +3342,12 @@ void Tree_ReleaseItems(
 
     count = TreeItemList_Count(&tree->preserveItemList);
     for (i = 0; i < count; i++) {
-	item = TreeItemList_ItemN(&tree->preserveItemList, i);
+	item = TreeItemList_Nth(&tree->preserveItemList, i);
 	/* if (!TreeItem_Deleted(tree, item)) panic(""); */
 	TreeItem_RemoveFromParent(tree, item);
     }
     for (i = 0; i < count; i++) {
-	item = TreeItemList_ItemN(&tree->preserveItemList, i);
+	item = TreeItemList_Nth(&tree->preserveItemList, i);
 	/* if (TreeItem_NumChildren(tree, item) > 0) panic(""); */
 	TreeItem_Delete(tree, item);
     }
