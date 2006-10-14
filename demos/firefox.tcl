@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.13 2006/10/04 04:01:37 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.14 2006/10/14 20:21:49 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -392,7 +392,7 @@ if {$::clip} {
 
 	# This binding collapses all items before expanding a new one
 	$T notify bind $T <Expand-before> {
-		%T collapse all
+		%T item collapse all
 	}
 	$T item collapse all
 
