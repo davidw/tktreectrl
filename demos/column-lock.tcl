@@ -1,10 +1,12 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.1 2006/10/11 01:42:45 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.2 2006/10/14 20:24:07 treectrl Exp $
 
 proc DemoColumnLock {} {
 
     global ColumnLock
 
     set T .f2.f1.t
+
+    InitPics *checked
 
     #
     # Configure the treectrl widget
@@ -24,12 +26,14 @@ proc DemoColumnLock {} {
     for {set i 0} {$i < 100} {incr i} {
 	$T column create -text "C$i" -tags C$i -width [expr {40 + 20 * ($i % 2)}] -justify center
     }
-    $T column configure C0 -lock left -width ""
+    $T column configure first -lock left -width ""
+    $T column configure last -lock right -width ""
 
+    $T state define CHECK
     $T state define mouseover
 
     #
-    # Create row labels
+    # Create styles for the left-locked column, and create items
     #
 
     $T element create label1.bg rect -fill {gray80 mouseover gray {}}
@@ -74,7 +78,7 @@ proc DemoColumnLock {} {
 
     $T element create label4.rect rect -fill {#e0e8f0 mouseover}
     $T element create label4.text text
-    $T element create label4.w window -clip yes
+    $T element create label4.w window -clip yes -destroy yes
     $T style create label4 -orient vertical
     $T style elements label4 {label4.rect label4.text label4.w}
     $T style layout label4 label4.rect -detach yes -iexpand xy
@@ -92,33 +96,63 @@ proc DemoColumnLock {} {
     }
 
     #
-    # Create elements
+    # Create styles for the right-locked column
+    #
+
+    $T element create labelR1.bg rect -fill {gray80 mouseover gray {}}
+    $T element create labelR1.img image -image {checked CHECK unchecked {}}
+    $T style create labelR1 -orient horizontal
+    $T style elements labelR1 {labelR1.bg labelR1.img}
+    $T style layout labelR1 labelR1.bg -detach yes -iexpand xy
+    $T style layout labelR1 labelR1.img -expand news -padx 2 -pady 2
+
+    $T element create labelR2.bd border -background $::SystemButtonFace \
+	-relief raised -thickness 2 -filled yes
+    $T element create labelR2.img image -image {checked CHECK unchecked {}}
+    $T style create labelR2 -orient horizontal
+    $T style elements labelR2 {labelR2.bd labelR2.img}
+    $T style layout labelR2 labelR2.bd -detach yes -iexpand xy
+    $T style layout labelR2 labelR2.img -expand news -padx 2 -pady 2
+
+    $T element create labelR3.div rect -fill black -height 2
+    $T element create labelR3.img image -image {checked CHECK unchecked {}}
+    $T style create labelR3 -orient horizontal
+    $T style elements labelR3 {labelR3.div labelR3.img}
+    $T style layout labelR3 labelR3.div -detach yes -expand n -iexpand x
+    $T style layout labelR3 labelR3.img -expand news -padx 2 -pady 2
+
+    $T element create labelR4.rect rect -fill {#e0e8f0 mouseover}
+    $T element create labelR4.img image -image {checked CHECK unchecked {}}
+    $T style create labelR4 -orient vertical
+    $T style elements labelR4 {labelR4.rect labelR4.img}
+    $T style layout labelR4 labelR4.rect -detach yes -iexpand xy
+    $T style layout labelR4 labelR4.img -expand news -padx 2 -pady 2
+
+    $T item style set {range 1 10} last labelR1
+    $T item style set {range 11 20} last labelR2
+    $T item style set {range 21 30} last labelR3
+    $T item style set {range 31 40} last labelR4
+
+    #
+    # Create styles for the non-locked columns
     #
 
     $T element create eRect rect -outline gray -outlinewidth 1 -open wn \
 	-fill {gray80 mouseover}
-
-    #
-    # Create styles using the elements
-    #
-
     $T style create s1 -orient horizontal
     $T style elements s1 eRect
     $T style layout s1 eRect -detach yes -iexpand xy
 
 $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover}
 $T element create windowStyle.text text
-$T element create windowStyle.w window -clip yes
+$T element create windowStyle.w window -clip yes -destroy yes
 $T style create windowStyle -orient vertical
 $T style elements windowStyle {windowStyle.rect windowStyle.text windowStyle.w}
 $T style layout windowStyle windowStyle.rect -detach yes -iexpand xy
 $T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
 $T style layout windowStyle windowStyle.w -iexpand x -padx 2 -pady {0 2}
-    #
-    # Create items and assign styles
-    #
 
-    foreach C [lrange [$T column list] 1 end] {
+    foreach C [lrange [$T column list] 1 end-1] {
 	$T item style set "root children" $C s1
 $T item style set 1 $C windowStyle
 set clip [frame $T.clip1$C -borderwidth 0]
