@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.67 2006/10/11 01:32:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.68 2006/10/14 20:16:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1818,16 +1818,24 @@ TreeItemList_FromObj(
 	    }
 	    case INDEX_ALL:
 	    {
-		if (qualArgsTotal) {
-		    Tcl_HashEntry *hPtr;
-		    Tcl_HashSearch search;
+		Tcl_HashEntry *hPtr;
+		Tcl_HashSearch search;
 
+		if (qualArgsTotal) {
 		    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		    while (hPtr != NULL) {
 			item = (Item *) Tcl_GetHashValue(hPtr);
 			if (Qualifies(&q, item)) {
 			    TreeItemList_Append(items, (TreeItem) item);
 			}
+			hPtr = Tcl_NextHashEntry(&search);
+		    }
+		    item = NULL;
+		} else if (flags & IFO_LIST_ALL) {
+		    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+		    while (hPtr != NULL) {
+			item = (Item *) Tcl_GetHashValue(hPtr);
+			TreeItemList_Append(items, (TreeItem) item);
 			hPtr = Tcl_NextHashEntry(&search);
 		    }
 		    item = NULL;
@@ -1880,7 +1888,7 @@ TreeItemList_FromObj(
 		 * clear the list of items and use "all". */
 		count = TreeItemList_Count(items);
 		for (i = 0; i < count; i++) {
-		    TreeItem item = TreeItemList_ItemN(items, i);
+		    TreeItem item = TreeItemList_Nth(items, i);
 		    if (item == ITEM_ALL)
 			break;
 		}
@@ -1907,10 +1915,10 @@ TreeItemList_FromObj(
 		TreeItem itemFirst, itemLast;
 
 		if (TreeItem_FromObj(tree, objv[listIndex + 1], &itemFirst,
-			0) != TCL_OK)
+			IFO_NOT_NULL) != TCL_OK)
 		    goto errorExit;
 		if (TreeItem_FromObj(tree, objv[listIndex + 2], &itemLast,
-			0) != TCL_OK)
+			IFO_NOT_NULL) != TCL_OK)
 		    goto errorExit;
 		if (TreeItem_FirstAndLast(tree, &itemFirst, &itemLast) == 0)
 		    goto errorExit;
@@ -1965,13 +1973,13 @@ TreeItemList_FromObj(
 	}
 	/* If 1 item, use it and clear the list. */
 	if (TreeItemList_Count(items) == 1) {
-	    item = (Item *) TreeItemList_ItemN(items, 0);
+	    item = (Item *) TreeItemList_Nth(items, 0);
 	    items->count = 0;
 	}
 
 	/* If "all" but only root exists, use it. */
 	if ((item == (Item *) ITEM_ALL) && (tree->itemCount == 1) &&
-		!(flags & IFO_NOTROOT))
+		!(flags & IFO_NOT_ROOT))
 	    item = (Item *) tree->root;
 
 	/* If > 1 item, no modifiers may follow. */
@@ -1997,7 +2005,7 @@ TreeItemList_FromObj(
 
 	hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
 	if (!hPtr) {
-	    if (!(flags & IFO_NULLOK))
+	    if (flags & IFO_NOT_NULL)
 		goto noitem;
 	    /* Empty list returned */
 	    goto goodExit;
@@ -2009,7 +2017,7 @@ TreeItemList_FromObj(
     } else if (Tcl_GetIntFromObj(NULL, elemPtr, &id) == TCL_OK) {
 	hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
 	if (!hPtr) {
-	    if (!(flags & IFO_NULLOK))
+	    if (flags & IFO_NOT_NULL)
 		goto noitem;
 	    /* Empty list returned */
 	    goto goodExit;
@@ -2045,7 +2053,7 @@ TreeItemList_FromObj(
 
 	/* If 1 item, use it and clear the list. */
 	if (TreeItemList_Count(items) == 1) {
-	    item = (Item *) TreeItemList_ItemN(items, 0);
+	    item = (Item *) TreeItemList_Nth(items, 0);
 	    items->count = 0;
 	}
 
@@ -2064,7 +2072,7 @@ TreeItemList_FromObj(
 
     /* This means a valid specification was given, but there is no such item */
     if ((TreeItemList_Count(items) == 0) && (item == NULL)) {
-	if (!(flags & IFO_NULLOK))
+	if (flags & IFO_NOT_NULL)
 	    goto noitem;
 	/* Empty list returned */
 	goto goodExit;
@@ -2268,38 +2276,38 @@ TreeItemList_FromObj(
 	    }
 	}
 	if ((TreeItemList_Count(items) == 0) && (item == NULL)) {
-	    if (!(flags & IFO_NULLOK))
+	    if (flags & IFO_NOT_NULL)
 		goto noitem;
 	    /* Empty list returned. */
 	    goto goodExit;
 	}
 	listIndex += modArgs[index] + qualArgsTotal;
     }
-    if (!(flags & IFO_ALLOK) && ((item == (Item *) ITEM_ALL) ||
+    if ((flags & IFO_NOT_MANY) && ((item == (Item *) ITEM_ALL) ||
 	(TreeItemList_Count(items) > 1))) {
 	FormatResult(interp, "can't specify > 1 item for this command");
 	goto errorExit;
     }
     if (TreeItemList_Count(items)) {
-	if (flags & (IFO_NOTROOT | IFO_NOTORPHAN)) {
+	if (flags & (IFO_NOT_ROOT | IFO_NOT_ORPHAN)) {
 	    int i;
 	    for (i = 0; i < TreeItemList_Count(items); i++) {
-		item = (Item *) TreeItemList_ItemN(items, i);
-		if (ISROOT(item) && (flags & IFO_NOTROOT))
+		item = (Item *) TreeItemList_Nth(items, i);
+		if (ISROOT(item) && (flags & IFO_NOT_ROOT))
 		    goto notRoot;
-		if ((item->parent == NULL) && (flags & IFO_NOTORPHAN))
+		if ((item->parent == NULL) && (flags & IFO_NOT_ORPHAN))
 		    goto notOrphan;
 	    }
 	}
     } else if (item == (Item *) ITEM_ALL) {
 	TreeItemList_Append(items, ITEM_ALL);
     } else {
-	if (ISROOT(item) && (flags & IFO_NOTROOT)) {
+	if (ISROOT(item) && (flags & IFO_NOT_ROOT)) {
 notRoot:
 	    FormatResult(interp, "can't specify \"root\" for this command");
 	    goto errorExit;
 	}
-	if ((item->parent == NULL) && (flags & IFO_NOTORPHAN)) {
+	if ((item->parent == NULL) && (flags & IFO_NOT_ORPHAN)) {
 notOrphan:
 	    FormatResult(interp, "item \"%s\" has no parent",
 		    Tcl_GetString(objPtr));
@@ -2352,30 +2360,13 @@ TreeItem_FromObj(
 {
     TreeItemList items;
 
-    if (TreeItemList_FromObj(tree, objPtr, &items, flags) != TCL_OK)
+    if (TreeItemList_FromObj(tree, objPtr, &items, flags | IFO_NOT_MANY) != TCL_OK)
 	return TCL_ERROR;
     /* May be NULL. */
-    (*itemPtr) = TreeItemList_ItemN(&items, 0);
+    (*itemPtr) = TreeItemList_Nth(&items, 0);
     TreeItemList_Free(&items);
     return TCL_OK;
 }
-
-typedef struct ItemForEach ItemForEach;
-struct ItemForEach {
-    TreeCtrl *tree;
-    int error;
-    int all;
-    Tcl_HashSearch search;
-    TreeItem last;
-    TreeItem item;
-    TreeItemList *items;
-    int index;
-};
-
-#define ITEM_FOR_EACH(item, items, item2s, iter) \
-    for (item = ItemForEach_Start(items, item2s, iter); \
-	 item != NULL; \
-	 item = ItemForEach_Next(iter))
 
 /*
  *----------------------------------------------------------------------
@@ -2408,9 +2399,9 @@ ItemForEach_Start(
     TreeCtrl *tree = items->tree;
     TreeItem item, item2 = NULL;
 
-    item = TreeItemList_ItemN(items, 0);
+    item = TreeItemList_Nth(items, 0);
     if (item2s)
-	item2 = TreeItemList_ItemN(item2s, 0);
+	item2 = TreeItemList_Nth(item2s, 0);
 
     iter->tree = tree;
     iter->all = FALSE;
@@ -2471,7 +2462,7 @@ ItemForEach_Next(
     if (iter->items != NULL) {
 	if (iter->index >= TreeItemList_Count(iter->items))
 	    return iter->item = NULL;
-	return iter->item = TreeItemList_ItemN(iter->items, ++iter->index);
+	return iter->item = TreeItemList_Nth(iter->items, ++iter->index);
     }
 
     if (iter->item == iter->last)
@@ -3377,7 +3368,7 @@ Item_FindColumnFromObj(
     TreeColumn treeColumn;
     int columnIndex;
 
-    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
     (*columnPtr) = Item_FindColumn(tree, item, columnIndex);
@@ -3473,7 +3464,7 @@ Item_CreateColumnFromObj(
     TreeColumn treeColumn;
     int columnIndex;
 
-    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+    if (TreeColumn_FromObj(tree, obj, &treeColumn, CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 	return TCL_ERROR;
     columnIndex = TreeColumn_Index(treeColumn);
     (*column) = Item_CreateColumn(tree, item, columnIndex, isNew);
@@ -3575,6 +3566,44 @@ ItemDrawBackground(
 }
 
 #ifdef COLUMN_SPAN
+
+void
+TreeItem_GetSpans(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    int *spans			/* Array of column-indices to return. */
+    )
+{
+    Item *self = (Item *) item_;
+    TreeColumn treeColumn = tree->columns;
+    Column *column = self->columns;
+    int columnIndex = 0, itemColumnIndex = 0, span = 1;
+#ifdef COLUMN_LOCK
+    int lock = TreeColumn_Lock(treeColumn);
+#endif
+
+    while (treeColumn != NULL) {
+#ifdef COLUMN_LOCK
+	/* End current span if column lock changes. */
+	if (TreeColumn_Lock(treeColumn) != lock) {
+	    lock = TreeColumn_Lock(treeColumn);
+	    span = 1;
+	}
+#endif
+	if (--span == 0) {
+	    if (TreeColumn_Visible(treeColumn))
+		span = column ? column->span : 1;
+	    else
+		span = 1;
+	    itemColumnIndex = columnIndex;
+	}
+	spans[columnIndex] = itemColumnIndex;
+	++columnIndex;
+	treeColumn = TreeColumn_Next(treeColumn);
+	if (column != NULL)
+	    column = column->next;
+    }
+}
 
 /*
  * The following structure holds information about which item column
@@ -3710,6 +3739,7 @@ TreeItem_Draw(
     TreeColumn treeColumn;
     int i, columnIndex;
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+    int area = TREE_AREA_CONTENT;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
 #ifdef COLUMN_LOCK
@@ -3717,28 +3747,25 @@ TreeItem_Draw(
 
     switch (lock) {
 	case COLUMN_LOCK_LEFT:
-	    drawArgs.bounds[0] = Tree_BorderLeft(tree);
-	    drawArgs.bounds[2] = Tree_ContentLeft(tree);
+	    area = TREE_AREA_LEFT;
 	    break;
 	case COLUMN_LOCK_NONE:
-	    drawArgs.bounds[0] = Tree_ContentLeft(tree);
-	    drawArgs.bounds[2] = Tree_ContentRight(tree);
 	    break;
 	case COLUMN_LOCK_RIGHT:
-	    drawArgs.bounds[0] = Tree_ContentRight(tree);
-	    drawArgs.bounds[2] = Tree_BorderRight(tree);
+	    area = TREE_AREA_RIGHT;
 	    break;
     }
 #else
     Item_GetSpans(tree, item_, spans);
-    drawArgs.bounds[0] = Tree_ContentLeft(tree);
-    drawArgs.bounds[2] = Tree_ContentRight(tree);
 #endif
     drawArgs.tree = tree;
     drawArgs.drawable = drawable;
 
-    drawArgs.bounds[1] = Tree_ContentTop(tree);
-    drawArgs.bounds[3] = Tree_ContentBottom(tree);
+    if (!Tree_AreaBbox(tree, area, &drawArgs.bounds[0], &drawArgs.bounds[1],
+	&drawArgs.bounds[2], &drawArgs.bounds[3])) {
+	drawArgs.bounds[0] = drawArgs.bounds[2] = 0;
+	drawArgs.bounds[1] = drawArgs.bounds[3] = 0;
+    }
 
     totalWidth = 0;
     for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
@@ -4165,6 +4192,9 @@ void
 TreeItem_UpdateWindowPositions(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
+#ifdef COLUMN_LOCK
+    int lock,			/* Columns we care about. */
+#endif
     int x, int y,		/* Window coordinates of the item. */
     int width, int height	/* Total size of the item. */
     )
@@ -4176,35 +4206,33 @@ TreeItem_UpdateWindowPositions(
     TreeColumn treeColumn;
     int i, columnIndex;
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
+    int area = TREE_AREA_CONTENT;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
 #ifdef COLUMN_LOCK
-    Item_GetSpans(tree, item_, COLUMN_LOCK_NONE, spans);
-    switch (COLUMN_LOCK_NONE) {
+    Item_GetSpans(tree, item_, lock, spans);
+    switch (lock) {
 	case COLUMN_LOCK_LEFT:
-	    drawArgs.bounds[0] = Tree_BorderLeft(tree);
-	    drawArgs.bounds[2] = Tree_ContentLeft(tree);
+	    area = TREE_AREA_LEFT;
 	    break;
 	case COLUMN_LOCK_NONE:
-	    drawArgs.bounds[0] = Tree_ContentLeft(tree);
-	    drawArgs.bounds[2] = Tree_ContentRight(tree);
 	    break;
 	case COLUMN_LOCK_RIGHT:
-	    drawArgs.bounds[0] = Tree_ContentRight(tree);
-	    drawArgs.bounds[2] = Tree_BorderRight(tree);
+	    area = TREE_AREA_RIGHT;
 	    break;
     }
 #else
     Item_GetSpans(tree, item_, spans);
-    drawArgs.bounds[0] = Tree_ContentLeft(tree);
-    drawArgs.bounds[2] = Tree_ContentRight(tree);
 #endif
 
     drawArgs.tree = tree;
     drawArgs.drawable = None;
 
-    drawArgs.bounds[1] = Tree_ContentTop(tree);
-    drawArgs.bounds[3] = Tree_ContentBottom(tree);
+    if (!Tree_AreaBbox(tree, area, &drawArgs.bounds[0], &drawArgs.bounds[1],
+	&drawArgs.bounds[2], &drawArgs.bounds[3])) {
+	drawArgs.bounds[0] = drawArgs.bounds[2] = 0;
+	drawArgs.bounds[1] = drawArgs.bounds[3] = 0;
+    }
 
     totalWidth = 0;
     for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
@@ -4644,7 +4672,7 @@ ItemCreateCmd(
 		break;
 	    case OPT_NEXTSIBLING:
 		if (TreeItem_FromObj(tree, objv[i + 1], &_item,
-			IFO_NOTROOT | IFO_NOTORPHAN) != TCL_OK) {
+			IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN) != TCL_OK) {
 		    return TCL_ERROR;
 		}
 		nextSibling = (Item *) _item;
@@ -4657,7 +4685,7 @@ ItemCreateCmd(
 		}
 		break;
 	    case OPT_PARENT:
-		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK) {
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, IFO_NOT_NULL) != TCL_OK) {
 		    return TCL_ERROR;
 		}
 		parent = (Item *) _item;
@@ -4665,7 +4693,7 @@ ItemCreateCmd(
 		break;
 	    case OPT_PREVSIBLING:
 		if (TreeItem_FromObj(tree, objv[i + 1], &_item,
-			IFO_NOTROOT | IFO_NOTORPHAN) != TCL_OK) {
+			IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN) != TCL_OK) {
 		    return TCL_ERROR;
 		}
 		prevSibling = (Item *) _item;
@@ -4863,6 +4891,7 @@ ItemElementCmd(
     TreeItemList itemList;
     TreeItem _item;
     Item *item;
+    int flags = IFO_NOT_NULL;
     int result = TCL_OK;
 
     if (objc < 7) {
@@ -4874,20 +4903,16 @@ ItemElementCmd(
 		&index) != TCL_OK)
 	return TCL_ERROR;
 
-    if (TreeItemList_FromObj(tree, objv[4], &itemList, IFO_ALLOK) != TCL_OK)
-	return TCL_ERROR;
-    _item = TreeItemList_ItemN(&itemList, 0);
     /*
      * [configure] without an option-value pair can operate on a single item
      * only. [cget] and [perstate] only operate on a single item.
      */
-    if ((_item == ITEM_ALL) && ((index != COMMAND_CONFIGURE) || (objc < 9)))
-	_item = tree->root;
-    else if ((index == COMMAND_CONFIGURE) && (objc < 9)) {
-	itemList.pointers[1] = NULL;
-	itemList.count = 1;
-	_item = TreeItemList_ItemN(&itemList, 0);
-    }
+    if ((index != COMMAND_CONFIGURE) || (objc < 9))
+	flags |= IFO_NOT_MANY;
+
+    if (TreeItemList_FromObj(tree, objv[4], &itemList, flags) != TCL_OK)
+	return TCL_ERROR;
+    _item = TreeItemList_Nth(&itemList, 0);
     item = (Item *) _item;
 
     switch (index) {
@@ -4961,141 +4986,198 @@ ItemElementCmd(
 	/* T item element configure I C E ... */
 	case COMMAND_CONFIGURE:
 	{
+	    struct columnObj {
+		TreeColumnList columns;
+		int isColumn;
+		int numArgs;
+	    } staticCO[STATIC_SIZE], *co = staticCO;
+	    int i, index, indexElem, prevColumn;
 	    ItemForEach iter;
-	    TreeColumn treeColumn0, treeColumn;
-	    int columnIndex0, columnIndex;
 
-	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn0,
-		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+	    /* If no option-value pair is given, we can't specify more than
+	     * one column. */
+	    flags = CFO_NOT_NULL | CFO_NOT_TAIL;
+	    if (objc < 9)
+		flags |= CFO_NOT_MANY;
+
+	    STATIC_ALLOC(co, struct columnObj, objc);
+	    for (i = 5; i < objc; i++) {
+		co[i].isColumn = FALSE;
+		co[i].numArgs = -1;
+	    }
+	    indexElem = 6;
+
+	    /* Get the first column(s) */
+	    i = indexElem - 1;
+	    if (TreeColumnList_FromObj(tree, objv[i], &co[i].columns,
+		    flags) != TCL_OK) {
 		result = TCL_ERROR;
 		break;
 	    }
-	    columnIndex0 = TreeColumn_Index(treeColumn0);
+	    co[i].isColumn = TRUE;
+	    prevColumn = i;
 
-	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
+	    while (1) {
+		int numArgs = 0;
+		char breakChar = '\0';
 
-		/* T item element configure I C E option value \
-		*     + E option value , C E option value */
-		int eMask, cMask = 0, iMask = 0;
-		int indexElem = 6;
+		/* Look for a + or , */
+		for (index = indexElem + 1; index < objc; index++) {
+		    if (numArgs % 2 == 0) {
+			int length;
+			char *s = Tcl_GetStringFromObj(objv[index], &length);
 
-		treeColumn = treeColumn0;
-		columnIndex = columnIndex0;
-
-		item = (Item *) _item;
-		column = Item_FindColumn(tree, item, columnIndex);
-		if ((column == NULL) || (column->style == NULL)) {
-		    NoStyleMsg(tree, item, columnIndex);
-		    result = TCL_ERROR;
-		    break;
+			if ((length == 1) && ((s[0] == '+') || (s[0] == ','))) {
+			    breakChar = s[0];
+			    break;
+			}
+		    }
+		    numArgs++;
 		}
 
-		while (1) {
-		    int numArgs = 0;
-		    char breakChar = '\0';
+		/* Require at least one option-value pair if more than one
+		* element is specified. */
+		if ((breakChar || indexElem != 6) && (numArgs < 2)) {
+		    FormatResult(interp,
+			"missing option-value pair after element \"%s\"",
+			Tcl_GetString(objv[indexElem]));
+		    result = TCL_ERROR;
+		    goto doneCONF;
+		}
 
-		    /* Look for a + or , */
-		    for (index = indexElem + 1; index < objc; index++) {
-			if (numArgs % 2 == 0) {
-			    int length;
-			    char *s = Tcl_GetStringFromObj(objv[index], &length);
+		co[indexElem].numArgs = numArgs;
 
-			    if ((length == 1) && ((s[0] == '+') || (s[0] == ','))) {
-				breakChar = s[0];
-				break;
-			    }
-			}
-			numArgs++;
-		    }
+		if (!breakChar)
+		    break;
 
-		    /* Require at least one option-value pair if more than one
-		     * element is specified. */
-		    if ((breakChar || indexElem != 6) && (numArgs < 2)) {
-			FormatResult(interp,
-			    "missing option-value pair after element \"%s\"",
-			    Tcl_GetString(objv[indexElem]));
+		if (index == objc - 1) {
+		    FormatResult(interp, "missing %s after \"%c\"",
+			(breakChar == '+') ? "element name" : "column",
+			breakChar);
+		    result = TCL_ERROR;
+		    goto doneCONF;
+		}
+
+		/* + indicates start of another element */
+		if (breakChar == '+') {
+		    indexElem = index + 1;
+		}
+
+		/* , indicates start of another column */
+		else if (breakChar == ',') {
+		    co[prevColumn].numArgs = index - prevColumn;
+
+		    if (TreeColumnList_FromObj(tree, objv[index + 1],
+			    &co[index + 1].columns, CFO_NOT_NULL |
+			    CFO_NOT_TAIL) != TCL_OK) {
 			result = TCL_ERROR;
-			break;
+			goto doneCONF;
 		    }
+		    co[index + 1].isColumn = TRUE;
+		    prevColumn = index + 1;
 
-#ifdef ROW_LABEL
-		    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
-			    (TreeItemColumn) column, NULL, column->style, objv[indexElem],
-			    numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
-#else
-		    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
-			    (TreeItemColumn) column, column->style, objv[indexElem],
-			    numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
-#endif
-		    if (result != TCL_OK)
-			break;
-
-		    cMask |= eMask;
-		    /* FIXME: do this after all elements in this column have
-		     * been configured. */
-		    if (cMask & CS_LAYOUT) {
-			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-			Tree_InvalidateColumnWidth(tree, treeColumn);
-		    } else if (cMask & CS_DISPLAY) {
-			Tree_InvalidateItemDInfo(tree, treeColumn, (TreeItem) item, NULL);
+		    indexElem = index + 2;
+		    if (indexElem == objc) {
+			FormatResult(interp,
+			    "missing element name after column \"%s\"",
+			    Tcl_GetString(objv[index + 1]));
+			result = TCL_ERROR;
+			goto doneCONF;
 		    }
-		    iMask |= cMask;
+		}
+	    }
+	    co[prevColumn].numArgs = index - prevColumn;
 
-		    if (breakChar) {
+	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
+		/* T item element configure I C E option value \
+		*     + E option value , C E option value */
+		int iMask = 0;
 
-			if (index == objc - 1) {
-			    FormatResult(interp, "missing %s after \"%c\"",
-				(breakChar == '+') ? "element name" : "column",
-				breakChar);
+		item = (Item *) _item;
+
+		/* co[index].numArgs is the number of arguments from the C
+		 * to the next separator (but not including that separator). */
+		for (index = 5; index < objc; index += co[index].numArgs + 1) {
+		    ColumnForEach citer;
+		    TreeColumn treeColumn;
+
+if (!co[index].isColumn) panic("isColumn == FALSE");
+
+		    COLUMN_FOR_EACH(treeColumn, &co[index].columns, NULL, &citer) {
+			int columnIndex, cMask = 0;
+
+			columnIndex = TreeColumn_Index(treeColumn);
+			column = Item_FindColumn(tree, item, columnIndex);
+			if ((column == NULL) || (column->style == NULL)) {
+			    NoStyleMsg(tree, item, columnIndex);
 			    result = TCL_ERROR;
 			    break;
 			}
 
-			/* + indicates start of another element */
-			if (breakChar == '+') {
-			    indexElem = index + 1;
+			indexElem = index + 1;
+
+			/* Do each element in this column */
+			while (1) {
+			    int eMask, index2;
+
+if (co[indexElem].numArgs == -1) panic("indexElem=%d (%s) objc=%d numArgs == -1", indexElem, Tcl_GetString(objv[indexElem]), objc);
+#ifdef ROW_LABEL
+			    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
+				    (TreeItemColumn) column, NULL, column->style, objv[indexElem],
+				    co[indexElem].numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
+#else
+			    result = TreeStyle_ElementConfigure(tree, (TreeItem) item,
+				    (TreeItemColumn) column, column->style, objv[indexElem],
+				    co[indexElem].numArgs, (Tcl_Obj **) objv + indexElem + 1, &eMask);
+#endif
+			    if (result != TCL_OK)
+				break;
+
+			    cMask |= eMask;
+
+			    /* co[indexElem].numArgs is the number of
+			     * option-value arguments after the element. */
+			    index2 = indexElem + co[indexElem].numArgs;
+			    if (index2 == objc - 1)
+				break;
+
+			    /* Skip the '+' or ',' */
+			    index2 += 2;
+
+			    if (co[index2].isColumn)
+				break;
+
+			    indexElem = index2;
 			}
 
-			/* , indicates start of another column */
-			else if (breakChar == ',') {
-			    if (TreeColumn_FromObj(tree, objv[index + 1],
-				    &treeColumn, CFO_NOT_MANY | CFO_NOT_NULL |
-				    CFO_NOT_TAIL) != TCL_OK) {
-				result = TCL_ERROR;
-				break;
-			    }
-			    columnIndex = TreeColumn_Index(treeColumn);
-			    column = Item_FindColumn(tree, item, columnIndex);
-			    if ((column == NULL) || (column->style == NULL)) {
-				NoStyleMsg(tree, item, columnIndex);
-				result = TCL_ERROR;
-				break;
-			    }
-			    indexElem = index + 2;
-
-			    if (indexElem == objc) {
-				FormatResult(interp,
-				    "missing element name after column \"%s\"",
-				    Tcl_GetString(objv[index + 1]));
-				result = TCL_ERROR;
-				break;
-			    }
-
-			    cMask = 0;
+			if (cMask & CS_LAYOUT) {
+			    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+			    Tree_InvalidateColumnWidth(tree, treeColumn);
+			} else if (cMask & CS_DISPLAY) {
+			    Tree_InvalidateItemDInfo(tree, treeColumn, (TreeItem) item, NULL);
 			}
-		    } else if (index == objc)
+			iMask |= cMask;
+			if (result != TCL_OK)
+			    break;
+		    }
+		    if (result != TCL_OK)
 			break;
 		}
 		if (iMask & CS_LAYOUT) {
 		    TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
 		    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-		}
-		else if (iMask & CS_DISPLAY) {
+		} else if (iMask & CS_DISPLAY) {
 		}
 		if (result != TCL_OK)
 		    break;
 	    }
+doneCONF:
+	    for (i = 5; i < objc; i++) {
+		if (co[i].isColumn)
+		    TreeColumnList_Free(&co[i].columns);
+	    }
+	    STATIC_FREE(co, struct columnObj, objc);
 	    break;
 	}
     }
@@ -5137,6 +5219,7 @@ ItemStyleCmd(
     TreeItemList itemList;
     TreeItem _item;
     Item *item;
+    int flags = IFO_NOT_NULL;
     int result = TCL_OK;
 
     if (objc < 5) {
@@ -5149,10 +5232,14 @@ ItemStyleCmd(
 	return TCL_ERROR;
     }
 
-    if (TreeItemList_FromObj(tree, objv[4], &itemList, IFO_ALLOK) != TCL_OK) {
+    /* [style elements] only works on a single item.
+     * [style set] only works on a single item without a column-style pair. */
+    if ((index == COMMAND_ELEMENTS) || (index == COMMAND_SET && objc < 7))
+	flags |= IFO_NOT_MANY;
+    if (TreeItemList_FromObj(tree, objv[4], &itemList, flags) != TCL_OK) {
 	return TCL_ERROR;
     }
-    _item = TreeItemList_ItemN(&itemList, 0);
+    _item = TreeItemList_Nth(&itemList, 0);
     item = (Item *) _item;
 
     switch (index) {
@@ -5167,8 +5254,6 @@ ItemStyleCmd(
 		result = TCL_ERROR;
 		break;
 	    }
-	    if (item == (Item *) ITEM_ALL)
-		item = (Item *) tree->root;
 	    if (Item_FindColumnFromObj(tree, item, objv[5], &column,
 		    &columnIndex) != TCL_OK) {
 		result = TCL_ERROR;
@@ -5187,54 +5272,63 @@ ItemStyleCmd(
 	case COMMAND_MAP:
 	{
 	    TreeStyle style;
+	    TreeColumnList columns;
 	    TreeColumn treeColumn;
 	    Column *column;
 	    int columnIndex;
 	    int objcM;
 	    Tcl_Obj **objvM;
 	    ItemForEach iter;
+	    ColumnForEach citer;
 
 	    if (objc != 8) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item column style map");
 		return TCL_ERROR;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
-		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+	    if (TreeColumnList_FromObj(tree, objv[5], &columns,
+		    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		break;
 	    }
-	    columnIndex = TreeColumn_Index(treeColumn);
 	    if (TreeStyle_FromObj(tree, objv[6], &style) != TCL_OK) {
 		result = TCL_ERROR;
-		break;
+		goto doneMAP;
 	    }
 	    if (Tcl_ListObjGetElements(interp, objv[7], &objcM, &objvM)
 		    != TCL_OK) {
 		result = TCL_ERROR;
-		break;
+		goto doneMAP;
 	    }
 	    if (objcM & 1) {
 		FormatResult(interp, "list must contain even number of elements");
 		result = TCL_ERROR;
-		break;
+		goto doneMAP;
 	    }
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
-		column = Item_CreateColumn(tree, item, columnIndex, NULL);
-		if (column->style != NULL) {
-		    if (TreeStyle_Remap(tree, column->style, style, objcM,
-			    objvM) != TCL_OK) {
-			result = TCL_ERROR;
-			break;
+		COLUMN_FOR_EACH(treeColumn, &columns, NULL, &citer) {
+		    columnIndex = TreeColumn_Index(treeColumn);
+		    column = Item_CreateColumn(tree, item, columnIndex, NULL);
+		    if (column->style != NULL) {
+			if (TreeStyle_Remap(tree, column->style, style, objcM,
+				objvM) != TCL_OK) {
+			    result = TCL_ERROR;
+			    break;
+			}
+		    } else {
+			column->style = TreeStyle_NewInstance(tree, style);
 		    }
-		} else
-		    column->style = TreeStyle_NewInstance(tree, style);
+		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+		    Tree_InvalidateColumnWidth(tree, treeColumn);
+		}
 		TreeItem_InvalidateHeight(tree, (TreeItem) item);
 		Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-		TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+		if (result != TCL_OK)
+		    break;
 	    }
-	    Tree_InvalidateColumnWidth(tree, treeColumn);
 	    Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
+doneMAP:
+	    TreeColumnList_Free(&columns);
 	    break;
 	}
 
@@ -5242,16 +5336,15 @@ ItemStyleCmd(
 	case COMMAND_SET:
 	{
 	    struct columnStyle {
-		TreeColumn treeColumn;
-		int columnIndex;
+		TreeColumnList columns;
 		TreeStyle style;
-		int changed;
 	    };
 	    struct columnStyle staticCS[STATIC_SIZE], *cs = staticCS;
 	    TreeColumn treeColumn;
 	    Column *column;
 	    int i, count = 0, length, changed = FALSE, changedI;
 	    ItemForEach iter;
+	    ColumnForEach citer;
 
 	    if (objc < 5) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item ?column? ?style? ?column style ...?");
@@ -5261,8 +5354,6 @@ ItemStyleCmd(
 	    if (objc == 5) {
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
 		treeColumn = tree->columns;
-		if (_item == ITEM_ALL)
-		    item = (Item *) tree->root;
 		column = item->columns;
 		while (treeColumn != NULL) {
 		    if ((column != NULL) && (column->style != NULL))
@@ -5281,8 +5372,6 @@ ItemStyleCmd(
 	    }
 	    /* Return style in one column. */
 	    if (objc == 6) {
-		if (_item == ITEM_ALL)
-		    item = (Item *) tree->root;
 		if (Item_FindColumnFromObj(tree, item, objv[5], &column, NULL) != TCL_OK)
 		    return TCL_ERROR;
 		if ((column != NULL) && (column->style != NULL))
@@ -5293,13 +5382,11 @@ ItemStyleCmd(
 	    /* Get column/style pairs. */
 	    STATIC_ALLOC(cs, struct columnStyle, objc / 2);
 	    for (i = 5; i < objc; i += 2) {
-		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		if (TreeColumnList_FromObj(tree, objv[i], &cs[count].columns,
+			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneSET;
 		}
-		cs[count].treeColumn = treeColumn;
-		cs[count].columnIndex = TreeColumn_Index(treeColumn);
 		if (i + 1 == objc) {
 		    FormatResult(interp, "missing style for column \"%s\"",
 			Tcl_GetString(objv[i]));
@@ -5316,42 +5403,50 @@ ItemStyleCmd(
 			goto doneSET;
 		    }
 		}
-		cs[count].changed = FALSE;
 		count++;
 	    }
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		changedI = FALSE;
 		for (i = 0; i < count; i++) {
-		    column = Item_CreateColumn(tree, item, cs[i].columnIndex, NULL);
-		    if (cs[i].style == NULL) {
-			if (column->style == NULL)
-			    continue;
-			TreeItemColumn_ForgetStyle(tree, (TreeItemColumn) column);
-		    } else {
-			if (column->style != NULL) {
-			    if (TreeStyle_GetMaster(tree, column->style) == cs[i].style)
+		    COLUMN_FOR_EACH(treeColumn, &cs[i].columns, NULL, &citer) {
+			if (treeColumn == tree->columnTail) continue; /* FIXME */
+			column = Item_CreateColumn(tree, item,
+				TreeColumn_Index(treeColumn), NULL);
+			if (cs[i].style == NULL) {
+			    if (column->style == NULL)
 				continue;
-			    TreeItemColumn_ForgetStyle(tree, (TreeItemColumn) column);
+			    TreeItemColumn_ForgetStyle(tree,
+				    (TreeItemColumn) column);
+			} else {
+			    if (column->style != NULL) {
+				if (TreeStyle_GetMaster(tree, column->style)
+					== cs[i].style)
+				    continue;
+				TreeItemColumn_ForgetStyle(tree,
+					(TreeItemColumn) column);
+			    }
+			    column->style = TreeStyle_NewInstance(tree,
+				    cs[i].style);
 			}
-			column->style = TreeStyle_NewInstance(tree, cs[i].style);
+			TreeItemColumn_InvalidateSize(tree,
+				(TreeItemColumn) column);
+			Tree_InvalidateColumnWidth(tree, treeColumn);
+			changedI = TRUE;
 		    }
-		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-		    changedI = TRUE;
-		    if (!cs[i].changed) {
-			Tree_InvalidateColumnWidth(tree, cs[i].treeColumn);
-			cs[i].changed = TRUE;
+		    if (changedI) {
+			TreeItem_InvalidateHeight(tree, (TreeItem) item);
+			Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
+			changed = TRUE;
 		    }
-		}
-		if (changedI) {
-		    TreeItem_InvalidateHeight(tree, (TreeItem) item);
-		    Tree_FreeItemDInfo(tree, (TreeItem) item, NULL);
-		    changed = TRUE;
 		}
 	    }
 	    if (changed)
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 doneSET:
+	    for (i = 0; i < count; i++) {
+		TreeColumnList_Free(&cs[i].columns);
+	    }
 	    STATIC_FREE(cs, struct columnStyle, objc / 2);
 	    break;
 	}
@@ -5860,7 +5955,7 @@ ItemSortCmd(
 	return TCL_ERROR;
     }
 
-    if (TreeItem_FromObj(tree, objv[3], &_item, 0) != TCL_OK)
+    if (TreeItem_FromObj(tree, objv[3], &_item, IFO_NOT_NULL) != TCL_OK)
 	return TCL_ERROR;
     item = (Item *) _item;
 
@@ -5904,7 +5999,7 @@ ItemSortCmd(
 		break;
 	    case OPT_COLUMN:
 		if (TreeColumn_FromObj(tree, objv[i + 1], &treeColumn,
-			    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+			    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		    return TCL_ERROR;
 		/* The first -column we see is the first column we compare */
 		if (sawColumn) {
@@ -5997,7 +6092,7 @@ ItemSortCmd(
 		break;
 	    }
 	    case OPT_FIRST:
-		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK)
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, IFO_NOT_NULL) != TCL_OK)
 		    return TCL_ERROR;
 		first = (Item *) _item;
 		if (first->parent != item) {
@@ -6014,7 +6109,7 @@ ItemSortCmd(
 		sortData.columns[sortData.columnCount - 1].sortBy = SORT_LONG;
 		break;
 	    case OPT_LAST:
-		if (TreeItem_FromObj(tree, objv[i + 1], &_item, 0) != TCL_OK)
+		if (TreeItem_FromObj(tree, objv[i + 1], &_item, IFO_NOT_NULL) != TCL_OK)
 		    return TCL_ERROR;
 		last = (Item *) _item;
 		if (last->parent != item) {
@@ -6338,25 +6433,30 @@ ItemStateCmd(
 	case COMMAND_FORCOLUMN:
 	{
 	    TreeItemList itemList;
+	    TreeColumnList columns;
 	    TreeColumn treeColumn;
 	    Tcl_Obj *listObj;
 	    Column *column;
 	    int columnIndex;
 	    int i, states[3], stateOn, stateOff;
 	    ItemForEach iter;
+	    ColumnForEach citer;
+	    int flags = IFO_NOT_NULL;
 	    int result = TCL_OK;
 
 	    if (objc < 6 || objc > 7) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item column ?stateList?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &itemList, IFO_ALLOK)
+	    /* Without a stateList only one item is accepted. */
+	    if (objc == 6)
+		flags |= IFO_NOT_MANY;
+	    if (TreeItemList_FromObj(tree, objv[4], &itemList, flags)
 		    != TCL_OK)
 		return TCL_ERROR;
+	    TreeColumnList_Init(tree, &columns, 0);
 	    if (objc == 6) {
-		item = (Item *) TreeItemList_ItemN(&itemList, 0);
-		if (item == (Item *) ITEM_ALL)
-		    item = (Item *) tree->root;
+		item = (Item *) TreeItemList_Nth(&itemList, 0);
 		if (Item_FindColumnFromObj(tree, item, objv[5], &column,
 			    &columnIndex) != TCL_OK) {
 		    result = TCL_ERROR;
@@ -6376,12 +6476,11 @@ ItemStateCmd(
 		Tcl_SetObjResult(interp, listObj);
 		goto doneFORC;
 	    }
-	    if (TreeColumn_FromObj(tree, objv[5], &treeColumn,
-		    CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+	    if (TreeColumnList_FromObj(tree, objv[5], &columns,
+		    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		result = TCL_ERROR;
 		goto doneFORC;
 	    }
-	    columnIndex = TreeColumn_Index(treeColumn);
 	    if (Tree_StateFromListObj(tree, objv[6], states, SFO_NOT_STATIC) != TCL_OK) {
 		result = TCL_ERROR;
 		goto doneFORC;
@@ -6390,15 +6489,20 @@ ItemStateCmd(
 		goto doneFORC;
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
-		column = Item_CreateColumn(tree, item, columnIndex, NULL);
-		stateOn = states[STATE_OP_ON];
-		stateOff = states[STATE_OP_OFF];
-		stateOn |= ~column->cstate & states[STATE_OP_TOGGLE];
-		stateOff |= column->cstate & states[STATE_OP_TOGGLE];
-		Column_ChangeState(tree, item, column, treeColumn,
-			stateOff, stateOn);
+		COLUMN_FOR_EACH(treeColumn, &columns, NULL, &citer) {
+		    if (treeColumn == tree->columnTail) continue; /* FIXME */
+		    columnIndex = TreeColumn_Index(treeColumn);
+		    column = Item_CreateColumn(tree, item, columnIndex, NULL);
+		    stateOn = states[STATE_OP_ON];
+		    stateOff = states[STATE_OP_OFF];
+		    stateOn |= ~column->cstate & states[STATE_OP_TOGGLE];
+		    stateOff |= column->cstate & states[STATE_OP_TOGGLE];
+		    Column_ChangeState(tree, item, column, treeColumn,
+			    stateOff, stateOn);
+		}
 	    }
 doneFORC:
+	    TreeColumnList_Free(&columns);
 	    TreeItemList_Free(&itemList);
 	    return result;
 	}
@@ -6413,7 +6517,7 @@ doneFORC:
 		Tcl_WrongNumArgs(interp, 5, objv, "?state?");
 		return TCL_ERROR;
 	    }
-	    if (TreeItem_FromObj(tree, objv[4], &_item, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[4], &_item, IFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    item = (Item *) _item;
 	    if (objc == 6) {
@@ -6451,13 +6555,13 @@ doneFORC:
 		Tcl_WrongNumArgs(interp, 5, objv, "?last? stateList");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &itemList, IFO_ALLOK) != TCL_OK)
+	    if (TreeItemList_FromObj(tree, objv[4], &itemList, IFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 	    if (objc == 6) {
 		TreeItemList_Init(tree, &item2List, 0);
 	    }
 	    if (objc == 7) {
-		if (TreeItemList_FromObj(tree, objv[5], &item2List, IFO_ALLOK) != TCL_OK) {
+		if (TreeItemList_FromObj(tree, objv[5], &item2List, IFO_NOT_NULL) != TCL_OK) {
 		    result =  TCL_ERROR;
 		    goto doneSET;
 		}
@@ -6554,7 +6658,7 @@ ItemTagCmd(
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_NOT_NULL) != TCL_OK) {
 		return TCL_ERROR;
 	    }
 	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
@@ -6584,7 +6688,7 @@ ItemTagCmd(
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagExpr");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_NOT_NULL) != TCL_OK) {
 		return TCL_ERROR;
 	    }
 	    if (TagExpr_Init(tree, objv[5], &expr) != TCL_OK) {
@@ -6615,7 +6719,7 @@ ItemTagCmd(
 		Tcl_WrongNumArgs(interp, 4, objv, "item");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_NOT_NULL) != TCL_OK) {
 		return TCL_ERROR;
 	    }
 	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
@@ -6646,7 +6750,7 @@ ItemTagCmd(
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
 		return TCL_ERROR;
 	    }
-	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_ALLOK) != TCL_OK) {
+	    if (TreeItemList_FromObj(tree, objv[4], &items, IFO_NOT_NULL) != TCL_OK) {
 		return TCL_ERROR;
 	    }
 	    if (Tcl_ListObjGetElements(interp, objv[5], &numTags, &listObjv) != TCL_OK) {
@@ -6720,7 +6824,7 @@ Tree_DeselectHidden(
 	hPtr = Tcl_NextHashEntry(&search);
     }
     for (i = 0; i < TreeItemList_Count(&items); i++)
-	Tree_RemoveFromSelection(tree, TreeItemList_ItemN(&items, i));
+	Tree_RemoveFromSelection(tree, TreeItemList_Nth(&items, i));
     if (TreeItemList_Count(&items)) {
 	TreeNotify_Selection(tree, NULL, &items);
     }
@@ -6841,7 +6945,7 @@ TreeItemCmd(
 	COMMAND_TEXT,
 	COMMAND_TOGGLE
     };
-#define AF_NOTANCESTOR	0x00010000 /* item can't be ancestor of other item */
+#define AF_NOT_ANCESTOR	0x00010000 /* item can't be ancestor of other item */
 #define AF_NOT_EQUAL	0x00020000 /* second item can't be same as first */
 #define AF_SAMEROOT	0x00040000 /* both items must be descendants of a common ancestor */
 #define AF_NOT_ITEM	0x00080000 /* arg is not an Item */
@@ -6854,46 +6958,46 @@ TreeItemCmd(
 	char *argString;
 	Tcl_ObjCmdProc *proc;
     } argInfo[] = {
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* ancestors */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* children */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* ancestors */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* children */
 	{ 0, 0, 0, 0, 0, NULL, ItemCreateCmd }, /* create */
-	{ 1, 2, IFO_ALLOK, IFO_ALLOK | AF_SAMEROOT, 0, "first ?last?", NULL }, /* delete */
-	{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, 0, "item ?newFirstChild?", NULL }, /* firstchild */
-	{ 1, 2, 0, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, 0, "item ?newLastChild?", NULL }, /* lastchild */
-	{ 1, 2, IFO_NOTROOT | IFO_NOTORPHAN, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, 0, "item ?newNextSibling?", NULL }, /* nextsibling */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* numchildren */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* parent */
-	{ 1, 2, IFO_NOTROOT | IFO_NOTORPHAN, IFO_NOTROOT | AF_NOTANCESTOR | AF_NOT_EQUAL, 0, "item ?newPrevSibling?", NULL }, /* prevsibling */
-	{ 1, 1, IFO_ALLOK | IFO_NOTROOT, 0, 0, "item", NULL }, /* remove */
+	{ 1, 2, IFO_NOT_NULL, IFO_NOT_NULL | AF_SAMEROOT, 0, "first ?last?", NULL }, /* delete */
+	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newFirstChild?", NULL }, /* firstchild */
+	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newLastChild?", NULL }, /* lastchild */
+	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newNextSibling?", NULL }, /* nextsibling */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* numchildren */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* parent */
+	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newPrevSibling?", NULL }, /* prevsibling */
+	{ 1, 1, IFO_NOT_NULL | IFO_NOT_ROOT, 0, 0, "item", NULL }, /* remove */
     
-	{ 1, 3, 0, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?element?", NULL }, /* bbox */
-	{ 2, 2, 0, AF_NOT_ITEM, 0, "item option", NULL }, /* cget */
-	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* collapse */
-	{ 3, 3, 0, AF_NOT_ITEM, AF_SAMEROOT, "item1 op item2", NULL }, /* compare */
-	{ 2, 100000, 0, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL }, /* complex */
-	{ 1, 100000, IFO_ALLOK, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL }, /* configure */
+	{ 1, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?element?", NULL }, /* bbox */
+	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item option", NULL }, /* cget */
+	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* collapse */
+	{ 3, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, "item1 op item2", NULL }, /* compare */
+	{ 2, 100000, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL }, /* complex */
+	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL }, /* configure */
 	{ 0, 1, AF_NOT_ITEM, 0, 0, "?-visible?" , NULL}, /* count */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* descendants */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* dump */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* descendants */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* dump */
 	{ 0, 0, 0, 0, 0, NULL, ItemElementCmd }, /* element */
-	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, 0, "item ?boolean?", NULL }, /* enabled */
-	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* expand */
-	{ 1, 1, IFO_ALLOK | IFO_NULLOK, 0, 0, "item", NULL }, /* id */
-	{ 1, 100000, IFO_ALLOK, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?", NULL }, /* image */
-	{ 2, 2, 0, 0, 0, "item item2", NULL }, /* isancestor */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* isopen */
-	{ 1, 2, 0, AF_NOT_ITEM, 0, "item ?-visible?", NULL }, /* order */
-	{ 2, 2, 0, AF_SAMEROOT, 0, "first last", NULL }, /* range */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* rnc */
+	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?boolean?", NULL }, /* enabled */
+	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* expand */
+	{ 1, 1, 0, 0, 0, "item", NULL }, /* id */
+	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?", NULL }, /* image */
+	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL, 0, "item item2", NULL }, /* isancestor */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* isopen */
+	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-visible?", NULL }, /* order */
+	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, 0, "first last", NULL }, /* range */
+	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* rnc */
 	{ 0, 0, 0, 0, 0, NULL, ItemSortCmd }, /* sort */
 #ifdef COLUMN_SPAN
-	{ 1, 100000, 0, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?span? ?column span ...?", NULL }, /* span */
+	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?span? ?column span ...?", NULL }, /* span */
 #endif
 	{ 0, 0, 0, 0, 0, NULL, ItemStateCmd }, /* state */
 	{ 0, 0, 0, 0, 0, NULL, ItemStyleCmd }, /* style */
 	{ 0, 0, 0, 0, 0, NULL, ItemTagCmd }, /* tag */
-	{ 1, 100000, IFO_ALLOK, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?", NULL }, /* text */
-	{ 1, 2, IFO_ALLOK, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* toggle */
+	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?", NULL }, /* text */
+	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* toggle */
     };
     int index;
     int numArgs = objc - 3;
@@ -6929,7 +7033,7 @@ TreeItemCmd(
 		    argInfo[index].flags & 0xFFFF) != TCL_OK) {
 	    goto errorExit;
 	}
-	_item = TreeItemList_ItemN(&itemList, 0); /* May be NULL. */
+	_item = TreeItemList_Nth(&itemList, 0); /* May be NULL. */
 	item = (Item *) _item;
     }
     if (((numArgs >= 2) && !(argInfo[index].flags2 & AF_NOT_ITEM)) ||
@@ -6946,20 +7050,20 @@ TreeItemCmd(
 		flags & 0xFFFF) != TCL_OK) {
 	    goto errorExit;
 	}
-	_item2 = TreeItemList_ItemN(&item2List, 0); /* May be NULL. */
+	_item2 = TreeItemList_Nth(&item2List, 0); /* May be NULL. */
 	item2 = (Item *) _item2;
 	if ((flags & AF_NOT_EQUAL) && (item == item2)) {
 	    FormatResult(interp, "item %s%d same as second item", tree->itemPrefix,
 		    item->id);
 	    goto errorExit;
 	}
-	if ((argInfo[index].flags & AF_NOTANCESTOR) &&
+	if ((argInfo[index].flags & AF_NOT_ANCESTOR) &&
 		TreeItem_IsAncestor(tree, (TreeItem) item, (TreeItem) item2)) {
 	    FormatResult(interp, "item %s%d is ancestor of item %s%d",
 		    tree->itemPrefix, item->id, tree->itemPrefix, item2->id);
 	    goto errorExit;
 	}
-	if ((flags & AF_NOTANCESTOR) &&
+	if ((flags & AF_NOT_ANCESTOR) &&
 		TreeItem_IsAncestor(tree, (TreeItem) item2, (TreeItem) item)) {
 	    FormatResult(interp, "item %s%d is ancestor of item %s%d",
 		    tree->itemPrefix, item2->id, tree->itemPrefix, item->id);
@@ -7007,7 +7111,7 @@ TreeItemCmd(
 		    break;
 	    } else {
 		if (TreeColumn_FromObj(tree, objv[4], &treeColumn,
-			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
+			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		    goto errorExit;
 		if (Tree_ItemBbox(tree, item_, TreeColumn_Lock(treeColumn),
 			&x, &y, &w, &h) < 0)
@@ -7136,7 +7240,7 @@ TreeItemCmd(
 	    }
 	    count = TreeItemList_Count(&items);
 	    for (i = 0; i < count; i++) {
-		_item = TreeItemList_ItemN(&items, i);
+		_item = TreeItemList_Nth(&items, i);
 		TreeItem_OpenClose(tree, _item, mode, FALSE);
 	    }
 	    TreeItemList_Free(&items);
@@ -7261,8 +7365,11 @@ TreeItemCmd(
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
 
-		if (_item == ITEM_ALL)
-		    _item = tree->root;
+		if ((_item == ITEM_ALL) ||
+			(TreeItemList_Count(&itemList) > 1)) {
+		    FormatResult(interp, "can't specify > 1 item for this command");
+		    goto errorExit;
+		}
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) item,
 			tree->itemOptionTable,
 			(objc == 4) ? (Tcl_Obj *) NULL : objv[4],
@@ -7369,7 +7476,7 @@ TreeItemCmd(
 	    count = TreeItemList_Count(&selected);
 	    if (count) {
 		for (i = 0; i < count; i++) {
-		    _item = TreeItemList_ItemN(&selected, i);
+		    _item = TreeItemList_Nth(&selected, i);
 		    Tree_RemoveFromSelection(tree, _item);
 		}
 		/* Generate <Selection> event for selected items being deleted. */
@@ -7428,8 +7535,11 @@ TreeItemCmd(
 	    ItemForEach iter;
 
 	    if (objc == 4) {
-		if (_item == ITEM_ALL)
-		    item = (Item *) tree->root;
+		if ((_item == ITEM_ALL) ||
+			(TreeItemList_Count(&itemList) > 1)) {
+		    FormatResult(interp, "can't specify > 1 item for this command");
+		    goto errorExit;
+		}
 		Tcl_SetObjResult(interp,
 			Tcl_NewBooleanObj(item->state & STATE_ENABLED));
 		break;
@@ -7666,14 +7776,18 @@ TreeItemCmd(
 	    Column *column = item->columns;
 	    Tcl_Obj *listObj;
 	    struct columnSpan {
-		TreeColumn treeColumn;
-		int columnIndex;
+		TreeColumnList columns;
 		int span;
-		int changed;
 	    } staticCS[STATIC_SIZE], *cs = staticCS;
 	    int i, count = 0, span, changed = FALSE;
 	    ItemForEach iter;
+	    ColumnForEach citer;
 
+	    if ((objc < 6) && ((_item == ITEM_ALL) ||
+		    (TreeItemList_Count(&itemList) > 1))) {
+		FormatResult(interp, "can't specify > 1 item for this command");
+		goto errorExit;
+	    }
 	    if (objc == 4) {
 		listObj = Tcl_NewListObj(0, NULL);
 		while (treeColumn != NULL) {
@@ -7701,8 +7815,8 @@ TreeItemCmd(
 	    /* Gather column/span pairs. */
 	    STATIC_ALLOC(cs, struct columnSpan, objc / 2);
 	    for (i = 4; i < objc; i += 2) {
-		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		if (TreeColumnList_FromObj(tree, objv[i], &cs[count].columns,
+			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneSPAN;
 		}
@@ -7715,24 +7829,23 @@ TreeItemCmd(
 		    result = TCL_ERROR;
 		    goto doneSPAN;
 		}
-		cs[count].treeColumn = treeColumn;
-		cs[count].columnIndex = TreeColumn_Index(treeColumn);
 		cs[count].span = span;
-		cs[count].changed = FALSE;
 		count++;
 	    }
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		int changedI = FALSE;
+		item = (Item *) _item;
 		for (i = 0; i < count; i++) {
-		    item = (Item *) _item;
-		    column = Item_CreateColumn(tree, item, cs[i].columnIndex, NULL);
-		    if (column->span != cs[i].span) {
-			column->span = cs[i].span;
-			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-			changedI = TRUE;
-			if (!cs[i].changed) {
-			    Tree_InvalidateColumnWidth(tree, cs[i].treeColumn);
-			    cs[i].changed = TRUE;
+		    COLUMN_FOR_EACH(treeColumn, &cs[i].columns, NULL, &citer) {
+			if (treeColumn == tree->columnTail) continue; /* FIXME */
+			column = Item_CreateColumn(tree, item,
+				TreeColumn_Index(treeColumn), NULL);
+			if (column->span != cs[i].span) {
+			    column->span = cs[i].span;
+			    TreeItemColumn_InvalidateSize(tree,
+				(TreeItemColumn) column);
+			    changedI = TRUE;
+			    Tree_InvalidateColumnWidth(tree, treeColumn);
 			}
 		    }
 		}
@@ -7745,6 +7858,9 @@ TreeItemCmd(
 	    if (changed)
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 doneSPAN:
+	    for (i = 0; i < count; i++) {
+		TreeColumnList_Free(&cs[i].columns);
+	    }
 	    STATIC_FREE(cs, struct columnSpan, objc / 2);
 	    break;
 	}
@@ -7759,16 +7875,17 @@ doneSPAN:
 	    Tcl_Obj *objPtr;
 	    int isImage = (index == COMMAND_IMAGE);
 	    struct columnObj {
-		TreeColumn treeColumn;
-		int columnIndex;
+		TreeColumnList columns;
 		Tcl_Obj *obj;
-		int changed;
 	    } staticCO[STATIC_SIZE], *co = staticCO;
-	    int i, count = 0, changed = FALSE;
+	    int i, count = 0, changed = FALSE, columnIndex;
 	    ItemForEach iter;
+	    ColumnForEach citer;
 
-	    if ((objc < 6) && (_item == ITEM_ALL)) {
-		item = (Item *) tree->root;
+	    if ((objc < 6) && ((_item == ITEM_ALL) ||
+		    (TreeItemList_Count(&itemList) > 1))) {
+		FormatResult(interp, "can't specify > 1 item for this command");
+		goto errorExit;
 	    }
 	    if (objc == 4) {
 		Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
@@ -7811,46 +7928,44 @@ doneSPAN:
 	    /* Gather column/obj pairs. */
 	    STATIC_ALLOC(co, struct columnObj, objc / 2);
 	    for (i = 4; i < objc; i += 2) {
-		if (TreeColumn_FromObj(tree, objv[i], &treeColumn,
-			CFO_NOT_MANY | CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
+		if (TreeColumnList_FromObj(tree, objv[i], &co[count].columns,
+			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto doneTEXT;
 		}
-		co[count].treeColumn = treeColumn;
-		co[count].columnIndex = TreeColumn_Index(treeColumn);
 		co[count].obj = objv[i + 1];
-		co[count].changed = FALSE;
 		count++;
 	    }
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		int changedI = FALSE;
 		item = (Item *) _item;
 		for (i = 0; i < count; i++) {
-		    column = Item_FindColumn(tree, item, co[i].columnIndex);
-		    if ((column == NULL) || (column->style == NULL)) {
-			NoStyleMsg(tree, item, co[i].columnIndex);
-			result = TCL_ERROR;
-			goto doneTEXT;
-		    }
-		    result = isImage ?
+		    COLUMN_FOR_EACH(treeColumn, &co[i].columns, NULL, &citer) {
+			if (treeColumn == tree->columnTail) continue; /* FIXME */
+			columnIndex = TreeColumn_Index(treeColumn);
+			column = Item_FindColumn(tree, item, columnIndex);
+			if ((column == NULL) || (column->style == NULL)) {
+			    NoStyleMsg(tree, item, columnIndex);
+			    result = TCL_ERROR;
+			    goto doneTEXT;
+			}
+			result = isImage ?
 #ifdef ROW_LABEL
-			TreeStyle_SetImage(tree, _item,
-			    (TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj) :
-			TreeStyle_SetText(tree, _item,
-			    (TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj);
+			    TreeStyle_SetImage(tree, _item,
+				(TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj) :
+			    TreeStyle_SetText(tree, _item,
+				(TreeItemColumn) column, (TreeRowLabel) NULL, column->style, co[i].obj);
 #else
-			TreeStyle_SetImage(tree, _item,
-			    (TreeItemColumn) column, column->style, co[i].obj) :
-			TreeStyle_SetText(tree, _item,
-			    (TreeItemColumn) column, column->style, co[i].obj);
+			    TreeStyle_SetImage(tree, _item,
+				(TreeItemColumn) column, column->style, co[i].obj) :
+			    TreeStyle_SetText(tree, _item,
+				(TreeItemColumn) column, column->style, co[i].obj);
 #endif
-		    if (result != TCL_OK)
-			goto doneTEXT;
-		    TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
-		    changedI = TRUE;
-		    if (!co[i].changed) {
-			Tree_InvalidateColumnWidth(tree, co[i].treeColumn);
-			co[i].changed = TRUE;
+			if (result != TCL_OK)
+			    goto doneTEXT;
+			TreeItemColumn_InvalidateSize(tree, (TreeItemColumn) column);
+			Tree_InvalidateColumnWidth(tree, treeColumn);
+			changedI = TRUE;
 		    }
 		}
 		if (changedI) {
@@ -7862,6 +7977,9 @@ doneSPAN:
 	    if (changed)
 		Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 doneTEXT:
+	    for (i = 0; i < count; i++) {
+		TreeColumnList_Free(&co[i].columns);
+	    }
 	    STATIC_FREE(co, struct columnObj, objc / 2);
 	    break;
 	}
