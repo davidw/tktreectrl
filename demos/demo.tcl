@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.46 2006/10/11 01:42:07 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.47 2006/10/14 20:23:28 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -635,7 +635,7 @@ proc MakeMainWindow {} {
     TreePlusScrollbarsInAFrame .f2.f1 1 1
     .f2.f1.t configure -indent 19
     .f2.f1.t debug configure -enable no -display yes -erasecolor pink \
-	-drawcolor orange -displaydelay 20
+	-drawcolor orange -displaydelay 30
 
     # Give it a big border to debug drawing
     .f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
@@ -732,16 +732,17 @@ proc MakeListPopup {T} {
     set m2 [menu $m.mDebug -tearoff no]
     $m2 add checkbutton -label Data -variable Popup(debug,data) \
 	-command {$Popup(T) debug configure -data $Popup(debug,data)}
-	set m3 [menu $m2.mDelay -tearoff no]
-	foreach n {0 10 20 30 40 50 60 70 80 90 100} {
-	    $m3 add radiobutton -label $n -variable Popup(debug,displaydelay) -value $n \
-		-command {$Popup(T) debug configure -displaydelay $Popup(debug,displaydelay)}
-	}
-	$m2 add cascade -label "Display Delay" -menu $m3
     $m2 add checkbutton -label Display -variable Popup(debug,display) \
 	-command {$Popup(T) debug configure -display $Popup(debug,display)}
     $m2 add checkbutton -label "Text Layout" -variable Popup(debug,textlayout) \
 	-command {$Popup(T) debug configure -textlayout $Popup(debug,textlayout)}
+    $m2 add separator
+    set m3 [menu $m2.mDelay -tearoff no]
+    foreach n {10 20 30 40 50 60 70 80 90 100} {
+	$m3 add radiobutton -label $n -variable Popup(debug,displaydelay) -value $n \
+	    -command {$Popup(T) debug configure -displaydelay $Popup(debug,displaydelay)}
+    }
+    $m2 add cascade -label "Display Delay" -menu $m3
     $m2 add separator
     $m2 add checkbutton -label Enable -variable Popup(debug,enable) \
 	-command {$Popup(T) debug configure -enable $Popup(debug,enable)}
@@ -1497,7 +1498,7 @@ proc CursorWindow {} {
 # A little screen magnifier
 if {[llength [info commands loupe]]} {
 
-    set Loupe(zoom) 3
+    set Loupe(zoom) 2
     set Loupe(x) 0
     set Loupe(y) 0
     set Loupe(auto) 1
@@ -1524,20 +1525,32 @@ if {[llength [info commands loupe]]} {
 	global Loupe
 
 	set w [toplevel .loupe]
+	wm title $w "TreeCtrl Magnifier"
 	wm withdraw $w
 	wm geometry $w -0+0
-	image create photo ImageLoupe -width 150 -height 150
-	pack [label $w.label -image ImageLoupe -borderwidth 0]
+	image create photo ImageLoupe -width 280 -height 150
+	pack [label $w.label -image ImageLoupe -borderwidth 1 -relief sunken] \
+	    -expand yes -fill both
+
+	set f [frame $w.zoom -borderwidth 0]
+	radiobutton $f.r1 -text "1x" -variable ::Loupe(zoom) -value 1
+	radiobutton $f.r2 -text "2x" -variable ::Loupe(zoom) -value 2
+	radiobutton $f.r4 -text "4x" -variable ::Loupe(zoom) -value 4
+	radiobutton $f.r8 -text "8x" -variable ::Loupe(zoom) -value 8
+	pack $f.r1 $f.r2 $f.r4 $f.r8 -side left
+	pack $f -side bottom -anchor e
 
 	# Resize the image with the window
 	bind LoupeWindow <Configure> {
-	    if {%w != [$Loupe(image) cget -width] ||
-		%h != [$Loupe(image) cget -height]} {
-		$Loupe(image) configure -width %w -height %h
-		loupe $Loupe(image) $Loupe(x) $Loupe(y) %w %h $Loupe(zoom)
+	    set w [expr {%w - 2}]
+	    set h [expr {%h - 2}]
+	    if {$w != [$Loupe(image) cget -width] ||
+		$h != [$Loupe(image) cget -height]} {
+		$Loupe(image) configure -width $w -height $h
+		loupe $Loupe(image) $Loupe(x) $Loupe(y) $w $h $Loupe(zoom)
 	    }
 	}
-	bindtags .loupe [concat [bindtags .loupe] LoupeWindow]
+	bindtags $w.label [concat [bindtags .loupe] LoupeWindow]
 
 	wm protocol $w WM_DELETE_WINDOW "ToggleLoupeWindow"
 
