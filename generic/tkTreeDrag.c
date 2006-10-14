@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.17 2006/10/11 01:26:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.18 2006/10/14 19:53:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -428,7 +428,7 @@ DragImageCmd(
 		return TCL_ERROR;
 	    }
 
-	    if (TreeItem_FromObj(tree, objv[3], &item, 0) != TCL_OK)
+	    if (TreeItem_FromObj(tree, objv[3], &item, IFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
 
 	    /* Validate all of the arguments, even if the command would exit
