@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.26 2006/10/04 03:54:25 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.27 2006/10/14 20:18:15 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -201,6 +201,44 @@ namespace eval ::TreeCtrl {
 # Retrieve filelist bindings from this dir
 source [file join [file dirname [info script]] filelist-bindings.tcl]
 
+# ::TreeCtrl::ColumnCanResizeLeft --
+#
+# Return 1 if the given column should be resized by the left edge.
+#
+# Arguments:
+# w		The treectrl widget.
+# column	The column.
+
+proc ::TreeCtrl::ColumnCanResizeLeft {w column} {
+    if {[$w column cget $column -lock] eq "right"} {
+	if {[$w column compare $column == "first visible lock right"]} {
+	    return 1
+	}
+	if {[$w column compare $column == "last visible lock right"]} {
+	    return 1
+	}
+    }
+    return 0
+}
+
+# ::TreeCtrl::ColumnCanMoveHere --
+#
+# Return 1 if the given column can be moved before another.
+#
+# Arguments:
+# w		The treectrl widget.
+# column	The column.
+
+proc ::TreeCtrl::ColumnCanMoveHere {w column before} {
+    if {[$w column compare $column == $before] ||
+	    ([$w column order $column] == [$w column order $before] - 1)} {
+	return 0
+    }
+    set lock [$w column cget $column -lock]
+    return [expr {[$w column compare $before >= "first lock $lock"] &&
+	[$w column compare $before <= "last lock $lock next"]}]
+}
+
 # ::TreeCtrl::CursorAction --
 #
 # If the given point is at the left or right edge of a resizable column, the
@@ -211,7 +249,7 @@ source [file join [file dirname [info script]] filelist-bindings.tcl]
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::CursorAction {w x y} {
     variable Priv
@@ -220,6 +258,11 @@ proc ::TreeCtrl::CursorAction {w x y} {
 	set column [lindex $id 1]
 	set side [lindex $id 2]
 	if {$side eq "left"} {
+	    if {[ColumnCanResizeLeft $w $column]} {
+		if {[$w column cget $column -resize]} {
+		    return "column $column"
+		}
+	    }
 	    if {[$w column compare $column != "first visible"]} {
 		set column [$w column id "$column prev visible"]
 		if {[$w column cget $column -resize]} {
@@ -227,8 +270,10 @@ proc ::TreeCtrl::CursorAction {w x y} {
 		}
 	    }
 	} else {
-	    if {[$w column cget $column -resize]} {
-		return "column $column"
+	    if {![ColumnCanResizeLeft $w $column]} {
+		if {[$w column cget $column -resize]} {
+		    return "column $column"
+		}
 	    }
 	}
     }
@@ -269,7 +314,7 @@ proc ::TreeCtrl::CursorAction {w x y} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::CursorCheck {w x y} {
     variable Priv
@@ -368,15 +413,22 @@ proc ::TreeCtrl::MotionInHeader {w args} {
     set column ""
     if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
-	if {[lindex $id 2] eq "left"} {
-	    if {[$w column compare $column != "first visible"]} {
+	set side [lindex $id 2]
+	if {$side eq "left"} {
+	    if {[ColumnCanResizeLeft $w $column]} {
+	    } elseif {[$w column compare $column != "first visible"]} {
 		set column [$w column id "$column prev visible"]
 	    }
-	}
-	if {[$w column compare $column == "tail"]} {
-	    set column ""
-	} elseif {![$w column cget $column -button]} {
-	    set column ""
+	} elseif {$side eq "right"} {
+	    if {![$w column cget $column -button]} {
+		set column ""
+	    }
+	} else {
+	    if {[$w column compare $column == "tail"]} {
+		set column ""
+	    } elseif {![$w column cget $column -button]} {
+		set column ""
+	    }
 	}
     }
     if {$column ne $prevColumn} {
@@ -440,8 +492,13 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	if {[llength $id] == 3} {
 	    set side [lindex $id 2]
 	    if {$side eq "left"} {
-		if {[$w column compare $column == "first visible"]} return
-		set column [$w column id "$column prev visible"]
+		if {[ColumnCanResizeLeft $w $column]} {
+		} else {
+		    if {[$w column compare $column == "first visible"]} return
+		    set column [$w column id "$column prev visible"]
+		}
+	    } else {
+		if {[ColumnCanResizeLeft $w $column]} return
 	    }
 	    if {![$w column cget $column -resize]} return
 	    set Priv(buttonMode) resize
@@ -519,8 +576,12 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
 	if {[llength $id] == 3} {
 	    set side [lindex $id 2]
 	    if {$side eq "left"} {
-		if {[$w column compare $column == "first visible"]} return
-		set column [$w column id "$column prev visible"]
+		if {![ColumnCanResizeLeft $w $column]} {
+		    if {[$w column compare $column == "first visible"]} return
+		    set column [$w column id "$column prev visible"]
+		}
+	    } else {
+		if {[ColumnCanResizeLeft $w $column]} return
 	    }
 	    if {[$w column compare $column == "tail"]} return
 	    $w column configure $column -width ""
@@ -592,19 +653,29 @@ proc ::TreeCtrl::Motion1 {w x y} {
 		set id [$w identify $x $Priv(columnDrag,y)]
 		if {[lindex $id 0] eq "header"} {
 		    set column [lindex $id 1]
+		    set before $column
 		    if {[$w column compare $column == "tail"]} {
-			$w column dragconfigure -indicatorcolumn tail
-		    } elseif {$column ne ""} {
+			set side left
+		    } else {
 			scan [$w column bbox $column] "%d %d %d %d" x1 y1 x2 y2
 			if {$x < $x1 + ($x2 - $x1) / 2} {
-			    $w column dragconfigure -indicatorcolumn $column
+			    set side left
 			} else {
-			    $w column dragconfigure -indicatorcolumn "$column next visible"
+			    set before [$w column id "$column next visible"]
+			    set side right
 			}
+		    }
+		    if {[ColumnCanMoveHere $w $Priv(column) $before]} {
+			$w column dragconfigure -indicatorcolumn $column \
+			    -indicatorside $side
+		    } else {
+			$w column dragconfigure -indicatorcolumn ""
 		    }
 		}
 	    }
-	    ColumnDragScrollCheck $w $x $y
+	    if {[$w column cget $Priv(column) -lock] eq "none"} {
+		ColumnDragScrollCheck $w $x $y
+	    }
 	}
 	normal {
 	    set Priv(x) $x
@@ -614,7 +685,11 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    AutoScanCheck $w $x $y
 	}
 	resize {
-	    set width [expr {$Priv(width) + $x - $Priv(x)}]
+	    if {[ColumnCanResizeLeft $w $Priv(column)]} {
+		set width [expr {$Priv(width) + $Priv(x) - $x}]
+	    } else {
+		set width [expr {$Priv(width) + $x - $Priv(x)}]
+	    }
 	    set minWidth [$w column cget $Priv(column) -minwidth]
 	    set maxWidth [$w column cget $Priv(column) -maxwidth]
 	    if {$minWidth eq ""} {
@@ -632,9 +707,15 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    switch -- [$w cget -columnresizemode] {
 		proxy {
 		    scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
-		    # Use "ne" because -columnproxy could be ""
-		    if {($x1 + $width - 1) ne [$w cget -columnproxy]} {
-			$w configure -columnproxy [expr {$x1 + $width - 1}]
+		    if {[ColumnCanResizeLeft $w $Priv(column)]} {
+			# Use "ne" because -columnproxy could be ""
+			if {$x ne [$w cget -columnproxy]} {
+			    $w configure -columnproxy $x
+			}
+		    } else {
+			if {($x1 + $width - 1) ne [$w cget -columnproxy]} {
+			    $w configure -columnproxy [expr {$x1 + $width - 1}]
+			}
 		    }
 		}
 		realtime {
@@ -774,14 +855,19 @@ proc ::TreeCtrl::Release1 {w x y} {
 	dragColumn {
 	    AutoScanCancel $w
 	    $w column configure $Priv(column) -state normal
-	    set visible [expr {[$w column dragcget -imagecolumn] ne ""}]
-	    if {$visible} {
-		$w column dragconfigure -imagecolumn ""
-		set column [$w column dragcget -indicatorcolumn]
-		if {($column ne "") && [$w column compare $column != $Priv(column)]} {
-		    TryEvent $w ColumnDrag receive [list C $Priv(column) b $column]
+	    if {[$w column dragcget -imagecolumn] ne ""} {
+		set visible 1
+	    } else {
+		set visible 0
+	    }
+	    set column [$w column dragcget -indicatorcolumn]
+	    $w column dragconfigure -imagecolumn "" -indicatorcolumn ""
+	    if {$visible && ($column ne "")} {
+		set side [$w column dragcget -indicatorside]
+		if {$side eq "right"} {
+		    set column [$w column id "$column next visible"]
 		}
-		$w column dragconfigure -indicatorcolumn ""
+		TryEvent $w ColumnDrag receive [list C $Priv(column) b $column]
 	    }
 	    set id [$w identify $x $y]
 	    if {[lindex $id 0] eq "header"} {
@@ -805,7 +891,11 @@ set Priv(prev) ""
 	resize {
 	    if {[$w cget -columnproxy] ne ""} {
 		scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
-		set width [expr {[$w cget -columnproxy] - $x1 + 1}]
+		if {[ColumnCanResizeLeft $w $Priv(column)]} {
+		    set width [expr {$x2 - [$w cget -columnproxy]}]
+		} else {
+		    set width [expr {[$w cget -columnproxy] - $x1 + 1}]
+		}
 		$w configure -columnproxy {}
 		$w column configure $Priv(column) -width $width
 		CursorCheck $w $x $y
@@ -1079,7 +1169,7 @@ proc ::TreeCtrl::AutoScanCancel {w} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::ColumnDragScrollCheck {w x y} {
     variable Priv
@@ -1349,7 +1439,7 @@ proc ::TreeCtrl::SelectAll w {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::MarqueeBegin {w x y} {
     set x [$w canvasx $x]
@@ -1366,7 +1456,7 @@ proc ::TreeCtrl::MarqueeBegin {w x y} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::MarqueeUpdate {w x y} {
     set x [$w canvasx $x]
@@ -1382,7 +1472,7 @@ proc ::TreeCtrl::MarqueeUpdate {w x y} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::MarqueeEnd {w x y} {
     $w marquee configure -visible no
@@ -1396,7 +1486,7 @@ proc ::TreeCtrl::MarqueeEnd {w x y} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::ScanMark {w x y} {
     variable Priv
@@ -1414,7 +1504,7 @@ proc ::TreeCtrl::ScanMark {w x y} {
 # Arguments:
 # w		The treectrl widget.
 # x		Window coord of pointer.
-# y		Window coord or pointer.
+# y		Window coord of pointer.
 
 proc ::TreeCtrl::ScanDrag {w x y} {
     variable Priv
