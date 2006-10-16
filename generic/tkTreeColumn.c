@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.45 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.46 2006/10/16 01:18:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -484,6 +484,129 @@ ImageChangedProc(
     Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnStateFromObj --
+ *
+ *	Parses a string object containing "state" or "!state" to a
+ *	state bit flag.
+ *	This function is passed to PerStateInfo_FromObj().
+ *
+ * Results:
+ *	A standard Tcl result.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ColumnStateFromObj(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *obj,		/* String object to parse. */
+    int *stateOff,		/* OR'd with state bit if "!state" is
+				 * specified. Caller must initialize. */
+    int *stateOn		/* OR'd with state bit if "state" is
+				 * specified. Caller must initialize. */
+    )
+{
+    Tcl_Interp *interp = tree->interp;
+    int i, op = STATE_OP_ON, op2, op3, length, state = 0;
+    char ch0, *string;
+    CONST char *stateNames[4] = { "normal", "active", "pressed", "up" };
+    int states[3];
+
+    states[STATE_OP_ON] = 0;
+    states[STATE_OP_OFF] = 0;
+    states[STATE_OP_TOGGLE] = 0;
+
+    string = Tcl_GetStringFromObj(obj, &length);
+    if (length == 0)
+	goto unknown;
+    ch0 = string[0];
+    if (ch0 == '!') {
+	op = STATE_OP_OFF;
+	++string;
+	ch0 = string[0];
+    } else if (ch0 == '~') {
+	if (1) {
+	    FormatResult(interp, "can't specify '~' for this command");
+	    return TCL_ERROR;
+	}
+	op = STATE_OP_TOGGLE;
+	++string;
+	ch0 = string[0];
+    }
+    for (i = 0; i < 4; i++) {
+	if ((ch0 == stateNames[i][0]) && !strcmp(string, stateNames[i])) {
+	    state = 1L << i;
+	    break;
+	}
+    }
+    if (state == 0)
+	goto unknown;
+
+    if (op == STATE_OP_ON) {
+	op2 = STATE_OP_OFF;
+	op3 = STATE_OP_TOGGLE;
+    }
+    else if (op == STATE_OP_OFF) {
+	op2 = STATE_OP_ON;
+	op3 = STATE_OP_TOGGLE;
+    } else {
+	op2 = STATE_OP_ON;
+	op3 = STATE_OP_OFF;
+    }
+    states[op2] &= ~state;
+    states[op3] &= ~state;
+    states[op] |= state;
+
+    *stateOn |= states[STATE_OP_ON];
+    *stateOff |= states[STATE_OP_OFF];
+
+    return TCL_OK;
+
+unknown:
+    FormatResult(interp, "unknown state \"%s\"", string);
+    return TCL_ERROR;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_MakeState --
+ *
+ *	Return a bit mask suitable for passing to the PerState_xxx
+ *	functions.
+ *
+ * Results:
+ *	State flags for the column's current state.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+Column_MakeState(
+    Column *column		/* Column record. */
+    )
+{
+    int state = 0;
+    if (column->state == COLUMN_STATE_NORMAL)
+	state |= 1L << 0;
+    else if (column->state == COLUMN_STATE_ACTIVE)
+	state |= 1L << 1;
+    else if (column->state == COLUMN_STATE_PRESSED)
+	state |= 1L << 2;
+    if (column->arrow == ARROW_UP)
+	state |= 1L << 3;
+    return state;
+}
+
 typedef struct Qualifiers {
     TreeCtrl *tree;
     int visible;		/* 1 for -visible TRUE,
@@ -601,9 +724,19 @@ Qualifiers_Scan(
 #endif
 	    case QUAL_STATE:
 	    {
-/*		if (Tree_StateFromListObj(tree, objv[j + 1], q->states,
-			SFO_NOT_TOGGLE) != TCL_OK)
-		    goto errorExit;*/
+		int i, listObjc;
+		Tcl_Obj **listObjv;
+
+		if (Tcl_ListObjGetElements(interp, objv[j + 1],
+			&listObjc, &listObjv) != TCL_OK)
+		    goto errorExit;
+		q->states[STATE_OP_OFF] = q->states[STATE_OP_ON] = 0;
+		for (i = 0; i < listObjc; i++) {
+		    if (ColumnStateFromObj(tree, listObjv[i],
+			    &q->states[STATE_OP_OFF],
+			    &q->states[STATE_OP_ON]) != TCL_OK)
+			goto errorExit;
+		}
 		break;
 	    }
 	    case QUAL_TAG:
@@ -666,9 +799,9 @@ Qualifies(
 	return 0;
     else if ((q->visible == 0) && column->visible)
 	return 0;
-    if (q->states[STATE_OP_OFF] & column->state)
+    if (q->states[STATE_OP_OFF] & Column_MakeState(column))
 	return 0;
-    if ((q->states[STATE_OP_ON] & column->state) != q->states[STATE_OP_ON])
+    if ((q->states[STATE_OP_ON] & Column_MakeState(column)) != q->states[STATE_OP_ON])
 	return 0;
     if (q->exprOK && !TagExpr_Eval(&q->expr, column->tagInfo))
 	return 0;
@@ -1448,40 +1581,6 @@ TreeColumn_Prev(
 /*
  *----------------------------------------------------------------------
  *
- * Column_MakeState --
- *
- *	Return a bit mask suitable for passing to the PerState_xxx
- *	functions.
- *
- * Results:
- *	State flags for the column's current state.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-Column_MakeState(
-    Column *column		/* Column record. */
-    )
-{
-    int state = 0;
-    if (column->state == COLUMN_STATE_NORMAL)
-	state |= 1L << 0;
-    else if (column->state == COLUMN_STATE_ACTIVE)
-	state |= 1L << 1;
-    else if (column->state == COLUMN_STATE_PRESSED)
-	state |= 1L << 2;
-    if (column->arrow == ARROW_UP)
-	state |= 1L << 3;
-    return state;
-}
-
-/*
- *----------------------------------------------------------------------
- *
  * Column_FreeColors --
  *
  *	Frees an array of XColors. This is used to free the -itembackground
@@ -1513,95 +1612,6 @@ Column_FreeColors(
 	}
     }
     WCFREE(colors, XColor *, count);
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * ColumnStateFromObj --
- *
- *	Parses a string object containing "state" or "!state" to a
- *	state bit flag.
- *	This function is passed to PerStateInfo_FromObj().
- *
- * Results:
- *	A standard Tcl result.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-static int
-ColumnStateFromObj(
-    TreeCtrl *tree,		/* Widget info. */
-    Tcl_Obj *obj,		/* String object to parse. */
-    int *stateOff,		/* OR'd with state bit if "!state" is
-				 * specified. Caller must initialize. */
-    int *stateOn		/* OR'd with state bit if "state" is
-				 * specified. Caller must initialize. */
-    )
-{
-    Tcl_Interp *interp = tree->interp;
-    int i, op = STATE_OP_ON, op2, op3, length, state = 0;
-    char ch0, *string;
-    CONST char *stateNames[4] = { "normal", "active", "pressed", "up" };
-    int states[3];
-
-    states[STATE_OP_ON] = 0;
-    states[STATE_OP_OFF] = 0;
-    states[STATE_OP_TOGGLE] = 0;
-
-    string = Tcl_GetStringFromObj(obj, &length);
-    if (length == 0)
-	goto unknown;
-    ch0 = string[0];
-    if (ch0 == '!') {
-	op = STATE_OP_OFF;
-	++string;
-	ch0 = string[0];
-    } else if (ch0 == '~') {
-	if (1) {
-	    FormatResult(interp, "can't specify '~' for this command");
-	    return TCL_ERROR;
-	}
-	op = STATE_OP_TOGGLE;
-	++string;
-	ch0 = string[0];
-    }
-    for (i = 0; i < 4; i++) {
-	if ((ch0 == stateNames[i][0]) && !strcmp(string, stateNames[i])) {
-	    state = 1L << i;
-	    break;
-	}
-    }
-    if (state == 0)
-	goto unknown;
-
-    if (op == STATE_OP_ON) {
-	op2 = STATE_OP_OFF;
-	op3 = STATE_OP_TOGGLE;
-    }
-    else if (op == STATE_OP_OFF) {
-	op2 = STATE_OP_ON;
-	op3 = STATE_OP_TOGGLE;
-    } else {
-	op2 = STATE_OP_ON;
-	op3 = STATE_OP_OFF;
-    }
-    states[op2] &= ~state;
-    states[op3] &= ~state;
-    states[op] |= state;
-
-    *stateOn |= states[STATE_OP_ON];
-    *stateOff |= states[STATE_OP_OFF];
-
-    return TCL_OK;
-
-unknown:
-    FormatResult(interp, "unknown state \"%s\"", string);
-    return TCL_ERROR;
 }
 
 #ifdef COLUMN_LOCK
@@ -3632,6 +3642,7 @@ TreeColumnCmd(
 		if (citer.all) {
 		    column = (Column *) tree->columns;
 		    while (column != NULL) {
+			TreeDisplay_ColumnDeleted(tree, (TreeColumn) column);
 			column = Column_Free(column);
 		    }
 		    ((Column *) tree->columnTail)->index = 0;
@@ -3669,6 +3680,8 @@ TreeColumnCmd(
 			    column->index);
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
+
+		TreeDisplay_ColumnDeleted(tree, (TreeColumn) column);
 
 		/* Unlink. */
 		prev = column->prev;
