@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.44 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.45 2006/10/16 01:16:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2632,44 +2632,210 @@ UpdateSpansForItem(
 }
 #endif
 
-#define DCOLUMNxxx
+#define DCOLUMN
 #ifdef DCOLUMN
+
+/*
+ *--------------------------------------------------------------
+ *
+ * GetOnScreenColumnsForItemAux --
+ *
+ *	Determine which columns of an item are onscreen.
+ *
+ * Results:
+ *	Sets the column list.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
-UpdateDColumnsForItem(
+GetOnScreenColumnsForItemAux(
     TreeCtrl *tree,		/* Widget info. */
-    DItem *dItem		/* Display info for an item. */
+    DItem *dItem,		/* Display info for an item. */
+    DItemArea *area,		/* Layout info. */
+    int bounds[4],		/* Window bounds of what's visible. */
+#ifdef COLUMN_LOCK
+    int lock,			/* Set of columns we care about. */
+#endif
+    TreeColumnList *columns	/* Initialized list to append to. */
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    int minX, maxX, columnIndex, x = 0;
-    TreeColumn column, first = NULL, last = NULL;
+    int minX, maxX, columnIndex, x = 0, i, width;
+    TreeColumn column;
 
-    minX = MAX(dItem->x, Tree_ContentLeft(tree));
-    maxX = MIN(dItem->x + dItem->width, Tree_ContentRight(tree));
+    minX = MAX(area->x, bounds[0]);
+    maxX = MIN(area->x + area->width, bounds[2]);
 
-    minX -= dItem->x;
-    maxX -= dItem->x;
+    minX -= area->x;
+    maxX -= area->x;
 
-    for (column = tree->columns, columnIndex = 0;
-	    column != NULL;
-	    column = TreeColumn_Next(column), columnIndex++) {
-	if (TreeColumn_Visible(column) && TreeColumn_Lock(column) == COLUMN_LOCK_NONE) {
-	    if (x < maxX && x + dInfo->columns[columnIndex].width > minX) {
-		if (first == NULL)
-		    first = column;
-		last = column;
-	    }
-	    x += dInfo->columns[columnIndex].width;
+    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+	column = dInfo->columns[columnIndex].column;
+	if (!TreeColumn_Visible(column))
+	    continue;
+	if (TreeColumn_Lock(column) != lock)
+	    continue;
+	width = dInfo->columns[columnIndex].width;
+#ifdef COLUMN_SPAN
+	if (dItem->spans[columnIndex] != columnIndex)
+	    goto next;
+	/* Start of a span */
+	for (i = columnIndex + 1; columnIndex < tree->columnCount &&
+		dItem->spans[i] == columnIndex; i++)
+	    width += dInfo->columns[i].width;
+#endif
+	if (x < maxX && x + width > minX) {
+	    TreeColumnList_Append(columns, column);
+	}
+#ifdef COLUMN_SPAN
+	columnIndex = i - 1;
+#endif
+next:
+	x += width;
+	if (x >= maxX)
+	    break;
+    }
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * GetOnScreenColumnsForItem --
+ *
+ *	Determine which columns of an item are onscreen.
+ *
+ * Results:
+ *	Sets the column list.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
+static int
+GetOnScreenColumnsForItem(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItem,		/* Display info for an item. */
+    TreeColumnList *columns	/* Initialized list to append to. */
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+
+    if (!dInfo->empty) {
+	GetOnScreenColumnsForItemAux(tree, dItem, &dItem->area,
+	    dInfo->bounds,
+#ifdef COLUMN_LOCK
+	    COLUMN_LOCK_NONE,
+#endif
+	    columns);
+    }
+#ifdef COLUMN_LOCK
+    if (!dInfo->emptyL) {
+	GetOnScreenColumnsForItemAux(tree, dItem,
+	    &dItem->left, dInfo->boundsL, COLUMN_LOCK_LEFT,
+	    columns);
+    }
+    if (!dInfo->emptyR) {
+	GetOnScreenColumnsForItemAux(tree, dItem,
+	    &dItem->right, dInfo->boundsR, COLUMN_LOCK_RIGHT,
+	    columns);
+    }
+#endif /* COLUMN_LOCK */
+    return TreeColumnList_Count(columns);
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * TrackOnScreenColumnsForItem --
+ *
+ *	Compares the list of onscreen columns for an item to the
+ *	list of previously-onscreen columns for the item.
+ *
+ * Results:
+ *	Hides window elements for columns that are no longer
+ *	onscreen.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *--------------------------------------------------------------
+ */
+
+static void
+TrackOnScreenColumnsForItem(
+    TreeCtrl *tree,		/* Widget info. */
+    DItem *dItem,		/* Item display info. */
+    Tcl_HashEntry *hPtr		/* DInfo.itemVisHash entry. */
+    )
+{
+    TreeColumnList columns;
+    TreeColumn column, *value;
+    int i, j, count = 0, n = 0;
+    char buf[256];
+
+    TreeColumnList_Init(tree, &columns, 0);
+    count = GetOnScreenColumnsForItem(tree, dItem, &columns);
+
+    if (tree->debug.enable && tree->debug.display)
+	sprintf(buf, "item %d:", TreeItem_GetID(tree, dItem->item));
+
+    value = (TreeColumn *) Tcl_GetHashValue(hPtr);
+
+    /* Track newly-visible columns */
+    for (i = 0; i < count; i++) {
+	column = TreeColumnList_Nth(&columns, i);
+	for (j = 0; value[j] != NULL; j++) {
+	    if (column == value[j])
+		break;
+	}
+	if (value[j] == NULL) {
+	    if (tree->debug.enable && tree->debug.display)
+		sprintf(buf + strlen(buf), " +%d", TreeColumn_GetID(column));
+	    n++;
 	}
     }
 
-    if (first != NULL && tree->debug.enable && tree->debug.display)
-	dbwin("UpdateDColumnsForItem %d %d-%d\n",
-	    TreeItem_GetID(tree, dItem->item),
-	    TreeColumn_GetID(first),
-	    TreeColumn_GetID(last));
+    /* Track newly-hidden columns */
+    for (j = 0; value[j] != NULL; j++) {
+	column = value[j];
+	for (i = 0; i < count; i++) {
+	    if (TreeColumnList_Nth(&columns, i) == column)
+		break;
+	}
+	if (i == count) {
+	    TreeItemColumn itemColumn = TreeItem_FindColumn(tree, dItem->item,
+		TreeColumn_Index(column));
+	    if (itemColumn != NULL) {
+		TreeStyle style = TreeItemColumn_GetStyle(tree, itemColumn);
+		if (style != NULL)
+		    TreeStyle_OnScreen(tree, style, FALSE);
+	    }
+	    if (tree->debug.enable && tree->debug.display)
+		sprintf(buf + strlen(buf), " -%d", TreeColumn_GetID(column));
+	    n++;
+	}
+    }
+
+    if (n && tree->debug.enable && tree->debug.display)
+	dbwin("%s", buf);
+
+    if (n > 0) {
+	ckfree((char *) value);
+	value = (TreeColumn *) ckalloc(sizeof(TreeColumn) * (count + 1));
+	memcpy(value, (TreeColumn *) columns.pointers, sizeof(TreeColumn) * count);
+	value[count] = NULL;
+	Tcl_SetHashValue(hPtr, (ClientData) value);
+    }
+    TreeColumnList_Free(&columns);
 }
-#endif
+
+#endif /* DCOLUMN */
 
 /*
  *--------------------------------------------------------------
@@ -2797,9 +2963,6 @@ UpdateDInfoForRange(
 #ifdef COLUMN_SPAN
 	    UpdateSpansForItem(tree, dItem);
 #endif
-#ifdef DCOLUMN
-	    UpdateDColumnsForItem(tree, dItem);
-#endif
 
 	    /* Keep track of the maximum item size */
 	    if (area->width > dInfo->itemWidth)
@@ -2908,9 +3071,6 @@ UpdateDInfoForRange(
 
 #ifdef COLUMN_SPAN
 	    UpdateSpansForItem(tree, dItem);
-#endif
-#ifdef DCOLUMN
-	    UpdateDColumnsForItem(tree, dItem);
 #endif
 
 	    /* Keep track of the maximum item size */
@@ -4673,6 +4833,13 @@ displayRetry:
 		TreeItemList_Append(&newV, dItem->item);
 		TreeItem_OnScreen(tree, dItem->item, TRUE);
 	    }
+#ifdef DCOLUMN
+	    /* The item was onscreen and still is. Figure out which
+	     * item-columns have become visible or hidden. */
+	    else {
+		TrackOnScreenColumnsForItem(tree, dItem, hPtr);
+	    }
+#endif /* DCOLUMN */
 	}
 
 	hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
@@ -4691,6 +4858,9 @@ displayRetry:
 	for (i = 0; i < count; i++) {
 	    item = TreeItemList_Nth(&newH, i);
 	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
+#ifdef DCOLUMN
+	    ckfree((char *) Tcl_GetHashValue(hPtr));
+#endif
 	    Tcl_DeleteHashEntry(hPtr);
 	}
 
@@ -4699,6 +4869,34 @@ displayRetry:
 	for (i = 0; i < count; i++) {
 	    item = TreeItemList_Nth(&newV, i);
 	    hPtr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) item, &isNew);
+#ifdef DCOLUMN
+	    {
+		TreeColumnList columns;
+		TreeColumn *value;
+		int i, count = 0;
+
+		dItem = (DItem *) TreeItem_GetDInfo(tree, item);
+
+		TreeColumnList_Init(tree, &columns, 0);
+		count = GetOnScreenColumnsForItem(tree, dItem, &columns);
+
+		value = (TreeColumn *) ckalloc(sizeof(TreeColumn) * (count + 1));
+		memcpy(value, (TreeColumn *) columns.pointers, sizeof(TreeColumn) * count);
+		value[count] = NULL;
+		Tcl_SetHashValue(hPtr, (ClientData) value);
+
+		TreeColumnList_Free(&columns);
+
+		if (tree->debug.enable && tree->debug.display) {
+		    char buf[256];
+		    sprintf(buf, "item %d:", TreeItem_GetID(tree, dItem->item));
+		    for (i = 0; i < count; i++)
+			sprintf(buf + strlen(buf), " +%d",
+			    TreeColumn_GetID(value[i]));
+		    dbwin("%s", buf);
+		}
+	    }
+#endif /* DCOLUMN */
 	}
 
 	requests = dInfo->requests;
@@ -5969,8 +6167,63 @@ TreeDisplay_ItemDeleted(
     Tcl_HashEntry *hPtr;
 
     hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
-    if (hPtr != NULL)
+    if (hPtr != NULL) {
+#ifdef DCOLUMN
+	ckfree((char *) Tcl_GetHashValue(hPtr));
+#endif
 	Tcl_DeleteHashEntry(hPtr);
+    }
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDisplay_ColumnDeleted --
+ *
+ *	Removes a column from the list of on-screen columns for
+ *	all on-screen items.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+TreeDisplay_ColumnDeleted(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeColumn column		/* Column to remove. */
+    )
+{
+#ifdef DCOLUMN
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    Tcl_HashSearch search;
+    Tcl_HashEntry *hPtr;
+    TreeColumn *value;
+    int i;
+
+    hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
+    while (hPtr != NULL) {
+	value = (TreeColumn *) Tcl_GetHashValue(hPtr);
+	for (i = 0; value[i] != NULL; i++) {
+	    if (value[i] == column) {
+		while (value[i] != NULL) {
+		    value[i] = value[i + 1];
+		    ++i;
+		}
+if (tree->debug.enable && tree->debug.display)
+    dbwin("TreeDisplay_ColumnDeleted item %d column %d",
+	TreeItem_GetID(tree, Tcl_GetHashKey(&dInfo->itemVisHash, hPtr)),
+	TreeColumn_GetID(column));
+		break;
+	    }
+	}
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+#endif
 }
 
 /*
