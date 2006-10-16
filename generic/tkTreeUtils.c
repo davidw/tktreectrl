@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.41 2006/10/05 22:44:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.42 2006/10/16 01:22:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2072,6 +2072,8 @@ ObjectIsEmpty(
     return (length == 0);
 }
 
+#define PERSTATE_ROUNDUP 5
+
 /*
  *----------------------------------------------------------------------
  *
@@ -2111,8 +2113,8 @@ PerStateInfo_Free(
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
 #ifdef ALLOC_HAX
-    AllocHax_CFree(tree->allocData, (char *) pInfo->data, typePtr->size,
-	pInfo->count, 5);
+    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pInfo->data, typePtr->size,
+	pInfo->count, PERSTATE_ROUNDUP);
 #else
     WIPEFREE(pInfo->data, typePtr->size * pInfo->count);
 #endif
@@ -2171,15 +2173,15 @@ PerStateInfo_FromObj(
     if (objc == 1) {
 #ifdef ALLOC_HAX
 	pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
-	    typePtr->size, 1, 5);
+	    typePtr->name, typePtr->size, 1, PERSTATE_ROUNDUP);
 #else
 	pData = (PerStateData *) ckalloc(typePtr->size);
 #endif
 	pData->stateOff = pData->stateOn = 0; /* all states */
 	if ((*typePtr->fromObjProc)(tree, objv[0], pData) != TCL_OK) {
 #ifdef ALLOC_HAX
-	    AllocHax_CFree(tree->allocData, (char *) pData, typePtr->size,
-		1, 5);
+	    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pData,
+		typePtr->size, 1, PERSTATE_ROUNDUP);
 #else
 	    WIPEFREE(pData, typePtr->size);
 #endif
@@ -2197,7 +2199,7 @@ PerStateInfo_FromObj(
 
 #ifdef ALLOC_HAX
     pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
-	typePtr->size, objc / 2, 5);
+	typePtr->name, typePtr->size, objc / 2, PERSTATE_ROUNDUP);
 #else
     pData = (PerStateData *) ckalloc(typePtr->size * (objc / 2));
 #endif
@@ -2227,8 +2229,8 @@ freeIt:
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
 #ifdef ALLOC_HAX
-    AllocHax_CFree(tree->allocData, (char *) pInfo->data, typePtr->size,
-	objc / 2, 5);
+    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pInfo->data,
+	typePtr->size, objc / 2, PERSTATE_ROUNDUP);
 #else
     WIPEFREE(pInfo->data, typePtr->size * (objc / 2));
 #endif
@@ -2269,9 +2271,10 @@ PerStateInfo_ForState(
     int i;
 
 #ifdef TREECTRL_DEBUG
-    if ((pInfo->data != NULL) && (pInfo->type != typePtr))
+    if ((pInfo->data != NULL) && (pInfo->type != typePtr)) {
 	panic("PerStateInfo_ForState type mismatch: got %s expected %s",
 		pInfo->type ? pInfo->type->name : "NULL", typePtr->name);
+    }
 #endif
 
     for (i = 0; i < pInfo->count; i++) {
@@ -2509,9 +2512,7 @@ static void PSDBitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
 
 PerStateType pstBitmap =
 {
-#ifdef TREECTRL_DEBUG
-    "Bitmap",
-#endif
+    "pstBitmap",
     sizeof(PerStateDataBitmap),
     (PerStateType_FromObjProc) PSDBitmapFromObj,
     (PerStateType_FreeProc) PSDBitmapFree
@@ -2580,9 +2581,7 @@ static void PSDBooleanFree(TreeCtrl *tree, PerStateDataBoolean *pBoolean)
 
 PerStateType pstBoolean =
 {
-#ifdef TREECTRL_DEBUG
-    "Boolean",
-#endif
+    "pstBoolean",
     sizeof(PerStateDataBoolean),
     (PerStateType_FromObjProc) PSDBooleanFromObj,
     (PerStateType_FreeProc) PSDBooleanFree
@@ -2632,9 +2631,7 @@ static void PSDBorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
 
 PerStateType pstBorder =
 {
-#ifdef TREECTRL_DEBUG
-    "Border",
-#endif
+    "pstBorder",
     sizeof(PerStateDataBorder),
     (PerStateType_FromObjProc) PSDBorderFromObj,
     (PerStateType_FreeProc) PSDBorderFree
@@ -2684,9 +2681,7 @@ static void PSDColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
 
 PerStateType pstColor =
 {
-#ifdef TREECTRL_DEBUG
-    "Color",
-#endif
+    "pstColor",
     sizeof(PerStateDataColor),
     (PerStateType_FromObjProc) PSDColorFromObj,
     (PerStateType_FreeProc) PSDColorFree
@@ -2736,9 +2731,7 @@ static void PSDFontFree(TreeCtrl *tree, PerStateDataFont *pFont)
 
 PerStateType pstFont =
 {
-#ifdef TREECTRL_DEBUG
-    "Font",
-#endif
+    "pstFont",
     sizeof(PerStateDataFont),
     (PerStateType_FromObjProc) PSDFontFromObj,
     (PerStateType_FreeProc) PSDFontFree
@@ -2797,9 +2790,7 @@ static void PSDImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
 
 PerStateType pstImage =
 {
-#ifdef TREECTRL_DEBUG
-    "Image",
-#endif
+    "pstImage",
     sizeof(PerStateDataImage),
     (PerStateType_FromObjProc) PSDImageFromObj,
     (PerStateType_FreeProc) PSDImageFree
@@ -2869,9 +2860,7 @@ static void PSDReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
 
 PerStateType pstRelief =
 {
-#ifdef TREECTRL_DEBUG
-    "Relief",
-#endif
+    "pstRelief",
     sizeof(PerStateDataRelief),
     (PerStateType_FromObjProc) PSDReliefFromObj,
     (PerStateType_FreeProc) PSDReliefFree
@@ -2930,6 +2919,14 @@ typedef struct AllocElem AllocElem;
 typedef struct AllocList AllocList;
 typedef struct AllocData AllocData;
 
+#ifdef TREECTRL_DEBUG
+#define ALLOC_STATS
+#endif
+
+#ifdef ALLOC_STATS
+typedef struct AllocStats AllocStats;
+#endif
+
 /*
  * One of the following structures exists for each client piece of memory.
  * These structures are allocated in arrays (blocks).
@@ -2940,6 +2937,7 @@ struct AllocElem
     AllocElem *next;
 #ifdef TREECTRL_DEBUG
     int free;
+    int size;
 #endif
     char body[1];	/* First byte of client's space.  Actual
 			 * size of this field will be larger than
@@ -2970,7 +2968,18 @@ struct AllocList
 struct AllocData
 {
     AllocList *freeLists;	/* Linked list. */
+#ifdef ALLOC_STATS
+    AllocStats *stats;		/* For memory-usage reporting. */
+#endif
 };
+
+#ifdef ALLOC_STATS
+struct AllocStats {
+    Tk_Uid id;			/* Name for reporting results. */
+    unsigned alloc;		/* Total allocated bytes. */
+    AllocStats *next;		/* Linked list. */
+};
+#endif
 
 /*
  * The following macro computes the offset of the "body" field within
@@ -2980,6 +2989,53 @@ struct AllocData
 
 #define BODY_OFFSET \
     ((unsigned long) (&((AllocElem *) 0)->body))
+
+#ifdef ALLOC_STATS
+
+static AllocStats *
+AllocStats_Get(
+    ClientData _data,
+    Tk_Uid id
+    )
+{
+    AllocData *data = (AllocData *) _data;
+    AllocStats *stats = data->stats;
+
+    while (stats != NULL) {
+	if (stats->id == id)
+	    break;
+	stats = stats->next;
+    }
+    if (stats == NULL) {
+	stats = (AllocStats *) ckalloc(sizeof(AllocStats));
+	stats->id = id;
+	stats->alloc = 0;
+	stats->next = data->stats;
+	data->stats = stats;
+    }
+    return stats;
+}
+
+char *
+AllocHax_Stats(
+    ClientData _data
+    )
+{
+    AllocData *data = (AllocData *) _data;
+    AllocStats *stats = data->stats;
+    char *buf = ckalloc(1024);
+    int len = 0;
+
+    buf[0] = '\0';
+    while (stats != NULL) {
+	len += sprintf(buf + len, "%-20s: %8d B %5d KB\n", stats->id, stats->alloc,
+		(stats->alloc + 1023) / 1024);
+	stats = stats->next;
+    }
+    return buf;
+}
+
+#endif /* ALLOC_STATS */
 
 /*
  *----------------------------------------------------------------------
@@ -3000,15 +3056,23 @@ struct AllocData
 
 char *
 AllocHax_Alloc(
-    ClientData data,		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+    ClientData _data,		/* Token returned by AllocHax_Init(). */
+    Tk_Uid id,			/* ID for memory-usage reporting. */
     int size			/* Number of bytes needed. */
     )
 {
-    AllocList *freeLists = ((AllocData *) data)->freeLists;
+    AllocData *data = (AllocData *) _data;
+    AllocList *freeLists = data->freeLists;
     AllocList *freeList = freeLists;
     AllocElem *elem, *result;
+#ifdef ALLOC_STATS
+    AllocStats *stats = AllocStats_Get(_data, id);
+#endif
     int i;
+
+#ifdef ALLOC_STATS
+    stats->alloc += size;
+#endif
 
     while ((freeList != NULL) && (freeList->size != size))
 	freeList = freeList->next;
@@ -3043,6 +3107,7 @@ AllocHax_Alloc(
 	for (i = 1; i < freeList->blockSize - 1; i++) {
 #ifdef TREECTRL_DEBUG
 	    elem->free = 1;
+	    elem->size = size;
 #endif
 	    elem->next = (AllocElem *) (((char *) freeList->head) +
 		elemSize * i);
@@ -3051,6 +3116,7 @@ AllocHax_Alloc(
 	elem->next = NULL;
 #ifdef TREECTRL_DEBUG
 	elem->free = 1;
+	elem->size = size;
 #endif
 	result = freeList->head;
 	freeList->head = result->next;
@@ -3085,8 +3151,8 @@ AllocHax_Alloc(
 
 char *
 AllocHax_Realloc(
-    ClientData data,		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+    ClientData data,		/* Token returned by AllocHax_Init(). */
+    Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,
     int size1,			/* Number of bytes in ptr. */
     int size2			/* Number of bytes needed. */
@@ -3094,9 +3160,9 @@ AllocHax_Realloc(
 {
     char *ptr2;
 
-    ptr2 = AllocHax_Alloc(data, size2);
+    ptr2 = AllocHax_Alloc(data, id, size2);
     memcpy(ptr2, ptr, MIN(size1, size2));
-    AllocHax_Free(data, ptr, size1);
+    AllocHax_Free(data, id, ptr, size1);
     return ptr2;
 }
 
@@ -3119,17 +3185,25 @@ AllocHax_Realloc(
 
 void
 AllocHax_Free(
-    ClientData data,		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+    ClientData _data,		/* Token returned by AllocHax_Init(). */
+    Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,			/* Memory to mark for reuse. Must have
 				 * been allocated by AllocHax_Alloc(). */
     int size			/* Number of bytes. Must match the size
 				 * passed to AllocHax_CAlloc(). */
     )
 {
-    AllocList *freeLists = ((AllocData *) data)->freeLists;
+    AllocData *data = (AllocData *) _data;
+    AllocList *freeLists = data->freeLists;
     AllocList *freeList = freeLists;
     AllocElem *elem;
+#ifdef ALLOC_STATS
+    AllocStats *stats = AllocStats_Get(_data, id);
+#endif
+
+#ifdef ALLOC_STATS
+    stats->alloc -= size;
+#endif
 
     /*
     * See comment from Tcl_DbCkfree before you change the following
@@ -3141,6 +3215,8 @@ AllocHax_Free(
 #ifdef TREECTRL_DEBUG
     if (elem->free)
 	panic("AllocHax_Free: element already marked free");
+    if (elem->size != size)
+	panic("AllocHax_Free: element size %d != size %d", elem->size, size);
 #endif
     while (freeList != NULL && freeList->size != size)
 	freeList = freeList->next;
@@ -3173,8 +3249,8 @@ AllocHax_Free(
 
 char *
 AllocHax_CAlloc(
-    ClientData data,		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+    ClientData data,		/* Token returned by AllocHax_Init(). */
+    Tk_Uid id,			/* ID for memory-usage reporting. */
     int size,			/* Number of bytes needed for each piece
 				 * of memory. */
     int count,			/* Number of pieces of memory needed. */
@@ -3184,7 +3260,7 @@ AllocHax_CAlloc(
     )
 {
     int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
-    return AllocHax_Alloc(data, size * n);
+    return AllocHax_Alloc(data, id, size * n);
 }
 
 /*
@@ -3206,8 +3282,8 @@ AllocHax_CAlloc(
 
 void
 AllocHax_CFree(
-    ClientData data,		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+    ClientData data,		/* Token returned by AllocHax_Init(). */
+    Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,			/* Memory to mark for reuse. Must have
 				 * been allocated by AllocHax_CAlloc(). */
     int size,			/* Same arg to AllocHax_CAlloc(). */
@@ -3216,7 +3292,7 @@ AllocHax_CFree(
     )
 {
     int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
-    AllocHax_Free(data, ptr, size * n);
+    AllocHax_Free(data, id, ptr, size * n);
 }
 
 /*
@@ -3240,6 +3316,9 @@ AllocHax_Init(void)
 {
     AllocData *data = (AllocData *) ckalloc(sizeof(AllocData));
     data->freeLists = NULL;
+#ifdef ALLOC_STATS
+    data->stats = NULL;
+#endif
     return data;
 }
 
@@ -3261,11 +3340,15 @@ AllocHax_Init(void)
 
 void
 AllocHax_Finalize(
-    ClientData data		/* Pointer to AllocData created by
+    ClientData _data		/* Pointer to AllocData created by
 				 * AllocHax_Init(). */
     )
 {
-    AllocList *freeList = ((AllocData *) data)->freeLists;
+    AllocData *data = (AllocData *) _data;
+    AllocList *freeList = data->freeLists;
+#ifdef ALLOC_STATS
+    AllocStats *stats = data->stats;
+#endif
     int i;
 
     while (freeList != NULL) {
@@ -3278,6 +3361,14 @@ AllocHax_Finalize(
 	ckfree((char *) freeList);
 	freeList = nextList;
     }
+
+#ifdef ALLOC_STATS
+    while (stats != NULL) {
+	AllocStats *next = stats->next;
+	ckfree((char *) stats);
+	stats = next;
+    }
+#endif
 
     ckfree((char *) data);
 }
@@ -3452,6 +3543,8 @@ TreePtrList_Free(
 #define TAG_INFO_SIZE(tagSpace) \
     (sizeof(TagInfo) + (((tagSpace) - TREE_TAG_SPACE) * sizeof(Tk_Uid)))
 
+static CONST char *TagInfoUid = "TagInfo";
+
 /*
  *----------------------------------------------------------------------
  *
@@ -3481,7 +3574,8 @@ TagInfo_Add(
     if (tagInfo == NULL) {
 	if (numTags <= TREE_TAG_SPACE) {
 #ifdef ALLOC_HAX
-	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, sizeof(TagInfo));
+	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
+		    sizeof(TagInfo));
 #else
 	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo));
 #endif
@@ -3491,7 +3585,7 @@ TagInfo_Add(
 		((numTags % TREE_TAG_SPACE) ? TREE_TAG_SPACE : 0);
 if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 #ifdef ALLOC_HAX
-	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData,
+	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
 		TAG_INFO_SIZE(tagSpace));
 #else
 	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) +
@@ -3512,7 +3606,7 @@ if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 		tagInfo->tagSpace += TREE_TAG_SPACE;
 #ifdef ALLOC_HAX
 		tagInfo = (TagInfo *) AllocHax_Realloc(tree->allocData,
-		    (char *) tagInfo,
+		    TagInfoUid, (char *) tagInfo,
 		    TAG_INFO_SIZE(tagInfo->tagSpace - TREE_TAG_SPACE),
 		    TAG_INFO_SIZE(tagInfo->tagSpace));
 #else
@@ -3654,7 +3748,8 @@ TagInfo_Copy(
     if (tagInfo != NULL) {
 	int tagSpace = tagInfo->tagSpace;
 #ifdef ALLOC_HAX
-	copy = (TagInfo *) AllocHax_Alloc(tree->allocData, TAG_INFO_SIZE(tagSpace));
+	copy = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
+		TAG_INFO_SIZE(tagSpace));
 #else
 	copy = (TagInfo *) ckalloc(TAG_INFO_SIZE(tagSpace));
 #endif
@@ -3689,7 +3784,7 @@ TagInfo_Free(
 {
     if (tagInfo != NULL)
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) tagInfo,
+	AllocHax_Free(tree->allocData, TagInfoUid, (char *) tagInfo,
 	    TAG_INFO_SIZE(tagInfo->tagSpace));
 #else
 	ckfree((char *) tagInfo);

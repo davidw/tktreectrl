@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.53 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.54 2006/10/16 01:18:06 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -80,9 +80,7 @@ typedef void (*PerStateType_FreeProc)(TreeCtrl *, PerStateData *);
 
 struct PerStateType
 {
-#ifdef TREECTRL_DEBUG
-    char *name;
-#endif
+    CONST char *name;
     int size;
     PerStateType_FromObjProc fromObjProc;
     PerStateType_FreeProc freeProc;
@@ -925,11 +923,12 @@ extern void PSTRestore(TreeCtrl *tree, PerStateType *typePtr,
 #ifdef ALLOC_HAX
 extern ClientData AllocHax_Init(void);
 extern void AllocHax_Finalize(ClientData data);
-extern char *AllocHax_Alloc(ClientData data, int size);
-extern char *AllocHax_CAlloc(ClientData data, int size, int count, int roundUp);
-extern char *AllocHax_Realloc(ClientData data, char *ptr, int size1, int size2);
-extern void AllocHax_Free(ClientData data, char *ptr, int size);
-extern void AllocHax_CFree(ClientData data, char *ptr, int size, int count, int roundUp);
+extern char *AllocHax_Alloc(ClientData data, Tk_Uid id, int size);
+extern char *AllocHax_CAlloc(ClientData data, Tk_Uid id, int size, int count, int roundUp);
+extern char *AllocHax_Realloc(ClientData data, Tk_Uid id, char *ptr, int size1, int size2);
+extern void AllocHax_Free(ClientData data, Tk_Uid id, char *ptr, int size);
+extern void AllocHax_CFree(ClientData data, Tk_Uid id, char *ptr, int size, int count, int roundUp);
+extern char *AllocHax_Stats(ClientData data);
 #endif
 
 /*****/
