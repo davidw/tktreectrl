@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.69 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.70 2006/10/16 01:25:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -53,6 +53,8 @@ struct Item {
     int flags;
     TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
+
+static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
 
 /*
  * Macro to test whether an item is the unique root item
@@ -110,7 +112,8 @@ Column_Alloc(
     )
 {
 #ifdef ALLOC_HAX
-    Column *column = (Column *) AllocHax_Alloc(tree->allocData, sizeof(Column));
+    Column *column = (Column *) AllocHax_Alloc(tree->allocData, ItemColumnUid,
+	    sizeof(Column));
 #else
     Column *column = (Column *) ckalloc(sizeof(Column));
 #endif
@@ -438,7 +441,7 @@ Column_FreeResources(
     if (self->style != NULL)
 	TreeStyle_FreeResources(tree, self->style);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, (char *) self, sizeof(Column));
+    AllocHax_Free(tree->allocData, ItemColumnUid, (char *) self, sizeof(Column));
 #else
     WFREE(self, Column);
 #endif
@@ -575,7 +578,7 @@ Item_Alloc(
     )
 {
 #ifdef ALLOC_HAX
-    Item *item = (Item *) AllocHax_Alloc(tree->allocData, sizeof(Item));
+    Item *item = (Item *) AllocHax_Alloc(tree->allocData, ItemUid, sizeof(Item));
 #else
     Item *item = (Item *) ckalloc(sizeof(Item));
 #endif
@@ -3162,8 +3165,9 @@ TreeItem_FreeResources(
 	Tree_FreeItemDInfo(tree, item_, NULL);
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
+    Tk_FreeConfigOptions((char *) self, tree->itemOptionTable, tree->tkwin);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, (char *) self, sizeof(Item));
+    AllocHax_Free(tree->allocData, ItemUid, (char *) self, sizeof(Item));
 #else
     WFREE(self, Item);
 #endif
@@ -4207,6 +4211,7 @@ TreeItem_UpdateWindowPositions(
     int i, columnIndex;
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
     int area = TREE_AREA_CONTENT;
+    int minX, maxX;
 
     STATIC_ALLOC(spans, SpanInfo, tree->columnCount);
 #ifdef COLUMN_LOCK
@@ -4233,6 +4238,8 @@ TreeItem_UpdateWindowPositions(
 	drawArgs.bounds[0] = drawArgs.bounds[2] = 0;
 	drawArgs.bounds[1] = drawArgs.bounds[3] = 0;
     }
+    minX = drawArgs.bounds[0];
+    maxX = drawArgs.bounds[2];
 
     totalWidth = 0;
     for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
@@ -4259,21 +4266,23 @@ TreeItem_UpdateWindowPositions(
 	}
 	if (columnWidth <= 0)
 	    continue;
-	column = (Column *) spans[columnIndex].itemColumn;
-	if ((column != NULL) && (column->style != NULL)) {
-	    if (treeColumn == tree->columnTree)
-		indent = TreeItem_Indent(tree, item_);
-	    else
-		indent = 0;
-	    drawArgs.state = self->state | column->cstate;
-	    drawArgs.style = column->style;
-	    drawArgs.indent = indent;
-	    drawArgs.x = x + totalWidth;
-	    drawArgs.y = y;
-	    drawArgs.width = columnWidth;
-	    drawArgs.height = height;
-	    drawArgs.justify = TreeColumn_Justify(treeColumn);
-	    TreeStyle_UpdateWindowPositions(&drawArgs);
+	if ((x + totalWidth < maxX) && (x + totalWidth + columnWidth > minX)) {
+	    column = (Column *) spans[columnIndex].itemColumn;
+	    if ((column != NULL) && (column->style != NULL)) {
+		if (treeColumn == tree->columnTree)
+		    indent = TreeItem_Indent(tree, item_);
+		else
+		    indent = 0;
+		drawArgs.state = self->state | column->cstate;
+		drawArgs.style = column->style;
+		drawArgs.indent = indent;
+		drawArgs.x = x + totalWidth;
+		drawArgs.y = y;
+		drawArgs.width = columnWidth;
+		drawArgs.height = height;
+		drawArgs.justify = TreeColumn_Justify(treeColumn);
+		TreeStyle_UpdateWindowPositions(&drawArgs);
+	    }
 	}
 	totalWidth += columnWidth;
     }
