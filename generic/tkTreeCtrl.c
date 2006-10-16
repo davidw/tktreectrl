@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.70 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.71 2006/10/16 01:17:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3124,9 +3124,9 @@ TreeDebugCmd(
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = {
-	"cget", "configure", "dinfo", "expose", "scroll", (char *) NULL
+	"alloc", "cget", "configure", "dinfo", "expose", "scroll", (char *) NULL
     };
-    enum { COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_DINFO,
+    enum { COMMAND_ALLOC, COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_DINFO,
 	COMMAND_EXPOSE, COMMAND_SCROLL };
     int index;
 
@@ -3141,6 +3141,18 @@ TreeDebugCmd(
     }
 
     switch (index) {
+	/* T debug alloc */
+	case COMMAND_ALLOC:
+	{
+#ifdef TREECTRL_DEBUG
+	    char *buf = AllocHax_Stats(tree->allocData);
+	    Tcl_SetResult(interp, buf, TCL_DYNAMIC);
+#else
+	    FormatResult(interp, "TREECTRL_DEBUG is not defined");
+#endif
+	    break;
+	}
+
 	/* T debug cget option */
 	case COMMAND_CGET:
 	{
