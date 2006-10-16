@@ -5,11 +5,13 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.52 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.53 2006/10/16 01:24:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
+
+#define ELEMENT_LINK_ROUND 1
 
 typedef struct MStyle MStyle;
 typedef struct IStyle IStyle;
@@ -110,6 +112,9 @@ struct IElementLink
     int layoutWidth;
     int layoutHeight;
 };
+
+static CONST char *MStyleUid = "MStyle", *IStyleUid = "IStyle",
+    *MElementLinkUid = "MElementLink", *IElementLinkUid = "IElementLink";
 
 static char *orientStringTable[] = { "horizontal", "vertical", (char *) NULL };
 
@@ -2416,6 +2421,7 @@ Element_FreeResources(
     Element *elem		/* Record to free. */
     )
 {
+    ElementType *typePtr = elem->typePtr;
     ElementArgs args;
     Tcl_HashEntry *hPtr;
 
@@ -2426,12 +2432,12 @@ Element_FreeResources(
     }
     args.tree = tree;
     args.elem = elem;
-    (*elem->typePtr->deleteProc)(&args);
+    (*typePtr->deleteProc)(&args);
     Tk_FreeConfigOptions((char *) elem,
-	elem->typePtr->optionTable,
+	typePtr->optionTable,
 	tree->tkwin);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, (char *) elem, elem->typePtr->size);
+    AllocHax_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
 #else
     WFREE(elem, Element);
 #endif
@@ -2553,14 +2559,14 @@ MStyle_FreeResources(
 	for (i = 0; i < style->numElements; i++)
 	    MElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, (char *) style->elements,
-		sizeof(MElementLink), style->numElements, 5);
+	AllocHax_CFree(tree->allocData, MElementLinkUid, (char *) style->elements,
+		sizeof(MElementLink), style->numElements, ELEMENT_LINK_ROUND);
 #else
 	WCFREE(style->elements, MElementLink, style->numElements);
 #endif
     }
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, (char *) style, sizeof(MStyle));
+    AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
     WFREE(style, MStyle);
 #endif
@@ -2596,14 +2602,15 @@ IStyle_FreeResources(
 	for (i = 0; i < masterStyle->numElements; i++)
 	    IElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, (char *) style->elements,
-		sizeof(IElementLink), masterStyle->numElements, 5);
+	AllocHax_CFree(tree->allocData, IElementLinkUid,
+		(char *) style->elements, sizeof(IElementLink),
+		masterStyle->numElements, ELEMENT_LINK_ROUND);
 #else
 	WCFREE(style->elements, IElementLink, masterStyle->numElements);
 #endif
     }
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, (char *) style, sizeof(IStyle));
+    AllocHax_Free(tree->allocData, IStyleUid, (char *) style, sizeof(IStyle));
 #else
     WFREE(style, IStyle);
 #endif
@@ -2808,7 +2815,7 @@ Element_CreateAndConfig(
     }
 
 #ifdef ALLOC_HAX
-    elem = (Element *) AllocHax_Alloc(tree->allocData, type->size);
+    elem = (Element *) AllocHax_Alloc(tree->allocData, type->name, type->size);
 #else
     elem = (Element *) ckalloc(type->size);
 #endif
@@ -2824,7 +2831,7 @@ Element_CreateAndConfig(
     if ((*type->createProc)(&args) != TCL_OK)
     {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) elem, type->size);
+	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
 	WFREE(elem, Element);
 #endif
@@ -2835,7 +2842,7 @@ Element_CreateAndConfig(
 	type->optionTable, tree->tkwin) != TCL_OK)
     {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) elem, type->size);
+	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
 	WFREE(elem, Element);
 #endif
@@ -2851,7 +2858,7 @@ Element_CreateAndConfig(
 	    elem->typePtr->optionTable,
 	    tree->tkwin);
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) elem, type->size);
+	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
 	WFREE(elem, Element);
 #endif
@@ -2967,7 +2974,7 @@ TreeStyle_NewInstance(
     int i;
 
 #ifdef ALLOC_HAX
-    copy = (IStyle *) AllocHax_Alloc(tree->allocData, sizeof(IStyle));
+    copy = (IStyle *) AllocHax_Alloc(tree->allocData, IStyleUid, sizeof(IStyle));
 #else
     copy = (IStyle *) ckalloc(sizeof(IStyle));
 #endif
@@ -2979,7 +2986,8 @@ TreeStyle_NewInstance(
     {
 #ifdef ALLOC_HAX
 	copy->elements = (IElementLink *) AllocHax_CAlloc(tree->allocData,
-		sizeof(IElementLink), style->numElements, 5);
+		IElementLinkUid, sizeof(IElementLink), style->numElements,
+		ELEMENT_LINK_ROUND);
 #else
 	copy->elements = (IElementLink *) ckalloc(sizeof(IElementLink) *
 		style->numElements);
@@ -3287,7 +3295,8 @@ MStyle_ChangeElementsAux(
     if (count > 0) {
 #ifdef ALLOC_HAX
 	eLinks = (MElementLink *) AllocHax_CAlloc(tree->allocData,
-		sizeof(MElementLink), count, 5);
+		MElementLinkUid, sizeof(MElementLink), count,
+		ELEMENT_LINK_ROUND);
 #else
 	eLinks = (MElementLink *) ckalloc(sizeof(MElementLink) * count);
 #endif
@@ -3320,8 +3329,9 @@ MStyle_ChangeElementsAux(
 	    }
 	}
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, (char *) style->elements,
-		sizeof(MElementLink), style->numElements, 5);
+	AllocHax_CFree(tree->allocData, MElementLinkUid,
+		(char *) style->elements, sizeof(MElementLink),
+		style->numElements, ELEMENT_LINK_ROUND);
 #else
 	WCFREE(style->mstyle.elements, MElementLink, style->numElements);
 #endif
@@ -3370,7 +3380,8 @@ IStyle_ChangeElementsAux(
     if (count > 0) {
 #ifdef ALLOC_HAX
 	eLinks = (IElementLink *) AllocHax_CAlloc(tree->allocData,
-		sizeof(IElementLink), count, 5);
+		IElementLinkUid, sizeof(IElementLink), count,
+		ELEMENT_LINK_ROUND);
 #else
 	eLinks = (IElementLink *) ckalloc(sizeof(IElementLink) * count);
 #endif
@@ -3405,8 +3416,9 @@ IStyle_ChangeElementsAux(
 	    }
 	}
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, (char *) style->elements,
-		sizeof(IElementLink), masterStyle->numElements, 5);
+	AllocHax_CFree(tree->allocData, IElementLinkUid,
+		(char *) style->elements, sizeof(IElementLink),
+		masterStyle->numElements, ELEMENT_LINK_ROUND);
 #else
 	WCFREE(style->elements, IElementLink, masterStyle->numElements);
 #endif
@@ -4881,7 +4893,8 @@ Style_CreateAndConfig(
     MStyle *style;
 
 #ifdef ALLOC_HAX
-    style = (MStyle *) AllocHax_Alloc(tree->allocData, sizeof(MStyle));
+    style = (MStyle *) AllocHax_Alloc(tree->allocData, MStyleUid,
+	    sizeof(MStyle));
 #else
     style = (MStyle *) ckalloc(sizeof(MStyle));
 #endif
@@ -4892,7 +4905,7 @@ Style_CreateAndConfig(
 	tree->styleOptionTable, tree->tkwin) != TCL_OK)
     {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) style, sizeof(MStyle));
+	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
 	WFREE(style, MStyle);
 #endif
@@ -4905,7 +4918,7 @@ Style_CreateAndConfig(
     {
 	Tk_FreeConfigOptions((char *) style, tree->styleOptionTable, tree->tkwin);
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, (char *) style, sizeof(MStyle));
+	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
 	WFREE(style, MStyle);
 #endif
@@ -6195,10 +6208,12 @@ TreeStyle_Remap(
     {
 #ifdef ALLOC_HAX
 	if (styleFromNumElements > 0)
-	    AllocHax_CFree(tree->allocData, (char *) styleFrom->elements,
-		sizeof(IElementLink), styleFromNumElements, 5);
+	    AllocHax_CFree(tree->allocData, IElementLinkUid,
+		(char *) styleFrom->elements, sizeof(IElementLink),
+		styleFromNumElements, ELEMENT_LINK_ROUND);
 	styleFrom->elements = (IElementLink *) AllocHax_CAlloc(tree->allocData,
-	    sizeof(IElementLink), styleTo->numElements, 5);
+	    IElementLinkUid, sizeof(IElementLink), styleTo->numElements,
+	    ELEMENT_LINK_ROUND);
 #else
 	if (styleFromNumElements > 0)
 	    WCFREE(styleFrom->elements, IElementLink, styleFromNumElements);
