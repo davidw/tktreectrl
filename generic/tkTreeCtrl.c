@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.71 2006/10/16 01:17:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.72 2006/10/18 22:21:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -33,6 +33,13 @@
 #define TK_PHOTOPUTBLOCK	Tk_PhotoPutBlock
 #define TK_PHOTOPUTZOOMEDBLOCK	Tk_PhotoPutZoomedBlock
 #endif
+
+/* This structure is used for reference-counted images. */
+typedef struct TreeImageRef {
+    int count;			/* Reference count. */
+    Tk_Image image;		/* Image token. */
+    Tcl_HashEntry *hPtr;	/* Entry in tree->imageNameHash. */
+} TreeImageRef;
 
 static CONST char *bgModeST[] = {
     "column", "order", "ordervisible", "row", "index", "visindex", (char *) NULL
@@ -376,7 +383,8 @@ TreeObjCmd(
     Tcl_InitHashTable(&tree->itemHash, TCL_ONE_WORD_KEYS);
     Tcl_InitHashTable(&tree->elementHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
-    Tcl_InitHashTable(&tree->imageHash, TCL_STRING_KEYS);
+    Tcl_InitHashTable(&tree->imageNameHash, TCL_STRING_KEYS);
+    Tcl_InitHashTable(&tree->imageTokenHash, TCL_ONE_WORD_KEYS);
 
     TreeItemList_Init(tree, &tree->preserveItemList, 0);
 
@@ -1223,7 +1231,10 @@ TreeConfigure(
 	     */
 
 	    if (mask & TREE_CONF_BG_IMAGE) {
-		tree->backgroundImage = NULL;
+		if (tree->backgroundImage != NULL) {
+		    Tree_FreeImage(tree, tree->backgroundImage);
+		    tree->backgroundImage = NULL;
+		}
 		if (tree->backgroundImageString != NULL) {
 		    Tk_Image image = Tree_GetImage(tree, tree->backgroundImageString);
 		    if (image == NULL)
@@ -1624,7 +1635,6 @@ TreeDestroy(
     TreeItem item;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
-    Tk_Image image;
     int i;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -1636,14 +1646,6 @@ TreeDestroy(
     Tcl_DeleteHashTable(&tree->itemHash);
 
     TreeItemList_Free(&tree->preserveItemList);
-
-    hPtr = Tcl_FirstHashEntry(&tree->imageHash, &search);
-    while (hPtr != NULL) {
-	image = (Tk_Image) Tcl_GetHashValue(hPtr);
-	Tk_FreeImage(image);
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-    Tcl_DeleteHashTable(&tree->imageHash);
 
     TreeStyle_Free(tree);
 
@@ -1672,6 +1674,16 @@ TreeDestroy(
 	    tree->tkwin);
 
     Tk_FreeConfigOptions((char *) tree, tree->optionTable, tree->tkwin);
+
+    hPtr = Tcl_FirstHashEntry(&tree->imageNameHash, &search);
+    while (hPtr != NULL) {
+	TreeImageRef *ref = (TreeImageRef *) Tcl_GetHashValue(hPtr);
+	Tk_FreeImage(ref->image);
+	ckfree((char *) ref->image);
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+    Tcl_DeleteHashTable(&tree->imageNameHash);
+    Tcl_DeleteHashTable(&tree->imageTokenHash);
 
     Tcl_DeleteHashTable(&tree->selection);
 
@@ -1944,8 +1956,8 @@ ImageChangedProc(
  *	the same image to be used hundreds of times (a folder image for
  *	example) and want to avoid allocating an instance for every usage.
  *
- *	Any image instances created by this procedure are not freed until
- *	the widget is destroyed.
+ *	For each call to this function, there must be a matching call
+ *	to Tree_FreeImage.
  *
  * Results:
  *	Token for the image instance. If an error occurs the result is
@@ -1963,11 +1975,12 @@ Tree_GetImage(
     char *imageName		/* Name of an existing image. */
     )
 {
-    Tcl_HashEntry *hPtr;
+    Tcl_HashEntry *hPtr, *h2Ptr;
+    TreeImageRef *ref;
     Tk_Image image;
     int isNew;
 
-    hPtr = Tcl_CreateHashEntry(&tree->imageHash, imageName, &isNew);
+    hPtr = Tcl_CreateHashEntry(&tree->imageNameHash, imageName, &isNew);
     if (isNew) {
 	image = Tk_GetImage(tree->interp, tree->tkwin, imageName,
 		ImageChangedProc, (ClientData) tree);
@@ -1975,9 +1988,57 @@ Tree_GetImage(
 	    Tcl_DeleteHashEntry(hPtr);
 	    return NULL;
 	}
-	Tcl_SetHashValue(hPtr, image);
+	ref = (TreeImageRef *) ckalloc(sizeof(TreeImageRef));
+	ref->count = 0;
+	ref->image = image;
+	ref->hPtr = hPtr;
+	Tcl_SetHashValue(hPtr, ref);
+
+	h2Ptr = Tcl_CreateHashEntry(&tree->imageTokenHash, (char *) image,
+		&isNew);
+	Tcl_SetHashValue(h2Ptr, ref);
     }
-    return (Tk_Image) Tcl_GetHashValue(hPtr);
+    ref = (TreeImageRef *) Tcl_GetHashValue(hPtr);
+    ref->count++;
+    return ref->image;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_FreeImage --
+ *
+ *	Decrement the reference count on an image.
+ *
+ * Results:
+ *	If the reference count hits zero, frees the image instance and
+ *	hash table entries.
+ *
+ * Side effects:
+ *	Memory may be freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_FreeImage(
+    TreeCtrl *tree,		/* Widget info. */
+    Tk_Image image		/* Image token. */
+    )
+{
+    Tcl_HashEntry *hPtr;
+    TreeImageRef *ref;
+
+    hPtr = Tcl_FindHashEntry(&tree->imageTokenHash, (char *) image);
+    if (hPtr != NULL) {
+	ref = (TreeImageRef *) Tcl_GetHashValue(hPtr);
+	if (--ref->count == 0) {
+	    Tcl_DeleteHashEntry(ref->hPtr); /* imageNameHash */
+	    Tcl_DeleteHashEntry(hPtr);
+	    Tk_FreeImage(ref->image);
+	    ckfree((char *) ref);
+	}
+    }
 }
 
 /*
@@ -3145,8 +3206,7 @@ TreeDebugCmd(
 	case COMMAND_ALLOC:
 	{
 #ifdef TREECTRL_DEBUG
-	    char *buf = AllocHax_Stats(tree->allocData);
-	    Tcl_SetResult(interp, buf, TCL_DYNAMIC);
+	    AllocHax_Stats(interp, tree->allocData);
 #else
 	    FormatResult(interp, "TREECTRL_DEBUG is not defined");
 #endif

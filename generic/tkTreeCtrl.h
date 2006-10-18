@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.55 2006/10/18 03:49:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.56 2006/10/18 22:21:16 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -291,7 +291,8 @@ struct TreeCtrl
     Tcl_HashTable itemHash;	/* TreeItem.id -> TreeItem */
     Tcl_HashTable elementHash;	/* Element.name -> Element */
     Tcl_HashTable styleHash;	/* Style.name -> Style */
-    Tcl_HashTable imageHash;	/* image name -> Tk_Image */
+    Tcl_HashTable imageNameHash;  /* image name -> TreeImageRef */
+    Tcl_HashTable imageTokenHash; /* Tk_Image -> TreeImageRef */
     int depth;			/* max depth of items under root */
     int itemCount;		/* Total number of items */
     int itemVisCount;		/* Total number of ReallyVisible() items */
@@ -374,6 +375,7 @@ struct TreeCtrl
 extern void Tree_AddItem(TreeCtrl *tree, TreeItem item);
 extern void Tree_RemoveItem(TreeCtrl *tree, TreeItem item);
 extern Tk_Image Tree_GetImage(TreeCtrl *tree, char *imageName);
+extern void Tree_FreeImage(TreeCtrl *tree, Tk_Image image);
 extern void Tree_UpdateScrollbarX(TreeCtrl *tree);
 extern void Tree_UpdateScrollbarY(TreeCtrl *tree);
 extern void Tree_AddToSelection(TreeCtrl *tree, TreeItem item);
@@ -929,7 +931,7 @@ extern char *AllocHax_CAlloc(ClientData data, Tk_Uid id, int size, int count, in
 extern char *AllocHax_Realloc(ClientData data, Tk_Uid id, char *ptr, int size1, int size2);
 extern void AllocHax_Free(ClientData data, Tk_Uid id, char *ptr, int size);
 extern void AllocHax_CFree(ClientData data, Tk_Uid id, char *ptr, int size, int count, int roundUp);
-extern char *AllocHax_Stats(ClientData data);
+extern void AllocHax_Stats(Tcl_Interp *interp, ClientData data);
 #endif
 
 /*****/
