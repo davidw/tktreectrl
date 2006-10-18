@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.43 2006/10/18 03:49:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.44 2006/10/18 22:18:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2785,7 +2785,8 @@ static void PSDImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
 {
     if (pImage->string != NULL)
 	ckfree(pImage->string);
-    /* don't free image */
+    if (pImage->image != NULL)
+	Tree_FreeImage(tree, pImage->image);
 }
 
 PerStateType pstImage =
@@ -2916,6 +2917,7 @@ void PSTRestore(
  */
 
 typedef struct AllocElem AllocElem;
+typedef struct AllocBlock AllocBlock;
 typedef struct AllocList AllocList;
 typedef struct AllocData AllocData;
 
@@ -2931,7 +2933,6 @@ typedef struct AllocStats AllocStats;
  * One of the following structures exists for each client piece of memory.
  * These structures are allocated in arrays (blocks).
  */
-
 struct AllocElem
 {
     AllocElem *next;
@@ -2944,18 +2945,23 @@ struct AllocElem
 			 * one. */
 };
 
+struct AllocBlock
+{
+    int count;		/* Size of .elem[] */
+    AllocBlock *next;	/* Next block with same-sized elems. */
+    AllocElem elem[1];	/* Actual size will be larger than one. */
+};
+
 /*
  * One of the following structures maintains an array of blocks of AllocElems
  * of the same size.
  */
-
 struct AllocList
 {
     int size;		/* Size of every AllocElem.body[] */
     AllocElem *head;	/* Top of stack of unused pieces of memory. */
-    AllocElem **blocks;	/* Array of pointers to allocated blocks. The blocks
+    AllocBlock *blocks;	/* Linked list of allocated blocks. The blocks
 			 * may contain a different number of elements. */
-    int blockCount;	/* Number of array elements in .blocks */
     int blockSize;	/* The number of AllocElems per block to allocate.
 			 * Starts at 16 and gets doubled up to 1024. */
     AllocList *next;	/* Points to an AllocList with a different .size */
@@ -2964,7 +2970,6 @@ struct AllocList
 /*
  * A pointer to one of the following structures is stored in each TreeCtrl.
  */
-
 struct AllocData
 {
     AllocList *freeLists;	/* Linked list. */
@@ -3018,14 +3023,15 @@ AllocStats_Get(
     return stats;
 }
 
-char *
+void
 AllocHax_Stats(
+    Tcl_Interp *interp,
     ClientData _data
     )
 {
     AllocData *data = (AllocData *) _data;
     AllocStats *stats = data->stats;
-    char *result, buf[128];
+    char buf[128];
     Tcl_DString dString;
 
     Tcl_DStringInit(&dString);
@@ -3036,10 +3042,7 @@ AllocHax_Stats(
 	Tcl_DStringAppend(&dString, buf, -1);
 	stats = stats->next;
     }
-    result = ckalloc(Tcl_DStringLength(&dString) + 1);
-    strcpy(result, Tcl_DStringValue(&dString));
-    Tcl_DStringFree(&dString);
-    return result;
+    Tcl_DStringResult(interp, &dString);
 }
 
 #endif /* ALLOC_STATS */
@@ -3071,6 +3074,7 @@ AllocHax_Alloc(
     AllocData *data = (AllocData *) _data;
     AllocList *freeLists = data->freeLists;
     AllocList *freeList = freeLists;
+    AllocBlock *block;
     AllocElem *elem, *result;
 #ifdef ALLOC_STATS
     AllocStats *stats = AllocStats_Get(_data, id);
@@ -3091,28 +3095,27 @@ AllocHax_Alloc(
 	freeList->head = NULL;
 	freeList->next = freeLists;
 	freeList->blocks = NULL;
-	freeList->blockCount = 0;
 	freeList->blockSize = 16;
 	freeLists = freeList;
 	((AllocData *) data)->freeLists = freeLists;
     }
 
-    if (freeList->head != NULL) {
-	elem = freeList->head;
-	freeList->head = elem->next;
-	result = elem;
-    } else {
-	AllocElem *block;
+    if (freeList->head == NULL) {
 	unsigned elemSize = TCL_ALIGN(BODY_OFFSET + size);
-	freeList->blockCount += 1;
-	freeList->blocks = (AllocElem **) ckrealloc((char *) freeList->blocks,
-	    sizeof(AllocElem *) * freeList->blockCount);
-	block = (AllocElem *) ckalloc(elemSize * freeList->blockSize);
-	freeList->blocks[freeList->blockCount - 1] = block;
+
+	block = (AllocBlock *) ckalloc(Tk_Offset(AllocBlock, elem) +
+		elemSize * freeList->blockSize);
+	block->count = freeList->blockSize;
+	block->next = freeList->blocks;
+
 /* dbwin("AllocHax_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
-	freeList->head = block;
+	freeList->blocks = block;
+	if (freeList->blockSize < 1024)
+	    freeList->blockSize *= 2;
+
+	freeList->head = block->elem;
 	elem = freeList->head;
-	for (i = 1; i < freeList->blockSize - 1; i++) {
+	for (i = 1; i < block->count - 1; i++) {
 #ifdef TREECTRL_DEBUG
 	    elem->free = 1;
 	    elem->size = size;
@@ -3126,12 +3129,10 @@ AllocHax_Alloc(
 	elem->free = 1;
 	elem->size = size;
 #endif
-	result = freeList->head;
-	freeList->head = result->next;
-	if (freeList->blockSize < 1024)
-	    freeList->blockSize *= 2;
     }
 
+    result = freeList->head;
+    freeList->head = result->next;
 #ifdef TREECTRL_DEBUG
     if (!result->free)
 	panic("AllocHax_Alloc: element not marked free");
@@ -3372,15 +3373,15 @@ AllocHax_Finalize(
 #ifdef ALLOC_STATS
     AllocStats *stats = data->stats;
 #endif
-    int i;
 
     while (freeList != NULL) {
 	AllocList *nextList = freeList->next;
-	for (i = 0; i < freeList->blockCount; i++) {
-	    AllocElem *block = freeList->blocks[i];
+	AllocBlock *block = freeList->blocks;
+	while (block != NULL) {
+	    AllocBlock *nextBlock = block->next;
 	    ckfree((char *) block);
+	    block = nextBlock;
 	}
-	ckfree((char *) freeList->blocks);
 	ckfree((char *) freeList);
 	freeList = nextList;
     }
@@ -3564,7 +3565,7 @@ TreePtrList_Free(
 }
 
 #define TAG_INFO_SIZE(tagSpace) \
-    (sizeof(TagInfo) + (((tagSpace) - TREE_TAG_SPACE) * sizeof(Tk_Uid)))
+    (Tk_Offset(TagInfo, tagPtr) + ((tagSpace) * sizeof(Tk_Uid)))
 
 static CONST char *TagInfoUid = "TagInfo";
 
