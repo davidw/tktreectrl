@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.54 2006/10/16 01:18:06 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.55 2006/10/18 03:49:18 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -759,6 +759,7 @@ extern void Tree_RelayoutWindow(TreeCtrl *tree);
 extern void Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
 extern void Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeColumn column, TreeItem item1, TreeItem item2);
 extern void TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item);
+extern void TreeDisplay_ColumnDeleted(TreeCtrl *tree, TreeColumn column);
 extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region);
@@ -1006,8 +1007,35 @@ extern int TagExpr_Scan(TagExpr *expr);
 extern int TagExpr_Eval(TagExpr *expr, TagInfo *tags);
 extern void TagExpr_Free(TagExpr *expr);
 
+extern Tk_ObjCustomOption *PerStateCO_Alloc(CONST char *optionName,
+    PerStateType *typePtr, StateFromObjProc proc);
 extern int PerStateCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
     PerStateType *typePtr, StateFromObjProc proc);
+
+/*****/
+
+typedef struct DynamicOptionSpec DynamicOptionSpec;
+typedef struct DynamicOption DynamicOption;
+
+struct DynamicOption
+{
+    int id;			/* Unique id. */
+    DynamicOption *next;	/* Linked list. */
+    char data[1];		/* Actual size will be > 1 */
+};
+
+extern char *DynamicOption_FindData(DynamicOption *first, int id);
+extern void DynamicOption_Free(DynamicOption *first);
+
+typedef void (DynamicOptionInitProc)(char *data);
+
+extern int DynamicCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
+    int id, int size, int objOffset, int internalOffset,
+    Tk_ObjCustomOption *custom,DynamicOptionInitProc *init);
+
+extern Tk_ObjCustomOption pixelsCO;
+extern Tk_ObjCustomOption stringCO;
+
 
 /*****/
 

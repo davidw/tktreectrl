@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.53 2006/09/27 02:05:13 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.54 2006/10/18 03:47:48 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1.1 treectrl "Tk Commands"
 .BS
@@ -59,6 +59,16 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBcolumn order\fR \fIcolumnDesc\fR ?\fI-visible\fR?
 .sp
+\fIpathName\fR \fBcolumn tag\fR \fIoption\fR ?\fIarg arg ...\fR?
+.sp
+\fIpathName\fR \fBcolumn tag add\fR \fIcolumnDesc\fR \fItagList\fR
+.sp
+\fIpathName\fR \fBcolumn tag expr\fR \fIcolumnDesc\fR \fItagExpr\fR
+.sp
+\fIpathName\fR \fBcolumn tag names\fR \fIcolumnDesc\fR
+.sp
+\fIpathName\fR \fBcolumn tag remove\fR \fIcolumnDesc\fR \fItagList\fR
+.sp
 \fIpathName\fR \fBcolumn width\fR \fIcolumnDesc\fR
 .sp
 \fIpathName\fR \fBcompare\fR \fIitemDesc1\fR \fIop\fR \fIitemDesc2\fR
@@ -69,11 +79,15 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?
 .sp
-\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR
+\fIpathName\fR \fBdebug alloc\fR
 .sp
-\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+\fIpathName\fR \fBdebug cget\fR \fIoption\fR
+.sp
+\fIpathName\fR \fBdebug configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
 \fIpathName\fR \fBdebug dinfo\fR
+.sp
+\fIpathName\fR \fBdebug expose\fR \fIx1\fR \fIy1\fR \fIx2\fR \fIy2\fR
 .sp
 \fIpathName\fR \fBdebug scroll\fR
 .sp
@@ -203,6 +217,16 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?
 .sp
+\fIpathName\fR \fBitem tag\fR \fIoption\fR ?\fIarg arg ...\fR?
+.sp
+\fIpathName\fR \fBitem tag add\fR \fIitemDesc\fR \fItagList\fR
+.sp
+\fIpathName\fR \fBitem tag expr\fR \fIitemDesc\fR \fItagExpr\fR
+.sp
+\fIpathName\fR \fBitem tag names\fR \fIitemDesc\fR
+.sp
+\fIpathName\fR \fBitem tag remove\fR \fIitemDesc\fR \fItagList\fR
+.sp
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fItext\fR? ?\fIcolumn text ...\fR?
 .sp
 \fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?
@@ -308,16 +332,6 @@ package require \fBtreectrl  2.1.1\fR
 \fIpathName\fR \fBstyle layout\fR \fIstyle\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
 \fIpathName\fR \fBstyle names\fR
-.sp
-\fIpathName\fR \fBtag\fR \fIoption\fR \fIargs\fR
-.sp
-\fIpathName\fR \fBtag add\fR \fIitemDesc\fR \fItagList\fR
-.sp
-\fIpathName\fR \fBtag expr\fR \fIitemDesc\fR \fItagExpr\fR
-.sp
-\fIpathName\fR \fBtag names\fR \fIitemDesc\fR
-.sp
-\fIpathName\fR \fBtag remove\fR \fIitemDesc\fR \fItagList\fR
 .sp
 \fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
 .sp
@@ -727,6 +741,25 @@ Items are never shorter than the maximum height of a button.
 .LP
 .nf
 .ta 6c
+Command-Line Switch:	\fB-rowproxy\fR
+Database Name:	\fBrowProxy\fR
+Database Class:	\fBRowProxy\fR
+
+.fi
+.IP
+If this option specifies a non empty value,
+it should be a screen distance
+in any of the forms acceptable to \fBTk_GetPixels\fR.
+Then a 1 pixel thick horizontal line will be drawn
+at the specified screen distance from the top edge of the treectrl widget,
+which reaches from left to right of the treectrl widget
+and uses an inverting color
+(i.e black on lighter background, white on darker background).
+This line can be used to give the user a visual feedback
+during row resizing.
+.LP
+.nf
+.ta 6c
 Command-Line Switch:	\fB-scrollmargin\fR
 Database Name:	\fBscrollMargin\fR
 Database Class:	\fBScrollMargin\fR
@@ -956,17 +989,19 @@ multiple of \fB-yscrollincrement\fR;  furthermore, the units for scrolling
 are selected) will also be \fB-yscrollincrement\fR.  If the value of
 this option is less than or equal to zero, then vertical scrolling
 is unconstrained.
-.SH "ITEM TAGS"
-An item may have any number of tags associated with it. A tag is just a string
-of characters, and it may take any form, including that of an integer,
-although the characters '(', ')', '&', '|', '^' and '!' should be avoided.
+.SH "ITEM AND COLUMN TAGS"
+Columns and items may have any number of tags associated with them.
+A tag is just a string of characters, and it may take any form,
+including that of an integer, although the characters '(', ')', '&', '|', '^'
+and '!' should be avoided.
 .PP
-The same tag may be associated with many items. This is commonly done to group
+The same tag may be associated with many columns or items. This is commonly done to group
 items in various interesting ways; for example, in a file browser all directories
 might be given the tag "directory".
 .PP
-Tag expressions are used in \fBitem descriptions\fR to specify which items to
-operate on.
+Tag expressions are used in \fBcolumn descriptions\fR
+and \fBitem descriptions\fR to specify which columns
+and items to operate on.
 A tag expression can be a single tag name or a logical expression of tags
 using operators '&&', '||', '^' and '!', and parenthesized subexpressions.
 For example:
@@ -1090,8 +1125,9 @@ of the new column.
 .TP
 \fIpathName\fR \fBcolumn delete\fR \fIfirst\fR ?\fIlast\fR?
 Deletes the specified column(s). \fIFirst\fR and \fIlast\fR must be valid
-\fBcolumn descriptions\fR. If either \fIfirst\fR
-or \fIlast\fR is specified as \fBall\fR, then all columns are deleted.
+\fBcolumn descriptions\fR. If \fIfirst\fR
+is specified as \fBall\fR, then all columns are deleted. If both \fIfirst\fR
+and \fIlast\fR are specified, then they may refer to a single column only.
 The \fBtail\fR column cannot be deleted and it is an error to specify it.
 The order of \fIfirst\fR and \fIlast\fR doesn't matter, and \fIfirst\fR may
 be equal to \fIlast\fR.
@@ -1134,7 +1170,11 @@ starting position.
 \fIColor\fR is the color of the 2-pixel-thick line.
 .TP
 \fB\fB-indicatorcolumn\fR\fR \fIcolumn\fR
-The 2-pixel-thick line will be drawn over the left edge of \fIcolumn\fR.
+The 2-pixel-thick line will be drawn over the left or right edge of \fIcolumn\fR.
+.TP
+\fB\fB-indicatorside\fR\fR \fIside\fR
+Specifies whether the 2-pixel-thick line will be drawn over the \fBleft\fR
+or \fBright\fR edge of the column specified by \fB-indicatorcolumn\fR.
 .RE
 .TP
 \fIpathName\fR \fBcolumn index\fR \fIcolumnDesc\fR
@@ -1142,9 +1182,8 @@ Deprecated. Use \fBcolumn id\fR instead.
 .TP
 \fIpathName\fR \fBcolumn id\fR \fIcolumnDesc\fR
 This command resolves the \fBcolumn description\fR
-\fIcolumnDesc\fR into a unique column identifier.
-If the column described by \fIcolumnDesc\fR doesn't exist, this command returns
-an empty string.
+\fIcolumnDesc\fR into a list of unique column identifiers. If the column(s) described by
+\fIcolumnDesc\fR don't exist, this command returns an empty list.
 .TP
 \fIpathName\fR \fBcolumn list\fR ?\fI-visible\fR?
 This command returns a list of identifiers for every column (except the tail)
@@ -1174,6 +1213,39 @@ If \fI-visible\fR is given, only columns whose -visible
 option is true are considered, and -1 is returned if \fIcolumnDesc\fR's -visible
 option is false.
 .TP
+\fIpathName\fR \fBcolumn tag\fR \fIoption\fR ?\fIarg arg ...\fR?
+This command is used to manipulate tags on columns.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBcolumn tag\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName\fR \fBcolumn tag add\fR \fIcolumnDesc\fR \fItagList\fR
+Adds each tag in \fItagList\fR to the columns specified by the
+\fBcolumn description\fR \fIcolumnDesc\fR.
+Duplicate tags are ignored. The list of tags for a column can also be
+changed via a column's \fB-tags\fR option.
+.TP
+\fIpathName\fR \fBcolumn tag expr\fR \fIcolumnDesc\fR \fItagExpr\fR
+Evaluates the tag expression \fItagExpr\fR against every column
+specified by the \fBcolumn description\fR
+\fIcolumnDesc\fR. The result is 1 if the tag expression evaluates to true
+for every column, 0 otherwise.
+.TP
+\fIpathName\fR \fBcolumn tag names\fR \fIcolumnDesc\fR
+Returns a list of tag names assigned to the columns
+specified by the \fBcolumn description\fR
+\fIcolumnDesc\fR. The result is the union of any tags assigned to the
+columns.
+.TP
+\fIpathName\fR \fBcolumn tag remove\fR \fIcolumnDesc\fR \fItagList\fR
+Removes each tag in \fItagList\fR from the columns specified by the
+\fBcolumn description\fR \fIcolumnDesc\fR.
+It is not an error if any of the columns do not use any of the tags.
+The list of tags for a column can also be changed via a column's
+\fB-tags\fR option.
+.RE
+.TP
 \fIpathName\fR \fBcolumn width\fR \fIcolumnDesc\fR
 This command returns a decimal string giving the width in pixels
 of the column specified by the \fBcolumn description\fR
@@ -1201,9 +1273,10 @@ command.
 .TP
 \fIpathName\fR \fBcontentbox\fR
 Returns a list with four elements giving the bounding box
-for the space used to display the items,
-i.e. the space of the treectrl window without
-the surrounding borders or the column headers.
+of the screen area used to display items.
+This is the area of the window not including borders, column headers, or
+locked columns. An empty string is returned if the display area has
+no height or width, which can happen if the window is too small.
 .TP
 \fIpathName\fR \fBdebug\fR \fIoption\fR ?\fIarg arg ...\fR?
 This command is used to facilitate debugging of the treectrl widget.
@@ -1212,13 +1285,16 @@ that follows the \fBdebug\fR argument.
 The following forms of the command are supported:
 .RS
 .TP
-\fIpathName\fR \fBdebug cget\fR \fIelement\fR \fIoption\fR
+\fIpathName\fR \fBdebug alloc\fR
+Returns a string giving partial statistics on memory allocations.
+.TP
+\fIpathName\fR \fBdebug cget\fR \fIoption\fR
 This command returns the current value of the debugging option
 named \fIoption\fR.
 \fIOption\fR may have any of the values accepted by the
 \fBdebug configure\fR widget command.
 .TP
-\fIpathName\fR \fBdebug configure\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
+\fIpathName\fR \fBdebug configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
 that it modifies debugging options
 instead of modifying options for the overall treectrl widget.
@@ -1256,15 +1332,23 @@ If this option is switched on
 (together with the debugging option \fB-enable\fR),
 at varios places additional debugging output is printed to stdout.
 .TP
+\fB\fB-drawcolor\fR\fR \fIcolor\fR
+When specified, areas of the window are painted with this color when drawing
+in those areas is about to occur.
+Setting this option has only an effect if the
+debugging options \fB-enable\fR and \fB-display\fR are switched on.
+.TP
 \fB\fB-enable\fR\fR \fIboolean\fR
 All other debugging options only take effect,
 if this option is also switched on.
 .TP
 \fB\fB-erasecolor\fR\fR \fIcolor\fR
-Use this color, when parts of the treectrl widget should be deleted.
+When specified, areas of the window which have been marked as "invalid"
+(for example, when part of the window is exposed) are
+painted with this color.
 If you use an unusual color for this option (like \fBpink\fR),
 superflous screen redraws can be spotted more easily.
-Setting this option has only an effect, if the
+Setting this option has only an effect if the
 debugging options \fB-enable\fR and \fB-display\fR are switched on.
 .RE
 .TP
@@ -1273,6 +1357,10 @@ For every of the treectrl widget
 a line with some internal values info about all items
 is printed to stdout.
 The command returns the empty string.
+.TP
+\fIpathName\fR \fBdebug expose\fR \fIx1\fR \fIy1\fR \fIx2\fR \fIy2\fR
+Causes the area of the window bounded by the given window-coords to be
+marked as invalid. This simulates uncovering part of the window.
 .TP
 \fIpathName\fR \fBdebug scroll\fR
 Returns a string useful for debugging vertical scrolling.
@@ -1524,9 +1612,12 @@ options for the item given by \fIitemDesc\fR (see \fBTk_ConfigureInfo\fR for
 information on the format of this list). If \fIoption\fR is specified with no
 value, then the command returns a list describing the one named option (this
 list will be identical to the corresponding sublist of the value returned if
-no \fIoption\fR is specified). If one or more \fIoption\fR-\fIvalue\fR pairs
+no \fIoption\fR is specified).
+.sp
+If one or more \fIoption\fR-\fIvalue\fR pairs
 are specified, then the command modifies the given item option(s) to have the
-given value(s); in this case the command returns an empty string.
+given value(s); in this case the command returns an empty string. This is the
+only case where \fIitemDesc\fR may refer to multiple items.
 .sp
 The following options are supported by this command (see \fBitem create\fR for
 the meaning of each option):
@@ -1535,6 +1626,8 @@ the meaning of each option):
 \fB\fB-button\fR\fR \fIboolean\fR
 .TP
 \fB\fB-height\fR\fR \fIheight\fR
+.TP
+\fB\fB-tags\fR\fR \fItagList\fR
 .TP
 \fB\fB-visible\fR\fR \fIboolean\fR
 .RE
@@ -1609,11 +1702,9 @@ and b) each ancestor's \fB-visible\fR option is true
 Deletes the specified item(s).
 \fIFirst\fR and \fIlast\fR must be valid
 \fBitem descriptions\fR.
-If either \fIfirst\fR or \fIlast\fR is specified as \fBall\fR, then all items are
-deleted. If \fIfirst\fR is specified and \fIlast\fR isn't
-specified, the item described by \fIfirst\fR is deleted.
+If \fIlast\fR isn't specified, then \fIfirst\fR may specify multiple items.
 If both \fIfirst\fR and \fIlast\fR are specified,
-they must decribe items with a common ancestor;
+they must each decribe a single item with a common ancestor;
 then the range of items between \fIfirst\fR and \fIlast\fR is deleted.
 The order of \fIfirst\fR and \fIlast\fR doesn't matter.
 .sp
@@ -1657,10 +1748,8 @@ associated with \fIelement\fR inside \fIcolumn\fR of the item described by
 specified element (see \fBELEMENTS\fR below)
 .TP
 \fIpathName\fR \fBitem element configure\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
-This command is similar to the \fBconfigure\fR widget command except
-that it modifies options associated with
-\fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR
-instead of modifying options for the overall treectrl widget.
+This command modifies configuration options for an element in a column of
+an item.
 If no \fIoption\fR is specified, the command returns a list describing
 all of the available options for the element (see \fBTk_ConfigureInfo\fR
 for information on the format of this list).
@@ -1668,10 +1757,12 @@ If \fIoption\fR is specified with no \fIvalue\fR, then the command returns
 a list describing the one named option (this list will be identical to
 the corresponding sublist of the value returned if no \fIoption\fR
 is specified).
+.sp
 If one or more \fIoption\fR-\fIvalue\fR pairs are specified, then the command
 modifies the given option(s) to have the given value(s) in the
-\fIelement\fR inside \fIcolumn\fR of the item described by \fIitemDesc\fR;
-in this case the command returns an empty string.
+\fIelement\fR inside \fIcolumn\fR of the item(s) described by \fIitemDesc\fR;
+in this case the command returns an empty string. This is the only case where
+\fIitemDesc\fR may refer to multiple items.
 .sp
 It is possible to configure multiple elements in multiple columns with
 a single call. To configure another element in the same column, append a
@@ -1686,6 +1777,8 @@ For example:
 	$C3 $E1 -text "apples and oranges"
 
 .fi
+Each of the \fBcolumn description\fR arguments
+may refer to multiple columns.
 .TP
 \fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
 This command returns the current value of the \fBper-state\fR
@@ -1735,8 +1828,12 @@ This command sets or retrieves the value of the \fBper-state\fR
 If no \fIcolumn\fR is specified, this command returns a list of values,
 one per column.
 If no \fIimage\fR is specified, this command returns the value for \fIcolumn\fR.
+.sp
 If one or more \fIcolumn\fR-\fIimage\fR pairs is specified,
 then the value of the -image option in each \fIcolumn\fR is set to \fIimage\fR.
+In this case \fIitemDesc\fR may refer to multiple items and each \fIcolumn\fR
+may refer to multiple columns.
+.sp
 Note that this command is provided as a convenience. Use the
 \fBitem element configure\fR or \fBitem element cget\fR commands if you want
 to set or retrieve the value of the -image option for a specific image element.
@@ -1868,8 +1965,11 @@ Convert to floating-point values and use floating comparison.
 This command sets or retrieves the number of columns that a style covers.
 If no \fIcolumn\fR is specified, the return value is a list of spans, one per column.
 If no \fInumColumns\fR is specified, the return value is the span for \fIcolumn\fR.
+.sp
 If one or more \fIcolumn\fR-\fInumColumns\fR pairs is specified, the
-span for each \fIcolumn\fR is set to \fInumColumns\fR.
+span for each \fIcolumn\fR is set to \fInumColumns\fR. In this case \fIitemDesc\fR
+may refer to multiple items and each \fIcolumn\fR may refer to multiple
+columns.
 .TP
 \fIpathName\fR \fBitem state\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
 This command is used to manipulate the states of an item.
@@ -1883,6 +1983,9 @@ Just like \fBitem state set\fR but manipulates dynamic states for a single
 item column, not the item as a whole. If \fIstateDescList\fR is unspecified,
 this command returns a list containing the names of all the dynamic states
 which are switched on in \fIcolumn\fR.
+.sp
+If \fIstateDescList\fR is specified, then \fIitemDesc\fR may refer to multiple
+items and \fIcolumn\fR may refer to multiple columns.
 .TP
 \fIpathName\fR \fBitem state get\fR \fIitemDesc\fR ?\fIstateName\fR?
 If no \fIstateName\fR is specified, returns a list containing
@@ -1901,9 +2004,9 @@ item described by \fIitemDesc\fR,
 every state with a leading \fB~\fR will be toggled, and
 every state without leading \fB!\fR or \fB~\fR will be switched on.
 If \fIlastItem\fR is specified, the state changes will be made for all items
-in the range betwen \fIitemDesc\fR and \fIlastItem\fR.
-If \fIItemDesc\fR is the string \fBall\fR,
-then the state changes are made for all items of the treectrl widget.
+in the range between \fIitemDesc\fR and \fIlastItem\fR.
+If \fIlastItem\fR unspecified,
+then the state changes are made for all items described by \fIitemDesc\fR.
 .RE
 .TP
 \fIpathName\fR \fBitem style\fR \fIcommand\fR \fIitemDesc\fR ?\fIarg ...\fR?
@@ -1928,6 +2031,8 @@ to elements in the new style specified by \fIstyle\fR.
 \fIelementOld\fR is an element in the current style, and \fIelementNew\fR is
 an element in the style specified by \fIstyle\fR. Both \fIelementOld\fR and
 \fIelementNew\fR must be of the same type (\fBbitmap\fR, \fBtext\fR etc).
+\fIItemDesc\fR may refer to multiple items and \fIcolumn\fR may refer to
+multiple columns.
 .TP
 \fIpathName\fR \fBitem style set\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIstyle\fR? ?\fIcolumn style ...\fR?
 This command sets or retrieves the style assigned to one or more columns.
@@ -1936,8 +2041,44 @@ styles set for all columns of the item described by \fIitemDesc\fR.
 If no \fIstyle\fR is specified, this command
 returns the name of the style set for the item described by
 \fIitemDesc\fR in \fIcolumn\fR.
+.sp
 If one or more \fIcolumn\fR-\fIstyle\fR pairs is specified,
-then the style in each \fIcolumn\fR is set to \fIstyle\fR.
+then the style in each \fIcolumn\fR is set to \fIstyle\fR. In this case
+\fIitemDesc\fR may refer to multiple items and each \fIcolumn\fR may refer to
+multiple columns.
+.RE
+.TP
+\fIpathName\fR \fBitem tag\fR \fIoption\fR ?\fIarg arg ...\fR?
+This command is used to manipulate tags on items.
+The exact behavior of the command depends on the \fIoption\fR argument
+that follows the \fBitem tag\fR argument.
+The following forms of the command are supported:
+.RS
+.TP
+\fIpathName\fR \fBitem tag add\fR \fIitemDesc\fR \fItagList\fR
+Adds each tag in \fItagList\fR to the items specified by the
+\fBitem description\fR \fIitemDesc\fR.
+Duplicate tags are ignored. The list of tags for an item can also be
+changed via an item's \fB-tags\fR option.
+.TP
+\fIpathName\fR \fBitem tag expr\fR \fIitemDesc\fR \fItagExpr\fR
+Evaluates the tag expression \fItagExpr\fR against every item
+specified by the \fBitem description\fR
+\fIitemDesc\fR. The result is 1 if the tag expression evaluates to true
+for every item, 0 otherwise.
+.TP
+\fIpathName\fR \fBitem tag names\fR \fIitemDesc\fR
+Returns a list of tag names assigned to the items
+specified by the \fBitem description\fR
+\fIitemDesc\fR. The result is the union of any tags assigned to the
+items.
+.TP
+\fIpathName\fR \fBitem tag remove\fR \fIitemDesc\fR \fItagList\fR
+Removes each tag in \fItagList\fR from the items specified by the
+\fBitem description\fR \fIitemDesc\fR.
+It is not an error if any of the items do not use any of the tags.
+The list of tags for an item can also be changed via an item's
+\fB-tags\fR option.
 .RE
 .TP
 \fIpathName\fR \fBitem text\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fItext\fR? ?\fIcolumn text ...\fR?
@@ -1946,8 +2087,12 @@ text element in one or more columns.
 If no \fIcolumn\fR is specified, this command returns a list of values,
 one per column.
 If no \fItext\fR is specified, this command returns the value for \fIcolumn\fR.
+.sp
 If one or more \fIcolumn\fR-\fItext\fR pairs is specified,
 then the value of the -text option in each \fIcolumn\fR is set to \fItext\fR.
+In this case \fIitemDesc\fR may refer to multiple items and each \fIcolumn\fR
+may refer to multiple columns.
+.sp
 Note that this command is provided as a convenience. Use the
 \fBitem element configure\fR or \fBitem element cget\fR commands if you
 want to set or retrieve the value of the -text option for a specific text element.
@@ -2283,12 +2428,14 @@ It has several forms, depending on \fIoption\fR:
 .TP
 \fIpathName\fR \fBselection add\fR \fIfirst\fR ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
-must be the string \fBall\fR or a valid \fBitem description\fR.
-Adds every unselected item in the range between
+must be valid \fBitem descriptions\fR. If both
+\fIfirst\fR and \fIlast\fR are specified, then they may refer to a single
+item only; in this case
+the command adds every unselected item in the range between
 \fIfirst\fR and \fIlast\fR, inclusive, to the selection
-without affecting the selection state of items outside that range.
-If one of the arguments is the string \fBall\fR,
-every unselected item in the treectrl widget is added to the selection.
+without affecting the selected state of items outside that range.
+If only \fIfirst\fR is specified, then
+every unselected item specified by \fIfirst\fR is added to the selection.
 A \fB<Selection>\fR event is generated if any items were added to the
 selection.
 .TP
@@ -2299,17 +2446,19 @@ The selection anchor is the end of the selection that is fixed
 while dragging out a selection with the mouse.
 The item description \fBanchor\fR may be used to refer to the anchor item.
 This command doesn't modify the selection state of any item.
-Returns the numerical id of the selection anchor item.
+Returns the unique id of the selection anchor item.
 .TP
 \fIpathName\fR \fBselection clear\fR ?\fIfirst\fR? ?\fIlast\fR?
 \fIFirst\fR and \fIlast\fR (if specified)
-must be the string \fBall\fR or a valid \fBitem description\fR.
-If any of the items between \fIfirst\fR and \fIlast\fR
-(inclusive) are selected, they are deselected.
-The selection state is not changed for items outside this range.
-If no additional arguments are given,
-or if one of the arguments is the string \fBall\fR,
-then all items are removed from the selection.
+must be valid \fBitem descriptions\fR. If both
+\fIfirst\fR and \fIlast\fR are specified, then they may refer to a single
+item only; in this case any selected items between \fIfirst\fR and \fIlast\fR
+(inclusive) are removed from the selection without affecting
+the selected state of items outside that range.
+If only \fIfirst\fR is specified, then
+every selected item specified by \fIfirst\fR is removed from the selection.
+If neither \fIfirst\fR nor \fIlast\fR are specified,
+then all selected items are removed from the selection.
 A \fB<Selection>\fR event is generated if any items were removed from the
 selection.
 .TP
@@ -2328,8 +2477,8 @@ Returns 1 if the item described by \fIitemDesc\fR is currently
 selected, 0 if it isn't.
 .TP
 \fIpathName\fR \fBselection modify\fR \fIselect\fR \fIdeselect\fR
-Both arguments \fIselect\fR and \fIdeselect\fR must be
-the string \fBall\fR or a possibly-empty list of \fBitem descriptions\fR.
+Both arguments \fIselect\fR and \fIdeselect\fR are
+a possibly-empty list of \fBitem descriptions\fR.
 Any unselected items in \fIselect\fR are added to the selection,
 and any selected items in \fIdeselect\fR are removed from the selection (except
 for those items which are also in \fIselect\fR).
@@ -2518,29 +2667,6 @@ around a piece of text.
 .TP
 \fIpathName\fR \fBstyle names\fR
 Returns a list containing the names of all existing styles.
-.RE
-.TP
-\fIpathName\fR \fBtag\fR \fIoption\fR \fIargs\fR
-This command is used to manipulate \fBitem tags\fR.
-The following forms of the command are supported:
-.RS
-.TP
-\fIpathName\fR \fBtag add\fR \fIitemDesc\fR \fItagList\fR
-Adds each tag in \fItagList\fR to the item(s) described by \fIitemDesc\fR.
-Duplicate tags are never added to an item.
-.TP
-\fIpathName\fR \fBtag expr\fR \fIitemDesc\fR \fItagExpr\fR
-Returns a boolean indicating if the item(s) described by \fIitemDesc\fR
-meet the tag expression \fItagExpr\fR. This command can be used to test
-whether an item has (or doesn't have) a certain tag.
-.TP
-\fIpathName\fR \fBtag names\fR \fIitemDesc\fR
-Returns a list of tag names that any of the items described by \fIitemDesc\fR
-have.
-.TP
-\fIpathName\fR \fBtag remove\fR \fIitemDesc\fR \fItagList\fR
-Removes each tag in \fItagList\fR from the item(s) described by \fIitemDesc\fR.
-If an item doesn't have one of the tags, then nothing bad happens.
 .RE
 .TP
 \fIpathName\fR \fBtoggle\fR ?\fB-recurse\fR? ?\fIitemDesc ...\fR?
@@ -2733,6 +2859,11 @@ See also the \fB-backgroundmode\fR widget option for more on this.
 This option determines how the items (and the title) line up with each other.
 Must be one of \fBleft\fR (the default), \fBcenter\fR, or \fBright\fR.
 .TP
+\fB\fB-lock\fR\fR \fIlock\fR
+This option allows a column to stick to the left or right edge of the window.
+A locked column scrolls vertically but not horizontally.
+Must be one of \fBnone\fR (the default), \fBleft\fR, or \fBright\fR.
+.TP
 \fB\fB-maxwidth\fR\fR \fIsize\fR
 Specifies the maximum size, in screen units, that will be permitted for this column.
 If \fIsize\fR is an empty string, then there is no limit on the maximum size of the column.
@@ -2763,9 +2894,9 @@ The pressed state is used when the mouse button is pressed in the header.
 \fB\fB-stepwidth\fR\fR \fIsize\fR
 Deprecated. Use the treectrl's \fB-itemwidthmultiple\fR option instead.
 .TP
-\fB\fB-tag\fR\fR \fItag\fR
-Defines a unique name for the column which can be used
-whenever a column must be specified.
+\fB\fB-tags\fR\fR \fItagList\fR
+\fITagList\fR is a list of tag names that can be used to identify the column.
+See also the \fBcolumn tag\fR command.
 .TP
 \fB\fB-text\fR\fR \fItext\fR
 Specifies a text string to be displayed as the column title.
@@ -2823,30 +2954,48 @@ Specifies the unique column identifier, where \fIid\fR should be
 the return value of a prior call of the \fBcolumn create\fR widget command.
 See also the \fB-columnprefix\fR option.
 .TP
-\fItag\fR
-Specifies the value of a column's -tag option.
+\fItagExpr\fR \fIQUALIFIERS\fR
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
+every column's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single column is
+matched. You may run into trouble if \fItagExpr\fR looks like a column id
+or other keyword; also, \fItagExpr\fR must look like a single list element
+since column descriptions are properly-formed lists. To be safe you may want to
+use the \fBtag\fR keyword.
 .TP
-\fBall\fR
-Indicates every column, including the tail column. Not all commands accept this.
+\fBall\fR \fIQUALIFIERS\fR
+Indicates every column, including the tail column, which match \fIQUALIFIERS\fR.
 .TP
-\fBfirst\fR ?\fBvisible\fR?
-Indicates the leftmost column of the treectrl.
-If \fBvisible\fR is specified, the leftmost column whose -visible option
-is true is used.
+\fBfirst\fR \fIQUALIFIERS\fR
+Indicates the leftmost column of the treectrl which matches \fIQUALIFIERS\fR.
 .TP
-\fBend\fR ?\fBvisible\fR?
+\fBend\fR \fIQUALIFIERS\fR
 .TP
-\fBlast\fR ?\fBvisible\fR?
-Indicates the rightmost column of the treectrl (but not the tail column).
-If \fBvisible\fR is specified, the rightmost column whose -visible option
-is true is used.
+\fBlast\fR \fIQUALIFIERS\fR
+Indicates the rightmost column of the treectrl (but not the tail column)
+which matches \fIQUALIFIERS\fR.
 .TP
-\fBorder\fR \fIn\fR ?\fBvisible\fR?
+\fBlist\fR \fIcolumnDescs\fR
+\fIColumnDescs\fR is a list (a single argument, i.e. "list {a b c}" not "list a b c")
+of other column descriptions.
+This keyword cannot be followed by any modifiers unless a single column is specified.
+.TP
+\fBorder\fR \fIn\fR \fIQUALIFIERS\fR
 Indicates the \fIn\fRth column in the list of columns as returned by the
 \fBcolumn order\fR command.
 .TP
+\fBrange\fR \fIfirst last\fR \fIQUALIFIERS\fR
+\fIFirst\fR and \fIlast\fR specify a range of columns.
+This keyword cannot be followed by any modifiers unless a single column is specified.
+.TP
 \fBtail\fR
 Indicates the ever-present tail column of the treectrl.
+.TP
+\fBtag\fR \fItagExpr\fR \fIQUALIFIERS\fR
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
+every column's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single column is
+matched.
 .TP
 \fBtree\fR
 Indicates the column specified by the -treecolumn option of the treectrl.
@@ -2857,13 +3006,30 @@ A modifier changes the column used relative to
 the description up to this point.
 It may be specified in any of the following forms:
 .TP
-\fBnext\fR ?\fBvisible\fR?
-Use the column to the right, or the column to the right whose -visible option
-is true.
+\fBnext\fR \fIQUALIFIERS\fR
+Use the column to the right matching \fIQUALIFIERS\fR.
 .TP
-\fBprev\fR ?\fBvisible\fR?
-Use the column to the left, or the column to the left whose -visible option
-is true.
+\fBprev\fR \fIQUALIFIERS\fR
+Use the column to the left matching \fIQUALIFIERS\fR.
+The word \fIQUALIFIERS\fR above represents a list of zero or more of the
+following terms that changes which item is chosen:
+.TP
+\fBstate\fR \fIstateList\fR
+\fIStateList\fR is a list of column state names.
+Only columns that have the given states set (or unset if the '!' prefix is used)
+are considered.
+.TP
+\fBtag\fR \fItagExpr\fR
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
+every column's tags are tested for a match.
+.TP
+\fBvisible\fR
+When this qualifier is given, only columns whose \fB-visible\fR option is
+TRUE are considered.
+.TP
+\fB!visible\fR
+When this qualifier is given, only columns whose \fB-visible\fR option is
+FALSE are considered.
 .SH "STATES"
 For every item a set of boolean states is managed. These states play an
 integral role in the appearance of each item.
@@ -3228,6 +3394,15 @@ the return value of a prior call of the \fBitem create\fR widget command,
 or \fB0\fR to specify the ever-present root item. See also the
 \fB-itemprefix\fR option.
 .TP
+\fItagExpr\fR
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
+every item's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single item is
+matched. You may run into trouble if \fItagExpr\fR looks like an item id
+or other keyword; also, \fItagExpr\fR must look like a single list element
+since item descriptions are properly-formed lists. To be safe you may want to
+use the \fBtag\fR keyword.
+.TP
 \fBactive\fR
 Indicates the item that is currently active, i.e. normally
 the item specified as argument of the last successful \fBactivate\fR
@@ -3276,7 +3451,7 @@ This keyword cannot be followed by any modifiers.
 Indicates the root item of the treectrl.
 .TP
 \fBtag\fR \fItagExpr\fR \fIQUALIFIERS\fR
-\fITagExpr\fR is a tag expression (see \fBITEM TAGS\fR) against which
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
 every item's tags are tested for a match.
 This keyword cannot be followed by any modifiers unless a single item is
 matched.
@@ -3364,7 +3539,7 @@ Only items that have the given states set (or unset if the '!' prefix is used)
 are considered.
 .TP
 \fBtag\fR \fItagExpr\fR
-\fITagExpr\fR is a tag expression (see \fBITEM TAGS\fR) against which
+\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
 every item's tags are tested for a match.
 .TP
 \fBvisible\fR

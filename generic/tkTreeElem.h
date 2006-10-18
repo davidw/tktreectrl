@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.21 2006/10/14 21:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.22 2006/10/18 03:49:18 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -28,6 +28,8 @@ struct ElementArgs
 	int objc;
 	Tcl_Obj *CONST *objv;
 	int flagSelf;
+	TreeItem item;
+	TreeItemColumn column;
     } config;
     struct {
 	int x;
@@ -94,9 +96,10 @@ struct ElementType
 /* list of these for each style */
 struct Element
 {
-    Tk_Uid name; /* "elem2", "eText" etc */
+    Tk_Uid name;		/* "elem2", "eText" etc */
     ElementType *typePtr;
-    Element *master; /* NULL if this is master */
+    Element *master;		/* NULL if this is master */
+    DynamicOption *options;	/* Dynamically-allocated options. */
     /* type-specific data here */
 };
 

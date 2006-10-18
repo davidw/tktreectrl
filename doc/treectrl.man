@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.37 2006/09/27 02:05:13 treectrl Exp $}
+  $Id: treectrl.man,v 1.38 2006/10/18 03:47:48 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -231,6 +231,18 @@ every item has the height requested by the arrangement of elements
 in each column. This option has no effect if the -itemheight option is specified.
 Items are never shorter than the maximum height of a button.
 
+[tkoption_def -rowproxy rowProxy RowProxy]
+If this option specifies a non empty value,
+it should be a screen distance
+in any of the forms acceptable to [fun Tk_GetPixels].
+Then a 1 pixel thick horizontal line will be drawn
+at the specified screen distance from the top edge of the treectrl widget,
+which reaches from left to right of the treectrl widget
+and uses an inverting color
+(i.e black on lighter background, white on darker background).
+This line can be used to give the user a visual feedback
+during row resizing.
+
 [tkoption_def -scrollmargin scrollMargin ScrollMargin]
 The interpretation of this option is left to Tcl scripts
 that implement scrolling:
@@ -356,17 +368,19 @@ this option is less than or equal to zero, then vertical scrolling
 is unconstrained.
 [list_end]
 
-[section {ITEM TAGS}]
-An item may have any number of tags associated with it. A tag is just a string
-of characters, and it may take any form, including that of an integer,
-although the characters '(', ')', '&', '|', '^' and '!' should be avoided.
+[section {ITEM AND COLUMN TAGS}]
+Columns and items may have any number of tags associated with them.
+A tag is just a string of characters, and it may take any form,
+including that of an integer, although the characters '(', ')', '&', '|', '^'
+and '!' should be avoided.
 [para]
-The same tag may be associated with many items. This is commonly done to group
+The same tag may be associated with many columns or items. This is commonly done to group
 items in various interesting ways; for example, in a file browser all directories
 might be given the tag "directory".
 [para]
-Tag expressions are used in [sectref {ITEM DESCRIPTION} {item descriptions}] to specify which items to
-operate on.
+Tag expressions are used in [sectref {COLUMN DESCRIPTION} {column descriptions}]
+and [sectref {ITEM DESCRIPTION} {item descriptions}] to specify which columns
+and items to operate on.
 A tag expression can be a single tag name or a logical expression of tags
 using operators '&&', '||', '^' and '!', and parenthesized subexpressions.
 For example:
@@ -495,8 +509,9 @@ of the new column.
 
 [call [arg pathName] [cmd {column delete}] [arg first] [opt [arg last]]]
 Deletes the specified column(s). [arg First] and [arg last] must be valid
-[sectref {COLUMN DESCRIPTION} {column descriptions}]. If either [arg first]
-or [arg last] is specified as [const all], then all columns are deleted.
+[sectref {COLUMN DESCRIPTION} {column descriptions}]. If [arg first]
+is specified as [const all], then all columns are deleted. If both [arg first]
+and [arg last] are specified, then they may refer to a single column only.
 The [const tail] column cannot be deleted and it is an error to specify it.
 The order of [arg first] and [arg last] doesn't matter, and [arg first] may
 be equal to [arg last].
@@ -540,8 +555,11 @@ starting position.
 [arg Color] is the color of the 2-pixel-thick line.
 
 [opt_def [option -indicatorcolumn] [arg column]]
-The 2-pixel-thick line will be drawn over the left edge of [arg column].
+The 2-pixel-thick line will be drawn over the left or right edge of [arg column].
 
+[opt_def [option -indicatorside] [arg side]]
+Specifies whether the 2-pixel-thick line will be drawn over the [const left]
+or [const right] edge of the column specified by [option -indicatorcolumn].
 [list_end]
 
 [call [arg pathName] [cmd {column index}] [arg columnDesc]]
@@ -549,9 +567,8 @@ Deprecated. Use [cmd {column id}] instead.
 
 [call [arg pathName] [cmd {column id}] [arg columnDesc]]
 This command resolves the [sectref {COLUMN DESCRIPTION} {column description}]
-[arg columnDesc] into a unique column identifier.
-If the column described by [arg columnDesc] doesn't exist, this command returns
-an empty string.
+[arg columnDesc] into a list of unique column identifiers. If the column(s) described by
+[arg columnDesc] don't exist, this command returns an empty list.
 
 [call [arg pathName] [cmd {column list}] [opt [arg -visible]]]
 This command returns a list of identifiers for every column (except the tail)
@@ -581,6 +598,43 @@ If [arg -visible] is given, only columns whose -visible
 option is true are considered, and -1 is returned if [arg columnDesc]'s -visible
 option is false.
 
+
+
+[call [arg pathName] [cmd {column tag}] [arg option] [opt [arg {arg arg ...}]]]
+This command is used to manipulate tags on columns.
+The exact behavior of the command depends on the [arg option] argument
+that follows the [cmd {column tag}] argument.
+The following forms of the command are supported:
+
+[list_begin definitions]
+[call [arg pathName] [cmd {column tag add}] [arg columnDesc] [arg tagList]]
+Adds each tag in [arg tagList] to the columns specified by the
+[sectref {COLUMN DESCRIPTION} {column description}] [arg columnDesc].
+Duplicate tags are ignored. The list of tags for a column can also be
+changed via a column's [option -tags] option.
+
+[call [arg pathName] [cmd {column tag expr}] [arg columnDesc] [arg tagExpr]]
+Evaluates the tag expression [arg tagExpr] against every column
+specified by the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc]. The result is 1 if the tag expression evaluates to true
+for every column, 0 otherwise.
+
+[call [arg pathName] [cmd {column tag names}] [arg columnDesc]]
+Returns a list of tag names assigned to the columns
+specified by the [sectref {COLUMN DESCRIPTION} {column description}]
+[arg columnDesc]. The result is the union of any tags assigned to the
+columns.
+
+[call [arg pathName] [cmd {column tag remove}] [arg columnDesc] [arg tagList]]
+Removes each tag in [arg tagList] from the columns specified by the
+[sectref {COLUMN DESCRIPTION} {column description}] [arg columnDesc].
+It is not an error if any of the columns do not use any of the tags.
+The list of tags for a column can also be changed via a column's
+[option -tags] option.
+[list_end]
+
+
+
 [call [arg pathName] [cmd {column width}] [arg columnDesc]]
 This command returns a decimal string giving the width in pixels
 of the column specified by the [sectref {COLUMN DESCRIPTION} {column description}]
@@ -609,9 +663,10 @@ command.
 
 [call [arg pathName] [cmd contentbox]]
 Returns a list with four elements giving the bounding box
-for the space used to display the items,
-i.e. the space of the treectrl window without
-the surrounding borders or the column headers.
+of the screen area used to display items.
+This is the area of the window not including borders, column headers, or
+locked columns. An empty string is returned if the display area has
+no height or width, which can happen if the window is too small.
 
 [call [arg pathName] [cmd debug] [arg option] [opt [arg {arg arg ...}]]]
 This command is used to facilitate debugging of the treectrl widget.
@@ -620,13 +675,16 @@ that follows the [cmd debug] argument.
 The following forms of the command are supported:
 
 [list_begin definitions]
-[call [arg pathName] [cmd {debug cget}] [arg element] [arg option]]
+[call [arg pathName] [cmd {debug alloc}]]
+Returns a string giving partial statistics on memory allocations.
+
+[call [arg pathName] [cmd {debug cget}] [arg option]]
 This command returns the current value of the debugging option
 named [arg option].
 [arg Option] may have any of the values accepted by the
 [cmd {debug configure}] widget command.
 
-[call [arg pathName] [cmd {debug configure}] [arg element] \
+[call [arg pathName] [cmd {debug configure}] \
      [opt [arg option]] [opt [arg value]] [opt [arg {option value ...}]]]
 This command is similar to the [cmd configure] widget command except
 that it modifies debugging options
@@ -665,15 +723,23 @@ If this option is switched on
 (together with the debugging option [option -enable]),
 at varios places additional debugging output is printed to stdout.
 
+[opt_def [option -drawcolor] [arg color]]
+When specified, areas of the window are painted with this color when drawing
+in those areas is about to occur.
+Setting this option has only an effect if the
+debugging options [option -enable] and [option -display] are switched on.
+
 [opt_def [option -enable] [arg boolean]]
 All other debugging options only take effect,
 if this option is also switched on.
 
 [opt_def [option -erasecolor] [arg color]]
-Use this color, when parts of the treectrl widget should be deleted.
+When specified, areas of the window which have been marked as "invalid"
+(for example, when part of the window is exposed) are
+painted with this color.
 If you use an unusual color for this option (like [const pink]),
 superflous screen redraws can be spotted more easily.
-Setting this option has only an effect, if the
+Setting this option has only an effect if the
 debugging options [option -enable] and [option -display] are switched on.
 [list_end]
 
@@ -682,6 +748,10 @@ For every of the treectrl widget
 a line with some internal values info about all items
 is printed to stdout.
 The command returns the empty string.
+
+[call [arg pathName] [cmd {debug expose}] [arg x1] [arg y1] [arg x2] [arg y2]]
+Causes the area of the window bounded by the given window-coords to be
+marked as invalid. This simulates uncovering part of the window.
 
 [call [arg pathName] [cmd {debug scroll}]]
 Returns a string useful for debugging vertical scrolling.
@@ -942,9 +1012,12 @@ options for the item given by [arg itemDesc] (see [fun Tk_ConfigureInfo] for
 information on the format of this list). If [arg option] is specified with no
 value, then the command returns a list describing the one named option (this
 list will be identical to the corresponding sublist of the value returned if
-no [arg option] is specified). If one or more [arg option]-[arg value] pairs
+no [arg option] is specified).
+[nl]
+If one or more [arg option]-[arg value] pairs
 are specified, then the command modifies the given item option(s) to have the
-given value(s); in this case the command returns an empty string.
+given value(s); in this case the command returns an empty string. This is the
+only case where [arg itemDesc] may refer to multiple items.
 [nl]
 The following options are supported by this command (see [cmd {item create}] for
 the meaning of each option):
@@ -953,6 +1026,7 @@ the meaning of each option):
 
 [opt_def [option -button] [arg boolean]]
 [opt_def [option -height] [arg height]]
+[opt_def [option -tags] [arg tagList]]
 [opt_def [option -visible] [arg boolean]]
 
 [list_end]
@@ -1029,11 +1103,9 @@ and b) each ancestor's [option -visible] option is true
 Deletes the specified item(s).
 [arg First] and [arg last] must be valid
 [sectref {ITEM DESCRIPTION} {item descriptions}].
-If either [arg first] or [arg last] is specified as [const all], then all items are
-deleted. If [arg first] is specified and [arg last] isn't
-specified, the item described by [arg first] is deleted.
+If [arg last] isn't specified, then [arg first] may specify multiple items.
 If both [arg first] and [arg last] are specified,
-they must decribe items with a common ancestor;
+they must each decribe a single item with a common ancestor;
 then the range of items between [arg first] and [arg last] is deleted.
 The order of [arg first] and [arg last] doesn't matter.
 [nl]
@@ -1082,10 +1154,8 @@ specified element (see [sectref ELEMENTS] below)
 [call [arg pathName] [cmd {item element configure}] [arg itemDesc] \
      [arg column] [arg element] [opt [arg option]] [opt [arg value]] \
      [opt [arg {option value ...}]]]
-This command is similar to the [cmd configure] widget command except
-that it modifies options associated with
-[arg element] inside [arg column] of the item described by [arg itemDesc]
-instead of modifying options for the overall treectrl widget.
+This command modifies configuration options for an element in a column of
+an item.
 If no [arg option] is specified, the command returns a list describing
 all of the available options for the element (see [fun Tk_ConfigureInfo]
 for information on the format of this list).
@@ -1093,10 +1163,12 @@ If [arg option] is specified with no [arg value], then the command returns
 a list describing the one named option (this list will be identical to
 the corresponding sublist of the value returned if no [arg option]
 is specified).
+[nl]
 If one or more [arg option]-[arg value] pairs are specified, then the command
 modifies the given option(s) to have the given value(s) in the
-[arg element] inside [arg column] of the item described by [arg itemDesc];
-in this case the command returns an empty string.
+[arg element] inside [arg column] of the item(s) described by [arg itemDesc];
+in this case the command returns an empty string. This is the only case where
+[arg itemDesc] may refer to multiple items.
 [nl]
 It is possible to configure multiple elements in multiple columns with
 a single call. To configure another element in the same column, append a
@@ -1109,6 +1181,8 @@ For example:
 	$C2 $E3 -fill Blue , \
 	$C3 $E1 -text "apples and oranges"
 [example_end]
+Each of the [sectref {COLUMN DESCRIPTION} {column description}] arguments
+may refer to multiple columns.
 
 [call [arg pathName] [cmd {item element perstate}] [arg itemDesc] [arg column] \
      [arg element] [arg option] [opt [arg stateList]]]
@@ -1163,10 +1237,12 @@ If no [arg column] is specified, this command returns a list of values,
 one per column.
 
 If no [arg image] is specified, this command returns the value for [arg column].
-
+[nl]
 If one or more [arg column]-[arg image] pairs is specified,
 then the value of the -image option in each [arg column] is set to [arg image].
-
+In this case [arg itemDesc] may refer to multiple items and each [arg column]
+may refer to multiple columns.
+[nl]
 Note that this command is provided as a convenience. Use the
 [cmd "item element configure"] or [cmd "item element cget"] commands if you want
 to set or retrieve the value of the -image option for a specific image element.
@@ -1303,8 +1379,11 @@ Convert to floating-point values and use floating comparison.
 This command sets or retrieves the number of columns that a style covers.
 If no [arg column] is specified, the return value is a list of spans, one per column.
 If no [arg numColumns] is specified, the return value is the span for [arg column].
+[nl]
 If one or more [arg column]-[arg numColumns] pairs is specified, the
-span for each [arg column] is set to [arg numColumns].
+span for each [arg column] is set to [arg numColumns]. In this case [arg itemDesc]
+may refer to multiple items and each [arg column] may refer to multiple
+columns.
 
 [call [arg pathName] [cmd {item state}] [arg command] [arg itemDesc] \
      [opt [arg {arg ...}]]]
@@ -1321,6 +1400,9 @@ Just like [cmd {item state set}] but manipulates dynamic states for a single
 item column, not the item as a whole. If [arg stateDescList] is unspecified,
 this command returns a list containing the names of all the dynamic states
 which are switched on in [arg column].
+[nl]
+If [arg stateDescList] is specified, then [arg itemDesc] may refer to multiple
+items and [arg column] may refer to multiple columns.
 
 [call [arg pathName] [cmd {item state get}] [arg itemDesc] \
      [opt [arg {stateName}]]]
@@ -1341,9 +1423,9 @@ item described by [arg itemDesc],
 every state with a leading [const ~] will be toggled, and
 every state without leading [const !] or [const ~] will be switched on.
 If [arg lastItem] is specified, the state changes will be made for all items
-in the range betwen [arg itemDesc] and [arg lastItem].
-If [arg ItemDesc] is the string [const all],
-then the state changes are made for all items of the treectrl widget.
+in the range between [arg itemDesc] and [arg lastItem].
+If [arg lastItem] unspecified,
+then the state changes are made for all items described by [arg itemDesc].
 
 [list_end]
 
@@ -1372,6 +1454,8 @@ to elements in the new style specified by [arg style].
 [arg elementOld] is an element in the current style, and [arg elementNew] is
 an element in the style specified by [arg style]. Both [arg elementOld] and
 [arg elementNew] must be of the same type ([const bitmap], [const text] etc).
+[arg ItemDesc] may refer to multiple items and [arg column] may refer to
+multiple columns.
 
 [call [arg pathName] [cmd {item style set}] [arg itemDesc] [opt [arg column]] \
      [opt [arg style]] [opt [arg {column style ...}]]]
@@ -1383,10 +1467,47 @@ styles set for all columns of the item described by [arg itemDesc].
 If no [arg style] is specified, this command
 returns the name of the style set for the item described by
 [arg itemDesc] in [arg column].
-
+[nl]
 If one or more [arg column]-[arg style] pairs is specified,
-then the style in each [arg column] is set to [arg style].
+then the style in each [arg column] is set to [arg style]. In this case
+[arg itemDesc] may refer to multiple items and each [arg column] may refer to
+multiple columns.
 [list_end]
+
+
+[call [arg pathName] [cmd {item tag}] [arg option] [opt [arg {arg arg ...}]]]
+This command is used to manipulate tags on items.
+The exact behavior of the command depends on the [arg option] argument
+that follows the [cmd {item tag}] argument.
+The following forms of the command are supported:
+
+[list_begin definitions]
+[call [arg pathName] [cmd {item tag add}] [arg itemDesc] [arg tagList]]
+Adds each tag in [arg tagList] to the items specified by the
+[sectref {ITEM DESCRIPTION} {item description}] [arg itemDesc].
+Duplicate tags are ignored. The list of tags for an item can also be
+changed via an item's [option -tags] option.
+
+[call [arg pathName] [cmd {item tag expr}] [arg itemDesc] [arg tagExpr]]
+Evaluates the tag expression [arg tagExpr] against every item
+specified by the [sectref {ITEM DESCRIPTION} {item description}]
+[arg itemDesc]. The result is 1 if the tag expression evaluates to true
+for every item, 0 otherwise.
+
+[call [arg pathName] [cmd {item tag names}] [arg itemDesc]]
+Returns a list of tag names assigned to the items
+specified by the [sectref {ITEM DESCRIPTION} {item description}]
+[arg itemDesc]. The result is the union of any tags assigned to the
+items.
+
+[call [arg pathName] [cmd {item tag remove}] [arg itemDesc] [arg tagList]]
+Removes each tag in [arg tagList] from the items specified by the
+[sectref {ITEM DESCRIPTION} {item description}] [arg itemDesc].
+It is not an error if any of the items do not use any of the tags.
+The list of tags for an item can also be changed via an item's
+[option -tags] option.
+[list_end]
+
 
 [call [arg pathName] [cmd {item text}] [arg itemDesc] [opt [arg column]] \
      [opt [arg text]] [opt [arg {column text ...}]]]
@@ -1397,10 +1518,12 @@ If no [arg column] is specified, this command returns a list of values,
 one per column.
 
 If no [arg text] is specified, this command returns the value for [arg column].
-
+[nl]
 If one or more [arg column]-[arg text] pairs is specified,
 then the value of the -text option in each [arg column] is set to [arg text].
-
+In this case [arg itemDesc] may refer to multiple items and each [arg column]
+may refer to multiple columns.
+[nl]
 Note that this command is provided as a convenience. Use the
 [cmd "item element configure"] or [cmd "item element cget"] commands if you
 want to set or retrieve the value of the -text option for a specific text element.
@@ -1753,12 +1876,14 @@ It has several forms, depending on [arg option]:
 [list_begin definitions]
 [call [arg pathName] [cmd {selection add}] [arg first] [opt [arg last]]]
 [arg First] and [arg last] (if specified)
-must be the string [const all] or a valid [sectref {ITEM DESCRIPTION} {item description}].
-Adds every unselected item in the range between
+must be valid [sectref {ITEM DESCRIPTION} {item descriptions}]. If both
+[arg first] and [arg last] are specified, then they may refer to a single
+item only; in this case
+the command adds every unselected item in the range between
 [arg first] and [arg last], inclusive, to the selection
-without affecting the selection state of items outside that range.
-If one of the arguments is the string [const all],
-every unselected item in the treectrl widget is added to the selection.
+without affecting the selected state of items outside that range.
+If only [arg first] is specified, then
+every unselected item specified by [arg first] is added to the selection.
 A [const <Selection>] event is generated if any items were added to the
 selection.
 
@@ -1769,18 +1894,19 @@ The selection anchor is the end of the selection that is fixed
 while dragging out a selection with the mouse.
 The item description [const anchor] may be used to refer to the anchor item.
 This command doesn't modify the selection state of any item.
-Returns the numerical id of the selection anchor item.
+Returns the unique id of the selection anchor item.
 
-[call [arg pathName] [cmd {selection clear}] \
-     [opt [arg first]] [opt [arg last]]]
+[call [arg pathName] [cmd {selection clear}] [opt [arg first]] [opt [arg last]]]
 [arg First] and [arg last] (if specified)
-must be the string [const all] or a valid [sectref {ITEM DESCRIPTION} {item description}].
-If any of the items between [arg first] and [arg last]
-(inclusive) are selected, they are deselected.
-The selection state is not changed for items outside this range.
-If no additional arguments are given,
-or if one of the arguments is the string [const all],
-then all items are removed from the selection.
+must be valid [sectref {ITEM DESCRIPTION} {item descriptions}]. If both
+[arg first] and [arg last] are specified, then they may refer to a single
+item only; in this case any selected items between [arg first] and [arg last]
+(inclusive) are removed from the selection without affecting
+the selected state of items outside that range.
+If only [arg first] is specified, then
+every selected item specified by [arg first] is removed from the selection.
+If neither [arg first] nor [arg last] are specified,
+then all selected items are removed from the selection.
 A [const <Selection>] event is generated if any items were removed from the
 selection.
 
@@ -1799,8 +1925,8 @@ Returns 1 if the item described by [arg itemDesc] is currently
 selected, 0 if it isn't.
 
 [call [arg pathName] [cmd {selection modify}] [arg select] [arg deselect]]
-Both arguments [arg select] and [arg deselect] must be
-the string [const all] or a possibly-empty list of [sectref {ITEM DESCRIPTION} {item descriptions}].
+Both arguments [arg select] and [arg deselect] are
+a possibly-empty list of [sectref {ITEM DESCRIPTION} {item descriptions}].
 Any unselected items in [arg select] are added to the selection,
 and any selected items in [arg deselect] are removed from the selection (except
 for those items which are also in [arg select]).
@@ -1993,31 +2119,6 @@ around a piece of text.
 [call [arg pathName] [cmd {style names}]]
 Returns a list containing the names of all existing styles.
 [list_end]
-
-
-[call [arg pathName] [cmd tag] [arg option] [arg args]]
-This command is used to manipulate [sectref {ITEM TAGS} "item tags"].
-The following forms of the command are supported:
-
-[list_begin definitions]
-[call [arg pathName] [cmd {tag add}] [arg itemDesc] [arg tagList]]
-Adds each tag in [arg tagList] to the item(s) described by [arg itemDesc].
-Duplicate tags are never added to an item.
-
-[call [arg pathName] [cmd {tag expr}] [arg itemDesc] [arg tagExpr]]
-Returns a boolean indicating if the item(s) described by [arg itemDesc]
-meet the tag expression [arg tagExpr]. This command can be used to test
-whether an item has (or doesn't have) a certain tag.
-
-[call [arg pathName] [cmd {tag names}] [arg itemDesc]]
-Returns a list of tag names that any of the items described by [arg itemDesc]
-have.
-
-[call [arg pathName] [cmd {tag remove}] [arg itemDesc] [arg tagList]]
-Removes each tag in [arg tagList] from the item(s) described by [arg itemDesc].
-If an item doesn't have one of the tags, then nothing bad happens.
-[list_end]
-
 
 [call [arg pathName] [cmd toggle] [opt [option -recurse]] \
      [opt [arg {itemDesc ...}]]]
@@ -2217,6 +2318,11 @@ See also the [option -backgroundmode] widget option for more on this.
 This option determines how the items (and the title) line up with each other.
 Must be one of [const left] (the default), [const center], or [const right].
 
+[opt_def [option -lock] [arg lock]]
+This option allows a column to stick to the left or right edge of the window.
+A locked column scrolls vertically but not horizontally.
+Must be one of [const none] (the default), [const left], or [const right].
+
 [opt_def [option -maxwidth] [arg size]]
 Specifies the maximum size, in screen units, that will be permitted for this column.
 If [arg size] is an empty string, then there is no limit on the maximum size of the column.
@@ -2247,9 +2353,9 @@ The pressed state is used when the mouse button is pressed in the header.
 [opt_def [option -stepwidth] [arg size]]
 Deprecated. Use the treectrl's [option -itemwidthmultiple] option instead.
 
-[opt_def [option -tag] [arg tag]]
-Defines a unique name for the column which can be used 
-whenever a column must be specified.
+[opt_def [option -tags] [arg tagList]]
+[arg TagList] is a list of tag names that can be used to identify the column.
+See also the [cmd {column tag}] command.
 
 [opt_def [option -text] [arg text]]
 Specifies a text string to be displayed as the column title.
@@ -2311,29 +2417,47 @@ Specifies the unique column identifier, where [arg id] should be
 the return value of a prior call of the [cmd {column create}] widget command.
 See also the [option -columnprefix] option.
 
-[lst_item [arg tag]]
-Specifies the value of a column's -tag option.
+[lst_item "[arg tagExpr] [arg QUALIFIERS]"]
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
+every column's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single column is
+matched. You may run into trouble if [arg tagExpr] looks like a column id
+or other keyword; also, [arg tagExpr] must look like a single list element
+since column descriptions are properly-formed lists. To be safe you may want to
+use the [const tag] keyword.
 
-[lst_item [const all]]
-Indicates every column, including the tail column. Not all commands accept this.
+[lst_item "[const all] [arg QUALIFIERS]"]
+Indicates every column, including the tail column, which match [arg QUALIFIERS].
 
-[lst_item "[const first] [opt [const visible]]"]
-Indicates the leftmost column of the treectrl.
-If [const visible] is specified, the leftmost column whose -visible option
-is true is used.
+[lst_item "[const first] [arg QUALIFIERS]"]
+Indicates the leftmost column of the treectrl which matches [arg QUALIFIERS].
 
-[lst_item "[const end] [opt [const visible]]"]
-[lst_item "[const last] [opt [const visible]]"]
-Indicates the rightmost column of the treectrl (but not the tail column).
-If [const visible] is specified, the rightmost column whose -visible option
-is true is used.
+[lst_item "[const end] [arg QUALIFIERS]"]
+[lst_item "[const last] [arg QUALIFIERS]"]
+Indicates the rightmost column of the treectrl (but not the tail column)
+which matches [arg QUALIFIERS].
 
-[lst_item "[const order] [arg n] [opt [const visible]]"]
+[lst_item "[const list] [arg columnDescs]"]
+[arg ColumnDescs] is a list (a single argument, i.e. "list {a b c}" not "list a b c")
+of other column descriptions.
+This keyword cannot be followed by any modifiers unless a single column is specified.
+
+[lst_item "[const order] [arg n] [arg QUALIFIERS]"]
 Indicates the [arg n]th column in the list of columns as returned by the
 [cmd {column order}] command.
 
+[lst_item "[const range] [arg {first last}] [arg QUALIFIERS]"]
+[arg First] and [arg last] specify a range of columns.
+This keyword cannot be followed by any modifiers unless a single column is specified.
+
 [lst_item [const tail]]
 Indicates the ever-present tail column of the treectrl.
+
+[lst_item "[const tag] [arg tagExpr] [arg QUALIFIERS]"]
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
+every column's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single column is
+matched.
 
 [lst_item [const tree]]
 Indicates the column specified by the -treecolumn option of the treectrl.
@@ -2348,14 +2472,34 @@ It may be specified in any of the following forms:
 
 [list_begin definitions]
 
-[lst_item "[const next] [opt [const visible]]"]
-Use the column to the right, or the column to the right whose -visible option
-is true.
+[lst_item "[const next] [arg QUALIFIERS]"]
+Use the column to the right matching [arg QUALIFIERS].
 
-[lst_item "[const prev] [opt [const visible]]"]
-Use the column to the left, or the column to the left whose -visible option
-is true.
+[lst_item "[const prev] [arg QUALIFIERS]"]
+Use the column to the left matching [arg QUALIFIERS].
 
+[list_end]
+
+The word [arg QUALIFIERS] above represents a list of zero or more of the
+following terms that changes which item is chosen:
+
+[list_begin definitions]
+[lst_item "[const state] [arg stateList]"]
+[arg StateList] is a list of column state names.
+Only columns that have the given states set (or unset if the '!' prefix is used)
+are considered.
+
+[lst_item "[const tag] [arg tagExpr]"]
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
+every column's tags are tested for a match.
+
+[lst_item [const visible]]
+When this qualifier is given, only columns whose [option -visible] option is
+TRUE are considered.
+
+[lst_item [const !visible]]
+When this qualifier is given, only columns whose [option -visible] option is
+FALSE are considered.
 [list_end]
 
 [section STATES]
@@ -2749,6 +2893,15 @@ the return value of a prior call of the [cmd {item create}] widget command,
 or [const 0] to specify the ever-present root item. See also the
 [option -itemprefix] option.
 
+[lst_item [arg tagExpr]]
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
+every item's tags are tested for a match.
+This keyword cannot be followed by any modifiers unless a single item is
+matched. You may run into trouble if [arg tagExpr] looks like an item id
+or other keyword; also, [arg tagExpr] must look like a single list element
+since item descriptions are properly-formed lists. To be safe you may want to
+use the [const tag] keyword.
+
 [lst_item [const active]]
 Indicates the item that is currently active, i.e. normally
 the item specified as argument of the last successful [cmd activate]
@@ -2796,7 +2949,7 @@ This keyword cannot be followed by any modifiers.
 Indicates the root item of the treectrl.
 
 [lst_item "[const tag] [arg tagExpr] [arg QUALIFIERS]"]
-[arg TagExpr] is a tag expression (see [sectref {ITEM TAGS}]) against which
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
 every item's tags are tested for a match.
 This keyword cannot be followed by any modifiers unless a single item is
 matched.
@@ -2891,7 +3044,7 @@ Only items that have the given states set (or unset if the '!' prefix is used)
 are considered.
 
 [lst_item "[const tag] [arg tagExpr]"]
-[arg TagExpr] is a tag expression (see [sectref {ITEM TAGS}]) against which
+[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
 every item's tags are tested for a match.
 
 [lst_item [const visible]]

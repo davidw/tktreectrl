@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.53 2006/10/16 01:24:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.54 2006/10/18 03:49:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2436,6 +2436,7 @@ Element_FreeResources(
     Tk_FreeConfigOptions((char *) elem,
 	typePtr->optionTable,
 	tree->tkwin);
+    DynamicOption_Free(elem->options);
 #ifdef ALLOC_HAX
     AllocHax_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
 #else
@@ -2851,12 +2852,15 @@ Element_CreateAndConfig(
     args.config.objc = objc;
     args.config.objv = objv;
     args.config.flagSelf = 0;
+    args.config.item = item;
+    args.config.column = column;
     if ((*type->configProc)(&args) != TCL_OK)
     {
 	(*type->deleteProc)(&args);
 	Tk_FreeConfigOptions((char *) elem,
 	    elem->typePtr->optionTable,
 	    tree->tkwin);
+	DynamicOption_Free(elem->options);
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
@@ -3873,6 +3877,8 @@ Style_SetImageOrText(
 	    args.config.objc = 2;
 	    args.config.objv = objv;
 	    args.config.flagSelf = 0;
+	    args.config.item = item;
+	    args.config.column = column;
 	    if ((*eLink->elem->typePtr->configProc)(&args) != TCL_OK)
 		return TCL_ERROR;
 
@@ -4565,6 +4571,8 @@ TreeStyle_ElementConfigure(
 	args.config.objc = objc;
 	args.config.objv = objv;
 	args.config.flagSelf = 0;
+	args.config.item = item;
+	args.config.column = column;
 	if ((*args.elem->typePtr->configProc)(&args) != TCL_OK)
 	    return TCL_ERROR;
 
@@ -4735,6 +4743,8 @@ TreeElementCmd(
 		args.config.objc = objc - 4;
 		args.config.objv = objv + 4;
 		args.config.flagSelf = 0;
+		args.config.item = NULL;
+		args.config.column = NULL;
 		if ((*elem->typePtr->configProc)(&args) != TCL_OK)
 		    return TCL_ERROR;
 
