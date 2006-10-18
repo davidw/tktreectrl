@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.45 2006/10/16 01:16:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.46 2006/10/18 22:19:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6645,57 +6645,69 @@ DumpDInfo(
     TreeCtrl *tree		/* Widget info. */
     )
 {
+    Tcl_DString dString;
+    char buf[128];
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
     Range *range;
     RItem *rItem;
 
-    dbwin("DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
+    Tcl_DStringInit(&dString);
+
+    sprintf(buf, "DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
 	    dInfo->itemWidth, dInfo->itemHeight,
 	    dInfo->totalWidth, dInfo->totalHeight,
 	    dInfo->flags, tree->vertical, tree->itemVisCount);
+    Tcl_DStringAppend(&dString, buf, -1);
     dItem = dInfo->dItem;
     while (dItem != NULL) {
 	if (dItem->item == NULL) {
-	    dbwin("    item NULL\n");
+	    sprintf(buf, "    item NULL\n");
 	} else {
-	    dbwin("    item %d x,y,w,h %d,%d,%d,%d dirty %d,%d,%d,%d flags %0X\n",
+	    sprintf(buf, "    item %d x,y,w,h %d,%d,%d,%d dirty %d,%d,%d,%d flags %0X\n",
 		    TreeItem_GetID(tree, dItem->item),
 		    dItem->area.x, dItem->y, dItem->area.width, dItem->height,
 		    dItem->area.dirty[LEFT], dItem->area.dirty[TOP],
 		    dItem->area.dirty[RIGHT], dItem->area.dirty[BOTTOM],
 		    dItem->area.flags);
 	}
+	Tcl_DStringAppend(&dString, buf, -1);
 	dItem = dItem->next;
     }
 
-    dbwin("  dInfo.rangeFirstD %p dInfo.rangeLastD %p\n",
+    sprintf(buf, "  dInfo.rangeFirstD %p dInfo.rangeLastD %p\n",
 	    dInfo->rangeFirstD, dInfo->rangeLastD);
+    Tcl_DStringAppend(&dString, buf, -1);
     for (range = dInfo->rangeFirstD;
 	 range != NULL;
 	 range = range->next) {
-	dbwin("  Range: totalW,H %d,%d offset %d\n", range->totalWidth,
+	sprintf(buf, "  Range: totalW,H %d,%d offset %d\n", range->totalWidth,
 		range->totalHeight, range->offset);
+	Tcl_DStringAppend(&dString, buf, -1);
 	if (range == dInfo->rangeLastD)
 	    break;
     }
 
-    dbwin("  dInfo.rangeFirst %p dInfo.rangeLast %p\n",
+    sprintf(buf, "  dInfo.rangeFirst %p dInfo.rangeLast %p\n",
 	    dInfo->rangeFirst, dInfo->rangeLast);
+    Tcl_DStringAppend(&dString, buf, -1);
     for (range = dInfo->rangeFirst;
 	 range != NULL;
 	 range = range->next) {
-	dbwin("   Range: first %p last %p totalW,H %d,%d offset %d\n",
+	sprintf(buf, "   Range: first %p last %p totalW,H %d,%d offset %d\n",
 		range->first, range->last,
 		range->totalWidth, range->totalHeight, range->offset);
+	Tcl_DStringAppend(&dString, buf, -1);
 	rItem = range->first;
 	while (1) {
-	    dbwin("    RItem: item %d index %d offset %d size %d\n",
+	    sprintf(buf, "    RItem: item %d index %d offset %d size %d\n",
 		    TreeItem_GetID(tree, rItem->item), rItem->index, rItem->offset, rItem->size);
+	    Tcl_DStringAppend(&dString, buf, -1);
 	    if (rItem == range->last)
 		break;
 	    rItem++;
 	}
     }
+    Tcl_DStringResult(tree->interp, &dString);
 }
 
