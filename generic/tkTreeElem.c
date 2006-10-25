@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.44 2006/10/18 03:49:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.45 2006/10/25 03:47:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -125,7 +125,10 @@ DO_FontForState(
  *	for an element.
  *
  * Results:
- *	None.
+ *	If the element has the dynamic option allocated, then the
+ *	per-state info is checked for a match. If an exact match for
+ *	the given state is not found, and if the element is an instance
+ *	(not a master), then the master element is checked.
  *
  * Side effects:
  *	None.
@@ -2194,10 +2197,6 @@ struct ElementText
     int textLen;
     int stringRepInvalid;
     struct PerStateGC *gc;
-    TextLayout layout;
-    int layoutWidth;
-    int neededWidth;
-    int totalWidth;
 };
 #define TEXTVAR
 
@@ -2236,6 +2235,15 @@ typedef struct ElementTextLayout {
 #define TEXT_WRAP_WORD 2
     int wrap;				/* -wrap */
 } ElementTextLayout;
+
+/* This structure doesn't hold any option values, but it is managed by
+ * the dynamic-option code. */
+typedef struct ElementTextLayout2 {
+    TextLayout layout;
+    int layoutWidth;
+    int neededWidth;
+    int totalWidth;
+} ElementTextLayout2;
 
 #ifdef TEXTVAR
 typedef struct ElementTextVar {
@@ -2361,10 +2369,44 @@ static void TextUpdateStringRep(ElementArgs *args)
     Tcl_Obj *dataObj, *formatObj, *textObj;
     ElementTextData *etd, *etdM = NULL;
 #ifdef TEXTVAR
-    ElementTextVar *etv = (ElementTextVar *) DynamicOption_FindData(elem->options, 1001);
-    Tcl_Obj *varNameObj = etv ? etv->varNameObj : NULL;
+    ElementTextVar *etv;
+    Tcl_Obj *varNameObj;
 #endif
     int dataType;
+
+    if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
+	ckfree(elemX->text);
+	elemX->text = NULL;
+    }
+
+    /* If -text is specified, -data, -datatype and -format are ignored */
+    textObj = elemX->textObj;
+    if ((textObj == NULL) && (masterX != NULL))
+	textObj = masterX->textObj; 
+
+    if (textObj != NULL) {
+	if (elemX->textObj != NULL)
+	    (void) Tcl_GetStringFromObj(elemX->textObj, &elemX->textLen);
+	return;
+    }
+
+#ifdef TEXTVAR
+    etv = (ElementTextVar *) DynamicOption_FindData(elem->options, 1001);
+    varNameObj = etv ? etv->varNameObj : NULL;
+
+    if (varNameObj != NULL) {
+	Tcl_Obj *valueObj = Tcl_ObjGetVar2(tree->interp, varNameObj, NULL, TCL_GLOBAL_ONLY);
+	
+	if (valueObj == NULL) {
+	    /* not possible I think */
+	} else {
+	    char *string = Tcl_GetStringFromObj(valueObj, &elemX->textLen);
+	    elemX->text = ckalloc(elemX->textLen);
+	    memcpy(elemX->text, string, elemX->textLen);
+	}
+	return;
+    }
+#endif
 
     etd = (ElementTextData *) DynamicOption_FindData(elem->options, 1006);
     if (masterX != NULL)
@@ -2382,37 +2424,9 @@ static void TextUpdateStringRep(ElementArgs *args)
     if ((formatObj == NULL) && (etdM != NULL))
 	formatObj = etdM->formatObj; 
 
-    textObj = elemX->textObj;
-    if ((textObj == NULL) && (masterX != NULL))
-	textObj = masterX->textObj; 
-
-    if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
-	ckfree(elemX->text);
-	elemX->text = NULL;
-    }
-
-    /* If -text is specified, -data, -datatype and -format are ignored */
-    if (textObj != NULL) {
-	if (elemX->textObj != NULL)
-	    (void) Tcl_GetStringFromObj(elemX->textObj, &elemX->textLen);
-    }
-
-#ifdef TEXTVAR
-    else if (varNameObj != NULL) {
-	Tcl_Obj *valueObj = Tcl_ObjGetVar2(tree->interp, varNameObj, NULL, TCL_GLOBAL_ONLY);
-	
-	if (valueObj == NULL) {
-	    /* not possible I think */
-	} else {
-	    char *string = Tcl_GetStringFromObj(valueObj, &elemX->textLen);
-	    elemX->text = ckalloc(elemX->textLen);
-	    memcpy(elemX->text, string, elemX->textLen);
-	}
-    }
-#endif
     /* Only create a string rep if elemX (not masterX) has dataObj,
        dataType or formatObj. */
-    else if ((dataObj != NULL) && (dataType != TDT_NULL) &&
+    if ((dataObj != NULL) && (dataType != TDT_NULL) &&
 	    ((etd != NULL) && ((etd->dataObj != NULL) ||
 		    (etd->dataType != TDT_NULL) ||
 		    (etd->formatObj != NULL)))) {
@@ -2524,7 +2538,13 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 }
 
-static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int maxWidth)
+static ElementTextLayout2 *
+TextUpdateLayout(
+    char *func,
+    ElementArgs *args,
+    int fixedWidth,
+    int maxWidth
+    )
 {
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
@@ -2542,16 +2562,19 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
     int i, multiLine = FALSE;
     int textWidth;
     ElementTextLayout *etl, *etlM = NULL;
+    ElementTextLayout2 *etl2;
+    DynamicOption *opt;
 
     if (tree->debug.enable && tree->debug.textLayout)
 	dbwin("TextUpdateLayout: %s %p (%s) %s\n",
 	    Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master", func);
 
-    if (elemX->layout != NULL) {
+    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
+    if (etl2 != NULL && etl2->layout != NULL) {
 	if (tree->debug.enable && tree->debug.textLayout)
 	    dbwin("    FREE\n");
-	TextLayout_Free(elemX->layout);
-	elemX->layout = NULL;
+	TextLayout_Free(etl2->layout);
+	etl2->layout = NULL;
     }
 
     if (elemX->text != NULL) {
@@ -2562,7 +2585,7 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
 	textLen = masterX->textLen;
     }
     if ((text == NULL) || (textLen == 0))
-	return;
+	return etl2;
 
     etl = (ElementTextLayout *) DynamicOption_FindData(elem->options, 1005);
     if (masterX != NULL)
@@ -2573,7 +2596,7 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
     else if (etlM != NULL && etlM->lines != -1)
 	lines = etlM->lines;
     if (lines == 1)
-	return;
+	return etl2;
 
     tkfont = DO_FontForState(tree, elem, 1004, state);
     if (tkfont == NULL)
@@ -2609,11 +2632,11 @@ static void TextUpdateLayout(char *func, ElementArgs *args, int fixedWidth, int 
 		lines, multiLine, width, textWrapST[wrap]);
     if (!multiLine) {
 	if (width == 0)
-	    return;
+	    return etl2;
 	textWidth = Tk_TextWidth(tkfont, text, textLen);
 if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", textWidth);
 	if (width >= textWidth)
-	    return;
+	    return etl2;
     }
 
     if (etl != NULL && etl->justify != TK_JUSTIFY_NULL)
@@ -2624,11 +2647,16 @@ if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", te
     if (wrap == TEXT_WRAP_WORD)
 	flags |= TK_WHOLE_WORDS;
 
-    elemX->layout = TextLayout_Compute(tkfont, text,
+    opt = (DynamicOption *) DynamicOption_AllocIfNeeded(&elem->options,
+	1007, sizeof(ElementTextLayout2), NULL);
+    etl2 = (ElementTextLayout2 *) opt->data;
+
+    etl2->layout = TextLayout_Compute(tkfont, text,
 	    Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
 
     if (tree->debug.enable && tree->debug.textLayout)
 	dbwin("    ALLOC\n");
+    return etl2;
 }
 
 #ifdef TEXTVAR
@@ -2708,6 +2736,7 @@ static void DeleteProcText(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementText *elemX = (ElementText *) elem;
+    ElementTextLayout2 *etl2;
 
     if (elemX->gc != NULL)
 	PerStateGC_Free(tree, &elemX->gc);
@@ -2715,8 +2744,9 @@ static void DeleteProcText(ElementArgs *args)
 	ckfree(elemX->text);
 	elemX->text = NULL;
     }
-    if (elemX->layout != NULL)
-	TextLayout_Free(elemX->layout);
+    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
+    if (etl2 != NULL && etl2->layout != NULL)
+	TextLayout_Free(etl2->layout);
 #ifdef TEXTVAR
     TextTraceUnset(tree->interp, elemX);
 #endif
@@ -2820,17 +2850,26 @@ static int CreateProcText(ElementArgs *args)
     return TCL_OK;
 }
 
-static void TextRedoLayoutIfNeeded(char *func, ElementArgs *args, int fixedWidth)
+static ElementTextLayout2 *
+TextRedoLayoutIfNeeded(
+    char *func,
+    ElementArgs *args,
+    int fixedWidth
+    )
 {
-    ElementText *elemX = (ElementText *) args->elem;
-    ElementText *masterX = (ElementText *) args->elem->master;
+    Element *elem = args->elem;
+    ElementText *elemX = (ElementText *) elem;
+    ElementText *masterX = (ElementText *) elem->master;
     int doLayout = 0;
     int wrap = TEXT_WRAP_WORD;
     ElementTextLayout *etl, *etlM = NULL;
+    ElementTextLayout2 *etl2;
 
-    etl = (ElementTextLayout *) DynamicOption_FindData(args->elem->options, 1005);
+    etl = (ElementTextLayout *) DynamicOption_FindData(elem->options, 1005);
     if (masterX != NULL)
-	etlM = (ElementTextLayout *) DynamicOption_FindData(args->elem->master->options, 1005);
+	etlM = (ElementTextLayout *) DynamicOption_FindData(elem->master->options, 1005);
+
+    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
 
     /* If text wrapping is disabled, the layout doesn't change */
     if (etl != NULL && etl->wrap != TEXT_WRAP_NULL)
@@ -2838,40 +2877,39 @@ static void TextRedoLayoutIfNeeded(char *func, ElementArgs *args, int fixedWidth
     else if ((etlM != NULL) && (etlM->wrap != TEXT_WRAP_NULL))
 	wrap = etlM->wrap;
     if (wrap == TEXT_WRAP_NONE)
-	return;
+	return etl2;
 
-    if (elemX->layout != NULL) {
+    if (etl2 != NULL && etl2->layout != NULL) {
 	/* See comment in NeededProc about totalWidth */
-	if ((elemX->neededWidth != -1) && (fixedWidth >= elemX->neededWidth))
-	    fixedWidth = elemX->totalWidth;
+	if ((etl2->neededWidth != -1) && (fixedWidth >= etl2->neededWidth))
+	    fixedWidth = etl2->totalWidth;
 
 	/* Already layed out at this width */
-	if (fixedWidth == elemX->layoutWidth)
-	    return;
+	if (fixedWidth == etl2->layoutWidth)
+	    return etl2;
     }
 
     /* May switch from layout -> no layout or vice versa */
-    if (elemX->layout == NULL)
+    if (etl2 == NULL || etl2->layout == NULL)
 	doLayout = 1;
 
     /* Width was constrained and we have more space now */
-    else if ((elemX->layoutWidth != -1) && (fixedWidth > elemX->layoutWidth))
+    else if ((etl2->layoutWidth != -1) && (fixedWidth > etl2->layoutWidth))
 	doLayout = 1;
 
     /* Width was unconstrained or we have less space now */
     else {
 	int width;
-	TextLayout_Size(elemX->layout, &width, NULL);
+	TextLayout_Size(etl2->layout, &width, NULL);
 	/* Redo if we are narrower than the layout */
 	if (fixedWidth < width)
 	    doLayout = 1;
     }
     if (doLayout)
-	TextUpdateLayout(func, args, fixedWidth, -1);
-    if (elemX->layout != NULL)
-	elemX->layoutWidth = fixedWidth;
-    else
-	elemX->layoutWidth = -1;
+	etl2 = TextUpdateLayout(func, args, fixedWidth, -1);
+    if (etl2 != NULL)
+	etl2->layoutWidth = (etl2->layout != NULL) ? fixedWidth : -1;
+    return etl2;
 }
 
 static void DisplayProcText(ElementArgs *args)
@@ -2894,6 +2932,7 @@ static void DisplayProcText(ElementArgs *args)
     int bytesThatFit, pixelsForText;
     char *ellipsis = "...";
     TkRegion clipRgn = NULL;
+    ElementTextLayout2 *etl2; 
 
     draw = DO_BooleanForState(tree, elem, 1002, state);
     if (!draw)
@@ -2931,17 +2970,16 @@ static void DisplayProcText(ElementArgs *args)
 	gc = tree->textGC;
     }
 
-    TextRedoLayoutIfNeeded("DisplayProcText", args, args->display.width);
-
-    if (elemX->layout != NULL)
-	layout = elemX->layout;
+    etl2 = TextRedoLayoutIfNeeded("DisplayProcText", args, args->display.width);
+    if (etl2 != NULL && etl2->layout != NULL)
+	layout = etl2->layout;
 
     if (layout != NULL) {
 	TextLayout_Size(layout, &width, &height);
 	/* Hack -- The actual size of the text may be slightly smaller than
 	 * the available space when squeezed. If so we don't want to center
 	 * the text horizontally */
-	if ((elemX->neededWidth == -1) || (elemX->neededWidth > width))
+	if ((etl2->neededWidth == -1) || (etl2->neededWidth > width))
 	    width = args->display.width;
 	AdjustForSticky(args->display.sticky,
 	    args->display.width, args->display.height,
@@ -3031,6 +3069,7 @@ static void NeededProcText(ElementArgs *args)
     Tk_FontMetrics fm;
     int width = 0, height = 0;
     ElementTextLayout *etl, *etlM = NULL;
+    ElementTextLayout2 *etl2;
 
     etl = (ElementTextLayout *) DynamicOption_FindData(args->elem->options, 1005);
     if (masterX != NULL)
@@ -3047,17 +3086,19 @@ static void NeededProcText(ElementArgs *args)
 	elemX->stringRepInvalid = FALSE;
     }
 
-    TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth, args->needed.maxWidth);
-    elemX->layoutWidth = -1;
-    elemX->neededWidth = -1;
+    etl2 = TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth, args->needed.maxWidth);
+    if (etl2 != NULL) {
+	etl2->layoutWidth = -1;
+	etl2->neededWidth = -1;
+    }
 
-    if (elemX->layout != NULL) {
-	TextLayout_Size(elemX->layout, &width, &height);
+    if (etl2 != NULL && etl2->layout != NULL) {
+	TextLayout_Size(etl2->layout, &width, &height);
 	if (args->needed.fixedWidth >= 0)
-	    elemX->layoutWidth = args->needed.fixedWidth;
+	    etl2->layoutWidth = args->needed.fixedWidth;
 	else if (args->needed.maxWidth >= 0)
-	    elemX->layoutWidth = args->needed.maxWidth;
-	elemX->neededWidth = width;
+	    etl2->layoutWidth = args->needed.maxWidth;
+	etl2->neededWidth = width;
 
 	/*
 	 * Hack -- If we call TextLayout_Compute() with the same width
@@ -3066,7 +3107,7 @@ static void NeededProcText(ElementArgs *args)
 	 * So if HeightProc or DisplayProc is given neededWidth, I do the
 	 * layout at totalWidth, not neededWidth.
 	 */
-	elemX->totalWidth = TextLayout_TotalWidth(elemX->layout);
+	etl2->totalWidth = TextLayout_TotalWidth(etl2->layout);
     } else {
 	if (elemX->text != NULL) {
 	    text = elemX->text;
@@ -3110,11 +3151,12 @@ static void HeightProcText(ElementArgs *args)
     char *text = NULL;
     Tk_Font tkfont;
     Tk_FontMetrics fm;
+    ElementTextLayout2 *etl2;
 
-    TextRedoLayoutIfNeeded("HeightProcText", args, args->height.fixedWidth);
+    etl2 = TextRedoLayoutIfNeeded("HeightProcText", args, args->height.fixedWidth);
    
-    if (elemX->layout != NULL) {
-	TextLayout_Size(elemX->layout, NULL, &height);
+    if (etl2 != NULL && etl2->layout != NULL) {
+	TextLayout_Size(etl2->layout, NULL, &height);
     } else {
 	if (elemX->text != NULL) {
 	    text = elemX->text;
