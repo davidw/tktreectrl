@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.56 2006/10/18 22:21:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.57 2006/10/25 03:48:15 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -1026,10 +1026,12 @@ struct DynamicOption
     char data[1];		/* Actual size will be > 1 */
 };
 
+typedef void (DynamicOptionInitProc)(char *data);
+
+extern DynamicOption *DynamicOption_AllocIfNeeded(DynamicOption **firstPtr,
+    int id, int size, DynamicOptionInitProc *init);
 extern char *DynamicOption_FindData(DynamicOption *first, int id);
 extern void DynamicOption_Free(DynamicOption *first);
-
-typedef void (DynamicOptionInitProc)(char *data);
 
 extern int DynamicCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
     int id, int size, int objOffset, int internalOffset,
