@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.28 2006/10/14 21:20:16 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.29 2006/10/26 03:04:16 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -480,6 +480,16 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     if {![$w item enabled $item]} {
 	return
     }
+
+    # If the initial mouse-click is in a locked column, restrict scrolling
+    # to the vertical.
+    scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
+    if {$x >= $x1 && $x < $x2} {
+	set Priv(autoscan,direction,$w) xy
+    } else {
+	set Priv(autoscan,direction,$w) y
+    }
+
     set Priv(buttonMode) normal
     BeginSelect $w $item
     return
@@ -944,39 +954,43 @@ proc ::TreeCtrl::AutoScanCheck {w x y} {
     variable Priv
     scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
     set margin [winfo pixels $w [$w cget -scrollmargin]]
-    if {($x < $x1 + $margin) || ($x >= $x2 - $margin) ||
-	($y < $y1 + $margin) || ($y >= $y2 - $margin)} {
-	if {![info exists Priv(autoscan,afterId,$w)]} {
-	    if {$y >= $y2 - $margin} {
-		$w yview scroll 1 units
-		set delay [$w cget -yscrolldelay]
-	    } elseif {$y < $y1 + $margin} {
-		$w yview scroll -1 units
-		set delay [$w cget -yscrolldelay]
-	    } elseif {$x >= $x2 - $margin} {
-		$w xview scroll 1 units
-		set delay [$w cget -xscrolldelay]
-	    } elseif {$x < $x1 + $margin} {
-		$w xview scroll -1 units
-		set delay [$w cget -xscrolldelay]
-	    }
-	    set count [scan $delay "%d %d" d1 d2]
-	    if {[info exists Priv(autoscan,scanning,$w)]} {
-		if {$count == 2} {
-		    set delay $d2
-		}
-	    } else {
-		if {$count == 2} {
-		    set delay $d1
-		}
-		set Priv(autoscan,scanning,$w) 1
-	    }
-	    if {$Priv(autoscan,command,$w) ne ""} {
-		set command [string map [list %T $w %x $x %y $y] $Priv(autoscan,command,$w)]
-		eval $command
-	    }
-	    set Priv(autoscan,afterId,$w) [after $delay [list TreeCtrl::AutoScanCheckAux $w]]
+    if {![info exists Priv(autoscan,direction,$w)]} {
+	set Priv(autoscan,direction,$w) xy
+    }
+    set scrollX [string match *x* $Priv(autoscan,direction,$w)]
+    set scrollY [string match *y* $Priv(autoscan,direction,$w)]
+    if {($scrollX && (($x < $x1 + $margin) || ($x >= $x2 - $margin))) ||
+	($scrollY && (($y < $y1 + $margin) || ($y >= $y2 - $margin)))} {
+	if {[info exists Priv(autoscan,afterId,$w)]} return
+	if {$scrollY && $y >= $y2 - $margin} {
+	    $w yview scroll 1 units
+	    set delay [$w cget -yscrolldelay]
+	} elseif {$scrollY && $y < $y1 + $margin} {
+	    $w yview scroll -1 units
+	    set delay [$w cget -yscrolldelay]
+	} elseif {$scrollX && $x >= $x2 - $margin} {
+	    $w xview scroll 1 units
+	    set delay [$w cget -xscrolldelay]
+	} elseif {$scrollX && $x < $x1 + $margin} {
+	    $w xview scroll -1 units
+	    set delay [$w cget -xscrolldelay]
 	}
+	set count [scan $delay "%d %d" d1 d2]
+	if {[info exists Priv(autoscan,scanning,$w)]} {
+	    if {$count == 2} {
+		set delay $d2
+	    }
+	} else {
+	    if {$count == 2} {
+		set delay $d1
+	    }
+	    set Priv(autoscan,scanning,$w) 1
+	}
+	if {$Priv(autoscan,command,$w) ne ""} {
+	    set command [string map [list %T $w %x $x %y $y] $Priv(autoscan,command,$w)]
+	    eval $command
+	}
+	set Priv(autoscan,afterId,$w) [after $delay [list TreeCtrl::AutoScanCheckAux $w]]
 	return
     }
     AutoScanCancel $w
