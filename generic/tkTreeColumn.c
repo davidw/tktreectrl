@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.46 2006/10/16 01:18:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.47 2006/10/26 02:56:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -607,6 +607,45 @@ Column_MakeState(
     return state;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_FirstAndLast --
+ *
+ *	Determine the order of two columns and swap them if needed.
+ *
+ * Results:
+ *	The return value is the number of columns in the range between
+ *	first and last.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_FirstAndLast(
+    TreeColumn *first,		/* Column token. */
+    TreeColumn *last		/* Column token. */
+    )
+{
+    int indexFirst, indexLast, index;
+
+    indexFirst = TreeColumn_Index(*first);
+    indexLast = TreeColumn_Index(*last);
+    if (indexFirst > indexLast) {
+	TreeColumn column = *first;
+	*first = *last;
+	*last = column;
+
+	index = indexFirst;
+	indexFirst = indexLast;
+	indexLast = index;
+    }
+    return indexLast - indexFirst + 1;
+}
+
 typedef struct Qualifiers {
     TreeCtrl *tree;
     int visible;		/* 1 for -visible TRUE,
@@ -852,6 +891,7 @@ Qualifiers_Free(
  * list listOfDescs
  * order N QUALIFIERS MODIFIERS
  * range first last QUALIFIERS
+ * tag tagExpr QUALIFIERS
  * tail
  * tree
  *
@@ -960,7 +1000,8 @@ TreeColumnList_FromObj(
 			}
 			column = column->next;
 		    }
-		    if (Qualifies(&q, (Column *) tree->columnTail)) {
+		    if (!(flags & CFO_NOT_TAIL) &&
+			    Qualifies(&q, (Column *) tree->columnTail)) {
 			TreeColumnList_Append(columns, tree->columnTail);
 		    }
 		    column = NULL;
@@ -970,7 +1011,8 @@ TreeColumnList_FromObj(
 			TreeColumnList_Append(columns, (TreeColumn) column);
 			column = column->next;
 		    }
-		    TreeColumnList_Append(columns, tree->columnTail);
+		    if (!(flags & CFO_NOT_TAIL))
+			TreeColumnList_Append(columns, tree->columnTail);
 		    column = NULL;
 		} else {
 		    column = (Column *) COLUMN_ALL;
@@ -1043,29 +1085,24 @@ TreeColumnList_FromObj(
 	    case INDEX_RANGE:
 	    {
 		TreeColumn _first, _last;
-		Column *first, *last;
 
 		if (TreeColumn_FromObj(tree, objv[listIndex + 1],
 			&_first, CFO_NOT_NULL) != TCL_OK)
 		    goto errorExit;
-		first = (Column *) _first;
 		if (TreeColumn_FromObj(tree, objv[listIndex + 2],
 			&_last, CFO_NOT_NULL) != TCL_OK)
 		    goto errorExit;
-		last = (Column *) _last;
-		if (first->index > last->index) {
-		    column = first;
-		    first = last;
-		    last = column;
-		}
-		column = first;
+		(void) TreeColumn_FirstAndLast(&_first, &_last);
+		column = (Column *) _first;
 		while (1) {
 		    if (Qualifies(&q, column)) {
 			TreeColumnList_Append(columns, column);
 		    }
-		    if (column == last)
+		    if (column == (Column *) _last)
 			break;
 		    column = column->next;
+		    if (column == NULL)
+			column = (Column *) tree->columnTail;
 		}
 		column = NULL;
 		break;
@@ -1314,45 +1351,6 @@ TreeColumn_FromObj(
     (*columnPtr) = TreeColumnList_Nth(&columns, 0);
     TreeColumnList_Free(&columns);
     return TCL_OK;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * TreeColumn_FirstAndLast --
- *
- *	Determine the order of two columns and swap them if needed.
- *
- * Results:
- *	The return value is the number of columns in the range between
- *	first and last.
- *
- * Side effects:
- *	None.
- *
- *----------------------------------------------------------------------
- */
-
-int
-TreeColumn_FirstAndLast(
-    TreeColumn *first,		/* Column token. */
-    TreeColumn *last		/* Column token. */
-    )
-{
-    int indexFirst, indexLast, index;
-
-    indexFirst = TreeColumn_Index(*first);
-    indexLast = TreeColumn_Index(*last);
-    if (indexFirst > indexLast) {
-	TreeColumn column = *first;
-	*first = *last;
-	*last = column;
-
-	index = indexFirst;
-	indexFirst = indexLast;
-	indexLast = index;
-    }
-    return indexLast - indexFirst + 1;
 }
 
 /*
@@ -2026,7 +2024,13 @@ Column_Config(
 		    before = (Column *) tree->columnLockRight;
 		break;
 	    case COLUMN_LOCK_NONE:
-		before = (Column *) tree->columnLockRight;
+		if (lock == COLUMN_LOCK_LEFT) {
+		    before = (Column *) tree->columnLockNone;
+		    if (before == NULL)
+			before = (Column *) tree->columnLockRight;
+		}
+		else
+		    before = (Column *) tree->columnLockRight;
 		break;
 	    case COLUMN_LOCK_RIGHT:
 		before = (Column *) NULL;
