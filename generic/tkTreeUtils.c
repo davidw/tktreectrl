@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.44 2006/10/18 22:18:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.45 2006/10/26 03:00:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1809,7 +1809,7 @@ void TextLayout_Draw(
  *
  * TreeCtrl_GetPadAmountFromObj --
  *
- *	Parse a pad amount configuration options.
+ *	Parse a pad amount configuration option.
  *	A pad amount (typically the value of an option -XXXpadx or
  *	-XXXpady, where XXX may be a possibly empty string) can
  *	be either a single pixel width, or a list of two pixel widths.
@@ -4848,6 +4848,8 @@ PerStateCO_Init(
 
 #define DEBUG_DYNAMICxxx
 
+static CONST char *DynamicOptionUid = "DynamicOption";
+
 /*
  *----------------------------------------------------------------------
  *
@@ -4928,6 +4930,7 @@ DynamicOption_FindData(
 
 DynamicOption *
 DynamicOption_AllocIfNeeded(
+    TreeCtrl *tree,
     DynamicOption **firstPtr,	/* Pointer to the head of linked list.
 				 * Will be updated if a new record is
 				 * created. */
@@ -4947,7 +4950,12 @@ DynamicOption_AllocIfNeeded(
 #ifdef DEBUG_DYNAMIC
 dbwin("DynamicOption_AllocIfNeeded allocated id=%d\n", id);
 #endif
+#ifdef ALLOC_HAX
+    opt = (DynamicOption *) AllocHax_Alloc(tree->allocData, DynamicOptionUid,
+	    Tk_Offset(DynamicOption, data) + size);
+#else
     opt = (DynamicOption *) ckalloc(Tk_Offset(DynamicOption, data) + size);
+#endif
     opt->id = id;
     memset(opt->data, '\0', size);
     if (init != NULL)
@@ -4955,37 +4963,6 @@ dbwin("DynamicOption_AllocIfNeeded allocated id=%d\n", id);
     opt->next = *firstPtr;
     *firstPtr = opt;
     return opt;
-}
-
-/*
- *----------------------------------------------------------------------
- *
- * DynamicOption_Free --
- *
- *	Free a linked list of dynamic-option records. This gets called
- *	after Tk_FreeConfigOptions.
- *
- * Results:
- *	None.
- *
- * Side effects:
- *	Memory may be freed.
- *
- *----------------------------------------------------------------------
- */
-
-void
-DynamicOption_Free(
-    DynamicOption *first
-    )
-{
-    DynamicOption *opt = first;
-
-    while (opt != NULL) {
-	DynamicOption *next = opt->next;
-	ckfree((char *) opt);
-	opt = next;
-    }
 }
 
 /*
@@ -5061,7 +5038,7 @@ DynamicCO_Set(
 
     /* Get the dynamic option record. Create it if needed, and update the
      * linked list of dynamic options. */
-    opt = DynamicOption_AllocIfNeeded(firstPtr, cd->id, cd->size, cd->init);
+    opt = DynamicOption_AllocIfNeeded(tree, firstPtr, cd->id, cd->size, cd->init);
 
     save = (DynamicCOSave *) ckalloc(sizeof(DynamicCOSave));
 #ifdef DEBUG_DYNAMIC
@@ -5264,6 +5241,110 @@ dbwin("DynamicCO_Init id=%d size=%d objOffset=%d internalOffset=%d custom->name=
 	return TCL_OK;
     }
     return TCL_ERROR;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * DynamicOption_Free --
+ *
+ *	Free a linked list of dynamic-option records. This gets called
+ *	after Tk_FreeConfigOptions.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DynamicOption_Free(
+    TreeCtrl *tree,
+    DynamicOption *first,
+    Tk_OptionSpec *optionTable
+    )
+{
+    DynamicOption *opt = first;
+    DynamicCOClientData *cd;
+    Tk_ObjCustomOption *co;
+    int i;
+
+    while (opt != NULL) {
+	DynamicOption *next = opt->next;
+
+	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
+
+	    if (optionTable[i].type != TK_OPTION_CUSTOM)
+		continue;
+
+	    co = (Tk_ObjCustomOption *) optionTable[i].clientData;
+	    if (co->setProc != DynamicCO_Set)
+		continue;
+
+	    cd = (DynamicCOClientData *) co->clientData;
+	    if (cd->id != opt->id)
+		continue;
+
+#ifdef ALLOC_HAX
+	    AllocHax_Free(tree->allocData, DynamicOptionUid, (char *) opt,
+		    Tk_Offset(DynamicOption, data) + cd->size);
+#else
+	    ckfree((char *) opt);
+#endif
+	}
+
+	opt = next;
+    }
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * DynamicOption_Free1 --
+ *
+ *	Free a single dynamic-option record. This is a big hack so that
+ *	dynamic-option records that aren't associated with a Tk_OptionSpec
+ *	array can be used.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory may be freed.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DynamicOption_Free1(
+    TreeCtrl *tree,
+    DynamicOption **firstPtr,
+    int id,
+    int size
+    )
+{
+    DynamicOption *opt = *firstPtr, *prev = NULL;
+
+    while (opt != NULL) {
+	if (opt->id == id) {
+	    if (prev == NULL)
+		*firstPtr = opt->next;
+	    else
+		prev->next = opt->next;
+#ifdef ALLOC_HAX
+	    AllocHax_Free(tree->allocData, DynamicOptionUid, (char *) opt,
+		    Tk_Offset(DynamicOption, data) + size);
+#else
+	    ckfree((char *) opt);
+#endif
+	    return;
+	}
+	prev = opt;
+	opt = opt->next;
+    }
 }
 
 /*

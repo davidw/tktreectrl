@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.57 2006/10/25 03:48:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.58 2006/10/26 03:00:32 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -1028,14 +1028,16 @@ struct DynamicOption
 
 typedef void (DynamicOptionInitProc)(char *data);
 
-extern DynamicOption *DynamicOption_AllocIfNeeded(DynamicOption **firstPtr,
-    int id, int size, DynamicOptionInitProc *init);
+extern DynamicOption *DynamicOption_AllocIfNeeded(TreeCtrl *tree,
+    DynamicOption **firstPtr, int id, int size, DynamicOptionInitProc *init);
 extern char *DynamicOption_FindData(DynamicOption *first, int id);
-extern void DynamicOption_Free(DynamicOption *first);
-
+extern void DynamicOption_Free(TreeCtrl *tree, DynamicOption *first,
+    Tk_OptionSpec *optionTable);
+extern void DynamicOption_Free1(TreeCtrl *tree, DynamicOption **firstPtr,
+    int id, int size);
 extern int DynamicCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
     int id, int size, int objOffset, int internalOffset,
-    Tk_ObjCustomOption *custom,DynamicOptionInitProc *init);
+    Tk_ObjCustomOption *custom, DynamicOptionInitProc *init);
 
 extern Tk_ObjCustomOption pixelsCO;
 extern Tk_ObjCustomOption stringCO;

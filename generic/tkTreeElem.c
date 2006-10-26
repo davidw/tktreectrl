@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.45 2006/10/25 03:47:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.46 2006/10/26 03:00:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2647,7 +2647,7 @@ if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", te
     if (wrap == TEXT_WRAP_WORD)
 	flags |= TK_WHOLE_WORDS;
 
-    opt = (DynamicOption *) DynamicOption_AllocIfNeeded(&elem->options,
+    opt = (DynamicOption *) DynamicOption_AllocIfNeeded(tree, &elem->options,
 	1007, sizeof(ElementTextLayout2), NULL);
     etl2 = (ElementTextLayout2 *) opt->data;
 
@@ -2747,6 +2747,7 @@ static void DeleteProcText(ElementArgs *args)
     etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
     if (etl2 != NULL && etl2->layout != NULL)
 	TextLayout_Free(etl2->layout);
+    DynamicOption_Free1(tree, &elem->options, 1007, sizeof(ElementTextLayout2));
 #ifdef TEXTVAR
     TextTraceUnset(tree->interp, elemX);
 #endif

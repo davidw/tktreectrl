@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.54 2006/10/18 03:49:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.55 2006/10/26 03:01:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2436,7 +2436,7 @@ Element_FreeResources(
     Tk_FreeConfigOptions((char *) elem,
 	typePtr->optionTable,
 	tree->tkwin);
-    DynamicOption_Free(elem->options);
+    DynamicOption_Free(tree, elem->options, typePtr->optionSpecs);
 #ifdef ALLOC_HAX
     AllocHax_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
 #else
@@ -2858,9 +2858,9 @@ Element_CreateAndConfig(
     {
 	(*type->deleteProc)(&args);
 	Tk_FreeConfigOptions((char *) elem,
-	    elem->typePtr->optionTable,
+	    type->optionTable,
 	    tree->tkwin);
-	DynamicOption_Free(elem->options);
+	DynamicOption_Free(tree, elem->options, type->optionSpecs);
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
