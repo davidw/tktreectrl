@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.46 2006/10/18 22:19:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.47 2006/10/26 02:57:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -98,12 +98,13 @@ struct DInfo
     int headerHeight;		/* Last seen TreeCtrl.headerHeight */
     DItem *dItem;		/* Head of list for each displayed item */
     DItem *dItemLast;		/* Temp for UpdateDInfo() */
+    DItem *dItemFree;		/* List of unused DItems */
     Range *rangeFirst;		/* Head of Ranges */
     Range *rangeLast;		/* Tail of Ranges */
-    RItem *rItem;		/* Block of RItems for all Ranges */
-    int rItemMax;		/* size of rItem[] */
     Range *rangeFirstD;		/* First range with valid display info */
     Range *rangeLastD; 		/* Last range with valid display info */
+    RItem *rItem;		/* Block of RItems for all Ranges */
+    int rItemMax;		/* size of rItem[] */
     int itemHeight;		/* Observed max TreeItem height */
     int itemWidth;		/* Observed max TreeItem width */
     Pixmap pixmap;		/* DOUBLEBUFFER_WINDOW */
@@ -119,7 +120,6 @@ struct DInfo
     int incrementLeft;		/* xScrollIncrement[] index of item at left */
     TkRegion wsRgn;		/* Region containing whitespace */
     Tcl_HashTable itemVisHash;	/* Table of visible items */
-    DItem *dItemFree;		/* List of unused DItems */
     int requests;		/* Incremented for every call to
 				   Tree_EventuallyRedraw */
     int bounds[4], empty;	/* Bounds of TREE_AREA_CONTENT */
@@ -4472,7 +4472,7 @@ Tree_DrawTiledImage(
     Tk_SizeOfImage(image, &imgWidth, &imgHeight);
 #ifdef COLUMN_LOCK
     /* xOffset can be < 0  for left-locked columns. */
-    while (xOffset < 0) xOffset += imgWidth;
+    if (xOffset < 0) xOffset = imgWidth + xOffset % imgWidth;
 #endif
     srcX = (x1 + xOffset) % imgWidth;
     dstX = x1;
