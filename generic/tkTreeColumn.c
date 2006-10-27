@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.48 2006/10/27 02:58:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.49 2006/10/27 04:30:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -397,7 +397,7 @@ static Tk_OptionSpec columnSpecs[] = {
      (char *) NULL, -1, Tk_Offset(Column, uniform), TK_OPTION_NULL_OK,
      (ClientData) &uniformGroupCO, COLU_CONF_TWIDTH},
     {TK_OPTION_INT, "-weight", (char *) NULL, (char *) NULL,
-     "0", -1, Tk_Offset(Column, weight),
+     "1", -1, Tk_Offset(Column, weight),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TWIDTH},
 #endif
     {TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
@@ -4978,11 +4978,16 @@ Tree_LayoutColumns(
 		    if (minSize > column->uniform->minSize)
 			column->uniform->minSize = minSize;
 		}
-#endif
+		if (column->expand)
+		    numExpand += MAX(column->weight, 0);
+		if (column->squeeze)
+		    numSqueeze += MAX(column->weight, 0);
+#else
 		if (column->expand)
 		    numExpand++;
 		if (column->squeeze)
 		    numSqueeze++;
+#endif
 	    }
 	    column->useWidth = width;
 	    totalWidth += width;
@@ -5031,7 +5036,9 @@ Tree_LayoutColumns(
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
 #endif
-		if (column->visible && column->squeeze && (column->widthObj == NULL)) {
+		if (column->visible &&
+			column->squeeze &&
+			(column->widthObj == NULL)) {
 		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
 		    if (column->useWidth > min) {
 			int sub = MIN(each, column->useWidth - min);
@@ -5061,7 +5068,24 @@ Tree_LayoutColumns(
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
 #endif
-		if (column->visible && column->expand && (column->widthObj == NULL)) {
+#ifdef UNIFORM_GROUP
+		int weight = MAX(column->weight, 0);
+		if (column->visible &&
+			column->expand && weight &&
+			(column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int eachW = MIN(each * weight, spaceRemaining);
+			int add = (max == -1) ? eachW : MIN(eachW, max - column->useWidth);
+			column->useWidth += add;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand += weight;
+#else
+		if (column->visible &&
+			column->expand &&
+			(column->widthObj == NULL)) {
 		    int max = TreeColumn_MaxWidth((TreeColumn) column);
 		    if ((max == -1) || (column->useWidth < max)) {
 			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
@@ -5070,6 +5094,7 @@ Tree_LayoutColumns(
 			if (!spaceRemaining) break;
 			if ((max == -1) || (column->useWidth < max))
 			    numExpand++;
+#endif
 		    }
 		}
 		column = column->next;
