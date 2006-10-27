@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.58 2006/10/26 03:00:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.59 2006/10/27 02:58:49 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -281,6 +281,10 @@ struct TreeCtrl
     int widthOfColumnsRight;	/* Sum of right-locked column widths */
     int columnCountVisLeft;	/* Number of visible left-locked columns */
     int columnCountVisRight;	/* Number of visible right-locked columns */
+#endif
+#define UNIFORM_GROUP
+#ifdef UNIFORM_GROUP
+    Tcl_HashTable uniformGroupHash;	/* -uniform -> UniformGroup */
 #endif
 
     TreeItem root;

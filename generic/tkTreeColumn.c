@@ -7,12 +7,20 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.47 2006/10/26 02:56:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.48 2006/10/27 02:58:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
 typedef struct Column Column;
+
+#ifdef UNIFORM_GROUP
+typedef struct UniformGroup {
+    Tcl_HashEntry *hPtr;
+    int refCount;
+    int minSize;
+} UniformGroup;
+#endif
 
 /*
  * The following structure holds information about a single
@@ -28,9 +36,11 @@ struct Column
     Tcl_Obj *minWidthObj;	/* -minwidth */
     int maxWidth;		/* -maxwidth */
     Tcl_Obj *maxWidthObj;	/* -maxwidth */
+#ifdef DEPRECATED
     int stepWidth;		/* -stepwidth */
     Tcl_Obj *stepWidthObj;	/* -stepwidth */
     int widthHack;		/* -widthhack */
+#endif /* DEPRECATED */
     Tk_Font tkfont;		/* -font */
     Tk_Justify justify;		/* -justify */
     PerStateInfo border;	/* -background */
@@ -107,7 +117,146 @@ struct Column
 #define TEXT_WRAP_WORD 1
     int textWrap;		/* -textwrap */
     int textLines;		/* -textlines */
+#ifdef UNIFORM_GROUP
+    UniformGroup *uniform;	/* -uniform */
+    int weight;			/* -weight */
+#endif
 };
+
+#ifdef UNIFORM_GROUP
+/*
+ *----------------------------------------------------------------------
+ *
+ * UniformGroupCO_Set --
+ * UniformGroupCO_Get --
+ * UniformGroupCO_Restore --
+ * UniformGroupCO_Free --
+ *
+ *	These procedures implement a TK_OPTION_CUSTOM where the custom
+ *	option is a UniformGroup.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+UniformGroupCO_Set(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **valuePtr,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags
+    )
+{
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    int objEmpty;
+    UniformGroup **internalPtr, *new;
+
+    if (internalOffset >= 0)
+	internalPtr = (UniformGroup **) (recordPtr + internalOffset);
+    else
+	internalPtr = NULL;
+
+    objEmpty = ObjectIsEmpty((*valuePtr));
+
+    if ((flags & TK_OPTION_NULL_OK) && objEmpty)
+	(*valuePtr) = NULL;
+
+    if (internalPtr != NULL) {
+	if (*valuePtr != NULL) {
+	    int isNew;
+	    Tcl_HashEntry *hPtr = Tcl_CreateHashEntry(&tree->uniformGroupHash,
+		    Tcl_GetString(*valuePtr), &isNew);
+	    if (isNew) {
+		new = (UniformGroup *) ckalloc(sizeof(UniformGroup));
+		new->refCount = 0;
+		new->hPtr = hPtr;
+		Tcl_SetHashValue(hPtr, (ClientData) new);
+	    } else {
+		new = (UniformGroup *) Tcl_GetHashValue(hPtr);
+	    }
+	    new->refCount++;
+#ifdef TREECTRL_DEBUG
+	    dbwin("UniformGroupCO_Set: %s refCount=%d\n", Tcl_GetString(*valuePtr), new->refCount);
+#endif
+	} else {
+	    new = NULL;
+	}
+	*((UniformGroup **) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
+    }
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+UniformGroupCO_Get(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset
+    )
+{
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    UniformGroup *uniform = *(UniformGroup **) (recordPtr + internalOffset);
+
+    if (uniform == NULL)
+	return NULL;
+    return Tcl_NewStringObj(Tcl_GetHashKey(&tree->uniformGroupHash,
+	    uniform->hPtr), -1);
+}
+
+static void
+UniformGroupCO_Restore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr
+    )
+{
+    *(UniformGroup **) internalPtr = *(UniformGroup **) saveInternalPtr;
+}
+
+static void
+UniformGroupCO_Free(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr
+    )
+{
+    UniformGroup *uniform = *(UniformGroup **) internalPtr;
+
+#ifdef TREECTRL_DEBUG
+    if (uniform != NULL) {
+	TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+	dbwin("UniformGroupCO_Free: %s refCount=%d\n", Tcl_GetHashKey(&tree->uniformGroupHash, uniform->hPtr), uniform->refCount - 1);
+    }
+#endif
+    if ((uniform != NULL) && (--uniform->refCount <= 0)) {
+	Tcl_DeleteHashEntry(uniform->hPtr);
+	ckfree((char *) uniform);
+	*((UniformGroup **) internalPtr) = NULL;
+    }
+}
+
+Tk_ObjCustomOption uniformGroupCO =
+{
+    "uniform group",
+    UniformGroupCO_Set,
+    UniformGroupCO_Get,
+    UniformGroupCO_Restore,
+    UniformGroupCO_Free,
+    (ClientData) NULL
+};
+#endif /* UNIFORM_GROUP */
 
 static char *arrowST[] = { "none", "up", "down", (char *) NULL };
 static char *arrowSideST[] = { "left", "right", (char *) NULL };
@@ -215,10 +364,12 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-state", (char *) NULL, (char *) NULL,
      "normal", -1, Tk_Offset(Column, state), 0, (ClientData) stateST,
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
+#ifdef DEPRECATED
     {TK_OPTION_PIXELS, "-stepwidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, stepWidthObj),
      Tk_Offset(Column, stepWidth),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_RANGES},
+#endif /* DEPRECATED */
     {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Column, tagInfo),
      TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, COLU_CONF_TAGS},
@@ -241,15 +392,25 @@ static Tk_OptionSpec columnSpecs[] = {
      "0", Tk_Offset(Column, textPadYObj),
      Tk_Offset(Column, textPadY), 0, (ClientData) &PadAmountOption,
      COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
+#ifdef UNIFORM_GROUP
+    {TK_OPTION_CUSTOM, "-uniform", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Column, uniform), TK_OPTION_NULL_OK,
+     (ClientData) &uniformGroupCO, COLU_CONF_TWIDTH},
+    {TK_OPTION_INT, "-weight", (char *) NULL, (char *) NULL,
+     "0", -1, Tk_Offset(Column, weight),
+     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TWIDTH},
+#endif
     {TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, widthObj), Tk_Offset(Column, width),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_TWIDTH},
     {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(Column, visible),
      0, (ClientData) NULL, COLU_CONF_TWIDTH | COLU_CONF_DISPLAY},
+#ifdef DEPRECATED
     {TK_OPTION_BOOLEAN, "-widthhack", (char *) NULL, (char *) NULL,
      "0", -1, Tk_Offset(Column, widthHack),
      0, (ClientData) NULL, COLU_CONF_RANGES},
+#endif /* DEPRECATED */
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, 0, 0}
 };
@@ -2247,6 +2408,7 @@ TreeColumn_MaxWidth(
     return column->maxWidthObj ? column->maxWidth : -1;
 }
 
+#ifdef DEPRECATED
 /*
  *----------------------------------------------------------------------
  *
@@ -2272,6 +2434,7 @@ TreeColumn_StepWidth(
     Column *column = (Column *) column_;
     return column->stepWidthObj ? column->stepWidth : -1;
 }
+#endif /* DEPRECATED */
 
 /*
  *----------------------------------------------------------------------
@@ -3050,6 +3213,7 @@ TreeColumn_Justify(
     return ((Column *) column_)->justify;
 }
 
+#ifdef DEPRECATED
 /*
  *----------------------------------------------------------------------
  *
@@ -3074,6 +3238,7 @@ TreeColumn_WidthHack(
 {
     return ((Column *) column_)->widthHack;
 }
+#endif /* DEPRECATED */
 
 /*
  *----------------------------------------------------------------------
@@ -4776,6 +4941,18 @@ Tree_LayoutColumns(
     Column *column = (Column *) tree->columns;
     int width, visWidth, totalWidth = 0;
     int numExpand = 0, numSqueeze = 0;
+#ifdef UNIFORM_GROUP
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
+    UniformGroup *uniform;
+
+    hPtr = Tcl_FirstHashEntry(&tree->uniformGroupHash, &search);
+    while (hPtr != NULL) {
+	uniform = (UniformGroup *) Tcl_GetHashValue(hPtr);
+	uniform->minSize = 0;
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+#endif
 
 #ifdef COLUMN_LOCK
     column = (Column *) tree->columnLockNone;
@@ -4792,6 +4969,16 @@ Tree_LayoutColumns(
 		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
 		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
 		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
+#ifdef UNIFORM_GROUP
+		/* Track the maximum requested width of every column in this
+		 * column's uniform group considering -weight. */
+		if (column->uniform != NULL) {
+		    int weight = MAX(column->weight, 1);
+		    int minSize = (width + weight - 1) / weight;
+		    if (minSize > column->uniform->minSize)
+			column->uniform->minSize = minSize;
+		}
+#endif
 		if (column->expand)
 		    numExpand++;
 		if (column->squeeze)
@@ -4803,6 +4990,29 @@ Tree_LayoutColumns(
 	    column->useWidth = 0;
 	column = column->next;
     }
+
+#ifdef UNIFORM_GROUP
+    /* Apply the -uniform and -weight options. */
+#ifdef COLUMN_LOCK
+    column = (Column *) tree->columnLockNone;
+    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
+#else
+    while (column != NULL) {
+#endif
+	if (column->visible &&
+		column->widthObj == NULL &&
+		column->uniform != NULL) {
+	    int weight = MAX(column->weight, 1);
+	    totalWidth -= column->useWidth;
+	    width = column->uniform->minSize * weight;
+	    if (column->maxWidthObj != NULL)
+		width = MIN(width, column->maxWidth);
+	    column->useWidth = width;
+	    totalWidth += width;
+	}
+	column = column->next;
+    }
+#endif
 
     visWidth = Tree_ContentWidth(tree);
     if (visWidth <= 0) return;
@@ -5423,6 +5633,10 @@ Tree_InitColumns(
     tree->columnDrag.optionTable = Tk_CreateOptionTable(tree->interp, dragSpecs);
     (void) Tk_InitOptions(tree->interp, (char *) tree,
 	    tree->columnDrag.optionTable, tree->tkwin);
+
+#ifdef UNIFORM_GROUP
+    Tcl_InitHashTable(&tree->uniformGroupHash, TCL_STRING_KEYS);
+#endif
 }
 
 /*
@@ -5453,6 +5667,10 @@ void Tree_FreeColumns(
 
     Column_Free((Column *) tree->columnTail);
     tree->columnCount = 0;
+
+#ifdef UNIFORM_GROUP
+    Tcl_DeleteHashTable(&tree->uniformGroupHash);
+#endif
 }
 
 int
