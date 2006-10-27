@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.49 2006/10/27 04:30:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.50 2006/10/27 22:50:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4919,193 +4919,6 @@ TreeColumn_WidthOfItems(
 /*
  *----------------------------------------------------------------------
  *
- * Tree_LayoutColumns --
- *
- *	Calculates the display width of every column.
- *
- * Results:
- *	The useWidth field of every column is updated.
- *
- * Side effects:
- *	The size of elements and styles will be updated if they are
- *	marked out-of-date.
- *
- *----------------------------------------------------------------------
- */
-
-void
-Tree_LayoutColumns(
-    TreeCtrl *tree		/* Widget info. */
-    )
-{
-    Column *column = (Column *) tree->columns;
-    int width, visWidth, totalWidth = 0;
-    int numExpand = 0, numSqueeze = 0;
-#ifdef UNIFORM_GROUP
-    Tcl_HashEntry *hPtr;
-    Tcl_HashSearch search;
-    UniformGroup *uniform;
-
-    hPtr = Tcl_FirstHashEntry(&tree->uniformGroupHash, &search);
-    while (hPtr != NULL) {
-	uniform = (UniformGroup *) Tcl_GetHashValue(hPtr);
-	uniform->minSize = 0;
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-#endif
-
-#ifdef COLUMN_LOCK
-    column = (Column *) tree->columnLockNone;
-    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
-    while (column != NULL) {
-#endif
-	if (column->visible) {
-	    if (column->widthObj != NULL)
-		width = column->width;
-	    else {
-		width = TreeColumn_WidthOfItems((TreeColumn) column);
-		width = MAX(width, TreeColumn_NeededWidth((TreeColumn) column));
-		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
-		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
-		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
-#ifdef UNIFORM_GROUP
-		/* Track the maximum requested width of every column in this
-		 * column's uniform group considering -weight. */
-		if (column->uniform != NULL) {
-		    int weight = MAX(column->weight, 1);
-		    int minSize = (width + weight - 1) / weight;
-		    if (minSize > column->uniform->minSize)
-			column->uniform->minSize = minSize;
-		}
-		if (column->expand)
-		    numExpand += MAX(column->weight, 0);
-		if (column->squeeze)
-		    numSqueeze += MAX(column->weight, 0);
-#else
-		if (column->expand)
-		    numExpand++;
-		if (column->squeeze)
-		    numSqueeze++;
-#endif
-	    }
-	    column->useWidth = width;
-	    totalWidth += width;
-	} else
-	    column->useWidth = 0;
-	column = column->next;
-    }
-
-#ifdef UNIFORM_GROUP
-    /* Apply the -uniform and -weight options. */
-#ifdef COLUMN_LOCK
-    column = (Column *) tree->columnLockNone;
-    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
-    while (column != NULL) {
-#endif
-	if (column->visible &&
-		column->widthObj == NULL &&
-		column->uniform != NULL) {
-	    int weight = MAX(column->weight, 1);
-	    totalWidth -= column->useWidth;
-	    width = column->uniform->minSize * weight;
-	    if (column->maxWidthObj != NULL)
-		width = MIN(width, column->maxWidth);
-	    column->useWidth = width;
-	    totalWidth += width;
-	}
-	column = column->next;
-    }
-#endif
-
-    visWidth = Tree_ContentWidth(tree);
-    if (visWidth <= 0) return;
-
-    /* Squeeze columns */
-    if ((visWidth < totalWidth) && (numSqueeze > 0)) {
-	int spaceRemaining = totalWidth - visWidth;
-	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
-	    int each = (spaceRemaining >= numSqueeze) ?
-		spaceRemaining / numSqueeze : 1;
-	    numSqueeze = 0;
-#ifdef COLUMN_LOCK
-	    column = (Column *) tree->columnLockNone;
-	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
-	    column = (Column *) tree->columns;
-	    while (column != NULL) {
-#endif
-		if (column->visible &&
-			column->squeeze &&
-			(column->widthObj == NULL)) {
-		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
-		    if (column->useWidth > min) {
-			int sub = MIN(each, column->useWidth - min);
-			column->useWidth -= sub;
-			spaceRemaining -= sub;
-			if (!spaceRemaining) break;
-			if (column->useWidth > min)
-			    numSqueeze++;
-		    }
-		}
-		column = column->next;
-	    }
-	}
-    }
-
-    /* Expand columns */
-    if ((visWidth > totalWidth) && (numExpand > 0)) {
-	int spaceRemaining = visWidth - totalWidth;
-	while ((spaceRemaining > 0) && (numExpand > 0)) {
-	    int each = (spaceRemaining >= numExpand) ?
-		spaceRemaining / numExpand : 1;
-	    numExpand = 0;
-#ifdef COLUMN_LOCK
-	    column = (Column *) tree->columnLockNone;
-	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
-	    column = (Column *) tree->columns;
-	    while (column != NULL) {
-#endif
-#ifdef UNIFORM_GROUP
-		int weight = MAX(column->weight, 0);
-		if (column->visible &&
-			column->expand && weight &&
-			(column->widthObj == NULL)) {
-		    int max = TreeColumn_MaxWidth((TreeColumn) column);
-		    if ((max == -1) || (column->useWidth < max)) {
-			int eachW = MIN(each * weight, spaceRemaining);
-			int add = (max == -1) ? eachW : MIN(eachW, max - column->useWidth);
-			column->useWidth += add;
-			spaceRemaining -= add;
-			if (!spaceRemaining) break;
-			if ((max == -1) || (column->useWidth < max))
-			    numExpand += weight;
-#else
-		if (column->visible &&
-			column->expand &&
-			(column->widthObj == NULL)) {
-		    int max = TreeColumn_MaxWidth((TreeColumn) column);
-		    if ((max == -1) || (column->useWidth < max)) {
-			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
-			column->useWidth += add;
-			spaceRemaining -= add;
-			if (!spaceRemaining) break;
-			if ((max == -1) || (column->useWidth < max))
-			    numExpand++;
-#endif
-		    }
-		}
-		column = column->next;
-	    }
-	}
-    }
-}
-
-/*
- *----------------------------------------------------------------------
- *
  * Tree_InvalidateColumnWidth --
  *
  *	Marks the width of zero or more columns as out-of-date.
@@ -5430,12 +5243,240 @@ done:
     return column;
 }
 
+#ifdef COLUMN_LOCK
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * LayoutColumns --
+ *
+ *	Calculates the display width and horizontal offset of a range
+ *	of columns.
+ *
+ * Results:
+ *	The .useWidth and .offset fields of every column in the range
+ *	are updated.
+ *	The result is the sum of the widths of all visible columns in the
+ *	range.
+ *
+ * Side effects:
+ *	The size of elements and styles may be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+LayoutColumns(
+    Column *first,		/* First column to update. All columns
+				 * with the same -lock value are updated. */
+    Column **visPtr,		/* Out: first visible column. */
+    int *countVisPtr		/* Out: number of visible columns. */
+    )
+{
+    TreeCtrl *tree;
+    Column *column;
+    int width, visWidth, totalWidth = 0;
+    int numExpand = 0, numSqueeze = 0;
+#ifdef UNIFORM_GROUP
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
+    UniformGroup *uniform;
+    int uniformCount = 0;
+#endif
+
+    if (visPtr)
+	(*visPtr) = NULL;
+    (*countVisPtr) = 0;
+
+    if (first == NULL)
+	return 0;
+
+    tree = first->tree;
+
+#ifdef UNIFORM_GROUP
+    /* Initialize the .minSize field of every uniform group. */
+    hPtr = Tcl_FirstHashEntry(&tree->uniformGroupHash, &search);
+    while (hPtr != NULL) {
+	uniform = (UniformGroup *) Tcl_GetHashValue(hPtr);
+	uniform->minSize = 0;
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+#endif
+
+    /*
+     * Determine the initial display width of each column. This will be:
+     *   a) the column's -width option (a fixed width), or
+     *   b) the maximum of:
+     *    1) the width requested by the column's header
+     *    2) the width requested by each item style in that column
+     * For b) the width is clipped to -minwidth and -maxwidth.
+     */
+    column = first;
+    while (column != NULL && column->lock == first->lock) {
+	if (column->visible) {
+	    if (column->widthObj != NULL)
+		width = column->width;
+	    else {
+		width = TreeColumn_WidthOfItems((TreeColumn) column);
+		width = MAX(width, TreeColumn_NeededWidth((TreeColumn) column));
+		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
+		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
+		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
+#ifdef UNIFORM_GROUP
+		/* Track the maximum requested width of every column in this
+		 * column's uniform group considering -weight. */
+		if (column->uniform != NULL) {
+		    int weight = MAX(column->weight, 1);
+		    int minSize = (width + weight - 1) / weight;
+		    if (minSize > column->uniform->minSize)
+			column->uniform->minSize = minSize;
+		    uniformCount++;
+		}
+		if (column->expand)
+		    numExpand += MAX(column->weight, 0);
+		if (column->squeeze)
+		    numSqueeze += MAX(column->weight, 0);
+#else
+		if (column->expand)
+		    numExpand++;
+		if (column->squeeze)
+		    numSqueeze++;
+#endif
+	    }
+	    if (visPtr && (*visPtr) == NULL)
+		(*visPtr) = column;
+	    (*countVisPtr)++;
+	} else
+	    width = 0;
+	column->useWidth = width;
+	totalWidth += width;
+	column = column->next;
+    }
+
+#ifdef UNIFORM_GROUP
+    /* Apply the -uniform and -weight options. */
+    if (uniformCount > 0) {
+	column = first;
+	while (column != NULL && column->lock == first->lock) {
+	    if (column->visible &&
+		    column->widthObj == NULL &&
+		    column->uniform != NULL) {
+		int weight = MAX(column->weight, 1);
+		width = column->uniform->minSize * weight;
+		if (column->maxWidthObj != NULL)
+		    width = MIN(width, column->maxWidth);
+		totalWidth -= column->useWidth;
+		column->useWidth = width;
+		totalWidth += width;
+	    }
+	    column = column->next;
+	}
+    }
+#endif /* UNIFORM_GROUP */
+
+    /* Locked columns don't squeeze or expand. */
+    if (first->lock != COLUMN_LOCK_NONE)
+	goto doOffsets;
+
+    visWidth = Tree_ContentWidth(tree);
+    if (visWidth <= 0)
+	goto doOffsets;
+
+    /* Squeeze columns */
+    if ((visWidth < totalWidth) && (numSqueeze > 0)) {
+	int spaceRemaining = totalWidth - visWidth;
+	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
+	    int each = (spaceRemaining >= numSqueeze) ?
+		spaceRemaining / numSqueeze : 1;
+	    numSqueeze = 0;
+	    column = first;
+	    while (column != NULL && column->lock == first->lock) {
+		if (column->visible &&
+			column->squeeze &&
+			(column->widthObj == NULL)) {
+		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
+		    if (column->useWidth > min) {
+			int sub = MIN(each, column->useWidth - min);
+			column->useWidth -= sub;
+			spaceRemaining -= sub;
+			if (!spaceRemaining) break;
+			if (column->useWidth > min)
+			    numSqueeze++;
+		    }
+		}
+		column = column->next;
+	    }
+	}
+    }
+
+    /* Expand columns */
+    if ((visWidth > totalWidth) && (numExpand > 0)) {
+	int spaceRemaining = visWidth - totalWidth;
+	while ((spaceRemaining > 0) && (numExpand > 0)) {
+	    int each = (spaceRemaining >= numExpand) ?
+		spaceRemaining / numExpand : 1;
+	    numExpand = 0;
+	    column = first;
+	    while (column != NULL && column->lock == first->lock) {
+#ifdef UNIFORM_GROUP
+		int weight = MAX(column->weight, 0);
+		if (column->visible &&
+			column->expand && weight &&
+			(column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int eachW = MIN(each * weight, spaceRemaining);
+			int add = (max == -1) ? eachW : MIN(eachW, max - column->useWidth);
+			column->useWidth += add;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand += weight;
+#else
+		if (column->visible &&
+			column->expand &&
+			(column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
+			column->useWidth += add;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand++;
+#endif
+		    }
+		}
+		column = column->next;
+	    }
+	}
+    }
+
+doOffsets:
+
+    /* Calculate the horizontal offset of each column in the range.
+     * The total width if recalculated as well (needed anyway if any
+     * columns were expanded or squeezed). */
+    totalWidth = 0;
+    column = first;
+    while (column != NULL && column->lock == first->lock) {
+	if (column->visible) {
+	    column->offset = totalWidth;
+	    totalWidth += column->useWidth;
+	}
+	column = column->next;
+    }
+    return totalWidth;
+}
+
 /*
  *----------------------------------------------------------------------
  *
  * Tree_WidthOfColumns --
  *
- *	Return the total display width of all columns (except the tail).
+ *	Return the total display width of all non-locked columns (except
+ *	the tail).
  *	The width is only recalculated if it is marked out-of-date.
  *	Other fields of the TreeCtrl are updated to reflect the current
  *	arrangement of columns.
@@ -5450,115 +5491,157 @@ done:
  *----------------------------------------------------------------------
  */
 
-#ifdef COLUMN_LOCK
-
 int
 Tree_WidthOfColumns(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    Column *column;
-    int totalWidth = 0;
-
     if (tree->widthOfColumns >= 0)
 	return tree->widthOfColumns;
 
-    Tree_LayoutColumns(tree);
-
-    (void) Tree_WidthOfLeftColumns(tree);
-    (void) Tree_WidthOfRightColumns(tree);
-
-    tree->columnTreeLeft = 0;
-    tree->columnTreeVis = FALSE;
-    tree->columnVis = NULL;
-    tree->columnCountVis = 0;
-
-    column = (Column *) tree->columns;
-    while (column != NULL) {
-	if (column->visible) {
-	    switch (column->lock) {
-		case COLUMN_LOCK_LEFT:
-		    break;
-		case COLUMN_LOCK_NONE:
-		    if (tree->columnVis == NULL)
-			tree->columnVis = (TreeColumn) column;
-		    tree->columnCountVis++;
-		    column->offset = totalWidth;
-		    totalWidth += column->useWidth;
-		    break;
-		case COLUMN_LOCK_RIGHT:
-		    break;
-	    }
-	}
-	column = column->next;
-    }
+    tree->widthOfColumns = LayoutColumns(
+	(Column *) tree->columnLockNone,
+	(Column **) &tree->columnVis,
+	&tree->columnCountVis);
 
     if (tree->columnTree != NULL && TreeColumn_Visible(tree->columnTree)) {
 	tree->columnTreeLeft = ((Column *) tree->columnTree)->offset;
 	tree->columnTreeVis = TRUE;
+    } else {
+	tree->columnTreeLeft = 0;
+	tree->columnTreeVis = FALSE;
     }
 
-    return tree->widthOfColumns = totalWidth;
+    return tree->widthOfColumns;
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_WidthOfLeftColumns --
+ *
+ *	Return the total display width of all left-locked columns.
+ *	The width is only recalculated if it is marked out-of-date.
+ *	Other fields of the TreeCtrl are updated to reflect the current
+ *	arrangement of columns.
+ *
+ * Results:
+ *	Pixel width.
+ *
+ * Side effects:
+ *	The size of elements and styles may be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
 
 int
 Tree_WidthOfLeftColumns(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    Column *column = (Column *) tree->columnLockLeft;
-    int width, totalWidth = 0;
+    int showLocked = tree->vertical && (tree->wrapMode == TREE_WRAP_NONE);
 
-    if (!tree->vertical || (tree->wrapMode != TREE_WRAP_NONE)) {
-	tree->columnCountVisLeft = tree->columnCountVisRight = 0;
-	return 0;
+    if (!showLocked) {
+	tree->columnCountVisLeft = 0;
+	return tree->widthOfColumnsLeft = 0;
     }
-
-    if (tree->widthOfColumnsLeft >= 0)
-	return tree->widthOfColumnsLeft;
-
-    tree->columnCountVisLeft = 0;
-
-    while (column != NULL && column->lock == COLUMN_LOCK_LEFT) {
-	if (column->visible) {
-	    if (column->widthObj != NULL)
-		width = column->width;
-	    else {
-		width = TreeColumn_WidthOfItems((TreeColumn) column);
-		width = MAX(width, TreeColumn_NeededWidth((TreeColumn) column));
-		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
-		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
-		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
-	    }
-	    column->offset = totalWidth;
-	    column->useWidth = width;
-	    tree->columnCountVisLeft++;
-	} else
-	    column->useWidth = 0;
-	totalWidth += column->useWidth;
-	column = column->next;
+    if (tree->widthOfColumnsLeft < 0) {
+	tree->widthOfColumnsLeft = LayoutColumns(
+	    (Column *) tree->columnLockLeft,
+	    NULL,
+	    &tree->columnCountVisLeft);
     }
-
-    return tree->widthOfColumnsLeft = totalWidth;
+    return tree->widthOfColumnsLeft;
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_WidthOfRightColumns --
+ *
+ *	Return the total display width of all right-locked columns.
+ *	The width is only recalculated if it is marked out-of-date.
+ *	Other fields of the TreeCtrl are updated to reflect the current
+ *	arrangement of columns.
+ *
+ * Results:
+ *	Pixel width.
+ *
+ * Side effects:
+ *	The size of elements and styles may be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
 
 int
 Tree_WidthOfRightColumns(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    Column *column = (Column *) tree->columnLockRight;
-    int width, totalWidth = 0;
+    int showLocked = tree->vertical && (tree->wrapMode == TREE_WRAP_NONE);
 
-    if (!tree->vertical || (tree->wrapMode != TREE_WRAP_NONE))
-	return 0;
+    if (!showLocked) {
+	tree->columnCountVisRight = 0;
+	return tree->widthOfColumnsRight = 0;
+    }
+    if (tree->widthOfColumnsRight < 0) {
+	tree->widthOfColumnsRight = LayoutColumns(
+	    (Column *) tree->columnLockRight,
+	    NULL,
+	    &tree->columnCountVisRight);
+    }
+    return tree->widthOfColumnsRight;
+}
 
-    if (tree->widthOfColumnsRight >= 0)
-	return tree->widthOfColumnsRight;
+#else /* COLUMN_LOCK */
 
-    tree->columnCountVisRight = 0;
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_LayoutColumns --
+ *
+ *	Calculates the display width of every column.
+ *
+ * Results:
+ *	The useWidth field of every column is updated.
+ *
+ * Side effects:
+ *	The size of elements and styles will be updated if they are
+ *	marked out-of-date.
+ *
+ *----------------------------------------------------------------------
+ */
 
-    while (column != NULL && column->lock == COLUMN_LOCK_RIGHT) {
+void
+Tree_LayoutColumns(
+    TreeCtrl *tree		/* Widget info. */
+    )
+{
+    Column *column = (Column *) tree->columns;
+    int width, visWidth, totalWidth = 0;
+    int numExpand = 0, numSqueeze = 0;
+#ifdef UNIFORM_GROUP
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
+    UniformGroup *uniform;
+    int uniformCount = 0;
+
+    hPtr = Tcl_FirstHashEntry(&tree->uniformGroupHash, &search);
+    while (hPtr != NULL) {
+	uniform = (UniformGroup *) Tcl_GetHashValue(hPtr);
+	uniform->minSize = 0;
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+#endif
+
+#ifdef COLUMN_LOCK
+    column = (Column *) tree->columnLockNone;
+    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
+#else
+    while (column != NULL) {
+#endif
 	if (column->visible) {
 	    if (column->widthObj != NULL)
 		width = column->width;
@@ -5568,20 +5651,142 @@ Tree_WidthOfRightColumns(
 		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
 		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
 		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
+#ifdef UNIFORM_GROUP
+		/* Track the maximum requested width of every column in this
+		 * column's uniform group considering -weight. */
+		if (column->uniform != NULL) {
+		    int weight = MAX(column->weight, 1);
+		    int minSize = (width + weight - 1) / weight;
+		    if (minSize > column->uniform->minSize)
+			column->uniform->minSize = minSize;
+		    uniformCount++;
+		}
+		if (column->expand)
+		    numExpand += MAX(column->weight, 0);
+		if (column->squeeze)
+		    numSqueeze += MAX(column->weight, 0);
+#else
+		if (column->expand)
+		    numExpand++;
+		if (column->squeeze)
+		    numSqueeze++;
+#endif
 	    }
-	    column->offset = totalWidth;
 	    column->useWidth = width;
-	    tree->columnCountVisRight++;
+	    totalWidth += width;
 	} else
 	    column->useWidth = 0;
-	totalWidth += column->useWidth;
 	column = column->next;
     }
 
-    return tree->widthOfColumnsRight = totalWidth;
-}
+#ifdef UNIFORM_GROUP
+    /* Apply the -uniform and -weight options. */
+    if (uniformCount > 0) {
+#ifdef COLUMN_LOCK
+	column = (Column *) tree->columnLockNone;
+	while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
+#else
+	while (column != NULL) {
+#endif
+	    if (column->visible &&
+		    column->widthObj == NULL &&
+		    column->uniform != NULL) {
+		int weight = MAX(column->weight, 1);
+		totalWidth -= column->useWidth;
+		width = column->uniform->minSize * weight;
+		if (column->maxWidthObj != NULL)
+		    width = MIN(width, column->maxWidth);
+		column->useWidth = width;
+		totalWidth += width;
+	    }
+	    column = column->next;
+	}
+    }
+#endif /* UNIFORM_GROUP */
 
-#else /* COLUMN_LOCK */
+    visWidth = Tree_ContentWidth(tree);
+    if (visWidth <= 0) return;
+
+    /* Squeeze columns */
+    if ((visWidth < totalWidth) && (numSqueeze > 0)) {
+	int spaceRemaining = totalWidth - visWidth;
+	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
+	    int each = (spaceRemaining >= numSqueeze) ?
+		spaceRemaining / numSqueeze : 1;
+	    numSqueeze = 0;
+#ifdef COLUMN_LOCK
+	    column = (Column *) tree->columnLockNone;
+	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
+#else
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+#endif
+		if (column->visible &&
+			column->squeeze &&
+			(column->widthObj == NULL)) {
+		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
+		    if (column->useWidth > min) {
+			int sub = MIN(each, column->useWidth - min);
+			column->useWidth -= sub;
+			spaceRemaining -= sub;
+			if (!spaceRemaining) break;
+			if (column->useWidth > min)
+			    numSqueeze++;
+		    }
+		}
+		column = column->next;
+	    }
+	}
+    }
+
+    /* Expand columns */
+    if ((visWidth > totalWidth) && (numExpand > 0)) {
+	int spaceRemaining = visWidth - totalWidth;
+	while ((spaceRemaining > 0) && (numExpand > 0)) {
+	    int each = (spaceRemaining >= numExpand) ?
+		spaceRemaining / numExpand : 1;
+	    numExpand = 0;
+#ifdef COLUMN_LOCK
+	    column = (Column *) tree->columnLockNone;
+	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
+#else
+	    column = (Column *) tree->columns;
+	    while (column != NULL) {
+#endif
+#ifdef UNIFORM_GROUP
+		int weight = MAX(column->weight, 0);
+		if (column->visible &&
+			column->expand && weight &&
+			(column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int eachW = MIN(each * weight, spaceRemaining);
+			int add = (max == -1) ? eachW : MIN(eachW, max - column->useWidth);
+			column->useWidth += add;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand += weight;
+#else
+		if (column->visible &&
+			column->expand &&
+			(column->widthObj == NULL)) {
+		    int max = TreeColumn_MaxWidth((TreeColumn) column);
+		    if ((max == -1) || (column->useWidth < max)) {
+			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
+			column->useWidth += add;
+			spaceRemaining -= add;
+			if (!spaceRemaining) break;
+			if ((max == -1) || (column->useWidth < max))
+			    numExpand++;
+#endif
+		    }
+		}
+		column = column->next;
+	    }
+	}
+    }
+}
 
 int
 Tree_WidthOfColumns(
