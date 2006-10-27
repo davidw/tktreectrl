@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.37 2006/10/18 03:47:48 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.38 2006/10/27 04:37:11 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.37 2006/10/18 03:47:48 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.38 2006/10/27 04:37:11 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -434,11 +434,9 @@ not request any size at all.
 Database Name:	<strong>indent</strong><br>
 Database Class:	<strong>Indent</strong><br>
 <dd>
-Specifies the amount of indentation
+Specifies the screen distance an item is indented relative to its parent item
 in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
-The default is 19 pixel.
-Indentation is the screen distance an item is displayed more to
-the right than its father.
+The default is 19 pixels.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-itemheight</strong><br>
@@ -552,9 +550,11 @@ during row resizing.
 Database Name:	<strong>scrollMargin</strong><br>
 Database Class:	<strong>ScrollMargin</strong><br>
 <dd>
-The interpretation of this option is left to Tcl scripts
-that implement scrolling:
-the  widget implementation ignores this option entirely.
+Specifies a positive screen distance
+in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
+This option is used by the default bindings to determine how close to the
+edges of the contentbox the mouse pointer must be before scrolling occurs.
+Specifying a positive value is useful when items may be drag-and-dropped.
 Defaults to 0.
 
 <br><br>
@@ -682,14 +682,13 @@ be wider than the window (-orient horizontal).
 Database Name:	<strong>xScrollDelay</strong><br>
 Database Class:	<strong>ScrollDelay</strong><br>
 <dd>
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in horizontal direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly horizontal scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay 
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-xscrollincrement</strong><br>
@@ -704,21 +703,21 @@ multiple of <strong>-xscrollincrement</strong>;  furthermore, the units for scro
 (e.g., the change in view when the left and right arrows of a scrollbar
 are selected) will also be <strong>-xscrollincrement</strong>.  If the value of
 this option is less than or equal to zero, then horizontal scrolling
-is unconstrained.
+snaps to the left of an item, or part of an item if items are wider than the
+contentbox.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-yscrolldelay</strong><br>
 Database Name:	<strong>yScrollDelay</strong><br>
 Database Class:	<strong>ScrollDelay</strong><br>
 <dd>
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in vertical direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly vertical scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay 
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 
 <br><br>
 <dt>Command-Line Switch:	<strong>-yscrollincrement</strong><br>
@@ -733,7 +732,8 @@ multiple of <strong>-yscrollincrement</strong>;  furthermore, the units for scro
 (e.g., the change in view when the top and bottom arrows of a scrollbar
 are selected) will also be <strong>-yscrollincrement</strong>.  If the value of
 this option is less than or equal to zero, then vertical scrolling
-is unconstrained.
+snaps to the top of an item, or part of an item if items are taller than the
+contentbox.
 </dl>
 
 <h2><a name="item_and_column_tags">ITEM AND COLUMN TAGS</a></h2>
@@ -901,8 +901,7 @@ of the new column.
 <dt><a name="14"><i class='arg'>pathName</i> <b class='cmd'>column delete</b> <i class='arg'>first</i> ?<i class='arg'>last</i>?</a><dd>
 
 Deletes the specified column(s). <i class='arg'>First</i> and <i class='arg'>last</i> must be valid
-<a href="#column_description">column descriptions</a>. If <i class='arg'>first</i>
-is specified as <strong>all</strong>, then all columns are deleted. If both <i class='arg'>first</i>
+<a href="#column_description">column descriptions</a>. If both <i class='arg'>first</i>
 and <i class='arg'>last</i> are specified, then they may refer to a single column only.
 The <strong>tail</strong> column cannot be deleted and it is an error to specify it.
 The order of <i class='arg'>first</i> and <i class='arg'>last</i> doesn't matter, and <i class='arg'>first</i> may
@@ -1186,10 +1185,7 @@ debugging options <strong>-enable</strong> and <strong>-display</strong> are swi
 
 <dt><a name="36"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b></a><dd>
 
-For every of the treectrl widget
-a line with some internal values info about all items
-is printed to stdout.
-The command returns the empty string.
+Returns a string describing item layout.
 
 <br><br>
 <dt><a name="37"><i class='arg'>pathName</i> <b class='cmd'>debug expose</b> <i class='arg'>x1</i> <i class='arg'>y1</i> <i class='arg'>x2</i> <i class='arg'>y2</i></a><dd>
@@ -1357,7 +1353,7 @@ which specifies the state to use.
 <br><br>
 <dt><a name="53"><i class='arg'>pathName</i> <b class='cmd'>element type</b> <i class='arg'>element</i></a><dd>
 
-Returns the type of the elements given by <i class='arg'>element</i>,
+Returns the type of the element given by <i class='arg'>element</i>,
 such as <strong>rect</strong> or <strong>text</strong>.
 </dl>
 
@@ -1368,39 +1364,38 @@ Use <b class='cmd'>item expand</b> instead.
 <br><br>
 <dt><a name="55"><i class='arg'>pathName</i> <b class='cmd'>identify</b> <i class='arg'>x</i> <i class='arg'>y</i></a><dd>
 
-Returns a list containing some diagnostics about what
-is displayed at the given windows coordinates <i class='arg'>x</i> and <i class='arg'>y</i>.
-The resulting list may be empty,
-if nothing is displayed at the given coordinates,
-otherwise the first list element is <strong>header</strong> or <strong>item</strong>.
+Returns a list describing what
+is displayed at the given window coordinates <i class='arg'>x</i> and <i class='arg'>y</i>.
+If the coordinates are outside the window, over the borders, or over any
+whitespace in the window, then the result is an empty string;
+otherwise the first word of the result is <strong>header</strong> or <strong>item</strong>.
 <br><br>
 
-If the coordinates are in the header area
-and thus the first element of the result is <strong>header</strong>,
-the number of the column or the string <strong>tail</strong>
-is the second element in the resulting list;
-if the x coordinate is near the left or right end of the header,
-a third element <strong>left</strong> or <strong>right</strong> is added respectively.
+If the coordinates are over a column header, then
+the first word of the result is <strong>header</strong>, followed by
+the unique id of the column (or the string <strong>tail</strong>).
+If the x coordinate is near the left or right end of a column, then
+a third word <strong>left</strong> or <strong>right</strong> is appended to the result.
 <br><br>
 
-If the coordinates are below the header area
-and thus the first element of the result is <strong>item</strong>,
-the numerical id of the item
-is the second element in the resulting list.
-If the x coordinate doesn't fall into the column
-displaying the hierarchical structure,
-the elements <strong>column</strong> and the column number are added.
-If the x coordinate is within the column
-displaying the hierarchical structure,
-the following elements are added to the resulting list:
-<strong>line</strong> and the numerical id of the item the line comes from,
-if the x coordinate is above an item connecting line;
-<strong>button</strong>, if the x coordinate is above a button;
-<strong>column</strong>, the column number, <strong>elem</strong>, and the element name,
-if the x coordinate is above an element of the item;
-<strong>column</strong> and the column number,
-if the x coordinate is to the right of the elements;
-nothing otherwise.
+If the coordinates are over an item, then the first word of the result
+is <strong>item</strong> followed by the unique id of that item.
+If the coordinates are not over the area for displaying buttons and lines,
+then <strong>column</strong> and a unique column id are the
+3rd and 4th words of the result. If the coordinates are over an element within
+that column, then <strong>element</strong> and an element name are the 5th and 6th
+words of the result.
+<br><br>
+
+If the coordinates are over a button, then the first word of the result is
+<strong>item</strong>, followed by the unique id of that item, followed by the word
+<strong>button</strong>.
+<br><br>
+If the coordinates are over a line descending from an ancestor of an item
+(but not the parent of that item), then the first word of the result is
+<strong>item</strong>, followed by the unique id of that item, followed by the word
+<strong>line</strong>, followed by the unique id of the item the line is coming
+from. This is used to collapse the ancestor when the line is clicked on.
 
 <br><br>
 <dt><a name="56"><i class='arg'>pathName</i> <b class='cmd'>index</b> <i class='arg'>itemDesc</i></a><dd>
@@ -1428,10 +1423,10 @@ root item if <i class='arg'>itemDesc</i> is a descendant of the root item.
 <dt><a name="59"><i class='arg'>pathName</i> <b class='cmd'>item bbox</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>element</i>?</a><dd>
 
 Returns a list with four elements giving the bounding box
-for the item described by <i class='arg'>itemDesc</i>.
+of the item described by <i class='arg'>itemDesc</i>.
 If no further argument is specified, the bbox spans the area of the item
-over all columns. If a <i class='arg'>column</i> is specified, only the area of the item
-in this column is considered, if an additional <i class='arg'>element</i> is specified,
+over all non-locked columns. If a <i class='arg'>column</i> is specified, only the area of the item
+in this column is considered. If an additional <i class='arg'>element</i> is specified,
 the area of this <i class='arg'>element</i> in <i class='arg'>column</i> of the specified item is
 returned.
 
@@ -1636,9 +1631,8 @@ great-grandchildren etc, of the item.
 <br><br>
 <dt><a name="70"><i class='arg'>pathName</i> <b class='cmd'>item dump</b> <i class='arg'>itemDesc</i></a><dd>
 
-Returns a list with six elements in the form
-<strong>index</strong> <em>index</em> <strong>indexVis</strong> <em>indexVis</em>
-<strong>neededHeight</strong> <em>neededHeight</em>.
+Returns a list with 4 words in the form
+<strong>index</strong> <em>index</em> <strong>indexVis</strong> <em>indexVis</em>.
 
 <br><br>
 <dt><a name="71"><i class='arg'>pathName</i> <b class='cmd'>item element</b> <i class='arg'>command</i> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>element</i> ?<i class='arg'>arg ...</i>?</a><dd>
@@ -1694,7 +1688,8 @@ For example:
 	$C3 $E1 -text &quot;apples and oranges&quot;
 </pre></td></tr></table></p>
 Each of the <a href="#column_description">column description</a> arguments
-may refer to multiple columns.
+to this command may refer to multiple columns if at least one
+<i class='arg'>option</i>-<i class='arg'>value</i> pair is given.
 
 <br><br>
 <dt><a name="75"><i class='arg'>pathName</i> <b class='cmd'>item element perstate</b> <i class='arg'>itemDesc</i> <i class='arg'>column</i> <i class='arg'>element</i> <i class='arg'>option</i> ?<i class='arg'>stateList</i>?</a><dd>
@@ -1711,7 +1706,8 @@ and dynamic, see <a href="#states">STATES</a>) is used in place of the current s
 
 Returns 1 if the item described by <i class='arg'>itemDesc</i> has the
 state <strong>enabled</strong> switched on, 0 otherwise. If <i class='arg'>boolean</i> is specified,
-the <strong>enabled</strong> state is set accordingly.
+then the <strong>enabled</strong> state of every item described by the
+<a href="#item_description">item description</a> <i class='arg'>itemDesc</i> is set accordingly.
 
 <br><br>
 <dt><a name="77"><i class='arg'>pathName</i> <b class='cmd'>item expand</b> <i class='arg'>itemDesc</i> ?<strong>-recurse</strong>?</a><dd>
@@ -1745,8 +1741,8 @@ Then it will become the new first child of <i class='arg'>parent</i>.
 <dt><a name="79"><i class='arg'>pathName</i> <b class='cmd'>item id</b> <i class='arg'>itemDesc</i></a><dd>
 
 This command resolves the <a href="#item_description">item description</a>
-<i class='arg'>itemDesc</i> into a list of unique item identifiers. If the item(s) described by
-<i class='arg'>itemDesc</i> don't exist, this command returns an empty list.
+<i class='arg'>itemDesc</i> into a list of unique item identifiers. If <i class='arg'>itemDesc</i>
+doesn't refer to any existing items, then this command returns an empty list.
 
 <br><br>
 <dt><a name="80"><i class='arg'>pathName</i> <b class='cmd'>item image</b> <i class='arg'>itemDesc</i> ?<i class='arg'>column</i>? ?<i class='arg'>image</i>? ?<i class='arg'>column image ...</i>?</a><dd>
@@ -2826,8 +2822,8 @@ This command shifts the view in the window left or right according to
 <i class='arg'>What</i> must be either <strong>units</strong> or <strong>pages</strong> or an abbreviation
 of one of these.
 If <i class='arg'>what</i> is <strong>units</strong>, the view adjusts left or right in units
-of the <strong>-xscrollincrement</strong> option, if it is greater than zero,
-or in units of one-tenth the window's width otherwise.
+determined by the <strong>-xscrollincrement</strong> option (which may be zero,
+see the description of that option).
 If <i class='arg'>what</i> is <strong>pages</strong> then the view
 adjusts in units of nine-tenths the window's width.
 If <i class='arg'>number</i> is negative then information farther to the left
@@ -2870,8 +2866,8 @@ This command adjusts the view in the window up or down according to
 <i class='arg'>Number</i> must be an integer.
 <i class='arg'>What</i> must be either <strong>units</strong> or <strong>pages</strong>.
 If <i class='arg'>what</i> is <strong>units</strong>, the view adjusts up or down in units
-of the <strong>-yscrollincrement</strong> option, if it is greater than zero,
-or in units of one-tenth the window's height otherwise.
+of the <strong>-yscrollincrement</strong> option (which may be zero,
+see the description of that option).
 If <i class='arg'>what</i> is <strong>pages</strong> then
 the view adjusts in units of nine-tenths the window's height.
 If <i class='arg'>number</i> is negative then higher information becomes
@@ -2895,7 +2891,7 @@ See <a href="#column_description">COLUMN DESCRIPTION</a> below.
 There is always one special column, the <strong>tail</strong> column, which fills
 all space to the right of the last ordinary column.
 This column has no number;
-it can only be specified by its tag <strong>tail</strong>, which cannot be modified.
+it can only be specified by the keyword <strong>tail</strong>.
 
 <p>
 When a column configuration option is specified as <a href="#per-state_options">per-state</a>,
@@ -3098,19 +3094,37 @@ of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
 <br><br>
+<dt><strong><strong>-uniform</strong></strong> <i class='arg'>group</i><dd>
+When a non-empty value is supplied, this option places the column in a
+<em>uniform group</em> with other columns that have the same value for
+<strong>-uniform</strong>. The space for columns belonging to a uniform group is
+allocated so that their sizes are always in strict proportion to their
+<strong>-weight</strong> values.
+This option is based on the grid geometry manager.
+
+<br><br>
 <dt><strong><strong>-visible</strong></strong> <i class='arg'>boolean</i><dd>
 Indicates whether or not the column should be displayed.
 
 <br><br>
+<dt><strong><strong>-weight</strong></strong> <i class='arg'>integer</i><dd>
+Sets the relative weight for apportioning any extra space among columns.
+A weight of zero (0) indicates the column will not deviate from its requested
+size.  A column whose weight is two will grow at twice the rate as a column of
+weight one when extra space is allocated to columns.
+This option is based on the grid geometry manager.
+
+<br><br>
 <dt><strong><strong>-width</strong></strong> <i class='arg'>size</i><dd>
 Specifies a fixed width for the column. If this value is an empty string,
-the column width is calculated as the maximum of:
+then the column width is calculated as the maximum of:
 a) the width requested by items;
 b) the width requested by the column's header;
 and c) the column's <strong>-minwidth</strong> option.
-This calculated width is also affected by the <strong>-expand</strong> option and the
-<strong>-squeeze</strong> option. In any case, the calculated width will not be greater
-than the <strong>-maxwidth</strong> option, if specified.
+This calculated width is also affected by the <strong>-expand</strong>,
+<strong>-squeeze</strong>, <strong>-uniform</strong> and <strong>-weight</strong> options. In any case,
+the calculated width will not be greater than the <strong>-maxwidth</strong> option,
+if specified.
 
 <br><br>
 <dt><strong><strong>-widthhack</strong></strong> <i class='arg'>boolean</i><dd>
@@ -3205,8 +3219,8 @@ Use the column to the left matching <i class='arg'>QUALIFIERS</i>.
 
 </dl>
 
-The word <i class='arg'>QUALIFIERS</i> above represents a list of zero or more of the
-following terms that changes which item is chosen:
+The word <i class='arg'>QUALIFIERS</i> above represents a sequence of zero or more of the
+following terms that changes which column is chosen:
 
 <dl>
 <dt><strong>state</strong> <i class='arg'>stateList</i><dd>
@@ -3669,7 +3683,7 @@ or <strong>0</strong> to specify the ever-present root item. See also the
 <strong>-itemprefix</strong> option.
 
 <br><br>
-<dt><i class='arg'>tagExpr</i><dd>
+<dt><i class='arg'>tagExpr</i> <i class='arg'>QUALIFIERS</i><dd>
 <i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
 every item's tags are tested for a match.
 This keyword cannot be followed by any modifiers unless a single item is
@@ -3726,7 +3740,7 @@ options.
 You can memorize <strong>rnc</strong> as an abbreviation of &quot;row 'n' column&quot;.
 
 <br><br>
-<dt><strong>range</strong> <i class='arg'>first last</i><dd>
+<dt><strong>range</strong> <i class='arg'>first last</i> <i class='arg'>QUALIFIERS</i><dd>
 <i class='arg'>First</i> and <i class='arg'>last</i> specify a range of items.
 This keyword cannot be followed by any modifiers.
 
@@ -3840,7 +3854,7 @@ Use the <i class='arg'>n</i>th child of the item's parent.
 Use the item in the first row of this column.
 </dl>
 
-The word <i class='arg'>QUALIFIERS</i> above represents a list of zero or more of the
+The word <i class='arg'>QUALIFIERS</i> above represents a series of zero or more of the
 following terms that changes which item is chosen:
 
 <dl>
@@ -3882,6 +3896,7 @@ To get the every hidden item with tag &quot;a&quot; or &quot;b&quot;:
 <p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
 $T item id &quot;all !visible tag a||b&quot;
 $T item id &quot;tag a||b !visible&quot;
+$T item id &quot;a||b !visible&quot;
 </pre></td></tr></table></p>
 
 <h2><a name="events_and_script_substitutions">EVENTS AND SCRIPT SUBSTITUTIONS</a></h2>

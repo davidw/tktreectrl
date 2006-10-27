@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.38 2006/10/18 03:47:48 treectrl Exp $}
+  $Id: treectrl.man,v 1.39 2006/10/27 04:37:11 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -170,11 +170,9 @@ If this option is less than or equal to zero then the window will
 not request any size at all.
 
 [tkoption_def -indent indent Indent]
-Specifies the amount of indentation
+Specifies the screen distance an item is indented relative to its parent item
 in any of the forms acceptable to [fun Tk_GetPixels].
-The default is 19 pixel.
-Indentation is the screen distance an item is displayed more to
-the right than its father.
+The default is 19 pixels.
 
 [tkoption_def -itemheight itemHeight ItemHeight]
 Specifies a fixed height for every item
@@ -244,9 +242,11 @@ This line can be used to give the user a visual feedback
 during row resizing.
 
 [tkoption_def -scrollmargin scrollMargin ScrollMargin]
-The interpretation of this option is left to Tcl scripts
-that implement scrolling:
-the  widget implementation ignores this option entirely.
+Specifies a positive screen distance
+in any of the forms acceptable to [fun Tk_GetPixels].
+This option is used by the default bindings to determine how close to the
+edges of the contentbox the mouse pointer must be before scrolling occurs.
+Specifying a positive value is useful when items may be drag-and-dropped.
 Defaults to 0.
 
 [tkoption_def -selectmode selectMode SelectMode]
@@ -326,14 +326,13 @@ taller than the window (-orient vertical) or no horizontal group of items will
 be wider than the window (-orient horizontal).
 
 [tkoption_def -xscrolldelay xScrollDelay ScrollDelay]
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in horizontal direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly horizontal scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay 
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 
 [tkoption_def -xscrollincrement xScrollIncrement ScrollIncrement]
 Specifies an increment for horizontal scrolling, in any of the usual forms
@@ -344,17 +343,17 @@ multiple of [option -xscrollincrement];  furthermore, the units for scrolling
 (e.g., the change in view when the left and right arrows of a scrollbar
 are selected) will also be [option -xscrollincrement].  If the value of
 this option is less than or equal to zero, then horizontal scrolling
-is unconstrained.
+snaps to the left of an item, or part of an item if items are wider than the
+contentbox.
 
 [tkoption_def -yscrolldelay yScrollDelay ScrollDelay]
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in vertical direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly vertical scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay 
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 
 [tkoption_def -yscrollincrement yScrollIncrement ScrollIncrement]
 Specifies an increment for vertical scrolling, in any of the usual forms
@@ -365,7 +364,8 @@ multiple of [option -yscrollincrement];  furthermore, the units for scrolling
 (e.g., the change in view when the top and bottom arrows of a scrollbar
 are selected) will also be [option -yscrollincrement].  If the value of
 this option is less than or equal to zero, then vertical scrolling
-is unconstrained.
+snaps to the top of an item, or part of an item if items are taller than the
+contentbox.
 [list_end]
 
 [section {ITEM AND COLUMN TAGS}]
@@ -509,8 +509,7 @@ of the new column.
 
 [call [arg pathName] [cmd {column delete}] [arg first] [opt [arg last]]]
 Deletes the specified column(s). [arg First] and [arg last] must be valid
-[sectref {COLUMN DESCRIPTION} {column descriptions}]. If [arg first]
-is specified as [const all], then all columns are deleted. If both [arg first]
+[sectref {COLUMN DESCRIPTION} {column descriptions}]. If both [arg first]
 and [arg last] are specified, then they may refer to a single column only.
 The [const tail] column cannot be deleted and it is an error to specify it.
 The order of [arg first] and [arg last] doesn't matter, and [arg first] may
@@ -744,10 +743,7 @@ debugging options [option -enable] and [option -display] are switched on.
 [list_end]
 
 [call [arg pathName] [cmd {debug dinfo}]]
-For every of the treectrl widget
-a line with some internal values info about all items
-is printed to stdout.
-The command returns the empty string.
+Returns a string describing item layout.
 
 [call [arg pathName] [cmd {debug expose}] [arg x1] [arg y1] [arg x2] [arg y2]]
 Causes the area of the window bounded by the given window-coords to be
@@ -888,7 +884,7 @@ option named [arg option] for [arg element] for a certain state.
 which specifies the state to use.
 
 [call [arg pathName] [cmd {element type}] [arg element]]
-Returns the type of the elements given by [arg element],
+Returns the type of the element given by [arg element],
 such as [const rect] or [const text].
 [list_end]
 
@@ -897,39 +893,38 @@ such as [const rect] or [const text].
 Use [cmd {item expand}] instead.
 
 [call [arg pathName] [cmd identify] [arg x] [arg y]]
-Returns a list containing some diagnostics about what
-is displayed at the given windows coordinates [arg x] and [arg y].
-The resulting list may be empty,
-if nothing is displayed at the given coordinates,
-otherwise the first list element is [const header] or [const item].
+Returns a list describing what
+is displayed at the given window coordinates [arg x] and [arg y].
+If the coordinates are outside the window, over the borders, or over any
+whitespace in the window, then the result is an empty string;
+otherwise the first word of the result is [const header] or [const item].
 [nl]
 
-If the coordinates are in the header area
-and thus the first element of the result is [const header],
-the number of the column or the string [const tail]
-is the second element in the resulting list;
-if the x coordinate is near the left or right end of the header,
-a third element [const left] or [const right] is added respectively.
+If the coordinates are over a column header, then
+the first word of the result is [const header], followed by
+the unique id of the column (or the string [const tail]).
+If the x coordinate is near the left or right end of a column, then
+a third word [const left] or [const right] is appended to the result.
 [nl]
 
-If the coordinates are below the header area
-and thus the first element of the result is [const item],
-the numerical id of the item
-is the second element in the resulting list.
-If the x coordinate doesn't fall into the column
-displaying the hierarchical structure,
-the elements [const column] and the column number are added.
-If the x coordinate is within the column
-displaying the hierarchical structure,
-the following elements are added to the resulting list:
-[const line] and the numerical id of the item the line comes from,
-if the x coordinate is above an item connecting line;
-[const button], if the x coordinate is above a button;
-[const column], the column number, [const elem], and the element name,
-if the x coordinate is above an element of the item;
-[const column] and the column number,
-if the x coordinate is to the right of the elements;
-nothing otherwise.
+If the coordinates are over an item, then the first word of the result
+is [const item] followed by the unique id of that item.
+If the coordinates are not over the area for displaying buttons and lines,
+then [const column] and a unique column id are the
+3rd and 4th words of the result. If the coordinates are over an element within
+that column, then [const element] and an element name are the 5th and 6th
+words of the result.
+[nl]
+
+If the coordinates are over a button, then the first word of the result is
+[const item], followed by the unique id of that item, followed by the word
+[const button].
+[nl]
+If the coordinates are over a line descending from an ancestor of an item
+(but not the parent of that item), then the first word of the result is
+[const item], followed by the unique id of that item, followed by the word
+[const line], followed by the unique id of the item the line is coming
+from. This is used to collapse the ancestor when the line is clicked on.
 
 [call [arg pathName] [cmd index] [arg itemDesc]]
 Deprecated. Use [cmd {item id}] instead.
@@ -950,10 +945,10 @@ root item if [arg itemDesc] is a descendant of the root item.
 [call [arg pathName] [cmd {item bbox}] [arg itemDesc] [opt [arg column]] \
      [opt [arg element]]]
 Returns a list with four elements giving the bounding box
-for the item described by [arg itemDesc].
+of the item described by [arg itemDesc].
 If no further argument is specified, the bbox spans the area of the item
-over all columns. If a [arg column] is specified, only the area of the item
-in this column is considered, if an additional [arg element] is specified,
+over all non-locked columns. If a [arg column] is specified, only the area of the item
+in this column is considered. If an additional [arg element] is specified,
 the area of this [arg element] in [arg column] of the specified item is
 returned.
 
@@ -1127,9 +1122,8 @@ of the item specified by [arg itemDesc], i.e. the children, grandchildren,
 great-grandchildren etc, of the item.
 
 [call [arg pathName] [cmd {item dump}] [arg itemDesc]]
-Returns a list with six elements in the form
-[const index] [emph index] [const indexVis] [emph indexVis]
-[const neededHeight] [emph neededHeight].
+Returns a list with 4 words in the form
+[const index] [emph index] [const indexVis] [emph indexVis].
 
 [call [arg pathName] [cmd {item element}] [arg command] [arg itemDesc] \
      [arg column] [arg element] [opt [arg {arg ...}]]]
@@ -1182,7 +1176,8 @@ For example:
 	$C3 $E1 -text "apples and oranges"
 [example_end]
 Each of the [sectref {COLUMN DESCRIPTION} {column description}] arguments
-may refer to multiple columns.
+to this command may refer to multiple columns if at least one
+[arg option]-[arg value] pair is given.
 
 [call [arg pathName] [cmd {item element perstate}] [arg itemDesc] [arg column] \
      [arg element] [arg option] [opt [arg stateList]]]
@@ -1197,7 +1192,8 @@ and dynamic, see [sectref STATES]) is used in place of the current state for
 [call [arg pathName] [cmd {item enabled}] [arg itemDesc] [opt [arg boolean]]]
 Returns 1 if the item described by [arg itemDesc] has the
 state [const enabled] switched on, 0 otherwise. If [arg boolean] is specified,
-the [const enabled] state is set accordingly.
+then the [const enabled] state of every item described by the
+[sectref {ITEM DESCRIPTION} {item description}] [arg itemDesc] is set accordingly.
 
 [call [arg pathName] [cmd {item expand}] [arg itemDesc] [opt [option -recurse]]]
 Switches on the [const open] state of the item(s) described by [arg itemDesc].
@@ -1225,8 +1221,8 @@ Then it will become the new first child of [arg parent].
 
 [call [arg pathName] [cmd {item id}] [arg itemDesc]]
 This command resolves the [sectref {ITEM DESCRIPTION} {item description}]
-[arg itemDesc] into a list of unique item identifiers. If the item(s) described by
-[arg itemDesc] don't exist, this command returns an empty list.
+[arg itemDesc] into a list of unique item identifiers. If [arg itemDesc]
+doesn't refer to any existing items, then this command returns an empty list.
 
 [call [arg pathName] [cmd {item image}] [arg itemDesc] [opt [arg column]] \
      [opt [arg image]] [opt [arg {column image ...}]]]
@@ -2154,8 +2150,8 @@ This command shifts the view in the window left or right according to
 [arg What] must be either [const units] or [const pages] or an abbreviation
 of one of these.
 If [arg what] is [const units], the view adjusts left or right in units
-of the [option -xscrollincrement] option, if it is greater than zero,
-or in units of one-tenth the window's width otherwise.
+determined by the [option -xscrollincrement] option (which may be zero,
+see the description of that option).
 If [arg what] is [const pages] then the view
 adjusts in units of nine-tenths the window's width.
 If [arg number] is negative then information farther to the left
@@ -2191,8 +2187,8 @@ This command adjusts the view in the window up or down according to
 [arg Number] must be an integer.
 [arg What] must be either [const units] or [const pages].
 If [arg what] is [const units], the view adjusts up or down in units
-of the [option -yscrollincrement] option, if it is greater than zero,
-or in units of one-tenth the window's height otherwise.
+of the [option -yscrollincrement] option (which may be zero,
+see the description of that option).
 If [arg what] is [const pages] then
 the view adjusts in units of nine-tenths the window's height.
 If [arg number] is negative then higher information becomes
@@ -2215,7 +2211,7 @@ See [sectref {COLUMN DESCRIPTION}] below.
 There is always one special column, the [const tail] column, which fills
 all space to the right of the last ordinary column.
 This column has no number;
-it can only be specified by its tag [const tail], which cannot be modified.
+it can only be specified by the keyword [const tail].
 
 [para]
 When a column configuration option is specified as [sectref {PER-STATE OPTIONS} per-state],
@@ -2387,18 +2383,34 @@ leave on the top and bottom of the text.
 of two values to specify padding for top and bottom separately;
 it defaults to 0.
 
+[opt_def [option -uniform] [arg group]]
+When a non-empty value is supplied, this option places the column in a
+[emph "uniform group"] with other columns that have the same value for
+[option -uniform]. The space for columns belonging to a uniform group is
+allocated so that their sizes are always in strict proportion to their
+[option -weight] values.
+This option is based on the grid geometry manager.
+
 [opt_def [option -visible] [arg boolean]]
 Indicates whether or not the column should be displayed.
 
+[opt_def [option -weight] [arg integer]]
+Sets the relative weight for apportioning any extra space among columns.
+A weight of zero (0) indicates the column will not deviate from its requested
+size.  A column whose weight is two will grow at twice the rate as a column of
+weight one when extra space is allocated to columns.
+This option is based on the grid geometry manager.
+
 [opt_def [option -width] [arg size]]
 Specifies a fixed width for the column. If this value is an empty string,
-the column width is calculated as the maximum of:
+then the column width is calculated as the maximum of:
 a) the width requested by items;
 b) the width requested by the column's header;
 and c) the column's [option -minwidth] option.
-This calculated width is also affected by the [option -expand] option and the
-[option -squeeze] option. In any case, the calculated width will not be greater
-than the [option -maxwidth] option, if specified.
+This calculated width is also affected by the [option -expand],
+[option -squeeze], [option -uniform] and [option -weight] options. In any case,
+the calculated width will not be greater than the [option -maxwidth] option,
+if specified.
 
 [opt_def [option -widthhack] [arg boolean]]
 Deprecated. Use the treectrl's [option -itemwidthequal] option instead.
@@ -2480,8 +2492,8 @@ Use the column to the left matching [arg QUALIFIERS].
 
 [list_end]
 
-The word [arg QUALIFIERS] above represents a list of zero or more of the
-following terms that changes which item is chosen:
+The word [arg QUALIFIERS] above represents a sequence of zero or more of the
+following terms that changes which column is chosen:
 
 [list_begin definitions]
 [lst_item "[const state] [arg stateList]"]
@@ -2893,7 +2905,7 @@ the return value of a prior call of the [cmd {item create}] widget command,
 or [const 0] to specify the ever-present root item. See also the
 [option -itemprefix] option.
 
-[lst_item [arg tagExpr]]
+[lst_item "[arg tagExpr] [arg QUALIFIERS]"]
 [arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
 every item's tags are tested for a match.
 This keyword cannot be followed by any modifiers unless a single item is
@@ -2941,7 +2953,7 @@ the on-screen arrangement of items as determined by the -orient and -wrap
 options.
 You can memorize [const rnc] as an abbreviation of "row 'n' column".
 
-[lst_item "[const range] [arg {first last}]"]
+[lst_item "[const range] [arg {first last}] [arg QUALIFIERS]"]
 [arg First] and [arg last] specify a range of items.
 This keyword cannot be followed by any modifiers.
 
@@ -3034,7 +3046,7 @@ Use the [arg n]th child of the item's parent.
 Use the item in the first row of this column.
 [list_end]
 
-The word [arg QUALIFIERS] above represents a list of zero or more of the
+The word [arg QUALIFIERS] above represents a series of zero or more of the
 following terms that changes which item is chosen:
 
 [list_begin definitions]
@@ -3073,6 +3085,7 @@ To get the every hidden item with tag "a" or "b":
 [example_begin]
 $T item id "all !visible tag a||b"
 $T item id "tag a||b !visible"
+$T item id "a||b !visible"
 [example_end]
 
 [section {EVENTS AND SCRIPT SUBSTITUTIONS}]

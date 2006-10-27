@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.54 2006/10/18 03:47:48 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.55 2006/10/27 04:37:11 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1.1 treectrl "Tk Commands"
 .BS
@@ -615,11 +615,9 @@ Database Class:	\fBIndent\fR
 
 .fi
 .IP
-Specifies the amount of indentation
+Specifies the screen distance an item is indented relative to its parent item
 in any of the forms acceptable to \fBTk_GetPixels\fR.
-The default is 19 pixel.
-Indentation is the screen distance an item is displayed more to
-the right than its father.
+The default is 19 pixels.
 .LP
 .nf
 .ta 6c
@@ -766,9 +764,11 @@ Database Class:	\fBScrollMargin\fR
 
 .fi
 .IP
-The interpretation of this option is left to Tcl scripts
-that implement scrolling:
-the  widget implementation ignores this option entirely.
+Specifies a positive screen distance
+in any of the forms acceptable to \fBTk_GetPixels\fR.
+This option is used by the default bindings to determine how close to the
+edges of the contentbox the mouse pointer must be before scrolling occurs.
+Specifying a positive value is useful when items may be drag-and-dropped.
 Defaults to 0.
 .LP
 .nf
@@ -928,14 +928,13 @@ Database Class:	\fBScrollDelay\fR
 
 .fi
 .IP
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in horizontal direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly horizontal scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 .LP
 .nf
 .ta 6c
@@ -953,7 +952,8 @@ multiple of \fB-xscrollincrement\fR;  furthermore, the units for scrolling
 (e.g., the change in view when the left and right arrows of a scrollbar
 are selected) will also be \fB-xscrollincrement\fR.  If the value of
 this option is less than or equal to zero, then horizontal scrolling
-is unconstrained.
+snaps to the left of an item, or part of an item if items are wider than the
+contentbox.
 .LP
 .nf
 .ta 6c
@@ -963,14 +963,13 @@ Database Class:	\fBScrollDelay\fR
 
 .fi
 .IP
-Specifies the amount of time before the default binding should handle
-repeating mouse motion events in vertical direction with button 1 pressed.
-The value should be a list of 1 or 2 integers.
-The first integer specifies the timespan in microseconds
-before the active item should be changed to get nearer to the
-current mouse position. If there are two integers specified, the first is only
-used for the first motion event, any repeating motion events are handled
-after the seconds amount of miliseconds is elapsed.
+This option controls how quickly vertical scrolling occurs while dragging
+the mouse with button 1 pressed.
+The value should be a list of 1 or 2 integers interpreted as microseconds.
+If 2 values are specified, then the first value determines the intial delay
+after the first scroll, and the second value determines the delay for all
+scrolling after the first. If only 1 value is specified, each scroll takes
+place after that delay.
 .LP
 .nf
 .ta 6c
@@ -988,7 +987,8 @@ multiple of \fB-yscrollincrement\fR;  furthermore, the units for scrolling
 (e.g., the change in view when the top and bottom arrows of a scrollbar
 are selected) will also be \fB-yscrollincrement\fR.  If the value of
 this option is less than or equal to zero, then vertical scrolling
-is unconstrained.
+snaps to the top of an item, or part of an item if items are taller than the
+contentbox.
 .SH "ITEM AND COLUMN TAGS"
 Columns and items may have any number of tags associated with them.
 A tag is just a string of characters, and it may take any form,
@@ -1125,8 +1125,7 @@ of the new column.
 .TP
 \fIpathName\fR \fBcolumn delete\fR \fIfirst\fR ?\fIlast\fR?
 Deletes the specified column(s). \fIFirst\fR and \fIlast\fR must be valid
-\fBcolumn descriptions\fR. If \fIfirst\fR
-is specified as \fBall\fR, then all columns are deleted. If both \fIfirst\fR
+\fBcolumn descriptions\fR. If both \fIfirst\fR
 and \fIlast\fR are specified, then they may refer to a single column only.
 The \fBtail\fR column cannot be deleted and it is an error to specify it.
 The order of \fIfirst\fR and \fIlast\fR doesn't matter, and \fIfirst\fR may
@@ -1353,10 +1352,7 @@ debugging options \fB-enable\fR and \fB-display\fR are switched on.
 .RE
 .TP
 \fIpathName\fR \fBdebug dinfo\fR
-For every of the treectrl widget
-a line with some internal values info about all items
-is printed to stdout.
-The command returns the empty string.
+Returns a string describing item layout.
 .TP
 \fIpathName\fR \fBdebug expose\fR \fIx1\fR \fIy1\fR \fIx2\fR \fIy2\fR
 Causes the area of the window bounded by the given window-coords to be
@@ -1490,7 +1486,7 @@ option named \fIoption\fR for \fIelement\fR for a certain state.
 which specifies the state to use.
 .TP
 \fIpathName\fR \fBelement type\fR \fIelement\fR
-Returns the type of the elements given by \fIelement\fR,
+Returns the type of the element given by \fIelement\fR,
 such as \fBrect\fR or \fBtext\fR.
 .RE
 .TP
@@ -1498,37 +1494,35 @@ such as \fBrect\fR or \fBtext\fR.
 Use \fBitem expand\fR instead.
 .TP
 \fIpathName\fR \fBidentify\fR \fIx\fR \fIy\fR
-Returns a list containing some diagnostics about what
-is displayed at the given windows coordinates \fIx\fR and \fIy\fR.
-The resulting list may be empty,
-if nothing is displayed at the given coordinates,
-otherwise the first list element is \fBheader\fR or \fBitem\fR.
+Returns a list describing what
+is displayed at the given window coordinates \fIx\fR and \fIy\fR.
+If the coordinates are outside the window, over the borders, or over any
+whitespace in the window, then the result is an empty string;
+otherwise the first word of the result is \fBheader\fR or \fBitem\fR.
 .sp
-If the coordinates are in the header area
-and thus the first element of the result is \fBheader\fR,
-the number of the column or the string \fBtail\fR
-is the second element in the resulting list;
-if the x coordinate is near the left or right end of the header,
-a third element \fBleft\fR or \fBright\fR is added respectively.
+If the coordinates are over a column header, then
+the first word of the result is \fBheader\fR, followed by
+the unique id of the column (or the string \fBtail\fR).
+If the x coordinate is near the left or right end of a column, then
+a third word \fBleft\fR or \fBright\fR is appended to the result.
 .sp
-If the coordinates are below the header area
-and thus the first element of the result is \fBitem\fR,
-the numerical id of the item
-is the second element in the resulting list.
-If the x coordinate doesn't fall into the column
-displaying the hierarchical structure,
-the elements \fBcolumn\fR and the column number are added.
-If the x coordinate is within the column
-displaying the hierarchical structure,
-the following elements are added to the resulting list:
-\fBline\fR and the numerical id of the item the line comes from,
-if the x coordinate is above an item connecting line;
-\fBbutton\fR, if the x coordinate is above a button;
-\fBcolumn\fR, the column number, \fBelem\fR, and the element name,
-if the x coordinate is above an element of the item;
-\fBcolumn\fR and the column number,
-if the x coordinate is to the right of the elements;
-nothing otherwise.
+If the coordinates are over an item, then the first word of the result
+is \fBitem\fR followed by the unique id of that item.
+If the coordinates are not over the area for displaying buttons and lines,
+then \fBcolumn\fR and a unique column id are the
+3rd and 4th words of the result. If the coordinates are over an element within
+that column, then \fBelement\fR and an element name are the 5th and 6th
+words of the result.
+.sp
+If the coordinates are over a button, then the first word of the result is
+\fBitem\fR, followed by the unique id of that item, followed by the word
+\fBbutton\fR.
+.sp
+If the coordinates are over a line descending from an ancestor of an item
+(but not the parent of that item), then the first word of the result is
+\fBitem\fR, followed by the unique id of that item, followed by the word
+\fBline\fR, followed by the unique id of the item the line is coming
+from. This is used to collapse the ancestor when the line is clicked on.
 .TP
 \fIpathName\fR \fBindex\fR \fIitemDesc\fR
 Deprecated. Use \fBitem id\fR instead.
@@ -1548,10 +1542,10 @@ root item if \fIitemDesc\fR is a descendant of the root item.
 .TP
 \fIpathName\fR \fBitem bbox\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIelement\fR?
 Returns a list with four elements giving the bounding box
-for the item described by \fIitemDesc\fR.
+of the item described by \fIitemDesc\fR.
 If no further argument is specified, the bbox spans the area of the item
-over all columns. If a \fIcolumn\fR is specified, only the area of the item
-in this column is considered, if an additional \fIelement\fR is specified,
+over all non-locked columns. If a \fIcolumn\fR is specified, only the area of the item
+in this column is considered. If an additional \fIelement\fR is specified,
 the area of this \fIelement\fR in \fIcolumn\fR of the specified item is
 returned.
 .TP
@@ -1726,9 +1720,8 @@ of the item specified by \fIitemDesc\fR, i.e. the children, grandchildren,
 great-grandchildren etc, of the item.
 .TP
 \fIpathName\fR \fBitem dump\fR \fIitemDesc\fR
-Returns a list with six elements in the form
-\fBindex\fR \fIindex\fR \fBindexVis\fR \fIindexVis\fR
-\fBneededHeight\fR \fIneededHeight\fR.
+Returns a list with 4 words in the form
+\fBindex\fR \fIindex\fR \fBindexVis\fR \fIindexVis\fR.
 .TP
 \fIpathName\fR \fBitem element\fR \fIcommand\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR ?\fIarg ...\fR?
 This command is used to manipulate elements of the item.
@@ -1778,7 +1771,8 @@ For example:
 
 .fi
 Each of the \fBcolumn description\fR arguments
-may refer to multiple columns.
+to this command may refer to multiple columns if at least one
+\fIoption\fR-\fIvalue\fR pair is given.
 .TP
 \fIpathName\fR \fBitem element perstate\fR \fIitemDesc\fR \fIcolumn\fR \fIelement\fR \fIoption\fR ?\fIstateList\fR?
 This command returns the current value of the \fBper-state\fR
@@ -1791,7 +1785,8 @@ and dynamic, see \fBSTATES\fR) is used in place of the current state for
 \fIpathName\fR \fBitem enabled\fR \fIitemDesc\fR ?\fIboolean\fR?
 Returns 1 if the item described by \fIitemDesc\fR has the
 state \fBenabled\fR switched on, 0 otherwise. If \fIboolean\fR is specified,
-the \fBenabled\fR state is set accordingly.
+then the \fBenabled\fR state of every item described by the
+\fBitem description\fR \fIitemDesc\fR is set accordingly.
 .TP
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
@@ -1819,8 +1814,8 @@ Then it will become the new first child of \fIparent\fR.
 .TP
 \fIpathName\fR \fBitem id\fR \fIitemDesc\fR
 This command resolves the \fBitem description\fR
-\fIitemDesc\fR into a list of unique item identifiers. If the item(s) described by
-\fIitemDesc\fR don't exist, this command returns an empty list.
+\fIitemDesc\fR into a list of unique item identifiers. If \fIitemDesc\fR
+doesn't refer to any existing items, then this command returns an empty list.
 .TP
 \fIpathName\fR \fBitem image\fR \fIitemDesc\fR ?\fIcolumn\fR? ?\fIimage\fR? ?\fIcolumn image ...\fR?
 This command sets or retrieves the value of the \fBper-state\fR
@@ -2702,8 +2697,8 @@ This command shifts the view in the window left or right according to
 \fIWhat\fR must be either \fBunits\fR or \fBpages\fR or an abbreviation
 of one of these.
 If \fIwhat\fR is \fBunits\fR, the view adjusts left or right in units
-of the \fB-xscrollincrement\fR option, if it is greater than zero,
-or in units of one-tenth the window's width otherwise.
+determined by the \fB-xscrollincrement\fR option (which may be zero,
+see the description of that option).
 If \fIwhat\fR is \fBpages\fR then the view
 adjusts in units of nine-tenths the window's width.
 If \fInumber\fR is negative then information farther to the left
@@ -2739,8 +2734,8 @@ This command adjusts the view in the window up or down according to
 \fINumber\fR must be an integer.
 \fIWhat\fR must be either \fBunits\fR or \fBpages\fR.
 If \fIwhat\fR is \fBunits\fR, the view adjusts up or down in units
-of the \fB-yscrollincrement\fR option, if it is greater than zero,
-or in units of one-tenth the window's height otherwise.
+of the \fB-yscrollincrement\fR option (which may be zero,
+see the description of that option).
 If \fIwhat\fR is \fBpages\fR then
 the view adjusts in units of nine-tenths the window's height.
 If \fInumber\fR is negative then higher information becomes
@@ -2759,7 +2754,7 @@ See \fBCOLUMN DESCRIPTION\fR below.
 There is always one special column, the \fBtail\fR column, which fills
 all space to the right of the last ordinary column.
 This column has no number;
-it can only be specified by its tag \fBtail\fR, which cannot be modified.
+it can only be specified by the keyword \fBtail\fR.
 .PP
 When a column configuration option is specified as \fBper-state\fR,
 the state names are \fBnormal\fR, \fBactive\fR, \fBpressed\fR or \fBup\fR, i.e.
@@ -2928,18 +2923,34 @@ leave on the top and bottom of the text.
 of two values to specify padding for top and bottom separately;
 it defaults to 0.
 .TP
+\fB\fB-uniform\fR\fR \fIgroup\fR
+When a non-empty value is supplied, this option places the column in a
+\fIuniform group\fR with other columns that have the same value for
+\fB-uniform\fR. The space for columns belonging to a uniform group is
+allocated so that their sizes are always in strict proportion to their
+\fB-weight\fR values.
+This option is based on the grid geometry manager.
+.TP
 \fB\fB-visible\fR\fR \fIboolean\fR
 Indicates whether or not the column should be displayed.
 .TP
+\fB\fB-weight\fR\fR \fIinteger\fR
+Sets the relative weight for apportioning any extra space among columns.
+A weight of zero (0) indicates the column will not deviate from its requested
+size.  A column whose weight is two will grow at twice the rate as a column of
+weight one when extra space is allocated to columns.
+This option is based on the grid geometry manager.
+.TP
 \fB\fB-width\fR\fR \fIsize\fR
 Specifies a fixed width for the column. If this value is an empty string,
-the column width is calculated as the maximum of:
+then the column width is calculated as the maximum of:
 a) the width requested by items;
 b) the width requested by the column's header;
 and c) the column's \fB-minwidth\fR option.
-This calculated width is also affected by the \fB-expand\fR option and the
-\fB-squeeze\fR option. In any case, the calculated width will not be greater
-than the \fB-maxwidth\fR option, if specified.
+This calculated width is also affected by the \fB-expand\fR,
+\fB-squeeze\fR, \fB-uniform\fR and \fB-weight\fR options. In any case,
+the calculated width will not be greater than the \fB-maxwidth\fR option,
+if specified.
 .TP
 \fB\fB-widthhack\fR\fR \fIboolean\fR
 Deprecated. Use the treectrl's \fB-itemwidthequal\fR option instead.
@@ -3011,8 +3022,8 @@ Use the column to the right matching \fIQUALIFIERS\fR.
 .TP
 \fBprev\fR \fIQUALIFIERS\fR
 Use the column to the left matching \fIQUALIFIERS\fR.
-The word \fIQUALIFIERS\fR above represents a list of zero or more of the
-following terms that changes which item is chosen:
+The word \fIQUALIFIERS\fR above represents a sequence of zero or more of the
+following terms that changes which column is chosen:
 .TP
 \fBstate\fR \fIstateList\fR
 \fIStateList\fR is a list of column state names.
@@ -3394,7 +3405,7 @@ the return value of a prior call of the \fBitem create\fR widget command,
 or \fB0\fR to specify the ever-present root item. See also the
 \fB-itemprefix\fR option.
 .TP
-\fItagExpr\fR
+\fItagExpr\fR \fIQUALIFIERS\fR
 \fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
 every item's tags are tested for a match.
 This keyword cannot be followed by any modifiers unless a single item is
@@ -3443,7 +3454,7 @@ the on-screen arrangement of items as determined by the -orient and -wrap
 options.
 You can memorize \fBrnc\fR as an abbreviation of "row 'n' column".
 .TP
-\fBrange\fR \fIfirst last\fR
+\fBrange\fR \fIfirst last\fR \fIQUALIFIERS\fR
 \fIFirst\fR and \fIlast\fR specify a range of items.
 This keyword cannot be followed by any modifiers.
 .TP
@@ -3530,7 +3541,7 @@ Use the \fIn\fRth child of the item's parent.
 .TP
 \fBtop\fR
 Use the item in the first row of this column.
-The word \fIQUALIFIERS\fR above represents a list of zero or more of the
+The word \fIQUALIFIERS\fR above represents a series of zero or more of the
 following terms that changes which item is chosen:
 .TP
 \fBstate\fR \fIstateList\fR
@@ -3570,6 +3581,7 @@ To get the every hidden item with tag "a" or "b":
 
 $T item id "all !visible tag a||b"
 $T item id "tag a||b !visible"
+$T item id "a||b !visible"
 
 .fi
 .SH "EVENTS AND SCRIPT SUBSTITUTIONS"
