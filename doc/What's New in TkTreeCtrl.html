@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.15 2006/10/18 03:47:48 treectrl Exp $ -->
+<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.16 2006/10/27 04:52:23 treectrl Exp $ -->
 
 
   
@@ -20,6 +20,218 @@
 
 
 <h1>What's New in TkTreeCtrl 2.2</h1>
+
+
+<h2>Column Configuration Options</h2>
+
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+  <tbody>
+
+
+    <tr>
+
+
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Renamed<br>
+
+
+      </th>
+
+
+      <th style="background-color: rgb(204, 255, 255);">New
+name</th>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>-tag</td>
+
+
+      <td>-tags</td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
+
+
+      <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>-lock</td>
+
+
+      <td>This option allows columns to stick to the left or
+right edge
+of the window. Locked columns can scroll vertically but not
+horizontally. Valid values for this option are <span style="font-weight: bold;">none</span> (the default), <span style="font-weight: bold;">left</span> or <span style="font-weight: bold;">right</span>.</td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>-uniform</td>
+
+
+      <td colspan="1" rowspan="2">These two options
+operate the same as the grid geometry manager options of the same name.
+For example:<br>
+
+
+      
+      <pre style="margin-left: 40px;">.t column configure&nbsp;0 -uniform a<br>.t column configure 1 -uniform a</pre>
+
+
+will give columns 0 and 1 the same requested width, whichever is the larger of the two columns. And:<br>
+
+      
+      <pre style="margin-left: 40px;">.t column configure 0 -uniform a -weight 2<br>.t column configure 1 -uniform a</pre>
+
+will give column 0 twice the maximum of the requested widths of columns 0 and 1. And:<br>
+      <pre style="margin-left: 40px;">.t column configure 0 -expand yes -weight 2<br>.t column configure 1 -expand yes</pre>
+will give column 0 twice the extra space as column 1.</td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>-weight</td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<h2>Column Command</h2>
+
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+  <tbody>
+
+
+    <tr>
+
+
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
+
+
+      <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>column tag add</td>
+
+
+      <td colspan="1" rowspan="4">Columns can have
+a list of tag names. Previously only a single tag was allowed. The <span style="font-weight: bold;">tail</span> column no
+longer has the word "tail" as a tag, but it is still referred to by the
+word "tail" in column descriptions. </td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>column tag expr</td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>column tag names</td>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>column tag remove</td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
+
+
+<h2>Item Configuration Options</h2>
+
+
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+  <tbody>
+
+
+    <tr>
+
+
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
+
+
+      <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+    </tr>
+
+
+    <tr>
+
+
+      <td>-tags</td>
+
+
+      <td>Tags are used to identify groups of items.</td>
+
+
+    </tr>
+
+
+  
+  </tbody>
+</table>
 
 
 <h2>Item Command</h2>
@@ -79,7 +291,21 @@ specifies an initial list of tags for created items.</td>
 
 
       <td>Returns a list of item ids if the item description
-matches multiple items.</td>
+matches multiple items. For example:<br>
+
+
+      
+      <pre>.t item id all</pre>
+
+
+will return a list of ids for all items, and:<br>
+
+
+      
+      <pre>.t item id "$item children"</pre>
+
+
+will return the ids of every child of an item.</td>
 
 
     </tr>
@@ -119,33 +345,7 @@ an item.</td>
       <td>Gets and sets the <span style="font-weight: bold;">enabled</span>
 state for items. All items are enabled when first created. Disabled
 items cannot be selected, and are ignored by the default key-navigation
-bindings.</td>
-
-
-    </tr>
-
-
-  
-  </tbody>
-</table>
-
-
-<h2>Tag Command</h2>
-
-
-<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
-
-
-  <tbody>
-
-
-    <tr>
-
-
-      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
-
-
-      <th style="background-color: rgb(204, 255, 255);">Comment</th>
+and mouse bindings.</td>
 
 
     </tr>
@@ -154,14 +354,14 @@ bindings.</td>
     <tr>
 
 
-      <td>tag add</td>
+      <td>item tag add</td>
 
 
       <td>Add tags to items. For example:<br>
 
 
       
-      <pre>.t tag add all {a b c}</pre>
+      <pre>.t item tag add all {a b c}</pre>
 
 
 will add tags "a", "b" and "c" to every item.<br>
@@ -176,21 +376,21 @@ will add tags "a", "b" and "c" to every item.<br>
     <tr>
 
 
-      <td>tag expr</td>
+      <td>item tag expr</td>
 
 
       <td>Evaluate a tag expression against items. For example:<br>
 
 
       
-      <pre>.t tag expr $item a</pre>
+      <pre>.t item tag expr $item a</pre>
 
 
 returns 1 if&nbsp;an item has tag "a". Also:<br>
 
 
       
-      <pre>.t tag expr $item a||b</pre>
+      <pre>.t item tag expr $item a||b</pre>
 
 
 returns 1 if &nbsp;an item has tag "a" or "b".</td>
@@ -202,7 +402,7 @@ returns 1 if &nbsp;an item has tag "a" or "b".</td>
     <tr>
 
 
-      <td>tag names</td>
+      <td>item tag names</td>
 
 
       <td>Return a list of tag names assigned to items. For
@@ -210,14 +410,14 @@ example:<br>
 
 
       
-      <pre>.t tag names $item</pre>
+      <pre>.t item tag names $item</pre>
 
 
 returns the tag list for an item, and:<br>
 
 
       
-      <pre>.t tag names all</pre>
+      <pre>.t item tag names all</pre>
 
 
 returns every tag assigned to any item.</td>
@@ -229,14 +429,14 @@ returns every tag assigned to any item.</td>
     <tr>
 
 
-      <td>tag remove</td>
+      <td>item tag remove</td>
 
 
       <td>Remove tags from items. For example:<br>
 
 
       
-      <pre>.t tag remove all {b c}</pre>
+      <pre>.t item tag remove all {b c}</pre>
 
 
 will remove tags "b" and "c" from any items that have them.</td>
@@ -250,10 +450,21 @@ will remove tags "b" and "c" from any items that have them.</td>
 </table>
 
 
+<table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+  <tbody>
+
+
+  
+  </tbody>
+</table>
+
+
 <h2>Item Tags</h2>
 
 
-Tags are textual labels applied to items to group them together. Tags
+Tags are textual labels applied to items to group them. Tags
 do not affect the appearance or behaviour of items. Tags can be used in
 item descriptions to operate on multiple items. More information can be
 found in the <a href="treectrl.html#item_tags">man page</a>.<br>
@@ -449,6 +660,17 @@ call:<br>
 </ul>
 
 
+<h2>Column Descriptions</h2>
+
+
+New keywords <span style="font-weight: bold;">list</span>,
+<span style="font-weight: bold;">range</span> and <span style="font-weight: bold;">tag</span> can be used to
+match multiple columns.<br>
+
+
+New qualifiers <span style="font-weight: bold;">state</span>,
+<span style="font-weight: bold;">tag</span> and <span style="font-weight: bold;">!visible</span> can be used
+to restrict which columns are specified.
 <h2>Demo Changes</h2>
 
 
@@ -457,7 +679,15 @@ call:<br>
 
   <li>New demo "My Computer". Demonstrates disabled items used as
 headers.</li>
-  <li>The "Big List" and "Firefox Privacy" demos were changed to use the new <span style="font-weight: bold;">-clip</span> option of window elements.</li>
+
+
+  <li>New demo "Column Locking". Demonstrates columns that do not
+scroll horizontally.</li>
+
+
+  <li>The "Big List" and "Firefox Privacy" demos were changed to
+use the new <span style="font-weight: bold;">-clip</span>
+option of window elements.</li>
 
 
 </ul>
@@ -490,6 +720,10 @@ binding scripts.</li>
 
   <li>When a style with window elements spanned more than one
 column, the window might be improperly sized during display updates.</li>
+
+
+  <li>Windows in window elements would not always be unmapped if
+columns or items were hidden, or the span of an item-column changed.</li>
 
 
 </ul>
