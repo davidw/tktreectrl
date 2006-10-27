@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.29 2006/10/26 03:04:16 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.30 2006/10/27 22:52:30 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -228,6 +228,7 @@ proc ::TreeCtrl::ColumnCanResizeLeft {w column} {
 # Arguments:
 # w		The treectrl widget.
 # column	The column.
+# before	The column to place 'column' before.
 
 proc ::TreeCtrl::ColumnCanMoveHere {w column before} {
     if {[$w column compare $column == $before] ||
@@ -606,8 +607,15 @@ proc ::TreeCtrl::Motion1 {w x y} {
 		if {[lindex $id 0] eq "header"} {
 		    set column [lindex $id 1]
 		    set before $column
+		    set prev [$w column id "$Priv(column) prev visible"]
+		    set next [$w column id "$Priv(column) next visible"]
 		    if {[$w column compare $column == "tail"]} {
 			set side left
+		    } elseif {$prev ne "" && [$w column compare $prev == $column]} {
+			set side left
+		    } elseif {$next ne "" && [$w column compare $next == $column]} {
+			set before [$w column id "$column next visible"]
+			set side right
 		    } else {
 			scan [$w column bbox $column] "%d %d %d %d" x1 y1 x2 y2
 			if {$x < $x1 + ($x2 - $x1) / 2} {
