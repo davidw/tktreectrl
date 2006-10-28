@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: mycomputer.tcl,v 1.2 2006/10/04 04:08:25 treectrl Exp $
+# RCS: @(#) $Id: mycomputer.tcl,v 1.3 2006/10/28 01:26:03 treectrl Exp $
 
 proc DemoMyComputer {} {
 
@@ -10,7 +10,6 @@ proc DemoMyComputer {} {
 
     $T configure -showroot no -showbuttons no -showlines no \
 	-selectmode browse -xscrollincrement 20 \
-	-scrollmargin 16 -xscrolldelay "500 50" -yscrolldelay "500 50" \
 	-font [.menubar cget -font]
 
     #
