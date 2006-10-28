@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.2 2006/10/14 20:24:07 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.3 2006/10/28 01:27:45 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -16,8 +16,8 @@ proc DemoColumnLock {} {
 	-showbuttons no \
 	-showlines no \
 	-showroot no \
-	-xscrollincrement 6 \
-	-yscrollincrement 6
+	-xscrollincrement 6 -xscrolldelay 30 \
+	-yscrollincrement 6 -yscrolldelay 30
 
     #
     # Create columns
@@ -26,8 +26,8 @@ proc DemoColumnLock {} {
     for {set i 0} {$i < 100} {incr i} {
 	$T column create -text "C$i" -tags C$i -width [expr {40 + 20 * ($i % 2)}] -justify center
     }
-    $T column configure first -lock left -width ""
-    $T column configure last -lock right -width ""
+    $T column configure first -text LEFT -lock left -width ""
+    $T column configure last -text RIGHT -lock right -width ""
 
     $T state define CHECK
     $T state define mouseover
@@ -43,7 +43,7 @@ proc DemoColumnLock {} {
     $T style layout label1 label1.bg -detach yes -iexpand xy
     $T style layout label1 label1.text -expand wns -padx 2
     
-    for {set i 0} {$i < 10} {incr i} {
+    for {set i 1} {$i <= 10} {incr i} {
 	set I [$T item create -tags R$i -parent root]
 	$T item style set $I C0 label1
 	$T item text $I C0 "R$i"
@@ -57,7 +57,7 @@ proc DemoColumnLock {} {
     $T style layout label2 label2.bd -detach yes -iexpand xy
     $T style layout label2 label2.text -expand news -padx 2 -pady 2
     
-    for {set i 10} {$i < 20} {incr i} {
+    for {set i 11} {$i <= 20} {incr i} {
 	set I [$T item create -tags R$i -parent root]
 	$T item style set $I C0 label2
 	$T item text $I C0 "R$i"
@@ -70,7 +70,7 @@ proc DemoColumnLock {} {
     $T style layout label3 label3.div -detach yes -expand n -iexpand x
     $T style layout label3 label3.text -expand ws -padx 2 -pady 2
     
-    for {set i 20} {$i < 30} {incr i} {
+    for {set i 21} {$i <= 30} {incr i} {
 	set I [$T item create -tags R$i -parent root]
 	$T item style set $I C0 label3
 	$T item text $I C0 "R$i"
@@ -85,11 +85,11 @@ proc DemoColumnLock {} {
     $T style layout label4 label4.text -expand we -padx 2 -pady 2
     $T style layout label4 label4.w -iexpand x -padx 2 -pady {0 2}
     
-    for {set i 30} {$i < 40} {incr i} {
+    for {set i 31} {$i <= 40} {incr i} {
 	set I [$T item create -tags R$i -parent root]
 	$T item style set $I C0 label4
 	$T item element configure $I C0 label4.text -textvariable ::DemoColumnLock(R$i)
-	set clip [frame $T.clip$i -borderwidth 0]
+	set clip [frame $T.clipR${I}C0 -borderwidth 0]
 	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(R$i)
 	$T item element configure $I C0 label4.w -window $clip
 	set ::DemoColumnLock(R$i) "R$i"
@@ -143,28 +143,45 @@ proc DemoColumnLock {} {
     $T style elements s1 eRect
     $T style layout s1 eRect -detach yes -iexpand xy
 
-$T element create windowStyle.rect rect -fill {#e0e8f0 mouseover}
-$T element create windowStyle.text text
-$T element create windowStyle.w window -clip yes -destroy yes
-$T style create windowStyle -orient vertical
-$T style elements windowStyle {windowStyle.rect windowStyle.text windowStyle.w}
-$T style layout windowStyle windowStyle.rect -detach yes -iexpand xy
-$T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
-$T style layout windowStyle windowStyle.w -iexpand x -padx 2 -pady {0 2}
+    $T item style set "root children" "range {first next} {last prev}" s1
+
+    $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover}
+    $T element create windowStyle.text text
+    $T element create windowStyle.w window -clip yes -destroy yes
+    $T style create windowStyle -orient vertical
+    $T style elements windowStyle {windowStyle.rect windowStyle.text windowStyle.w}
+    $T style layout windowStyle windowStyle.rect -detach yes -iexpand xy
+    $T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
+    $T style layout windowStyle windowStyle.w -iexpand x -padx 2 -pady {0 2}
+
+    $T item style set "list {2 22}" "all lock none" windowStyle
 
     foreach C [lrange [$T column list] 1 end-1] {
-	$T item style set "root children" $C s1
-$T item style set 1 $C windowStyle
-set clip [frame $T.clip1$C -borderwidth 0]
-$::entryCmd $clip.e -width 4
-$clip.e insert end "C$C"
-$T item element configure 1 $C windowStyle.w -window $clip
+	set ::DemoColumnLock(C$C) "C$C"
 
-$T item style set 20 $C windowStyle
-set clip [frame $T.clip20$C -borderwidth 0]
-$::entryCmd $clip.e -width 4
-$clip.e insert end "C$C"
-$T item element configure 20 $C windowStyle.w -window $clip
+	set I 2
+	set clip [frame $T.clipR${I}C$C -borderwidth 0]
+	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
+	$T item element configure $I $C windowStyle.w -window $clip + \
+	    windowStyle.text -textvariable ::DemoColumnLock(C$C)
+
+	set I 22
+	set clip [frame $T.clipR${I}C$C -borderwidth 0]
+	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
+	$T item element configure $I $C windowStyle.w -window $clip + \
+	    windowStyle.text -textvariable ::DemoColumnLock(C$C)
+    }
+
+    bind DemoColumnLock <ButtonPress-1> {
+	set id [%W identify %x %y]
+	if {[lindex $id 0] eq "item"} {
+	    foreach {what item where arg1 arg2 arg3} $id {}
+	    if {$where eq "column"} {
+		if {[%W column compare $arg1 == last]} {
+		    %W item state forcolumn $item $arg1 ~CHECK
+		}
+	    }
+	}
     }
 
     bind DemoColumnLock <Button1-Motion> {
