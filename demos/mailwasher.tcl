@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: mailwasher.tcl,v 1.13 2006/10/04 04:08:25 treectrl Exp $
+# RCS: @(#) $Id: mailwasher.tcl,v 1.14 2006/10/28 01:26:37 treectrl Exp $
 
 #
 # Demo: MailWasher
@@ -27,8 +27,8 @@ proc DemoMailWasher {} {
 	#
 
 	set pad 4
-	$T column create -text Delete -textpadx $pad -tags delete
-	$T column create -text Bounce -textpadx $pad -tags bounce
+	$T column create -text Delete -textpadx $pad -justify center -tags delete
+	$T column create -text Bounce -textpadx $pad -justify center -tags bounce
 	$T column create -text Status -width 80 -textpadx $pad -tags status
 	$T column create -text Size -width 40 -textpadx $pad -justify right -tags size
 	$T column create -text From -width 140 -textpadx $pad -tags from
