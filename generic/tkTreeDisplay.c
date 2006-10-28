@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.47 2006/10/26 02:57:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.48 2006/10/28 01:20:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -232,18 +232,20 @@ Range_Redo(
 	    fixedWidth = TreeColumn_FixedWidth(tree->columns);
 
 	/* Single item column, want all items same width */
-	else if (tree->itemWidthEqual ||
-		/* This option is deprecated */
-		TreeColumn_WidthHack(tree->columnVis)) {
-
+	else if (tree->itemWidthEqual
+#ifdef DEPRECATED
+		|| TreeColumn_WidthHack(tree->columnVis)
+#endif /* DEPRECATED */
+	    ) {
 	    fixedWidth = TreeColumn_WidthOfItems(tree->columnVis);
 
 	    /* Each item is a multiple of this width */
 	    if (tree->itemWidMult > 0)
 		stepWidth = tree->itemWidMult;
+#ifdef DEPRECATED
 	    else
-		/* This option is deprecated */
 		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+#endif /* DEPRECATED */
 
 	    if ((stepWidth != -1) && (fixedWidth % stepWidth))
 		fixedWidth += stepWidth - fixedWidth % stepWidth;
@@ -254,9 +256,10 @@ Range_Redo(
 	    /* Each item is a multiple of this width */
 	    if (tree->itemWidMult > 0)
 		stepWidth = tree->itemWidMult;
+#ifdef DEPRECATED
 	    else
-		/* This option is deprecated */
 		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+#endif /* DEPRECATED */
 	}
     }
 
@@ -478,14 +481,17 @@ Range_TotalWidth(
 	/* Single item column, each item is a multiple of this width */
 	if (tree->itemWidMult > 0)
 	    stepWidth = tree->itemWidMult;
+#ifdef DEPRECATED
 	else
-	    /* This option is deprecated */
 	    stepWidth = TreeColumn_StepWidth(tree->columnVis);
+#endif /* DEPRECATED */
 
 	/* Single item column, want all items same width */
-	if (tree->itemWidthEqual ||
-		/* This option is deprecated */
-		TreeColumn_WidthHack(tree->columnVis)) {
+	if (tree->itemWidthEqual
+#ifdef DEPRECATED
+		|| TreeColumn_WidthHack(tree->columnVis)
+#endif /* DEPRECATED */
+	    ) {
 	    range->totalWidth = TreeColumn_WidthOfItems(tree->columnVis);
 	    if ((stepWidth != -1) && (range->totalWidth % stepWidth))
 		range->totalWidth += stepWidth - range->totalWidth % stepWidth;
@@ -531,18 +537,20 @@ Range_TotalWidth(
 	    fixedWidth = TreeColumn_FixedWidth(tree->columnVis);
 
 	/* Single item column, want all items same width */
-	else if (tree->itemWidthEqual ||
-		/* This option is deprecated */
-		TreeColumn_WidthHack(tree->columnVis)) {
-
+	else if (tree->itemWidthEqual
+#ifdef DEPRECATED
+		|| TreeColumn_WidthHack(tree->columnVis)
+#endif /* DEPRECATED */
+	    ) {
 	    fixedWidth = TreeColumn_WidthOfItems(tree->columnVis);
 
 	    /* Each item is a multiple of this width */
 	    if (tree->itemWidMult > 0)
 		stepWidth = tree->itemWidMult;
+#ifdef DEPRECATED
 	    else
-		/* This option is deprecated */
 		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+#endif /* DEPRECATED */
 
 	    if ((stepWidth != -1) && (fixedWidth % stepWidth))
 		fixedWidth += stepWidth - fixedWidth % stepWidth;
@@ -553,9 +561,10 @@ Range_TotalWidth(
 	    /* Each item is a multiple of this width */
 	    if (tree->itemWidMult > 0)
 		stepWidth = tree->itemWidMult;
+#ifdef DEPRECATED
 	    else
-		/* This option is deprecated */
 		stepWidth = TreeColumn_StepWidth(tree->columnVis);
+#endif /* DEPRECATED */
 	}
 
 	/* Sum of widths of items in this range */

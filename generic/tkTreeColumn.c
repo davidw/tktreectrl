@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.50 2006/10/27 22:50:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.51 2006/10/28 01:20:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3592,15 +3592,21 @@ TreeColumnCmd(
     TreeCtrl *tree = (TreeCtrl *) clientData;
     static CONST char *commandNames[] = {
 	"bbox", "cget", "compare", "configure", "count", "create", "delete",
-	"dragcget", "dragconfigure", "id", "index", "list", "move",
-	"neededwidth", "order", "tag", "width", (char *) NULL
+	"dragcget", "dragconfigure", "id",
+#ifdef DEPRECATED
+	"index",
+#endif
+	"list", "move", "neededwidth", "order", "tag", "width", (char *) NULL
     };
     enum {
 	COMMAND_BBOX, COMMAND_CGET, COMMAND_COMPARE, COMMAND_CONFIGURE,
 	COMMAND_COUNT, COMMAND_CREATE, COMMAND_DELETE, COMMAND_DRAGCGET,
-	COMMAND_DRAGCONF, COMMAND_ID, COMMAND_INDEX, COMMAND_LIST,
-	COMMAND_MOVE, COMMAND_NEEDEDWIDTH, COMMAND_ORDER, COMMAND_TAG,
-	COMMAND_WIDTH
+	COMMAND_DRAGCONF, COMMAND_ID,
+#ifdef DEPRECATED
+	COMMAND_INDEX,
+#endif
+	COMMAND_LIST, COMMAND_MOVE, COMMAND_NEEDEDWIDTH, COMMAND_ORDER,
+	COMMAND_TAG, COMMAND_WIDTH
     };
     int index;
     TreeColumnList columns;
@@ -4137,7 +4143,9 @@ doneDELETE:
 	}
 
 	case COMMAND_ID:
+#ifdef DEPRECATED
 	case COMMAND_INDEX:
+#endif
 	{
 	    Tcl_Obj *listObj;
 

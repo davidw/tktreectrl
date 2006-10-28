@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.72 2006/10/18 22:21:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.73 2006/10/28 01:20:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -459,23 +459,65 @@ static int TreeWidgetCmd(
     TreeCtrl *tree = (TreeCtrl *) clientData;
     int result = TCL_OK;
     static CONST char *commandName[] = {
-	"activate", "canvasx", "canvasy", "cget", "collapse",
-	"column", "compare", "configure", "contentbox",
+	"activate", "canvasx", "canvasy", "cget",
+#ifdef DEPRECATED
+	"collapse",
+#endif
+	"column",
+#ifdef DEPRECATED
+	"compare",
+#endif
+	"configure", "contentbox",
 	"debug", "depth", "dragimage",
-	"element", "expand", "identify", "index", "item",
-	"marquee", "notify", "numcolumns", "numitems", "orphans",
-	"range", "scan", "see", "selection", "state", "style",
-	"toggle", "xview", "yview", (char *) NULL
+	"element",
+#ifdef DEPRECATED
+	"expand",
+#endif
+	"identify", "index", "item",
+	"marquee", "notify",
+#ifdef DEPRECATED
+	"numcolumns", "numitems",
+#endif
+	"orphans",
+#ifdef DEPRECATED
+	"range",
+#endif
+	"scan", "see", "selection", "state", "style",
+#ifdef DEPRECATED
+	"toggle",
+#endif
+	"xview", "yview", (char *) NULL
     };
     enum {
 	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
-	COMMAND_COLLAPSE, COMMAND_COLUMN, COMMAND_COMPARE, COMMAND_CONFIGURE,
+#ifdef DEPRECATED
+	COMMAND_COLLAPSE,
+#endif
+	COMMAND_COLUMN,
+#ifdef DEPRECATED
+	COMMAND_COMPARE,
+#endif
+	COMMAND_CONFIGURE,
 	COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
-	COMMAND_DRAGIMAGE, COMMAND_ELEMENT, COMMAND_EXPAND,COMMAND_IDENTIFY,
+	COMMAND_DRAGIMAGE, COMMAND_ELEMENT,
+#ifdef DEPRECATED
+	COMMAND_EXPAND,
+#endif
+	COMMAND_IDENTIFY,
 	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
-	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS, COMMAND_ORPHANS, COMMAND_RANGE,
+#ifdef DEPRECATED
+	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS,
+#endif
+	COMMAND_ORPHANS,
+#ifdef DEPRECATED
+	COMMAND_RANGE,
+#endif
 	COMMAND_SCAN, COMMAND_SEE, COMMAND_SELECTION, COMMAND_STATE,
-	COMMAND_STYLE, COMMAND_TOGGLE, COMMAND_XVIEW, COMMAND_YVIEW
+	COMMAND_STYLE,
+#ifdef DEPRECATED
+	COMMAND_TOGGLE,
+#endif
+	COMMAND_XVIEW, COMMAND_YVIEW
     };
     Tcl_Obj *resultObjPtr;
     int index;
@@ -670,6 +712,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
+#ifdef DEPRECATED
 	case COMMAND_COMPARE:
 	{
 	    TreeItem item1, item2;
@@ -708,6 +751,7 @@ static int TreeWidgetCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(compare));
 	    break;
 	}
+#endif /* DEPRECATED */
 
 	case COMMAND_DEBUG:
 	{
@@ -862,6 +906,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
+#ifdef DEPRECATED
 	case COMMAND_INDEX:
 	{
 	    TreeItem item;
@@ -877,6 +922,7 @@ static int TreeWidgetCmd(
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item));
 	    break;
 	}
+#endif /* DEPRECATED */
 
 	case COMMAND_ITEM:
 	{
@@ -896,6 +942,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
+#ifdef DEPRECATED
 	case COMMAND_NUMCOLUMNS:
 	{
 	    if (objc != 2) {
@@ -915,6 +962,7 @@ static int TreeWidgetCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
 	    break;
 	}
+#endif /* DEPRECATED */
 
 	case COMMAND_ORPHANS:
 	{
@@ -944,6 +992,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
+#ifdef DEPRECATED
 	case COMMAND_RANGE:
 	{
 	    TreeItem item, itemFirst, itemLast;
@@ -985,6 +1034,7 @@ static int TreeWidgetCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
+#endif /* DEPRECATED */
 
 	case COMMAND_SCAN:
 	{

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.71 2006/10/26 03:03:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.72 2006/10/28 01:20:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4891,9 +4891,17 @@ ItemElementCmd(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = { "actual", "cget", "configure",
+    static CONST char *commandNames[] = {
+#ifdef DEPRECATED
+	"actual",
+#endif
+	"cget", "configure",
 	"perstate", (char *) NULL };
-    enum { COMMAND_ACTUAL, COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_PERSTATE };
+    enum {
+#ifdef DEPRECATED
+    COMMAND_ACTUAL,
+#endif
+    COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_PERSTATE };
     int index;
     int columnIndex;
     Column *column;
@@ -4926,7 +4934,9 @@ ItemElementCmd(
 
     switch (index) {
 	/* T item element perstate I C E option ?stateList? */
+#ifdef DEPRECATED
 	case COMMAND_ACTUAL:
+#endif
 	case COMMAND_PERSTATE:
 	{
 	    int state;
@@ -6877,7 +6887,9 @@ TreeItemCmd(
 	"cget",
 	"collapse",
 	"compare",
+#ifdef DEPRECATED
 	"complex",
+#endif
 	"configure",
 	"count",
 	"descendants",
@@ -6920,7 +6932,9 @@ TreeItemCmd(
 	COMMAND_CGET,
 	COMMAND_COLLAPSE,
 	COMMAND_COMPARE,
+#ifdef DEPRECATED
 	COMMAND_COMPLEX,
+#endif
 	COMMAND_CONFIGURE,
 	COMMAND_COUNT,
 	COMMAND_DESCENDANTS,
@@ -6974,7 +6988,9 @@ TreeItemCmd(
 	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item option", NULL }, /* cget */
 	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* collapse */
 	{ 3, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, "item1 op item2", NULL }, /* compare */
+#ifdef DEPRECATED
 	{ 2, 100000, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL }, /* complex */
+#endif
 	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL }, /* configure */
 	{ 0, 1, AF_NOT_ITEM, 0, 0, "?-visible?" , NULL}, /* count */
 	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* descendants */
@@ -7271,6 +7287,8 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(compare));
 	    break;
 	}
+
+#ifdef DEPRECATED
 	case COMMAND_COMPLEX:
 	{
 	    int i, j, columnIndex;
@@ -7351,6 +7369,8 @@ TreeItemCmd(
 	    }
 	    break;
 	}
+#endif /* DEPRECATED*/
+
 	/* T item configure I ?option? ?value? ?option value ...? */
 	case COMMAND_CONFIGURE:
 	{
