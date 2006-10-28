@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.14 2006/10/14 20:21:49 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.15 2006/10/28 01:24:13 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -443,7 +443,7 @@ proc DemoFirefoxPrivacyButton1 {w x y} {
 			return
 		}
 		if {[lindex $id 5] eq "eText1"} {
-			$w toggle $item
+			$w item toggle $item
 			DisplayStylesInItem $item
 		}
 	}

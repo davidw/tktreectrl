@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.8 2006/10/04 03:57:08 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.9 2006/10/28 01:24:13 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
@@ -367,7 +367,7 @@ proc BigListButton1 {w x y} {
 			return
 		}
 		if {[$w item tag expr $item !info]} {
-			$w toggle $item
+			$w item toggle $item
 		}
 	}
 	return

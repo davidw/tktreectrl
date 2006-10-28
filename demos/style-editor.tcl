@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.8 2006/10/04 04:10:20 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.9 2006/10/28 01:24:13 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -723,7 +723,7 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
     }
     # No selected item uses the current style, look for an unselected item
     if {$match eq ""} {
-	foreach I [$Tdemo range first last] {
+	foreach I [$Tdemo item range first last] {
 	    set C 0
 	    foreach S [$Tdemo item style set $I] {
 		if {$S eq $style} {
