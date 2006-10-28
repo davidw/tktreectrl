@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.45 2006/10/26 03:00:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.46 2006/10/28 01:21:51 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5059,7 +5059,8 @@ dbwin("DynamicCO_Set id=%d saveInternalPtr=%p save=%p\n", cd->id, saveInternalPt
 dbwin("saving object '%s'\n", *value ? Tcl_GetString(*value) : "NULL");
 #endif
 	*objPtrPtr = *value;
-	Tcl_IncrRefCount(*value);
+	if (*value != NULL)
+	    Tcl_IncrRefCount(*value);
     }
 
     *(DynamicCOSave **) saveInternalPtr = save;
