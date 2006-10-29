@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.51 2006/10/28 01:20:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.52 2006/10/29 02:36:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -16,9 +16,9 @@ typedef struct Column Column;
 
 #ifdef UNIFORM_GROUP
 typedef struct UniformGroup {
-    Tcl_HashEntry *hPtr;
-    int refCount;
-    int minSize;
+    Tcl_HashEntry *hPtr;	/* Entry in TreeCtrl.uniformGroupHash */
+    int refCount;		/* Number of columns in this group. */
+    int minSize;		/* Used during layout. */
 } UniformGroup;
 #endif
 
@@ -185,7 +185,8 @@ UniformGroupCO_Set(
 	    }
 	    new->refCount++;
 #ifdef TREECTRL_DEBUG
-	    dbwin("UniformGroupCO_Set: %s refCount=%d\n", Tcl_GetString(*valuePtr), new->refCount);
+	    if (tree->debug.enable)
+		dbwin("UniformGroupCO_Set: %s refCount=%d\n", Tcl_GetString(*valuePtr), new->refCount);
 #endif
 	} else {
 	    new = NULL;
@@ -235,8 +236,8 @@ UniformGroupCO_Free(
     UniformGroup *uniform = *(UniformGroup **) internalPtr;
 
 #ifdef TREECTRL_DEBUG
-    if (uniform != NULL) {
-	TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    if (tree->debug.enable && uniform != NULL) {
 	dbwin("UniformGroupCO_Free: %s refCount=%d\n", Tcl_GetHashKey(&tree->uniformGroupHash, uniform->hPtr), uniform->refCount - 1);
     }
 #endif
@@ -416,11 +417,12 @@ static Tk_OptionSpec columnSpecs[] = {
 };
 
 #define IS_TAIL(C) (((TreeColumn) C) == tree->columnTail)
+#define IS_ALL(C) ((((TreeColumn) C) == COLUMN_ALL) || (((TreeColumn) C) == COLUMN_NTAIL))
 
 /*
  *----------------------------------------------------------------------
  *
- * ColumnOptionSet --
+ * ColumnCO_Set --
  *
  *	Tk_ObjCustomOption.setProc(). Converts a Tcl_Obj holding a
  *	column description into a pointer to a Column.
@@ -437,7 +439,7 @@ static Tk_OptionSpec columnSpecs[] = {
  */
 
 static int
-ColumnOptionSet(
+ColumnCO_Set(
     ClientData clientData,	/* CFO_xxx flags to control the conversion. */
     Tcl_Interp *interp,		/* Current interpreter. */
     Tk_Window tkwin,		/* Window for which option is being set. */
@@ -482,7 +484,7 @@ ColumnOptionSet(
 /*
  *----------------------------------------------------------------------
  *
- * ColumnOptionGet --
+ * ColumnCO_Get --
  *
  *	Tk_ObjCustomOption.getProc(). Converts a TreeColumn into a
  *	Tcl_Obj string representation.
@@ -498,7 +500,7 @@ ColumnOptionSet(
  */
 
 static Tcl_Obj *
-ColumnOptionGet(
+ColumnCO_Get(
     ClientData clientData,	/* Not used. */
     Tk_Window tkwin,		/* Window for which option is being set. */
     char *recordPtr,		/* Pointer to widget record. */
@@ -510,15 +512,17 @@ ColumnOptionGet(
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
     if (value == NULL)
 	return NULL;
+#if 0
     if (value == COLUMN_ALL)
 	return Tcl_NewStringObj("all", -1);
+#endif
     return TreeColumn_ToObj(tree, value);
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * ColumnOptionRestore --
+ * ColumnCO_Restore --
  *
  *	Tk_ObjCustomOption.restoreProc(). Restores a TreeColumn value
  *	from a saved value.
@@ -533,7 +537,7 @@ ColumnOptionGet(
  */
 
 static void
-ColumnOptionRestore(
+ColumnCO_Restore(
     ClientData clientData,	/* Not used. */
     Tk_Window tkwin,		/* Not used. */
     char *internalPtr,		/* Where to store old value. */
@@ -545,14 +549,14 @@ ColumnOptionRestore(
 /*
  * The following structure contains pointers to functions used for processing
  * a custom config option that handles Tcl_Obj<->TreeColumn conversion.
- * A column description must refer to a valid column. "all" is not allowed.
+ * A column description must refer to a single column.
  */
-Tk_ObjCustomOption columnCustomOption =
+Tk_ObjCustomOption columnCO =
 {
     "column",
-    ColumnOptionSet,
-    ColumnOptionGet,
-    ColumnOptionRestore,
+    ColumnCO_Set,
+    ColumnCO_Get,
+    ColumnCO_Restore,
     NULL,
     (ClientData) (CFO_NOT_NULL)
 };
@@ -560,15 +564,15 @@ Tk_ObjCustomOption columnCustomOption =
 /*
  * The following structure contains pointers to functions used for processing
  * a custom config option that handles Tcl_Obj<->TreeColumn conversion.
- * A column description must refer to a valid column. "all" is not allowed.
+ * A column description must refer to a single column.
  * "tail" is not allowed.
  */
-Tk_ObjCustomOption columnCustomOption_NOT_TAIL =
+Tk_ObjCustomOption columnCO_NOT_TAIL =
 {
     "column",
-    ColumnOptionSet,
-    ColumnOptionGet,
-    ColumnOptionRestore,
+    ColumnCO_Set,
+    ColumnCO_Get,
+    ColumnCO_Restore,
     NULL,
     (ClientData) (CFO_NOT_NULL | CFO_NOT_TAIL)
 };
@@ -585,7 +589,7 @@ static Tk_OptionSpec dragSpecs[] = {
      0, (ClientData) NULL, 0},
     {TK_OPTION_CUSTOM, "-imagecolumn", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnDrag.column),
-     TK_OPTION_NULL_OK, (ClientData) &columnCustomOption_NOT_TAIL, 0},
+     TK_OPTION_NULL_OK, (ClientData) &columnCO_NOT_TAIL, 0},
     {TK_OPTION_PIXELS, "-imageoffset", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(TreeCtrl, columnDrag.offsetObj),
      Tk_Offset(TreeCtrl, columnDrag.offset), 0, (ClientData) NULL, 0},
@@ -594,7 +598,7 @@ static Tk_OptionSpec dragSpecs[] = {
      0, (ClientData) NULL, 0},
     {TK_OPTION_CUSTOM, "-indicatorcolumn", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnDrag.indColumn),
-     TK_OPTION_NULL_OK, (ClientData) &columnCustomOption, 0},
+     TK_OPTION_NULL_OK, (ClientData) &columnCO, 0},
     {TK_OPTION_STRING_TABLE, "-indicatorside", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(TreeCtrl, columnDrag.indSide),
      0, (ClientData) arrowSideST, 0},
@@ -816,7 +820,7 @@ typedef struct Qualifiers {
     TagExpr expr;		/* Tag expression. */
     int exprOK;			/* TRUE if expr is valid. */
 #ifdef COLUMN_LOCK
-    int lock;			/* COLUMN_LOCK_xxx or -2 */
+    int lock;			/* COLUMN_LOCK_xxx or -1 */
 #endif
 } Qualifiers;
 
@@ -1086,11 +1090,11 @@ TreeColumnList_FromObj(
     )
 {
     Tcl_Interp *interp = tree->interp;
-    int objc;
-    int index, listIndex;
+    int i, objc, index, listIndex;
     Tcl_Obj **objv, *elemPtr;
     Column *column = NULL;
     Qualifiers q;
+    int qualArgsTotal;
 
     static CONST char *indexName[] = {
 	"all", "end", "first", "last", "list", "order", "range", "tail",
@@ -1136,13 +1140,14 @@ TreeColumnList_FromObj(
     elemPtr = objv[listIndex];
     if (Tcl_GetIndexFromObj(NULL, elemPtr, indexName, NULL, 0, &index)
 	    == TCL_OK) {
-	int qualArgsTotal = 0;
 
 	if (objc - listIndex < indexArgs[index]) {
 	    Tcl_AppendResult(interp, "missing arguments to \"",
 		    Tcl_GetString(elemPtr), "\" keyword", NULL);
 	    goto errorExit;
 	}
+
+	qualArgsTotal = 0;
 	if (indexQual[index]) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + indexArgs[index],
 		    &qualArgsTotal) != TCL_OK) {
@@ -1175,6 +1180,8 @@ TreeColumnList_FromObj(
 		    if (!(flags & CFO_NOT_TAIL))
 			TreeColumnList_Append(columns, tree->columnTail);
 		    column = NULL;
+		} else if (flags & CFO_NOT_TAIL) {
+		    column = (Column *) COLUMN_NTAIL;
 		} else {
 		    column = (Column *) COLUMN_ALL;
 		}
@@ -1200,7 +1207,7 @@ TreeColumnList_FromObj(
 	    {
 		int listObjc;
 		Tcl_Obj **listObjv;
-		int i, count;
+		int count;
 
 		if (Tcl_ListObjGetElements(interp, objv[listIndex + 1],
 			&listObjc, &listObjv) != TCL_OK)
@@ -1218,12 +1225,15 @@ TreeColumnList_FromObj(
 		count = TreeColumnList_Count(columns);
 		for (i = 0; i < count; i++) {
 		    TreeColumn column = TreeColumnList_Nth(columns, i);
-		    if (column == COLUMN_ALL)
+		    if (IS_ALL(column))
 			break;
 		}
 		if (i < count) {
 		    TreeColumnList_Free(columns);
-		    column = (Column *) COLUMN_ALL;
+		    if (flags & CFO_NOT_TAIL)
+			column = (Column *) COLUMN_NTAIL;
+		    else
+			column = (Column *) COLUMN_ALL;
 		} else
 		    column = NULL;
 		break;
@@ -1279,35 +1289,16 @@ TreeColumnList_FromObj(
 		break;
 	    }
 	}
-	/* If 1 column, use it and clear the list. */
-	if (TreeColumnList_Count(columns) == 1) {
-	    column = (Column *) TreeColumnList_Nth(columns, 0);
-	    columns->count = 0;
-
-	}
-
-	/* If "all" but only tail column exists, use it. */
-	if ((column == (Column *) COLUMN_ALL) && (tree->columns == NULL) &&
-		!(flags & CFO_NOT_TAIL))
-	    column = (Column *) tree->columnTail;
-
-	/* If > 1 column, no modifiers may follow. */
-	if ((TreeColumnList_Count(columns) > 1) || (column == (Column *) COLUMN_ALL)) {
-	    if (listIndex + indexArgs[index] + qualArgsTotal < objc) {
-		FormatResult(interp,
-		    "unexpected arguments after \"%s\" keyword",
-		    indexName[index]);
-		goto errorExit;
-	    }
-	}
 	listIndex += indexArgs[index] + qualArgsTotal;
+
+    /* No indexName[] was found. */
     } else {
-	int gotId = FALSE, id = -1;
+	int gotId = FALSE, id;
+	TagExpr expr;
 
 	if (tree->columnPrefixLen) {
 	    char *end, *t = Tcl_GetString(elemPtr);
-	    if (strncmp(t, tree->columnPrefix, tree->columnPrefixLen) == 0)
-	    {
+	    if (strncmp(t, tree->columnPrefix, tree->columnPrefixLen) == 0) {
 		t += tree->columnPrefixLen;
 		id = strtoul(t, &end, 10);
 		if ((end != t) && (*end == '\0'))
@@ -1325,47 +1316,82 @@ TreeColumnList_FromObj(
 		column = column->next;
 	    }
 	    listIndex++;
-	} else {
-	    TagExpr expr;
-	    int qualArgsTotal = 0;
+	    goto gotFirstPart;
+	}
 
-	    if (objc > 1) {
-		if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
-			&qualArgsTotal) != TCL_OK) {
-		    goto errorExit;
-		}
-	    }
-	    if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
-		goto errorExit;
+	/* Try a list of qualifiers. This has the same effect as
+	 * "all QUALIFIERS". */
+	if (Qualifiers_Scan(&q, objc, objv, listIndex, &qualArgsTotal)
+		!= TCL_OK) {
+	    goto errorExit;
+	}
+	if (qualArgsTotal) {
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
-		if (TagExpr_Eval(&expr, column->tagInfo) &&
-			Qualifies(&q, column)) {
+		if (Qualifies(&q, column)) {
 		    TreeColumnList_Append(columns, (TreeColumn) column);
 		}
 		column = column->next;
 	    }
-	    TagExpr_Free(&expr);
+	    if (!(flags & CFO_NOT_TAIL) &&
+		    Qualifies(&q, (Column *) tree->columnTail)) {
+		TreeColumnList_Append(columns, tree->columnTail);
+	    }
 	    column = NULL;
+	    listIndex += qualArgsTotal;
+	    goto gotFirstPart;
+	}
 
-	    /* If 1 column, use it and clear the list. */
-	    if (TreeColumnList_Count(columns) == 1) {
-		column = (Column *) TreeColumnList_Nth(columns, 0);
-		columns->count = 0;
-
+	/* Try a tag expression. */
+	if (objc > 1) {
+	    if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
+		    &qualArgsTotal) != TCL_OK) {
+		goto errorExit;
 	    }
-
-	    /* If > 1 column, no modifiers may follow. */
-	    if (TreeColumnList_Count(columns) > 1) {
-		if (listIndex + 1 + qualArgsTotal < objc) {
-		    FormatResult(interp,
-			"unexpected arguments after \"%s\"",
-			Tcl_GetString(elemPtr));
-		    goto errorExit;
-		}
+	}
+	if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
+	    goto errorExit;
+	column = (Column *) tree->columns;
+	while (column != NULL) {
+	    if (TagExpr_Eval(&expr, column->tagInfo) && Qualifies(&q, column)) {
+		TreeColumnList_Append(columns, (TreeColumn) column);
 	    }
+	    column = column->next;
+	}
+	if (!(flags & CFO_NOT_TAIL) &&
+		TagExpr_Eval(&expr, ((Column *) tree->columnTail)->tagInfo) &&
+		Qualifies(&q, (Column *) tree->columnTail)) {
+	    TreeColumnList_Append(columns, tree->columnTail);
+	}
+	TagExpr_Free(&expr);
+	column = NULL;
+	listIndex += 1 + qualArgsTotal;
+    }
 
-	    listIndex += 1 + qualArgsTotal;
+gotFirstPart:
+
+    /* If 1 column, use it and clear the list. */
+    if (TreeColumnList_Count(columns) == 1) {
+	column = (Column *) TreeColumnList_Nth(columns, 0);
+	columns->count = 0;
+    }
+
+    /* If "all" but only tail column exists, use it. */
+    if (IS_ALL(column) && (tree->columns == NULL) && !(flags & CFO_NOT_TAIL))
+	column = (Column *) tree->columnTail;
+
+    /* If > 1 column, no modifiers may follow. */
+    if ((TreeColumnList_Count(columns) > 1) || IS_ALL(column)) {
+	if (listIndex  < objc) {
+	    Tcl_AppendResult(interp, "unexpected arguments after \"",
+		(char *) NULL);
+	    for (i = 0; i < listIndex; i++) {
+		Tcl_AppendResult(interp, Tcl_GetString(objv[i]), (char *) NULL);
+		if (i != listIndex - 1)
+		    Tcl_AppendResult(interp, " ", (char *) NULL);
+	    }
+	    Tcl_AppendResult(interp, "\"", (char *) NULL);
+	    goto errorExit;
 	}
     }
 
@@ -1377,6 +1403,7 @@ TreeColumnList_FromObj(
 	goto goodExit;
     }
 
+    /* Process any modifiers following the column we matched above. */
     for (; listIndex < objc; /* nothing */) {
 	int qualArgsTotal = 0;
 
@@ -1436,7 +1463,7 @@ TreeColumnList_FromObj(
 	}
 	listIndex += modArgs[index] + qualArgsTotal;
     }
-    if ((flags & CFO_NOT_MANY) && ((column == (Column *) COLUMN_ALL) ||
+    if ((flags & CFO_NOT_MANY) && (IS_ALL(column) ||
 	    (TreeColumnList_Count(columns) > 1))) {
 	FormatResult(interp, "can't specify > 1 column for this command");
 	goto errorExit;
@@ -1456,8 +1483,8 @@ notNull:
 		    goto notTail;
 	    }
 	}
-    } else if (column == (Column *) COLUMN_ALL) {
-	TreeColumnList_Append(columns, COLUMN_ALL);
+    } else if (IS_ALL(column)) {
+	TreeColumnList_Append(columns, column);
     } else {
 	if ((flags & CFO_NOT_TAIL) && IS_TAIL(column)) {
 notTail:
@@ -1499,8 +1526,8 @@ errorExit:
 int
 TreeColumn_FromObj(
     TreeCtrl *tree,		/* Widget info. */
-    Tcl_Obj *objPtr,		/* Object to parse to an item. */
-    TreeColumn *columnPtr,	/* Returned item. */
+    Tcl_Obj *objPtr,		/* Object to parse to a column. */
+    TreeColumn *columnPtr,	/* Returned column. */
     int flags			/* CFO_xxx flags */
     )
 {
@@ -1522,7 +1549,7 @@ TreeColumn_FromObj(
  *	Begin iterating over items. A command might accept two column
  *	descriptions for a range of column, or a single column description
  *	which may itself refer to multiple column. Either column
- *	description could be COLUMN_ALL.
+ *	description could be "all".
  *
  * Results:
  *	Returns the first column to iterate over. If an error occurs
@@ -1551,13 +1578,15 @@ ColumnForEach_Start(
 
     iter->tree = tree;
     iter->all = FALSE;
+    iter->ntail = FALSE;
     iter->error = 0;
     iter->list = NULL;
 
-    if (column == COLUMN_ALL || column2 == COLUMN_ALL) {
+    if (IS_ALL(column) || IS_ALL(column2)) {
 	iter->all = TRUE;
+	iter->ntail = (column == COLUMN_NTAIL) || (column2 == COLUMN_NTAIL);
 	if (tree->columns == NULL)
-	    return iter->current = tree->columnTail;
+	    return iter->current = iter->ntail ? NULL : tree->columnTail;
 	iter->next = TreeColumn_Next(tree->columns);
 	return iter->current = tree->columns;
     }
@@ -1607,7 +1636,7 @@ ColumnForEach_Next(
 	    return iter->current = NULL;
 	column = iter->next;
 	if (column == NULL)
-	    return iter->current = tree->columnTail;
+	    return iter->current = iter->ntail ? NULL : tree->columnTail;
 	iter->next = TreeColumn_Next(column);
 	return iter->current = column;
     }
@@ -1773,33 +1802,30 @@ Column_FreeColors(
     WCFREE(colors, XColor *, count);
 }
 
-#ifdef COLUMN_LOCK
-void DumpColumns(TreeCtrl *tree)
-{
-    Column *column = (Column *) tree->columns;
-return;
-    dbwin("DumpColumns: columnFirst id=%d\n",
-	tree->columns ? TreeColumn_GetID(tree->columns) : -1);
-    dbwin("DumpColumns: columnLockLeft id=%d\n",
-	tree->columnLockLeft ? TreeColumn_GetID(tree->columnLockLeft) : -1);
-    dbwin("DumpColumns: columnLockNone id=%d\n",
-	tree->columnLockNone ? TreeColumn_GetID(tree->columnLockNone) : -1);
-    dbwin("DumpColumns: columnLockRight id=%d\n",
-	tree->columnLockRight ? TreeColumn_GetID(tree->columnLockRight) : -1);
-    dbwin("DumpColumns: columnLast id=%d\n",
-	tree->columnLast ? TreeColumn_GetID(tree->columnLast) : -1);
-    while (column != NULL) {
-	dbwin("DumpColumns: id=%d index=%d lock=%d\n",
-	    column->id, column->index, column->lock);
-	column = column->next;
-    }
-}
-#endif
+/*
+ *----------------------------------------------------------------------
+ *
+ * Column_Move --
+ *
+ *	Move a column before another.
+ *
+ * Results:
+ *	If the column is moved, then the list of item-columns for every item
+ *	is rearranged and the treectrl option -defaultstyles is rearranged.
+ *	Whether the column is moved or not, the .index field of every
+ *	column is recalculated.
+ *
+ * Side effects:
+ *	A redisplay is scheduled if the moved column is visible.
+ *
+ *----------------------------------------------------------------------
+ */
 
 static void
 Column_Move(
-    Column *move,
-    Column *before
+    Column *move,		/* Column to move. */
+    Column *before		/* Column to place 'move' in front of.
+				 * May be the same as 'move'. */
     )
 {
     TreeCtrl *tree = move->tree;
@@ -1942,10 +1968,6 @@ renumber:
 #endif
 	column = column->next;
     }
-
-#ifdef COLUMN_LOCK
-    DumpColumns(tree);
-#endif /* COLUMN_LOCK */
 
     if (move->visible) {
 	/* Must update column widths because of expansion. */
@@ -2270,7 +2292,6 @@ Column_Alloc(
     column->optionTable = Tk_CreateOptionTable(tree->interp, columnSpecs);
     if (Tk_InitOptions(tree->interp, (char *) column, column->optionTable,
 		tree->tkwin) != TCL_OK) {
-dbwin("boom %s\n", Tcl_GetStringResult(tree->interp));
 	WFREE(column, Column);
 	return NULL;
     }
@@ -3349,6 +3370,22 @@ int TreeColumn_GetID(
 }
 
 #ifdef COLUMN_LOCK
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_Lock --
+ *
+ *	Return the value of the -lock option for a column.
+ *
+ * Results:
+ *	One of the COLUMN_LOCK_xxx constants.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int TreeColumn_Lock(
     TreeColumn column_		/* Column token. */
     )
@@ -3786,7 +3823,6 @@ TreeColumnCmd(
 	/* T column delete first ?last? */
 	case COMMAND_DELETE:
 	{
-#if 1
 	    TreeColumnList columns, column2s;
 	    TreeColumn _column;
 	    Column *column, *prev, *next;
@@ -3918,142 +3954,6 @@ doneDELETE:
 	    TreeItemList_Free(&columns);
 	    if (objc == 5)
 		TreeItemList_Free(&column2s);
-#else
-	    int firstIndex, lastIndex;
-	    TreeColumn _column;
-	    Column *column, *first, *last, *prev = NULL, *next = NULL;
-	    TreeItem item;
-	    Tcl_HashEntry *hPtr;
-	    Tcl_HashSearch search;
-
-	    if (objc < 4 || objc > 5) {
-		Tcl_WrongNumArgs(interp, 3, objv, "first ?last?");
-		return TCL_ERROR;
-	    }
-	    if (TreeColumn_FromObj(tree, objv[3], &_column,
-			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
-		return TCL_ERROR;
-	    first = (Column *) _column;
-	    last = first;
-	    if (objc == 5) {
-		if (TreeColumn_FromObj(tree, objv[4], &_column,
-			    CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
-		    return TCL_ERROR;
-		last = (Column *) _column;
-	    }
-
-	    /* T column delete "all" */
-	    if (first == (Column *) COLUMN_ALL ||
-		    last == (Column *) COLUMN_ALL) {
-		column = (Column *) tree->columns;
-		while (column != NULL) {
-		    column = Column_Free(column);
-		}
-		((Column *) tree->columnTail)->index = 0;
-		tree->columns = NULL;
-		tree->columnLast = NULL;
-#ifdef COLUMN_LOCK
-		tree->columnLockLeft = NULL;
-		tree->columnLockNone = NULL;
-		tree->columnLockRight = NULL;
-#endif
-		/* Delete all TreeItemColumns */
-		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-		while (hPtr != NULL) {
-		    item = (TreeItem) Tcl_GetHashValue(hPtr);
-		    TreeItem_RemoveAllColumns(tree, item);
-		    hPtr = Tcl_NextHashEntry(&search);
-		}
-
-		tree->columnTree = NULL;
-		tree->columnDrag.column = tree->columnDrag.indColumn = NULL;
-		tree->widthOfColumns = tree->headerHeight = -1;
-#ifdef COLUMN_LOCK
-		tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
-		Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
-		break;
-	    }
-
-	    /* Swap first and last if needed */
-	    if (last->index < first->index) {
-		column = first;
-		first = last;
-		last = column;
-	    }
-
-	    firstIndex = first->index;
-	    lastIndex = last->index;
-
-	    prev = first->prev;
-	    next = last->next;
-
-	    column = first;
-	    while (column != NULL) {
-		Column *next;
-		if (column == (Column *) tree->columnTree)
-		    tree->columnTree = NULL;
-		if (column == (Column *) tree->columnDrag.column)
-		    tree->columnDrag.column = NULL;
-		if (column == (Column *) tree->columnDrag.indColumn)
-		    tree->columnDrag.indColumn = NULL;
-		next = Column_Free(column);
-		if (column == last)
-		    break;
-		column = next;
-	    }
-
-	    if (prev != NULL)
-		prev->next = next;
-	    else
-		tree->columns = (TreeColumn) next;
-	    if (next == NULL)
-		tree->columnLast = (TreeColumn) prev;
-	    else
-		next->prev = prev;
-
-	    /* Delete all TreeItemColumns in the range */
-	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-	    while (hPtr != NULL) {
-		item = (TreeItem) Tcl_GetHashValue(hPtr);
-		TreeItem_RemoveColumns(tree, item, firstIndex, lastIndex);
-		hPtr = Tcl_NextHashEntry(&search);
-	    }
-
-#ifdef COLUMN_LOCK
-	    tree->columnLockLeft = NULL;
-	    tree->columnLockNone = NULL;
-	    tree->columnLockRight = NULL;
-
-	    index = 0;
-	    column = (Column *) tree->columns;
-	    while (column != NULL) {
-		column->index = index++;
-		if (column->lock == COLUMN_LOCK_LEFT && tree->columnLockLeft == NULL)
-		    tree->columnLockLeft = (TreeColumn) column;
-		if (column->lock == COLUMN_LOCK_NONE && tree->columnLockNone == NULL)
-		    tree->columnLockNone = (TreeColumn) column;
-		if (column->lock == COLUMN_LOCK_RIGHT && tree->columnLockRight == NULL)
-		    tree->columnLockRight = (TreeColumn) column;
-		column = column->next;
-	    }
-	    ((Column *) tree->columnTail)->index = firstIndex;
-#else
-	    /* Renumber trailing columns */
-	    column = next;
-	    while (column != NULL) {
-		column->index = firstIndex++;
-		column = column->next;
-	    }
-	    ((Column *) tree->columnTail)->index = firstIndex;
-#endif
-
-	    tree->widthOfColumns = tree->headerHeight = -1;
-#ifdef COLUMN_LOCK
-	    tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
-	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
-#endif
 	    break;
 	}
 
@@ -5146,7 +5046,7 @@ TreeColumn_Bbox(
     }
 #endif
 
-    *x = left + ((Column *) column)->offset;
+    *x = left + TreeColumn_Offset(column);
     return 0;
 }
 
@@ -5293,7 +5193,7 @@ LayoutColumns(
     int uniformCount = 0;
 #endif
 
-    if (visPtr)
+    if (visPtr != NULL)
 	(*visPtr) = NULL;
     (*countVisPtr) = 0;
 
@@ -5352,7 +5252,7 @@ LayoutColumns(
 		    numSqueeze++;
 #endif
 	    }
-	    if (visPtr && (*visPtr) == NULL)
+	    if (visPtr != NULL && (*visPtr) == NULL)
 		(*visPtr) = column;
 	    (*countVisPtr)++;
 	} else
@@ -5464,7 +5364,7 @@ LayoutColumns(
 doOffsets:
 
     /* Calculate the horizontal offset of each column in the range.
-     * The total width if recalculated as well (needed anyway if any
+     * The total width is recalculated as well (needed anyway if any
      * columns were expanded or squeezed). */
     totalWidth = 0;
     column = first;
@@ -5504,6 +5404,11 @@ Tree_WidthOfColumns(
     TreeCtrl *tree		/* Widget info. */
     )
 {
+    /* This gets called when the layout of all columns needs to be current.
+     * So update the layout of the left- and right-locked columns too. */
+    (void) Tree_WidthOfLeftColumns(tree);
+    (void) Tree_WidthOfRightColumns(tree);
+
     if (tree->widthOfColumns >= 0)
 	return tree->widthOfColumns;
 
@@ -5644,12 +5549,7 @@ Tree_LayoutColumns(
     }
 #endif
 
-#ifdef COLUMN_LOCK
-    column = (Column *) tree->columnLockNone;
-    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
     while (column != NULL) {
-#endif
 	if (column->visible) {
 	    if (column->widthObj != NULL)
 		width = column->width;
@@ -5690,12 +5590,8 @@ Tree_LayoutColumns(
 #ifdef UNIFORM_GROUP
     /* Apply the -uniform and -weight options. */
     if (uniformCount > 0) {
-#ifdef COLUMN_LOCK
-	column = (Column *) tree->columnLockNone;
-	while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
+	column = (Column *) tree->columns;
 	while (column != NULL) {
-#endif
 	    if (column->visible &&
 		    column->widthObj == NULL &&
 		    column->uniform != NULL) {
@@ -5722,13 +5618,8 @@ Tree_LayoutColumns(
 	    int each = (spaceRemaining >= numSqueeze) ?
 		spaceRemaining / numSqueeze : 1;
 	    numSqueeze = 0;
-#ifdef COLUMN_LOCK
-	    column = (Column *) tree->columnLockNone;
-	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
-#endif
 		if (column->visible &&
 			column->squeeze &&
 			(column->widthObj == NULL)) {
@@ -5754,13 +5645,8 @@ Tree_LayoutColumns(
 	    int each = (spaceRemaining >= numExpand) ?
 		spaceRemaining / numExpand : 1;
 	    numExpand = 0;
-#ifdef COLUMN_LOCK
-	    column = (Column *) tree->columnLockNone;
-	    while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
-#endif
 #ifdef UNIFORM_GROUP
 		int weight = MAX(column->weight, 0);
 		if (column->visible &&
