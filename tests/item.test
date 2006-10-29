@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.16 2006/10/14 20:21:03 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.17 2006/10/29 02:41:58 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -178,33 +178,52 @@ test item-12.2 {item remove} -body {
     .t item remove 12
 } -result {}
 
-test item-13.1 {item complex: missing args} -body {
+test item-13.1 {item complex: missing args} -constraints {
+    deprecated
+} -body {
     .t item complex 8
 } -returnCodes error -result {wrong # args: should be ".t item complex item list ..."}
 
-test item-13.2 {item complex: only allowed if column style is defined} -body {
+test item-13.2 {item complex: only allowed if column style is defined} -constraints {
+    deprecated
+} -body {
     .t item complex 8 {{e1 -text Hallo}}
 } -returnCodes error -result {column #0 doesn't exist}
 
-test item-13.3 {item complex: invalid list} -body {
+test item-13.3 {item complex: invalid list} -constraints {
+    deprecated
+} -body {
     .t column create -tag column0
     .t item style set 8 0 testStyle
     .t item complex 8 {{e1 -text}}
 } -returnCodes error -result {wrong # args: should be "element option value ..."}
 
-test item-13.4 {item complex: element name not defined in style} -body {
+test item-13.4 {item complex: element name not defined in style} -constraints {
+    deprecated
+} -body {
     .t item complex 8 {{e1 -text Hallo}}
 } -returnCodes error -result {element "e1" doesn't exist}
 
-test item-13.5 {item complex: option not known in element} -body {
+test item-13.5 {item complex: option not known in element} -constraints {
+    deprecated
+} -body {
     .t item complex 8 {{eText -bitmap questhead}}
 } -returnCodes error -result {unknown option "-bitmap"}
 
-test item-13.6 {item complex: invalid option value in element} -body {
+test item-13.6 {item complex: invalid option value in element} -constraints {
+    deprecated
+} -body {
     .t item complex 8 {{eText -fill foo}}
+} -cleanup {
+    .t column delete column0
 } -returnCodes error -result {unknown color name "foo"}
 
-test item-14.1 {item element: missing command} -body {
+test item-14.1 {item element: missing command} -setup {
+    # in case the deprecated complex command is not run...
+    .t column create -tag column0
+    .t item style set 8 0 testStyle
+    .t item text 8 0 ""
+} -body {
     .t item element
 } -returnCodes error -result {wrong # args: should be ".t item element command item column element ?arg ...?"}
 
@@ -419,7 +438,7 @@ test item-15.15 {item style map: different element types} -body {
 
 test item-15.16 {item style set: invalid item} -body {
     .t item style set foo bar
-} -returnCodes error -result {bad item description "foo"}
+} -returnCodes error -result {item "foo" doesn't exist}
 
 test item-15.17 {item style set: without args returns all styles} -body {
     .t item style set 2
@@ -570,17 +589,17 @@ test item-16.19 {item state: switch off states} -body {
 } -result {0}
 
 test item-16.20 {item state: reset predefined state} -body {
-    .t collapse 8
+    .t item collapse 8
     .t item state get 8
 } -result {enabled}
 
 test item-16.21 {item state: reset predefined state} -body {
-    .t expand 8
+    .t item expand 8
     .t item state get 8
 } -result {open enabled}
 
 test item-16.22 {item state: reset predefined state} -body {
-    .t toggle 8
+    .t item toggle 8
     .t item state get 8 enabled
 } -result {1}
 
@@ -665,7 +684,7 @@ test item-17.1 {item sort: missing args} -body {
 
 test item-17.2 {item sort: invalid item} -body {
     .t item sort foo
-} -returnCodes error -result {bad item description "foo"}
+} -returnCodes error -result {item "foo" doesn't exist}
 
 test item-17.3 {item sort: is all allowed?} -body {
     .t item sort all
@@ -769,7 +788,7 @@ test item-17.20 {item sort: restrict to item of different parent} -body {
 
 test item-17.21 {item sort: restrict to unknown item} -body {
     .t item sort root -first foo
-} -returnCodes error -result {bad item description "foo"}
+} -returnCodes error -result {item "foo" doesn't exist}
 
 test item-17.22 {item sort: restricted sort} -body {
     .t item sort root -first 5 -last 8 -decreasing
