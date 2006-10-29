@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.73 2006/10/28 01:20:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.74 2006/10/29 02:38:39 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -57,7 +57,7 @@ static CONST char *orientStringTable[] = {
     "horizontal", "vertical", (char *) NULL
 };
 
-extern Tk_ObjCustomOption columnCustomOption_NOT_TAIL;
+extern Tk_ObjCustomOption columnCO_NOT_TAIL;
 
 static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BORDER, "-background", "background", "Background",
@@ -227,7 +227,7 @@ static Tk_OptionSpec optionSpecs[] = {
      TK_OPTION_NULL_OK, 0, 0},
     {TK_OPTION_CUSTOM, "-treecolumn", "treeColumn", "TreeColumn",
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnTree),
-     TK_OPTION_NULL_OK, (ClientData) &columnCustomOption_NOT_TAIL,
+     TK_OPTION_NULL_OK, (ClientData) &columnCO_NOT_TAIL,
      TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-usetheme", "useTheme",
      "UseTheme", "0", -1, Tk_Offset(TreeCtrl, useTheme),
