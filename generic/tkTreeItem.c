@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.72 2006/10/28 01:20:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.73 2006/10/29 02:33:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -59,7 +59,9 @@ static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
 /*
  * Macro to test whether an item is the unique root item
  */
-#define ISROOT(i) ((i)->depth == -1)
+#define IS_ROOT(i) ((i)->depth == -1)
+
+#define IS_ALL(i) (((TreeItem) i) == ITEM_ALL)
 
 #define IS_DELETED(i) (((i)->flags & ITEM_FLAG_DELETED) != 0)
 
@@ -493,7 +495,7 @@ Item_UpdateIndex(TreeCtrl *tree,
     if (item->parent != NULL) {
 	parentOpen = (item->parent->state & STATE_OPEN) != 0;
 	parentVis = item->parent->indexVis != -1;
-	if (ISROOT(item->parent) && !tree->showRoot) {
+	if (IS_ROOT(item->parent) && !tree->showRoot) {
 	    parentOpen = TRUE;
 	    parentVis = item->parent->isVisible;
 	}
@@ -806,7 +808,7 @@ TreeItem_ChangeState(
 
     /* This item has a button */
     if (item->hasButton && tree->showButtons
-	    && (!ISROOT(item) || tree->showRootButton)) {
+	    && (!IS_ROOT(item) || tree->showRootButton)) {
 
 	Tk_Image image1, image2;
 	Pixmap bitmap1, bitmap2;
@@ -1474,6 +1476,7 @@ typedef struct Qualifiers {
     int states[3];		/* Item states that must be on or off. */
     TagExpr expr;		/* Tag expression. */
     int exprOK;			/* TRUE if expr is valid. */
+    int depth;			/* >= 0 for depth, -1 for unspecified */
 } Qualifiers;
 
 /*
@@ -1502,6 +1505,7 @@ Qualifiers_Init(
     q->visible = -1;
     q->states[0] = q->states[1] = q->states[2] = 0;
     q->exprOK = FALSE;
+    q->depth = -1;
 }
 
 /*
@@ -1535,14 +1539,14 @@ Qualifiers_Scan(
     int qual, j = startIndex;
 
     static CONST char *qualifiers[] = {
-	"state", "tag", "visible", "!visible", NULL
+	"depth", "state", "tag", "visible", "!visible", NULL
     };
     enum qualEnum {
-	QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_VISIBLE
+	QUAL_DEPTH, QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_VISIBLE
     };
     /* Number of arguments used by qualifiers[]. */
     static int qualArgs[] = {
-	2, 2, 1, 1
+	2, 2, 2, 1, 1
     };
 
     *argsUsed = 0;
@@ -1557,6 +1561,12 @@ Qualifiers_Scan(
 	    goto errorExit;
 	}
 	switch ((enum qualEnum) qual) {
+	    case QUAL_DEPTH:
+	    {
+		if (Tcl_GetIntFromObj(interp, objv[j + 1], &q->depth) != TCL_OK)
+		    goto errorExit;
+		break;
+	    }
 	    case QUAL_STATE:
 	    {
 		if (Tree_StateFromListObj(tree, objv[j + 1], q->states,
@@ -1632,6 +1642,8 @@ Qualifies(
 	return 0;
     if (q->exprOK && !TagExpr_Eval(&q->expr, item->tagInfo))
 	return 0;
+    if ((q->depth >= 0) && (item->depth + 1 != q->depth))
+	return 0;
     return 1;
 }
 
@@ -1667,7 +1679,6 @@ Qualifiers_Free(
  *
  *	Parse a Tcl_Obj item description to get a list of items.
  *
- *   all
  *   -- returning a single item --
  *   "active MODIFIERS"
  *   "anchor MODIFIERS"
@@ -1679,10 +1690,11 @@ Qualifiers_Free(
  *   "rnc row col MODIFIERS"
  *   "ID MODIFIERS"
  *   -- returning multiple items --
+ *   all QUALIFIERS
  *   list listOfItemDescs
  *   range QUALIFIERS
  *   tag tagExpr QUALIFIERS
- *   "TAG QUALFIERS"
+ *   "TAG-EXPR QUALFIERS"
  *
  *   MODIFIERS:
  *   -- returning a single item --
@@ -1709,6 +1721,7 @@ Qualifiers_Free(
  *   descendants QUALIFIERS
  *
  *   QUALIFIERS:
+ *   depth integer
  *   state stateList
  *   visible
  *   !visible
@@ -1740,25 +1753,26 @@ TreeItemList_FromObj(
     )
 {
     Tcl_Interp *interp = tree->interp;
-    int objc;
-    int index, listIndex, id;
+    int i, objc, index, listIndex, id;
     Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
     Tcl_Obj **objv, *elemPtr;
     Item *item = NULL;
     Qualifiers q;
+    int qualArgsTotal = 0;
 
     static CONST char *indexName[] = {
 	"active", "all", "anchor", "end", "first", "last", "list",
-	"nearest", "range", "rnc", "root", "tag", (char *) NULL
+	"nearest", "range", "rnc", "root", (char *) NULL
     };
     enum indexEnum {
 	INDEX_ACTIVE, INDEX_ALL, INDEX_ANCHOR, INDEX_END, INDEX_FIRST,
 	INDEX_LAST, INDEX_LIST, INDEX_NEAREST, INDEX_RANGE, INDEX_RNC,
-	INDEX_ROOT, INDEX_TAG
+	INDEX_ROOT
     };
     /* Number of arguments used by indexName[]. */
     static int indexArgs[] = {
-	1, 1, 1, 1, 1, 1, 2, 3, 3, 3, 1, 2
+	1, 1, 1, 1, 1, 1, 2, 3, 3, 3, 1
     };
     /* Boolean: can indexName[] be followed by 1 or more qualifiers. */
     static int indexQual[] = {
@@ -1799,13 +1813,14 @@ TreeItemList_FromObj(
     elemPtr = objv[listIndex];
     if (Tcl_GetIndexFromObj(NULL, elemPtr, indexName, NULL, 0, &index)
 	    == TCL_OK) {
-	int qualArgsTotal = 0;
 
 	if (objc - listIndex < indexArgs[index]) {
 	    Tcl_AppendResult(interp, "missing arguments to \"",
 		    Tcl_GetString(elemPtr), "\" keyword", NULL);
 	    goto errorExit;
 	}
+
+	qualArgsTotal = 0;
 	if (indexQual[index]) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + indexArgs[index],
 		    &qualArgsTotal) != TCL_OK) {
@@ -1821,9 +1836,6 @@ TreeItemList_FromObj(
 	    }
 	    case INDEX_ALL:
 	    {
-		Tcl_HashEntry *hPtr;
-		Tcl_HashSearch search;
-
 		if (qualArgsTotal) {
 		    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		    while (hPtr != NULL) {
@@ -1874,11 +1886,12 @@ TreeItemList_FromObj(
 	    {
 		int listObjc;
 		Tcl_Obj **listObjv;
-		int i, count;
+		int count;
 
 		if (Tcl_ListObjGetElements(interp, objv[listIndex + 1],
-			&listObjc, &listObjv) != TCL_OK)
+			&listObjc, &listObjv) != TCL_OK) {
 		    goto errorExit;
+		}
 		for (i = 0; i < listObjc; i++) {
 		    TreeItemList item2s;
 		    if (TreeItemList_FromObj(tree, listObjv[i], &item2s, flags)
@@ -1892,7 +1905,7 @@ TreeItemList_FromObj(
 		count = TreeItemList_Count(items);
 		for (i = 0; i < count; i++) {
 		    TreeItem item = TreeItemList_Nth(items, i);
-		    if (item == ITEM_ALL)
+		    if (IS_ALL(item))
 			break;
 		}
 		if (i < count) {
@@ -1906,10 +1919,14 @@ TreeItemList_FromObj(
 	    {
 		int x, y;
 
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &x) != TCL_OK)
-		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 2], &y) != TCL_OK)
-		    goto baditem;
+		if (Tk_GetPixelsFromObj(interp, tree->tkwin,
+			objv[listIndex + 1], &x) != TCL_OK) {
+		    goto errorExit;
+		}
+		if (Tk_GetPixelsFromObj(interp, tree->tkwin,
+			objv[listIndex + 2], &y) != TCL_OK) {
+		    goto errorExit;
+		}
 		item = (Item *) Tree_ItemUnderPoint(tree, &x, &y, TRUE);
 		break;
 	    }
@@ -1940,10 +1957,10 @@ TreeItemList_FromObj(
 	    {
 		int row, col;
 
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &row) != TCL_OK)
-		    goto baditem;
-		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 2], &col) != TCL_OK)
-		    goto baditem;
+		if (Tcl_GetIntFromObj(interp, objv[listIndex + 1], &row) != TCL_OK)
+		    goto errorExit;
+		if (Tcl_GetIntFromObj(interp, objv[listIndex + 2], &col) != TCL_OK)
+		    goto errorExit;
 		item = (Item *) Tree_RNCToItem(tree, row, col);
 		break;
 	    }
@@ -1952,89 +1969,61 @@ TreeItemList_FromObj(
 		item = (Item *) tree->root;
 		break;
 	    }
-	    case INDEX_TAG:
-	    {
-		TagExpr expr;
-		Tcl_HashEntry *hPtr;
-		Tcl_HashSearch search;
-
-		if (TagExpr_Init(tree, objv[listIndex + 1], &expr) != TCL_OK)
-		    goto errorExit;
-		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-		while (hPtr != NULL) {
-		    item = (Item *) Tcl_GetHashValue(hPtr);
-		    if (TagExpr_Eval(&expr, item->tagInfo) &&
-			    Qualifies(&q, item)) {
-			TreeItemList_Append(items, (TreeItem) item);
-		    }
-		    hPtr = Tcl_NextHashEntry(&search);
-		}
-		TagExpr_Free(&expr);
-		item = NULL;
-		break;
-	    }
-	}
-	/* If 1 item, use it and clear the list. */
-	if (TreeItemList_Count(items) == 1) {
-	    item = (Item *) TreeItemList_Nth(items, 0);
-	    items->count = 0;
 	}
 
-	/* If "all" but only root exists, use it. */
-	if ((item == (Item *) ITEM_ALL) && (tree->itemCount == 1) &&
-		!(flags & IFO_NOT_ROOT))
-	    item = (Item *) tree->root;
-
-	/* If > 1 item, no modifiers may follow. */
-	if ((TreeItemList_Count(items) > 1) || (item == (Item *) ITEM_ALL)) {
-	    if (listIndex + indexArgs[index] + qualArgsTotal < objc) {
-		FormatResult(interp,
-		    "unexpected arguments after \"%s\" keyword",
-		    indexName[index]);
-		goto errorExit;
-	    }
-	}
 	listIndex += indexArgs[index] + qualArgsTotal;
 
-    /* No indexName[] was found. Try an itemPrefix + item ID. */
-    } else if (tree->itemPrefixLen) {
-	char *end, *t = Tcl_GetString(elemPtr);
-	if (strncmp(t, tree->itemPrefix, tree->itemPrefixLen) != 0)
-	    goto baditem;
-	t += tree->itemPrefixLen;
-	id = strtoul(t, &end, 10);
-	if ((end == t) || (*end != '\0'))
-	    goto baditem;
-
-	hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
-	if (!hPtr) {
-	    if (flags & IFO_NOT_NULL)
-		goto noitem;
-	    /* Empty list returned */
-	    goto goodExit;
-	}
-	item = (Item *) Tcl_GetHashValue(hPtr);
-	listIndex++;
-
-    /* Try an item ID. */
-    } else if (Tcl_GetIntFromObj(NULL, elemPtr, &id) == TCL_OK) {
-	hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
-	if (!hPtr) {
-	    if (flags & IFO_NOT_NULL)
-		goto noitem;
-	    /* Empty list returned */
-	    goto goodExit;
-	}
-	item = (Item *) Tcl_GetHashValue(hPtr);
-	listIndex++;
-
-    /* Try a tag expression. */
+    /* No indexName[] was found. */
     } else {
+	int gotId = FALSE;
 	TagExpr expr;
-	Tcl_HashEntry *hPtr;
-	Tcl_HashSearch search;
-	int qualArgsTotal = 0;
 
+	/* Try an itemPrefix + item ID. */
+	if (tree->itemPrefixLen) {
+	    char *end, *t = Tcl_GetString(elemPtr);
+	    if (strncmp(t, tree->itemPrefix, tree->itemPrefixLen) == 0) {
+		t += tree->itemPrefixLen;
+		id = strtoul(t, &end, 10);
+		if ((end != t) && (*end == '\0'))
+		    gotId = TRUE;
+	    }
+
+	/* Try an item ID. */
+	} else if (Tcl_GetIntFromObj(NULL, elemPtr, &id) == TCL_OK) {
+	    gotId = TRUE;
+	}
+	if (gotId) {
+	    hPtr = Tcl_FindHashEntry(&tree->itemHash, (char *) id);
+	    if (hPtr != NULL) {
+		item = (Item *) Tcl_GetHashValue(hPtr);
+	    } else {
+		item = NULL;
+	    }
+	    listIndex++;
+	    goto gotFirstPart;
+	}
+
+	/* Try a list of qualifiers. This has the same effect as
+	 * "all QUALIFIERS". */
+	if (Qualifiers_Scan(&q, objc, objv, listIndex, &qualArgsTotal)
+		!= TCL_OK) {
+	    goto errorExit;
+	}
+	if (qualArgsTotal) {
+	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	    while (hPtr != NULL) {
+		item = (Item *) Tcl_GetHashValue(hPtr);
+		if (Qualifies(&q, item)) {
+		    TreeItemList_Append(items, (TreeItem) item);
+		}
+		hPtr = Tcl_NextHashEntry(&search);
+	    }
+	    item = NULL;
+	    listIndex += qualArgsTotal;
+	    goto gotFirstPart;
+	}
+
+	/* Try a tag expression. */
 	if (objc > 1) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
 		    &qualArgsTotal) != TCL_OK) {
@@ -2053,24 +2042,34 @@ TreeItemList_FromObj(
 	}
 	TagExpr_Free(&expr);
 	item = NULL;
-
-	/* If 1 item, use it and clear the list. */
-	if (TreeItemList_Count(items) == 1) {
-	    item = (Item *) TreeItemList_Nth(items, 0);
-	    items->count = 0;
-	}
-
-	/* If > 1 item, no modifiers may follow. */
-	if (TreeItemList_Count(items) > 1) {
-	    if (listIndex + 1 + qualArgsTotal < objc) {
-		FormatResult(interp,
-		    "unexpected arguments after \"%s\"",
-		    Tcl_GetString(elemPtr));
-		goto errorExit;
-	    }
-	}
-
 	listIndex += 1 + qualArgsTotal;
+    }
+
+gotFirstPart:
+    /* If 1 item, use it and clear the list. */
+    if (TreeItemList_Count(items) == 1) {
+	item = (Item *) TreeItemList_Nth(items, 0);
+	items->count = 0;
+    }
+
+    /* If "all" but only root exists, use it. */
+    if (IS_ALL(item) && (tree->itemCount == 1) && !(flags & IFO_NOT_ROOT)) {
+	item = (Item *) tree->root;
+    }
+
+    /* If > 1 item, no modifiers may follow. */
+    if ((TreeItemList_Count(items) > 1) || IS_ALL(item)) {
+	if (listIndex < objc) {
+	    Tcl_AppendResult(interp, "unexpected arguments after \"",
+		(char *) NULL);
+	    for (i = 0; i < listIndex; i++) {
+		Tcl_AppendResult(interp, Tcl_GetString(objv[i]), (char *) NULL);
+		if (i != listIndex - 1)
+		    Tcl_AppendResult(interp, " ", (char *) NULL);
+	    }
+	    Tcl_AppendResult(interp, "\"", (char *) NULL);
+	    goto errorExit;
+	}
     }
 
     /* This means a valid specification was given, but there is no such item */
@@ -2083,7 +2082,6 @@ TreeItemList_FromObj(
 
     /* Process any modifiers following the item we matched above. */
     for (; listIndex < objc; /* nothing */) {
-	int qualArgsTotal = 0;
 
 	elemPtr = objv[listIndex];
 	if (Tcl_GetIndexFromObj(interp, elemPtr, modifiers, "modifier", 0,
@@ -2095,6 +2093,8 @@ TreeItemList_FromObj(
 		    Tcl_GetString(elemPtr), "\" modifier", NULL);
 	    goto errorExit;
 	}
+
+	qualArgsTotal = 0;
 	if (modQual[index]) {
 	    Qualifiers_Free(&q);
 	    Qualifiers_Init(tree, &q);
@@ -2271,10 +2271,17 @@ TreeItemList_FromObj(
 		break;
 	    }
 	}
-	if ((TreeItemList_Count(items) > 1) || (item == (Item *) ITEM_ALL)) {
-	    if (listIndex + modArgs[index] + qualArgsTotal < objc) {
+	if ((TreeItemList_Count(items) > 1) || IS_ALL(item)) {
+	    int end = listIndex + modArgs[index] + qualArgsTotal;
+	    if (end < objc) {
 		Tcl_AppendResult(interp, "unexpected arguments after \"",
-			modifiers[index], "\" modifier", NULL);
+		    (char *) NULL);
+		for (i = 0; i < end; i++) {
+		    Tcl_AppendResult(interp, Tcl_GetString(objv[i]), (char *) NULL);
+		    if (i != end - 1)
+			Tcl_AppendResult(interp, " ", (char *) NULL);
+		}
+		Tcl_AppendResult(interp, "\"", (char *) NULL);
 		goto errorExit;
 	    }
 	}
@@ -2286,8 +2293,8 @@ TreeItemList_FromObj(
 	}
 	listIndex += modArgs[index] + qualArgsTotal;
     }
-    if ((flags & IFO_NOT_MANY) && ((item == (Item *) ITEM_ALL) ||
-	(TreeItemList_Count(items) > 1))) {
+    if ((flags & IFO_NOT_MANY) && (IS_ALL(item) ||
+	    (TreeItemList_Count(items) > 1))) {
 	FormatResult(interp, "can't specify > 1 item for this command");
 	goto errorExit;
     }
@@ -2296,16 +2303,16 @@ TreeItemList_FromObj(
 	    int i;
 	    for (i = 0; i < TreeItemList_Count(items); i++) {
 		item = (Item *) TreeItemList_Nth(items, i);
-		if (ISROOT(item) && (flags & IFO_NOT_ROOT))
+		if (IS_ROOT(item) && (flags & IFO_NOT_ROOT))
 		    goto notRoot;
 		if ((item->parent == NULL) && (flags & IFO_NOT_ORPHAN))
 		    goto notOrphan;
 	    }
 	}
-    } else if (item == (Item *) ITEM_ALL) {
+    } else if (IS_ALL(item)) {
 	TreeItemList_Append(items, ITEM_ALL);
     } else {
-	if (ISROOT(item) && (flags & IFO_NOT_ROOT)) {
+	if (IS_ROOT(item) && (flags & IFO_NOT_ROOT)) {
 notRoot:
 	    FormatResult(interp, "can't specify \"root\" for this command");
 	    goto errorExit;
@@ -2411,7 +2418,7 @@ ItemForEach_Start(
     iter->error = 0;
     iter->items = NULL;
 
-    if (item == ITEM_ALL || item2 == ITEM_ALL) {
+    if (IS_ALL(item) || IS_ALL(item2)) {
 	Tcl_HashEntry *hPtr = Tcl_FirstHashEntry(&tree->itemHash, &iter->search);
 	iter->all = TRUE;
 	return iter->item = (TreeItem) Tcl_GetHashValue(hPtr);
@@ -2501,7 +2508,7 @@ Item_ToggleOpen(
 
     mask = TreeItem_ChangeState(tree, (TreeItem) item, stateOff, stateOn);
 
-    if (ISROOT(item) && !tree->showRoot)
+    if (IS_ROOT(item) && !tree->showRoot)
 	return;
 
 #if 0
@@ -2744,7 +2751,7 @@ TreeItem_UpdateDepth(
     Item *self = (Item *) item_;
     Item *child;
 
-    if (ISROOT(self))
+    if (IS_ROOT(self))
 	return;
     if (self->parent != NULL)
 	self->depth = self->parent->depth + 1;
@@ -3255,14 +3262,14 @@ int TreeItem_Height(
     int buttonHeight = 0;
     int useHeight;
 
-    if (!self->isVisible || (ISROOT(self) && !tree->showRoot))
+    if (!self->isVisible || (IS_ROOT(self) && !tree->showRoot))
 	return 0;
 
     /* Get requested height of the style in each column */
     useHeight = Item_HeightOfStyles(tree, self);
 
     /* Can't have less height than our button */
-    if (tree->showButtons && self->hasButton && (!ISROOT(self) || tree->showRootButton)) {
+    if (tree->showButtons && self->hasButton && (!IS_ROOT(self) || tree->showRootButton)) {
 	buttonHeight = ButtonHeight(tree, self->state);
     }
 
@@ -3502,7 +3509,7 @@ int TreeItem_Indent(
     Item *self = (Item *) item_;
     int indent;
 
-    if (ISROOT(self))
+    if (IS_ROOT(self))
 	return (tree->showRoot && tree->showButtons && tree->showRootButton) ? tree->useIndent : 0;
 
     if (tree->updateIndex)
@@ -3960,7 +3967,7 @@ TreeItem_DrawLines(
     hasPrev = (item != NULL);
 
     /* Check for ReallyVisible parent */
-    if ((self->parent != NULL) && (!ISROOT(self->parent) || tree->showRoot))
+    if ((self->parent != NULL) && (!IS_ROOT(self->parent) || tree->showRoot))
 	hasPrev = TRUE;
 
     /* Check for ReallyVisible next sibling */
@@ -3970,7 +3977,7 @@ TreeItem_DrawLines(
     hasNext = (item != NULL);
 
     /* Option: Don't connect children of root item */
-    if ((self->parent != NULL) && ISROOT(self->parent) && !tree->showRootLines)
+    if ((self->parent != NULL) && IS_ROOT(self->parent) && !tree->showRootLines)
 	hasPrev = hasNext = FALSE;
 
     /* Vertical line to parent and/or previous/next sibling */
@@ -4022,7 +4029,7 @@ TreeItem_DrawLines(
 	lineLeft -= tree->useIndent;
 
 	/* Option: Don't connect children of root item */
-	if ((parent->parent != NULL) && ISROOT(parent->parent) && !tree->showRootLines)
+	if ((parent->parent != NULL) && IS_ROOT(parent->parent) && !tree->showRootLines)
 	    continue;
 
 	/* Check for ReallyVisible next sibling */
@@ -4081,7 +4088,7 @@ TreeItem_DrawButton(
 
     if (!self->hasButton)
 	return;
-    if (ISROOT(self) && !tree->showRootButton)
+    if (IS_ROOT(self) && !tree->showRootButton)
 	return;
 
 #if defined(MAC_TCL) || defined(MAC_OSX_TK)
@@ -4409,8 +4416,8 @@ int TreeItem_ReallyVisible(
     if (!self->isVisible)
 	return 0;
     if (self->parent == NULL)
-	return ISROOT(self) ? tree->showRoot : 0;
-    if (ISROOT(self->parent)) {
+	return IS_ROOT(self) ? tree->showRoot : 0;
+    if (IS_ROOT(self->parent)) {
 	if (!self->parent->isVisible)
 	    return 0;
 	if (!tree->showRoot)
@@ -5418,7 +5425,6 @@ doneMAP:
 		changedI = FALSE;
 		for (i = 0; i < count; i++) {
 		    COLUMN_FOR_EACH(treeColumn, &cs[i].columns, NULL, &citer) {
-			if (treeColumn == tree->columnTail) continue; /* FIXME */
 			if (cs[i].style == NULL) {
 			    column = Item_FindColumn(tree, item,
 				    TreeColumn_Index(treeColumn));
@@ -6500,7 +6506,6 @@ ItemStateCmd(
 	    ITEM_FOR_EACH(_item, &itemList, NULL, &iter) {
 		item = (Item *) _item;
 		COLUMN_FOR_EACH(treeColumn, &columns, NULL, &citer) {
-		    if (treeColumn == tree->columnTail) continue; /* FIXME */
 		    columnIndex = TreeColumn_Index(treeColumn);
 		    column = Item_CreateColumn(tree, item, columnIndex, NULL);
 		    stateOn = states[STATE_OP_ON];
@@ -7379,8 +7384,7 @@ TreeItemCmd(
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
 
-		if ((_item == ITEM_ALL) ||
-			(TreeItemList_Count(&itemList) > 1)) {
+		if (IS_ALL(_item) || (TreeItemList_Count(&itemList) > 1)) {
 		    FormatResult(interp, "can't specify > 1 item for this command");
 		    goto errorExit;
 		}
@@ -7453,7 +7457,7 @@ TreeItemCmd(
 
 	    ITEM_FOR_EACH(_item, &itemList, &item2List, &iter) {
 		item = (Item *) _item;
-		if (ISROOT(item))
+		if (IS_ROOT(item))
 		    continue;
 		if (IS_DELETED(item))
 		    continue;
@@ -7549,8 +7553,7 @@ TreeItemCmd(
 	    ItemForEach iter;
 
 	    if (objc == 4) {
-		if ((_item == ITEM_ALL) ||
-			(TreeItemList_Count(&itemList) > 1)) {
+		if (IS_ALL(_item) || (TreeItemList_Count(&itemList) > 1)) {
 		    FormatResult(interp, "can't specify > 1 item for this command");
 		    goto errorExit;
 		}
@@ -7797,7 +7800,7 @@ TreeItemCmd(
 	    ItemForEach iter;
 	    ColumnForEach citer;
 
-	    if ((objc < 6) && ((_item == ITEM_ALL) ||
+	    if ((objc < 6) && (IS_ALL(_item) ||
 		    (TreeItemList_Count(&itemList) > 1))) {
 		FormatResult(interp, "can't specify > 1 item for this command");
 		goto errorExit;
@@ -7851,7 +7854,6 @@ TreeItemCmd(
 		item = (Item *) _item;
 		for (i = 0; i < count; i++) {
 		    COLUMN_FOR_EACH(treeColumn, &cs[i].columns, NULL, &citer) {
-			if (treeColumn == tree->columnTail) continue; /* FIXME */
 			column = Item_CreateColumn(tree, item,
 				TreeColumn_Index(treeColumn), NULL);
 			if (column->span != cs[i].span) {
@@ -7896,7 +7898,7 @@ doneSPAN:
 	    ItemForEach iter;
 	    ColumnForEach citer;
 
-	    if ((objc < 6) && ((_item == ITEM_ALL) ||
+	    if ((objc < 6) && (IS_ALL(_item) ||
 		    (TreeItemList_Count(&itemList) > 1))) {
 		FormatResult(interp, "can't specify > 1 item for this command");
 		goto errorExit;
@@ -7955,7 +7957,6 @@ doneSPAN:
 		item = (Item *) _item;
 		for (i = 0; i < count; i++) {
 		    COLUMN_FOR_EACH(treeColumn, &co[i].columns, NULL, &citer) {
-			if (treeColumn == tree->columnTail) continue; /* FIXME */
 			columnIndex = TreeColumn_Index(treeColumn);
 			column = Item_FindColumn(tree, item, columnIndex);
 			if ((column == NULL) || (column->style == NULL)) {
