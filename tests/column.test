@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.10 2005/09/07 20:39:07 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.11 2006/10/29 02:42:16 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -84,7 +84,7 @@ test column-2.5 {column bbox: tail column not allowed} -body {
 
 test column-3.1 {column configure: missing args} -body {
     .t column configure
-} -returnCodes error -result {wrong # args: should be ".t column configure column ?option? ?value?"}
+} -returnCodes error -result {wrong # args: should be ".t column configure column ?option? ?value? ?option value ...?"}
 
 test column-3.2 {column configure: invalid column} -body {
     .t column configure foo
@@ -262,11 +262,15 @@ test column-3.36 {column configure/cget: -state} -body {
     .t column cget column1 -state
 } -result {pressed}
 
-test column-3.37 {column configure: invalid -stepwidth} -body {
+test column-3.37 {column configure: invalid -stepwidth} -constraints {
+    deprecated
+} -body {
     .t column configure column1 -stepwidth "\t"
 } -returnCodes error -result {bad screen distance "	"}
 
-test column-3.38 {column configure/cget: -stepwidth} -body {
+test column-3.38 {column configure/cget: -stepwidth} -constraints {
+    deprecated
+} -body {
     .t column configure column1 -stepwidth 125
     .t column cget column1 -stepwidth
 } -result {125}
@@ -314,11 +318,15 @@ test column-3.47 {column configure/cget: -visible} -body {
     .t column cget column1 -visible
 } -result {0}
 
-test column-3.48 {column configure: invalid -widthhack} -body {
+test column-3.48 {column configure: invalid -widthhack} -constraints {
+    deprecated
+} -body {
     .t column configure column1 -widthhack ok
 } -returnCodes error -result {expected boolean value but got "ok"}
 
-test column-3.49 {column configure/cget: -widthhack} -body {
+test column-3.49 {column configure/cget: -widthhack} -constraints {
+    deprecated
+} -body {
     .t column configure column1 -widthhack yes
     .t column cget column1 -widthhack
 } -result {1}
