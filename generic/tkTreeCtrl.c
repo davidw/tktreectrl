@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.74 2006/10/29 02:38:39 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.75 2006/10/30 00:42:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -818,9 +818,9 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "x y");
 		goto error;
 	    }
-	    if (Tcl_GetIntFromObj(interp, objv[2], &x) != TCL_OK)
+	    if (Tk_GetPixelsFromObj(interp, tree->tkwin, objv[2], &x) != TCL_OK)
 		goto error;
-	    if (Tcl_GetIntFromObj(interp, objv[3], &y) != TCL_OK)
+	    if (Tk_GetPixelsFromObj(interp, tree->tkwin, objv[3], &y) != TCL_OK)
 		goto error;
 
 	    hit = Tree_HitTest(tree, x, y);
