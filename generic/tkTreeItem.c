@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.73 2006/10/29 02:33:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.74 2006/10/30 23:03:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -63,7 +63,7 @@ static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
 
 #define IS_ALL(i) (((TreeItem) i) == ITEM_ALL)
 
-#define IS_DELETED(i) (((i)->flags & ITEM_FLAG_DELETED) != 0)
+#define IS_DELETED(i) ((((Item *) i)->flags & ITEM_FLAG_DELETED) != 0)
 
 /*
  * Flags returned by Tk_SetOptions() (see itemOptionSpecs below).
@@ -1691,6 +1691,7 @@ Qualifiers_Free(
  *   "ID MODIFIERS"
  *   -- returning multiple items --
  *   all QUALIFIERS
+ *   QUALIFIERS (like "all QUALIFIERS")
  *   list listOfItemDescs
  *   range QUALIFIERS
  *   tag tagExpr QUALIFIERS
@@ -1723,9 +1724,9 @@ Qualifiers_Free(
  *   QUALIFIERS:
  *   depth integer
  *   state stateList
+ *   tag tagExpr
  *   visible
  *   !visible
- *   tag tagExpr
  *
  *   Examples:
  *   $T item id "first visible firstchild"
@@ -1759,7 +1760,7 @@ TreeItemList_FromObj(
     Tcl_Obj **objv, *elemPtr;
     Item *item = NULL;
     Qualifiers q;
-    int qualArgsTotal = 0;
+    int qualArgsTotal;
 
     static CONST char *indexName[] = {
 	"active", "all", "anchor", "end", "first", "last", "list",
@@ -2539,7 +2540,7 @@ Item_ToggleOpen(
  *
  * TreeItem_OpenClose --
  *
- *	Inverts the STATE_OPEN flag of an Item, possibly recursively.
+ *	Inverts the STATE_OPEN flag of an Item.
  *
  * Results:
  *	Items may be displayed/undisplayed.
@@ -2555,16 +2556,17 @@ void
 TreeItem_OpenClose(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-    int mode,			/* -1: toggle
+    int mode			/* -1: toggle
 				 * 0: close
 				 * 1: open */
-    int recurse			/* TRUE to perform same op on descendants,
-				 * FALSE to only affect given item. */
     )
 {
     Item *item = (Item *) item_;
-    Item *child;
     int stateOff = 0, stateOn = 0;
+
+    /* When processing a list of items, any <Expand> or <Collapse> event
+     * may result in items being deleted. */
+    if (IS_DELETED(item_)) return;
 
     if (mode == -1) {
 	if (item->state & STATE_OPEN)
@@ -2578,12 +2580,9 @@ TreeItem_OpenClose(
 
     if (stateOff != stateOn) {
 	TreeNotify_OpenClose(tree, item_, stateOn, TRUE);
+	if (IS_DELETED(item_)) return;
 	Item_ToggleOpen(tree, item, stateOff, stateOn);
 	TreeNotify_OpenClose(tree, item_, stateOn, FALSE);
-    }
-    if (recurse) {
-	for (child = item->firstChild; child != NULL; child = child->nextSibling)
-	    TreeItem_OpenClose(tree, (TreeItem) child, mode, recurse);
     }
 }
 
@@ -2632,6 +2631,31 @@ TreeItem_Delete(
 	tree->anchorItem = tree->root;
     if (tree->debug.enable && tree->debug.data)
 	Tree_Debug(tree);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_Deleted --
+ *
+ *	Return 1 if the given item is deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeItem_Deleted(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
+{
+    return IS_DELETED(item_);
 }
 
 /*
@@ -3173,10 +3197,37 @@ TreeItem_FreeResources(
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
     Tk_FreeConfigOptions((char *) self, tree->itemOptionTable, tree->tkwin);
+
+    /* Add the item record to the "preserved" list. It will be freed later. */
+    TreeItemList_Append(&tree->preserveItemList, item_);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_Release --
+ *
+ *	Finally free an item record when it is no longer needed.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Memory is deallocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeItem_Release(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
+{
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, ItemUid, (char *) self, sizeof(Item));
+    AllocHax_Free(tree->allocData, ItemUid, (char *) item_, sizeof(Item));
 #else
-    WFREE(self, Item);
+    WFREE(item_, Item);
 #endif
 }
 
@@ -7233,8 +7284,9 @@ TreeItemCmd(
 	    ItemForEach iter;
 
 	    if (numArgs == 2) {
-		char *s = Tcl_GetString(objv[4]);
-		if (strcmp(s, "-recurse")) {
+		int len;
+		char *s = Tcl_GetStringFromObj(objv[4], &len);
+		if (strncmp(s, "-recurse", len)) {
 		    FormatResult(interp, "bad option \"%s\": must be -recurse",
 			    s);
 		    goto errorExit;
@@ -7262,7 +7314,7 @@ TreeItemCmd(
 	    count = TreeItemList_Count(&items);
 	    for (i = 0; i < count; i++) {
 		_item = TreeItemList_Nth(&items, i);
-		TreeItem_OpenClose(tree, _item, mode, FALSE);
+		TreeItem_OpenClose(tree, _item, mode);
 	    }
 	    TreeItemList_Free(&items);
 #ifdef SELECTION_VISIBLE
@@ -7462,9 +7514,9 @@ TreeItemCmd(
 		if (IS_DELETED(item))
 		    continue;
 		item->flags |= ITEM_FLAG_DELETED;
-		TreeItemList_Append(&deleted, (TreeItem) item);
-		if (TreeItem_GetSelected(tree, (TreeItem) item))
-		    TreeItemList_Append(&selected, (TreeItem) item);
+		TreeItemList_Append(&deleted, _item);
+		if (TreeItem_GetSelected(tree, _item))
+		    TreeItemList_Append(&selected, _item);
 		if (iter.all)
 		    continue;
 		/* Check every descendant. */
@@ -7475,15 +7527,16 @@ TreeItemCmd(
 		    item2 = item2->lastChild;
 		item = item->firstChild;
 		while (1) {
+		    _item = (TreeItem) item;
 		    if (IS_DELETED(item)) {
 			/* Skip all descendants (they are already flagged). */
 			while (item->lastChild != NULL)
 			    item = item->lastChild;
 		    } else {
 			item->flags |= ITEM_FLAG_DELETED;
-			TreeItemList_Append(&deleted, (TreeItem) item);
-			if (TreeItem_GetSelected(tree, (TreeItem) item))
-			    TreeItemList_Append(&selected, (TreeItem) item);
+			TreeItemList_Append(&deleted, _item);
+			if (TreeItem_GetSelected(tree, _item))
+			    TreeItemList_Append(&selected, _item);
 		    }
 		    if (item == item2)
 			break;
@@ -7506,9 +7559,20 @@ TreeItemCmd(
 		/* Generate <ItemDelete> event for items being deleted. */
 		TreeNotify_ItemDeleted(tree, &deleted);
 
-		/* Add deleted items to the preserved list so they can be
-		 * freed when no longer in use. */
-		TreeItemList_Concat(&tree->preserveItemList, &deleted);
+		/* Remove every item from its parent. Needed because items
+		 * are deleted recursively. */
+		for (i = 0; i < count; i++) {
+		    _item = TreeItemList_Nth(&deleted, i);
+		    TreeItem_RemoveFromParent(tree, _item);
+		}
+
+		/* Delete the items. The item record will be freed when no
+		 * longer in use; however, the item cannot be referred to
+		 * by commands from this point on. */
+		for (i = 0; i < count; i++) {
+		    _item = TreeItemList_Nth(&deleted, i);
+		    TreeItem_Delete(tree, _item);
+		}
 	    }
 
 	    TreeItemList_Free(&selected);

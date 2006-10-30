@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.60 2006/10/29 02:37:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.61 2006/10/30 23:03:22 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -464,8 +464,9 @@ extern void Tree_Debug(TreeCtrl *tree);
 
 extern int TreeItem_Init(TreeCtrl *tree);
 extern int TreeItem_Debug(TreeCtrl *tree, TreeItem item);
-extern void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item, int mode, int recurse);
+extern void TreeItem_OpenClose(TreeCtrl *tree, TreeItem item, int mode);
 extern void TreeItem_Delete(TreeCtrl *tree, TreeItem item);
+extern int TreeItem_Deleted(TreeCtrl *tree, TreeItem item);
 
 #define STATE_OPEN	0x0001
 #define STATE_SELECTED	0x0002
@@ -512,6 +513,7 @@ extern void TreeItem_DrawLines(TreeCtrl *tree, TreeItem self, int x, int y, int 
 extern void TreeItem_DrawButton(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
 extern int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_FreeResources(TreeCtrl *tree, TreeItem self);
+extern void TreeItem_Release(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_RootAncestor(TreeCtrl *tree, TreeItem item_);
 extern int TreeItem_IsAncestor(TreeCtrl *tree, TreeItem item1, TreeItem item2);
 extern Tcl_Obj *TreeItem_ToObj(TreeCtrl *tree, TreeItem item);

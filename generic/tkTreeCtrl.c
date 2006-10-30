@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.76 2006/10/30 02:41:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.77 2006/10/30 23:03:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -538,7 +538,7 @@ static int TreeWidgetCmd(
     switch (index) {
 	case COMMAND_ACTIVATE:
 	{
-	    TreeItem item;
+	    TreeItem active, item;
 
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "item");
@@ -550,8 +550,8 @@ static int TreeWidgetCmd(
 	    if (item != tree->activeItem) {
 		int x, y, w, h;
 
-		TreeNotify_ActiveItem(tree, tree->activeItem, item);
-		TreeItem_ChangeState(tree, tree->activeItem, STATE_ACTIVE, 0);
+		active = tree->activeItem;
+		TreeItem_ChangeState(tree, active, STATE_ACTIVE, 0);
 		tree->activeItem = item;
 		TreeItem_ChangeState(tree, tree->activeItem, 0, STATE_ACTIVE);
 #ifdef COLUMN_LOCK
@@ -563,6 +563,7 @@ static int TreeWidgetCmd(
 		    Tk_SetCaretPos(tree->tkwin, x - tree->xOrigin,
 			    y - tree->yOrigin, h);
 		}
+		TreeNotify_ActiveItem(tree, active, item);
 	    }
 	    break;
 	}
@@ -697,7 +698,7 @@ static int TreeWidgetCmd(
 		count = TreeItemList_Count(&item2s);
 		for (j = 0; j < count; j++) {
 		    _item = TreeItemList_Nth(&item2s, j);
-		    TreeItem_OpenClose(tree, _item, mode, FALSE);
+		    TreeItem_OpenClose(tree, _item, mode);
 		}
 		TreeItemList_Free(&items);
 		TreeItemList_Free(&item2s);
@@ -1688,7 +1689,7 @@ TreeDestroy(
     TreeItem item;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
-    int i;
+    int i, count;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
     while (hPtr != NULL) {
@@ -1698,6 +1699,11 @@ TreeDestroy(
     }
     Tcl_DeleteHashTable(&tree->itemHash);
 
+    count = TreeItemList_Count(&tree->preserveItemList);
+    for (i = 0; i < count; i++) {
+	item = TreeItemList_Nth(&tree->preserveItemList, i);
+	TreeItem_Release(tree, item);
+    }
     TreeItemList_Free(&tree->preserveItemList);
 
     TreeStyle_Free(tree);
@@ -3374,14 +3380,49 @@ TreeDebugCmd(
     return TCL_OK;
 }
 
-void Tree_PreserveItems(
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_PreserveItems --
+ *
+ *	Increment tree->preserveItemRefCnt.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+void 
+Tree_PreserveItems(
     TreeCtrl *tree
     )
 {
     tree->preserveItemRefCnt++;
 }
 
-void Tree_ReleaseItems(
+/*
+ *--------------------------------------------------------------
+ *
+ * Tree_ReleaseItems --
+ *
+ *	Decrement tree->preserveItemRefCnt. If it reaches zero,
+ *	release the storage of items marked as deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+Tree_ReleaseItems(
     TreeCtrl *tree
     )
 {
@@ -3397,13 +3438,7 @@ void Tree_ReleaseItems(
     count = TreeItemList_Count(&tree->preserveItemList);
     for (i = 0; i < count; i++) {
 	item = TreeItemList_Nth(&tree->preserveItemList, i);
-	/* if (!TreeItem_Deleted(tree, item)) panic(""); */
-	TreeItem_RemoveFromParent(tree, item);
-    }
-    for (i = 0; i < count; i++) {
-	item = TreeItemList_Nth(&tree->preserveItemList, i);
-	/* if (TreeItem_NumChildren(tree, item) > 0) panic(""); */
-	TreeItem_Delete(tree, item);
+	TreeItem_Release(tree, item);
     }
 
     TreeItemList_Free(&tree->preserveItemList);
