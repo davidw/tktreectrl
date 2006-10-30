@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.46 2006/10/28 01:21:51 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.47 2006/10/30 23:50:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4605,7 +4605,7 @@ OptionHax_Forget(
 {
     int i;
 
-    for (i = 0; tree->optionHaxCnt; i++) {
+    for (i = 0; i < tree->optionHaxCnt; i++) {
 	if (ptr == tree->optionHax[i]) {
 	    tree->optionHax[i] = tree->optionHax[--tree->optionHaxCnt];
 /*dbwin("OptionHax_Forget %p\n", ptr);*/
