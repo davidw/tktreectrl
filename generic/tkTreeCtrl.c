@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.75 2006/10/30 00:42:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.76 2006/10/30 02:41:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -645,34 +645,31 @@ static int TreeWidgetCmd(
 	}
 
 #ifdef DEPRECATED
-	/* T expand ?-recurse? I */
+	/* T expand ?-recurse? I ... */
 	case COMMAND_COLLAPSE:
 	case COMMAND_EXPAND:
 	case COMMAND_TOGGLE:
 	{
+	    char *s;
 	    int recurse = 0;
 	    int mode = 0; /* lint */
-	    int i, count;
+	    int i, j, count, len;
 	    TreeItemList items, item2s;
 	    TreeItem _item;
 	    ItemForEach iter;
 
-	    if (objc < 3 || objc > 4) {
-		Tcl_WrongNumArgs(interp, 2, objv, "?-recurse? item");
-		goto error;
-	    }
-	    if (objc == 4) {
-		char *s = Tcl_GetString(objv[3]);
-		if (strcmp(s, "-recurse")) {
+	    if (objc == 2)
+		break;
+	    s = Tcl_GetStringFromObj(objv[2], &len);
+	    if (s[0] == '-') {
+		if (strncmp(s, "-recurse", len)) {
 		    FormatResult(interp, "bad option \"%s\": must be -recurse",
 			    s);
 		    goto error;
 		}
+		if (objc == 3)
+		    break;
 		recurse = 1;
-	    }
-	    if (TreeItemList_FromObj(tree, objv[objc - 1], &items,
-		    IFO_NOT_NULL) != TCL_OK) {
-		goto error;
 	    }
 	    switch (index) {
 		case COMMAND_COLLAPSE:
@@ -685,20 +682,26 @@ static int TreeWidgetCmd(
 		    mode = -1;
 		    break;
 	    }
-	    TreeItemList_Init(tree, &item2s, 0);
-	    ITEM_FOR_EACH(_item, &items, NULL, &iter) {
-		TreeItemList_Append(&item2s, _item);
-		if (!iter.all && recurse) {
-		    TreeItem_ListDescendants(tree, _item, &item2s);
+	    for (i = 2 + recurse; i < objc; i++) {
+		if (TreeItemList_FromObj(tree, objv[i], &items,
+			IFO_NOT_NULL) != TCL_OK) {
+		    goto error;
 		}
+		TreeItemList_Init(tree, &item2s, 0);
+		ITEM_FOR_EACH(_item, &items, NULL, &iter) {
+		    TreeItemList_Append(&item2s, _item);
+		    if (!iter.all && recurse) {
+			TreeItem_ListDescendants(tree, _item, &item2s);
+		    }
+		}
+		count = TreeItemList_Count(&item2s);
+		for (j = 0; j < count; j++) {
+		    _item = TreeItemList_Nth(&item2s, j);
+		    TreeItem_OpenClose(tree, _item, mode, FALSE);
+		}
+		TreeItemList_Free(&items);
+		TreeItemList_Free(&item2s);
 	    }
-	    count = TreeItemList_Count(&item2s);
-	    for (i = 0; i < count; i++) {
-		_item = TreeItemList_Nth(&item2s, i);
-		TreeItem_OpenClose(tree, _item, mode, FALSE);
-	    }
-	    TreeItemList_Free(&items);
-	    TreeItemList_Free(&item2s);
 #ifdef SELECTION_VISIBLE
 	    Tree_DeselectHidden(tree);
 #endif
