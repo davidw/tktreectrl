@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.55 2006/10/26 03:01:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.56 2006/10/30 00:48:10 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3588,6 +3588,7 @@ Style_ElemChanged(
     TreeCtrl *tree,		/* Widget info. */
     MStyle *masterStyle,	/* Master style that uses the element. */
     Element *masterElem,	/* Master element affected by the change. */
+    int masterElemIndex,	/* Index of masterElem in masterStyle. */
     int flagM,			/* Flags returned by ElementType.configProc()
 				 * if the master element was configured,
 				 * zero if the TreeCtrl was configured. */
@@ -3604,7 +3605,7 @@ Style_ElemChanged(
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
     IElementLink *eLink;
-    int i, columnIndex;
+    int columnIndex;
     ElementArgs args;
     IStyle *style;
     int eMask, cMask, iMask;
@@ -3629,26 +3630,21 @@ Style_ElemChanged(
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	    if ((style != NULL) && (style->master == masterStyle))
 	    {
-		for (i = 0; i < masterStyle->numElements; i++)
+		eLink = &style->elements[masterElemIndex];
+		if (eLink->elem == masterElem)
 		{
-		    eLink = &style->elements[i];
-		    if (eLink->elem == masterElem)
-		    {
-			if (csM & CS_LAYOUT)
-			    eLink->neededWidth = eLink->neededHeight = -1;
-			cMask |= csM;
-			break;
-		    }
-		    /* Instance element */
-		    if (eLink->elem->master == masterElem)
-		    {
-			args.elem = eLink->elem;
-			eMask = (*masterElem->typePtr->changeProc)(&args);
-			if (eMask & CS_LAYOUT)
-			    eLink->neededWidth = eLink->neededHeight = -1;
-			cMask |= eMask;
-			break;
-		    }
+		    if (csM & CS_LAYOUT)
+			eLink->neededWidth = eLink->neededHeight = -1;
+		    cMask |= csM;
+		}
+		/* Instance element */
+		else
+		{
+		    args.elem = eLink->elem;
+		    eMask = (*masterElem->typePtr->changeProc)(&args);
+		    if (eMask & CS_LAYOUT)
+			eLink->neededWidth = eLink->neededHeight = -1;
+		    cMask |= eMask;
 		}
 		iMask |= cMask;
 		if (cMask & CS_LAYOUT)
@@ -4082,7 +4078,7 @@ Element_Changed(
 	    eLink = &masterStyle->elements[i];
 	    if (eLink->elem == masterElem)
 	    {
-		Style_ElemChanged(tree, masterStyle, masterElem, flagM, flagT, csM);
+		Style_ElemChanged(tree, masterStyle, masterElem, i, flagM, flagT, csM);
 		break;
 	    }
 	}
@@ -4291,10 +4287,17 @@ Tree_ElementChangedItself(
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
     Element *elem,		/* The element that changed. */
+    int flags,			/* Element-specific configuration flags. */
     int csM			/* CS_xxx flags detailing the effects of
 				 * the change. */
     )
 {
+    /* Master element. */
+    if (item == NULL)
+    {
+	Element_Changed(tree, elem, flags, 0, csM);
+	return;
+    }
     if (csM & CS_LAYOUT)
     {
 	IStyle *style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
