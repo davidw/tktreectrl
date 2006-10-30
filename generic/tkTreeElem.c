@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.46 2006/10/26 03:00:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.47 2006/10/30 00:53:43 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2726,7 +2726,7 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
 
     elemX->stringRepInvalid = TRUE;
     Tree_ElementChangedItself(etv->tree, etv->item, etv->column,
-	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+	(Element *) elemX, TEXT_CONF_TEXTVAR, CS_LAYOUT | CS_DISPLAY);
     return (char *) NULL;
 }
 #endif /* TEXTVAR */
@@ -3401,7 +3401,7 @@ WinItemStructureProc(clientData, eventPtr)
     if (eventPtr->type == DestroyNotify) {
 	elemX->tkwin = elemX->child = NULL;
 	Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
-	    (Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+	    (Element *) elemX, EWIN_CONF_WINDOW, CS_LAYOUT | CS_DISPLAY);
     }
 }
 
@@ -3419,7 +3419,7 @@ WinItemRequestProc(clientData, tkwin)
 	return;
 #endif
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
-	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+	(Element *) elemX, EWIN_CONF_WINDOW, CS_LAYOUT | CS_DISPLAY);
 }
 
 static void
@@ -3467,7 +3467,7 @@ WinItemLostSlaveProc(clientData, tkwin)
     elemX->tkwin = NULL;
 #endif
     Tree_ElementChangedItself(elemX->tree, elemX->item, elemX->column,
-	(Element *) elemX, CS_LAYOUT | CS_DISPLAY);
+	(Element *) elemX, EWIN_CONF_WINDOW, CS_LAYOUT | CS_DISPLAY);
 }
 
 static Tk_GeomMgr winElemGeomType = {
