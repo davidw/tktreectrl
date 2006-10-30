@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.22 2006/10/18 03:49:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.23 2006/10/30 00:52:15 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -126,7 +126,7 @@ extern TreeIterate Tree_ElementIterateNext(TreeIterate iter_);
 extern Element *Tree_ElementIterateGet(TreeIterate iter_);
 extern void Tree_ElementIterateChanged(TreeIterate iter_, int mask);
 extern void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
-    TreeItemColumn column, Element *elem, int mask);
+    TreeItemColumn column, Element *elem, int flags, int mask);
 
 typedef struct TreeCtrlStubs TreeCtrlStubs;
 struct TreeCtrlStubs
