@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.3 2006/10/28 01:27:45 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.4 2006/10/31 06:19:29 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -137,13 +137,26 @@ proc DemoColumnLock {} {
     # Create styles for the non-locked columns
     #
 
-    $T element create eRect rect -outline gray -outlinewidth 1 -open wn \
-	-fill {gray80 mouseover}
-    $T style create s1 -orient horizontal
-    $T style elements s1 eRect
-    $T style layout s1 eRect -detach yes -iexpand xy
+    $T state define selN
+    $T state define selS
+    $T state define selW
+    $T state define selE
 
-    $T item style set "root children" "range {first next} {last prev}" s1
+    $T element create cell.bd rect -outline gray -outlinewidth 1 -open wn \
+	-fill {gray80 mouseover #F7F7F7 CHECK}
+    $T element create cell.selN rect -height 2 -fill black -draw {no !selN}
+    $T element create cell.selS rect -height 2 -fill black -draw {no !selS}
+    $T element create cell.selW rect -width 2 -fill black -draw {no !selW}
+    $T element create cell.selE rect -width 2 -fill black -draw {no !selE}
+    $T style create cell -orient horizontal
+    $T style elements cell {cell.bd cell.selN cell.selS cell.selW cell.selE}
+    $T style layout cell cell.bd -detach yes -iexpand xy
+    $T style layout cell cell.selN -detach yes -expand s -iexpand x
+    $T style layout cell cell.selS -detach yes -expand n -iexpand x
+    $T style layout cell cell.selW -detach yes -expand e -iexpand y
+    $T style layout cell cell.selE -detach yes -expand w -iexpand y
+
+    $T item style set "root children" "range {first next} {last prev}" cell
 
     $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover}
     $T element create windowStyle.text text
@@ -173,27 +186,63 @@ proc DemoColumnLock {} {
     }
 
     bind DemoColumnLock <ButtonPress-1> {
-	set id [%W identify %x %y]
-	if {[lindex $id 0] eq "item"} {
-	    foreach {what item where arg1 arg2 arg3} $id {}
-	    if {$where eq "column"} {
-		if {[%W column compare $arg1 == last]} {
-		    %W item state forcolumn $item $arg1 ~CHECK
-		}
-	    }
-	}
+	ColumnLockButton1 %W %x %y
     }
-
     bind DemoColumnLock <Button1-Motion> {
-	# no-op
+	ColumnLockMotion1 %W %x %y
+	ColumnLockMotion %W %x %y
     }
     bind DemoColumnLock <Motion> {
 	ColumnLockMotion %W %x %y
     }
 
     set ColumnLock(prev) ""
+    set ColumnLock(selection) {}
+
     bindtags $T [list $T DemoColumnLock TreeCtrl [winfo toplevel $T] all]
 
+    return
+}
+
+proc ColumnLockButton1 {w x y} {
+    global ColumnLock
+    set id [$w identify $x $y]
+    set ColumnLock(selecting) 0
+    if {[lindex $id 0] eq "item"} {
+	foreach {what item where arg1 arg2 arg3} $id {}
+	if {$where eq "column"} {
+	    if {[$w column compare $arg1 == last]} {
+		$w item state set $item ~CHECK
+		return
+	    }
+	    if {[$w column cget $arg1 -lock] eq "none"} {
+		set ColumnLock(corner1) [list $item $arg1]
+		set ColumnLock(corner2) $ColumnLock(corner1)
+		set ColumnLock(selecting) 1
+		ColumnLockUpdateSelection $w
+	    }
+	}
+    }
+    return
+}
+
+proc ColumnLockMotion1 {w x y} {
+    global ColumnLock
+    set id [$w identify $x $y]
+    if {[lindex $id 0] eq "item"} {
+	foreach {what item where arg1 arg2 arg3} $id {}
+	if {$where eq "column"} {
+	    if {[$w column cget $arg1 -lock] eq "none"} {
+		if {$ColumnLock(selecting)} {
+		    set corner [list $item $arg1]
+		    if {$corner ne $ColumnLock(corner2)} {
+			set ColumnLock(corner2) $corner
+			ColumnLockUpdateSelection $w
+		    }
+		}
+	    }
+	}
+    }
     return
 }
 
@@ -209,12 +258,13 @@ proc ColumnLockMotion {w x y} {
 	} else {
 	    set column [$w cget -treecolumn]
 	}
-	if {[list $item $column] ne $ColumnLock(prev)} {
+	set curr [list $item $column]
+	if {$curr ne $ColumnLock(prev)} {
 	    if {$ColumnLock(prev) ne ""} {
 		eval $w item state forcolumn $ColumnLock(prev) !mouseover
 	    }
 	    $w item state forcolumn $item $column mouseover
-	    set ColumnLock(prev) [list $item $column]
+	    set ColumnLock(prev) $curr
 	}
 	return
     }
@@ -225,3 +275,32 @@ proc ColumnLockMotion {w x y} {
     return
 }
 
+proc ColumnLockUpdateSelection {w} {
+    global ColumnLock
+    foreach {item column} $ColumnLock(selection) {
+	$w item state forcolumn $item $column {!selN !selS !selE !selW}
+    }
+    set ColumnLock(selection) {}
+    foreach {item1 column1} $ColumnLock(corner1) {}
+    foreach {item2 column2} $ColumnLock(corner2) {}
+    if {[$w item compare $item1 > $item2]} {
+	set swap $item1
+	set item1 $item2
+	set item2 $swap
+    }
+    if {[$w column compare $column1 > $column2]} {
+	set swap $column1
+	set column1 $column2
+	set column2 $swap
+    }
+    $w item state forcolumn $item1 "range $column1 $column2" selN
+    $w item state forcolumn $item2 "range $column1 $column2" selS
+    $w item state forcolumn "range $item1 $item2" $column1 selW
+    $w item state forcolumn "range $item1 $item2" $column2 selE
+    foreach item [$w item id "range $item1 $item2"] {
+	foreach column [$w column id "range $column1 $column2"] {
+	    lappend ColumnLock(selection) $item $column
+	}
+    }
+    return
+}
