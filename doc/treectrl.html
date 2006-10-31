@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.38 2006/10/27 04:37:11 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.39 2006/10/31 23:30:13 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.38 2006/10/27 04:37:11 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.39 2006/10/31 23:30:13 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -3146,6 +3146,11 @@ the return value of a prior call of the <b class='cmd'>column create</b> widget 
 See also the <strong>-columnprefix</strong> option.
 
 <br><br>
+<dt><i class='arg'>QUALIFIERS</i><dd>
+Specifies a list of qualifiers. This gives the same result as <strong>all</strong> followed
+by <i class='arg'>QUALIFIERS</i>; i.e., every column is tested for a match.
+
+<br><br>
 <dt><i class='arg'>tagExpr</i> <i class='arg'>QUALIFIERS</i><dd>
 <i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
 every column's tags are tested for a match.
@@ -3153,11 +3158,12 @@ This keyword cannot be followed by any modifiers unless a single column is
 matched. You may run into trouble if <i class='arg'>tagExpr</i> looks like a column id
 or other keyword; also, <i class='arg'>tagExpr</i> must look like a single list element
 since column descriptions are properly-formed lists. To be safe you may want to
-use the <strong>tag</strong> keyword.
+use the <strong>tag</strong> keyword followed by <i class='arg'>tagExpr</i>.
 
 <br><br>
 <dt><strong>all</strong> <i class='arg'>QUALIFIERS</i><dd>
-Indicates every column, including the tail column, which match <i class='arg'>QUALIFIERS</i>.
+Indicates every column, including the tail column if the command allows it,
+which match <i class='arg'>QUALIFIERS</i>.
 
 <br><br>
 <dt><strong>first</strong> <i class='arg'>QUALIFIERS</i><dd>
@@ -3173,7 +3179,7 @@ which matches <i class='arg'>QUALIFIERS</i>.
 <dt><strong>list</strong> <i class='arg'>columnDescs</i><dd>
 <i class='arg'>ColumnDescs</i> is a list (a single argument, i.e. &quot;list {a b c}&quot; not &quot;list a b c&quot;)
 of other column descriptions.
-This keyword cannot be followed by any modifiers unless a single column is specified.
+This keyword cannot be followed by any modifiers unless a single column is matched.
 
 <br><br>
 <dt><strong>order</strong> <i class='arg'>n</i> <i class='arg'>QUALIFIERS</i><dd>
@@ -3188,13 +3194,6 @@ This keyword cannot be followed by any modifiers unless a single column is speci
 <br><br>
 <dt><strong>tail</strong><dd>
 Indicates the ever-present tail column of the treectrl.
-
-<br><br>
-<dt><strong>tag</strong> <i class='arg'>tagExpr</i> <i class='arg'>QUALIFIERS</i><dd>
-<i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
-every column's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single column is
-matched.
 
 <br><br>
 <dt><strong>tree</strong><dd>
@@ -3231,7 +3230,11 @@ are considered.
 <br><br>
 <dt><strong>tag</strong> <i class='arg'>tagExpr</i><dd>
 <i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
-every column's tags are tested for a match.
+a column's tags are tested for a match.
+
+<br><br>
+<dt><strong>!tail</strong><dd>
+When this qualifier is given, the tail column is not matched.
 
 <br><br>
 <dt><strong>visible</strong><dd>
@@ -3608,6 +3611,13 @@ If this option is specified, the <strong>-data</strong>, <strong>-datatype</stro
 and <strong>-format</strong> options are ignored.
 
 <br><br>
+<dt><strong><strong>-underline</strong></strong> <i class='arg'>charIndex</i><dd>
+Specifies the integer index of a character to underline.
+0 corresponds to the first character.
+If <i class='arg'>charIndex</i> is unspecified (the default), less than zero or greater
+than the index of the last displayed character, the underline is not drawn.
+
+<br><br>
 <dt><strong><strong>-width</strong></strong> <i class='arg'>size</i><dd>
 Specifies the maximum line length in any of the forms acceptable to <strong>Tk_GetPixels</strong>.
 For text to wrap lines the value of the <strong>-width</strong>
@@ -3683,6 +3693,11 @@ or <strong>0</strong> to specify the ever-present root item. See also the
 <strong>-itemprefix</strong> option.
 
 <br><br>
+<dt><i class='arg'>QUALIFIERS</i><dd>
+Specifies a list of qualifiers. This gives the same result as <strong>all</strong> followed
+by <i class='arg'>QUALIFIERS</i>; i.e., every item is tested for a match.
+
+<br><br>
 <dt><i class='arg'>tagExpr</i> <i class='arg'>QUALIFIERS</i><dd>
 <i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
 every item's tags are tested for a match.
@@ -3690,7 +3705,7 @@ This keyword cannot be followed by any modifiers unless a single item is
 matched. You may run into trouble if <i class='arg'>tagExpr</i> looks like an item id
 or other keyword; also, <i class='arg'>tagExpr</i> must look like a single list element
 since item descriptions are properly-formed lists. To be safe you may want to
-use the <strong>tag</strong> keyword.
+use the <strong>tag</strong> keyword followed by <i class='arg'>tagExpr</i>.
 
 <br><br>
 <dt><strong>active</strong><dd>
@@ -3706,9 +3721,8 @@ widget command, or the root item if no such call happened yet.
 
 <br><br>
 <dt><strong>all</strong> <i class='arg'>QUALIFIERS</i><dd>
-Indicates every item of the treectrl including orphans,
-or the items matching <i class='arg'>QUALIFIERS</i>.
-This keyword cannot be followed by any modifiers.
+Indicates every item including orphans which match <i class='arg'>QUALIFIERS</i>.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 <br><br>
 <dt><strong>first</strong> <i class='arg'>QUALIFIERS</i><dd>
@@ -3718,14 +3732,13 @@ or the first item matching <i class='arg'>QUALIFIERS</i>.
 <br><br>
 <dt><strong>end</strong> <i class='arg'>QUALIFIERS</i><dd>
 <dt><strong>last</strong> <i class='arg'>QUALIFIERS</i><dd>
-Indicates the last item of the treectrl,
-or the last item matching <i class='arg'>QUALIFIERS</i>.
+Indicates the last item which matches <i class='arg'>QUALIFIERS</i>.
 
 <br><br>
 <dt><strong>list</strong> <i class='arg'>itemDescs</i><dd>
 <i class='arg'>ItemDescs</i> is a list (a single argument, i.e. &quot;list {a b c}&quot; not &quot;list a b c&quot;)
 of other item descriptions.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 <br><br>
 <dt><strong>nearest</strong> <i class='arg'>x y</i><dd>
@@ -3742,18 +3755,11 @@ You can memorize <strong>rnc</strong> as an abbreviation of &quot;row 'n' column
 <br><br>
 <dt><strong>range</strong> <i class='arg'>first last</i> <i class='arg'>QUALIFIERS</i><dd>
 <i class='arg'>First</i> and <i class='arg'>last</i> specify a range of items.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 <br><br>
 <dt><strong>root</strong><dd>
 Indicates the root item of the treectrl.
-
-<br><br>
-<dt><strong>tag</strong> <i class='arg'>tagExpr</i> <i class='arg'>QUALIFIERS</i><dd>
-<i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
-every item's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single item is
-matched.
 
 </dl>
 
@@ -3858,6 +3864,11 @@ The word <i class='arg'>QUALIFIERS</i> above represents a series of zero or more
 following terms that changes which item is chosen:
 
 <dl>
+<dt><strong>depth</strong> <i class='arg'>depth</i><dd>
+Matches items whose depth (as returned by the <b class='cmd'>depth</b> command) is equal to
+<i class='arg'>depth</i>.
+
+<br><br>
 <dt><strong>state</strong> <i class='arg'>stateList</i><dd>
 <i class='arg'>StateList</i> is a list of item state names (static and dynamic, see <a href="#states">STATES</a>).
 Only items that have the given states set (or unset if the '!' prefix is used)
@@ -3866,7 +3877,7 @@ are considered.
 <br><br>
 <dt><strong>tag</strong> <i class='arg'>tagExpr</i><dd>
 <i class='arg'>TagExpr</i> is a tag expression (see <a href="#item_and_column_tags">ITEM AND COLUMN TAGS</a>) against which
-every item's tags are tested for a match.
+an item's tags are tested for a match.
 
 <br><br>
 <dt><strong>visible</strong><dd>
@@ -3895,6 +3906,7 @@ $T item id &quot;root descendants visible&quot;
 To get the every hidden item with tag &quot;a&quot; or &quot;b&quot;:
 <p><table><tr><td bgcolor=black>&nbsp;</td><td><pre class='sample'>
 $T item id &quot;all !visible tag a||b&quot;
+$T item id &quot;!visible tag a||b&quot;
 $T item id &quot;tag a||b !visible&quot;
 $T item id &quot;a||b !visible&quot;
 </pre></td></tr></table></p>

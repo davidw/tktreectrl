@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.39 2006/10/27 04:37:11 treectrl Exp $}
+  $Id: treectrl.man,v 1.40 2006/10/31 23:30:13 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -2429,6 +2429,10 @@ Specifies the unique column identifier, where [arg id] should be
 the return value of a prior call of the [cmd {column create}] widget command.
 See also the [option -columnprefix] option.
 
+[lst_item [arg QUALIFIERS]]
+Specifies a list of qualifiers. This gives the same result as [const all] followed
+by [arg QUALIFIERS]; i.e., every column is tested for a match.
+
 [lst_item "[arg tagExpr] [arg QUALIFIERS]"]
 [arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
 every column's tags are tested for a match.
@@ -2436,10 +2440,11 @@ This keyword cannot be followed by any modifiers unless a single column is
 matched. You may run into trouble if [arg tagExpr] looks like a column id
 or other keyword; also, [arg tagExpr] must look like a single list element
 since column descriptions are properly-formed lists. To be safe you may want to
-use the [const tag] keyword.
+use the [const tag] keyword followed by [arg tagExpr].
 
 [lst_item "[const all] [arg QUALIFIERS]"]
-Indicates every column, including the tail column, which match [arg QUALIFIERS].
+Indicates every column, including the tail column if the command allows it,
+which match [arg QUALIFIERS].
 
 [lst_item "[const first] [arg QUALIFIERS]"]
 Indicates the leftmost column of the treectrl which matches [arg QUALIFIERS].
@@ -2452,7 +2457,7 @@ which matches [arg QUALIFIERS].
 [lst_item "[const list] [arg columnDescs]"]
 [arg ColumnDescs] is a list (a single argument, i.e. "list {a b c}" not "list a b c")
 of other column descriptions.
-This keyword cannot be followed by any modifiers unless a single column is specified.
+This keyword cannot be followed by any modifiers unless a single column is matched.
 
 [lst_item "[const order] [arg n] [arg QUALIFIERS]"]
 Indicates the [arg n]th column in the list of columns as returned by the
@@ -2464,12 +2469,6 @@ This keyword cannot be followed by any modifiers unless a single column is speci
 
 [lst_item [const tail]]
 Indicates the ever-present tail column of the treectrl.
-
-[lst_item "[const tag] [arg tagExpr] [arg QUALIFIERS]"]
-[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
-every column's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single column is
-matched.
 
 [lst_item [const tree]]
 Indicates the column specified by the -treecolumn option of the treectrl.
@@ -2503,7 +2502,10 @@ are considered.
 
 [lst_item "[const tag] [arg tagExpr]"]
 [arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
-every column's tags are tested for a match.
+a column's tags are tested for a match.
+
+[lst_item [const !tail]]
+When this qualifier is given, the tail column is not matched.
 
 [lst_item [const visible]]
 When this qualifier is given, only columns whose [option -visible] option is
@@ -2837,6 +2839,12 @@ will automatically update itself to display the new value.
 If this option is specified, the [option -data], [option -datatype],
 and [option -format] options are ignored.
 
+[opt_def [option -underline] [arg charIndex]]
+Specifies the integer index of a character to underline.
+0 corresponds to the first character.
+If [arg charIndex] is unspecified (the default), less than zero or greater
+than the index of the last displayed character, the underline is not drawn.
+
 [opt_def [option -width] [arg size]]
 Specifies the maximum line length in any of the forms acceptable to [fun Tk_GetPixels].
 For text to wrap lines the value of the [option -width]
@@ -2905,6 +2913,10 @@ the return value of a prior call of the [cmd {item create}] widget command,
 or [const 0] to specify the ever-present root item. See also the
 [option -itemprefix] option.
 
+[lst_item [arg QUALIFIERS]]
+Specifies a list of qualifiers. This gives the same result as [const all] followed
+by [arg QUALIFIERS]; i.e., every item is tested for a match.
+
 [lst_item "[arg tagExpr] [arg QUALIFIERS]"]
 [arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
 every item's tags are tested for a match.
@@ -2912,7 +2924,7 @@ This keyword cannot be followed by any modifiers unless a single item is
 matched. You may run into trouble if [arg tagExpr] looks like an item id
 or other keyword; also, [arg tagExpr] must look like a single list element
 since item descriptions are properly-formed lists. To be safe you may want to
-use the [const tag] keyword.
+use the [const tag] keyword followed by [arg tagExpr].
 
 [lst_item [const active]]
 Indicates the item that is currently active, i.e. normally
@@ -2925,9 +2937,8 @@ the item specified as argument of the last successful [cmd {selection anchor}]
 widget command, or the root item if no such call happened yet.
 
 [lst_item "[const all] [arg QUALIFIERS]"]
-Indicates every item of the treectrl including orphans,
-or the items matching [arg QUALIFIERS].
-This keyword cannot be followed by any modifiers.
+Indicates every item including orphans which match [arg QUALIFIERS].
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 [lst_item "[const first] [arg QUALIFIERS]"]
 Indicates the first item of the treectrl (the root item),
@@ -2935,13 +2946,12 @@ or the first item matching [arg QUALIFIERS].
 
 [lst_item "[const end] [arg QUALIFIERS]"]
 [lst_item "[const last] [arg QUALIFIERS]"]
-Indicates the last item of the treectrl,
-or the last item matching [arg QUALIFIERS].
+Indicates the last item which matches [arg QUALIFIERS].
 
 [lst_item "[const list] [arg itemDescs]"]
 [arg ItemDescs] is a list (a single argument, i.e. "list {a b c}" not "list a b c")
 of other item descriptions.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 [lst_item "[const nearest] [arg {x y}]"]
 Indicates the item nearest to the point given by [arg x] and [arg y].
@@ -2955,16 +2965,10 @@ You can memorize [const rnc] as an abbreviation of "row 'n' column".
 
 [lst_item "[const range] [arg {first last}] [arg QUALIFIERS]"]
 [arg First] and [arg last] specify a range of items.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 
 [lst_item [const root]]
 Indicates the root item of the treectrl.
-
-[lst_item "[const tag] [arg tagExpr] [arg QUALIFIERS]"]
-[arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
-every item's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single item is
-matched.
 
 [list_end]
 
@@ -3050,6 +3054,10 @@ The word [arg QUALIFIERS] above represents a series of zero or more of the
 following terms that changes which item is chosen:
 
 [list_begin definitions]
+[lst_item "[const depth] [arg depth]"]
+Matches items whose depth (as returned by the [cmd depth] command) is equal to
+[arg depth].
+
 [lst_item "[const state] [arg stateList]"]
 [arg StateList] is a list of item state names (static and dynamic, see [sectref STATES]).
 Only items that have the given states set (or unset if the '!' prefix is used)
@@ -3057,7 +3065,7 @@ are considered.
 
 [lst_item "[const tag] [arg tagExpr]"]
 [arg TagExpr] is a tag expression (see [sectref {ITEM AND COLUMN TAGS}]) against which
-every item's tags are tested for a match.
+an item's tags are tested for a match.
 
 [lst_item [const visible]]
 When this qualifier is given, only items that are displayed are considered.
@@ -3084,6 +3092,7 @@ $T item id "root descendants visible"
 To get the every hidden item with tag "a" or "b":
 [example_begin]
 $T item id "all !visible tag a||b"
+$T item id "!visible tag a||b"
 $T item id "tag a||b !visible"
 $T item id "a||b !visible"
 [example_end]

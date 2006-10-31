@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.55 2006/10/27 04:37:11 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.56 2006/10/31 23:30:13 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.1.1 treectrl "Tk Commands"
 .BS
@@ -2965,6 +2965,10 @@ Specifies the unique column identifier, where \fIid\fR should be
 the return value of a prior call of the \fBcolumn create\fR widget command.
 See also the \fB-columnprefix\fR option.
 .TP
+\fIQUALIFIERS\fR
+Specifies a list of qualifiers. This gives the same result as \fBall\fR followed
+by \fIQUALIFIERS\fR; i.e., every column is tested for a match.
+.TP
 \fItagExpr\fR \fIQUALIFIERS\fR
 \fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
 every column's tags are tested for a match.
@@ -2972,10 +2976,11 @@ This keyword cannot be followed by any modifiers unless a single column is
 matched. You may run into trouble if \fItagExpr\fR looks like a column id
 or other keyword; also, \fItagExpr\fR must look like a single list element
 since column descriptions are properly-formed lists. To be safe you may want to
-use the \fBtag\fR keyword.
+use the \fBtag\fR keyword followed by \fItagExpr\fR.
 .TP
 \fBall\fR \fIQUALIFIERS\fR
-Indicates every column, including the tail column, which match \fIQUALIFIERS\fR.
+Indicates every column, including the tail column if the command allows it,
+which match \fIQUALIFIERS\fR.
 .TP
 \fBfirst\fR \fIQUALIFIERS\fR
 Indicates the leftmost column of the treectrl which matches \fIQUALIFIERS\fR.
@@ -2989,7 +2994,7 @@ which matches \fIQUALIFIERS\fR.
 \fBlist\fR \fIcolumnDescs\fR
 \fIColumnDescs\fR is a list (a single argument, i.e. "list {a b c}" not "list a b c")
 of other column descriptions.
-This keyword cannot be followed by any modifiers unless a single column is specified.
+This keyword cannot be followed by any modifiers unless a single column is matched.
 .TP
 \fBorder\fR \fIn\fR \fIQUALIFIERS\fR
 Indicates the \fIn\fRth column in the list of columns as returned by the
@@ -3001,12 +3006,6 @@ This keyword cannot be followed by any modifiers unless a single column is speci
 .TP
 \fBtail\fR
 Indicates the ever-present tail column of the treectrl.
-.TP
-\fBtag\fR \fItagExpr\fR \fIQUALIFIERS\fR
-\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
-every column's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single column is
-matched.
 .TP
 \fBtree\fR
 Indicates the column specified by the -treecolumn option of the treectrl.
@@ -3032,7 +3031,10 @@ are considered.
 .TP
 \fBtag\fR \fItagExpr\fR
 \fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
-every column's tags are tested for a match.
+a column's tags are tested for a match.
+.TP
+\fB!tail\fR
+When this qualifier is given, the tail column is not matched.
 .TP
 \fBvisible\fR
 When this qualifier is given, only columns whose \fB-visible\fR option is
@@ -3344,6 +3346,12 @@ will automatically update itself to display the new value.
 If this option is specified, the \fB-data\fR, \fB-datatype\fR,
 and \fB-format\fR options are ignored.
 .TP
+\fB\fB-underline\fR\fR \fIcharIndex\fR
+Specifies the integer index of a character to underline.
+0 corresponds to the first character.
+If \fIcharIndex\fR is unspecified (the default), less than zero or greater
+than the index of the last displayed character, the underline is not drawn.
+.TP
 \fB\fB-width\fR\fR \fIsize\fR
 Specifies the maximum line length in any of the forms acceptable to \fBTk_GetPixels\fR.
 For text to wrap lines the value of the \fB-width\fR
@@ -3405,6 +3413,10 @@ the return value of a prior call of the \fBitem create\fR widget command,
 or \fB0\fR to specify the ever-present root item. See also the
 \fB-itemprefix\fR option.
 .TP
+\fIQUALIFIERS\fR
+Specifies a list of qualifiers. This gives the same result as \fBall\fR followed
+by \fIQUALIFIERS\fR; i.e., every item is tested for a match.
+.TP
 \fItagExpr\fR \fIQUALIFIERS\fR
 \fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
 every item's tags are tested for a match.
@@ -3412,7 +3424,7 @@ This keyword cannot be followed by any modifiers unless a single item is
 matched. You may run into trouble if \fItagExpr\fR looks like an item id
 or other keyword; also, \fItagExpr\fR must look like a single list element
 since item descriptions are properly-formed lists. To be safe you may want to
-use the \fBtag\fR keyword.
+use the \fBtag\fR keyword followed by \fItagExpr\fR.
 .TP
 \fBactive\fR
 Indicates the item that is currently active, i.e. normally
@@ -3425,9 +3437,8 @@ the item specified as argument of the last successful \fBselection anchor\fR
 widget command, or the root item if no such call happened yet.
 .TP
 \fBall\fR \fIQUALIFIERS\fR
-Indicates every item of the treectrl including orphans,
-or the items matching \fIQUALIFIERS\fR.
-This keyword cannot be followed by any modifiers.
+Indicates every item including orphans which match \fIQUALIFIERS\fR.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 .TP
 \fBfirst\fR \fIQUALIFIERS\fR
 Indicates the first item of the treectrl (the root item),
@@ -3436,13 +3447,12 @@ or the first item matching \fIQUALIFIERS\fR.
 \fBend\fR \fIQUALIFIERS\fR
 .TP
 \fBlast\fR \fIQUALIFIERS\fR
-Indicates the last item of the treectrl,
-or the last item matching \fIQUALIFIERS\fR.
+Indicates the last item which matches \fIQUALIFIERS\fR.
 .TP
 \fBlist\fR \fIitemDescs\fR
 \fIItemDescs\fR is a list (a single argument, i.e. "list {a b c}" not "list a b c")
 of other item descriptions.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 .TP
 \fBnearest\fR \fIx y\fR
 Indicates the item nearest to the point given by \fIx\fR and \fIy\fR.
@@ -3456,16 +3466,10 @@ You can memorize \fBrnc\fR as an abbreviation of "row 'n' column".
 .TP
 \fBrange\fR \fIfirst last\fR \fIQUALIFIERS\fR
 \fIFirst\fR and \fIlast\fR specify a range of items.
-This keyword cannot be followed by any modifiers.
+This keyword cannot be followed by any modifiers unless a single item is matched.
 .TP
 \fBroot\fR
 Indicates the root item of the treectrl.
-.TP
-\fBtag\fR \fItagExpr\fR \fIQUALIFIERS\fR
-\fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
-every item's tags are tested for a match.
-This keyword cannot be followed by any modifiers unless a single item is
-matched.
 .PP
 The initial part of the item description (matching any of the values above)
 may be followed by one or more \fImodifier\fRs.
@@ -3544,6 +3548,10 @@ Use the item in the first row of this column.
 The word \fIQUALIFIERS\fR above represents a series of zero or more of the
 following terms that changes which item is chosen:
 .TP
+\fBdepth\fR \fIdepth\fR
+Matches items whose depth (as returned by the \fBdepth\fR command) is equal to
+\fIdepth\fR.
+.TP
 \fBstate\fR \fIstateList\fR
 \fIStateList\fR is a list of item state names (static and dynamic, see \fBSTATES\fR).
 Only items that have the given states set (or unset if the '!' prefix is used)
@@ -3551,7 +3559,7 @@ are considered.
 .TP
 \fBtag\fR \fItagExpr\fR
 \fITagExpr\fR is a tag expression (see \fBITEM AND COLUMN TAGS\fR) against which
-every item's tags are tested for a match.
+an item's tags are tested for a match.
 .TP
 \fBvisible\fR
 When this qualifier is given, only items that are displayed are considered.
@@ -3580,6 +3588,7 @@ To get the every hidden item with tag "a" or "b":
 .nf
 
 $T item id "all !visible tag a||b"
+$T item id "!visible tag a||b"
 $T item id "tag a||b !visible"
 $T item id "a||b !visible"
 
