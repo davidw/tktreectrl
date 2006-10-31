@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.22 2006/09/16 20:31:05 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.23 2006/10/31 23:11:27 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -715,6 +715,16 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
     # Get the text used by the Element. Could check master Element too.
     set text [$T item element cget $item $column $element -text]
 
+    set justify [$T element cget $element -justify]
+    if {$justify eq ""} {
+	set justify left
+    }
+
+    set wrap [$T element cget $element -wrap]
+    if {$wrap eq ""} {
+	set wrap word
+    }
+
     # Create the Text widget if needed
     set w $T.text
     if {[winfo exists $w]} {
@@ -727,8 +737,8 @@ proc ::TreeCtrl::TextOpen {T item column element {width 0} {height 0}} {
     # Pesky MouseWheel
     $T notify bind $w <Scroll> { TreeCtrl::EditClose %T text 0 1 }
 
-    $w tag configure TAG -justify [$T element cget $element -justify]
-    $w configure -font $font
+    $w tag configure TAG -justify $justify
+    $w configure -font $font -background [$T cget -background] -wrap $wrap
     $w insert end $text
     $w tag add sel 1.0 end
     $w tag add TAG 1.0 end
@@ -774,6 +784,11 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
 	set justify left
     }
 
+    set wrap [$T element cget $element -wrap]
+    if {$wrap eq ""} {
+	set wrap word
+    }
+
     # Create the Text widget if needed
     set w $T.text
     if {[winfo exists $w]} {
@@ -793,7 +808,7 @@ proc ::TreeCtrl::TextExpanderOpen {T item column element width} {
     $T notify bind $w <Scroll> { TreeCtrl::EditClose %T text 0 1 }
 
     $w tag configure TAG -justify $justify
-    $w configure -font $font -background [$T cget -background]
+    $w configure -font $font -background [$T cget -background] -wrap $wrap
     $w insert end $text
     $w tag add sel 1.0 end
     $w tag add TAG 1.0 end
