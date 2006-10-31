@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.47 2006/10/30 00:53:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.48 2006/10/31 23:12:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2201,15 +2201,12 @@ struct ElementText
 #define TEXTVAR
 
 /* for Tk_SetOptions() */
-#define TEXT_CONF_FONT 0x0001
-#define TEXT_CONF_FILL 0x0002
-#define TEXT_CONF_TEXTOBJ 0x0004
-#define TEXT_CONF_LAYOUT 0x0008
+#define TEXT_CONF_LAYOUT 0x0001
+#define TEXT_CONF_DISPLAY 0x0002
+#define TEXT_CONF_STRINGREP 0x0040
 #ifdef TEXTVAR
-#define TEXT_CONF_TEXTVAR 0x0010
+#define TEXT_CONF_TEXTVAR 0x0080
 #endif
-#define TEXT_CONF_DRAW 0x0020
-#define TEXT_CONF_DATA 0x0001000
 
 typedef struct ElementTextData {
     Tcl_Obj *dataObj;			/* -data */
@@ -2244,6 +2241,25 @@ typedef struct ElementTextLayout2 {
     int neededWidth;
     int totalWidth;
 } ElementTextLayout2;
+
+#define TEXT_STYLE
+#ifdef TEXT_STYLE
+typedef struct ElementTextStyle {
+    int underline;			/* -underline */
+} ElementTextStyle;
+
+/* Called by the dynamic-option code when an ElementTextData is allocated. */
+static void
+ElementTextStyleInit(
+    char *data
+    )
+{
+    ElementTextStyle *ets = (ElementTextStyle *) data;
+
+#define TEXT_UNDERLINE_EMPTYVAL -100000
+    ets->underline = TEXT_UNDERLINE_EMPTYVAL;
+}
+#endif
 
 #ifdef TEXTVAR
 typedef struct ElementTextVar {
@@ -2286,22 +2302,22 @@ static CONST char *textWrapST[] = { "char", "none", "word", (char *) NULL };
 static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-data", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
     {TK_OPTION_CUSTOM, "-datatype", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DRAW},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL,  TEXT_CONF_FILL},
+     TK_OPTION_NULL_OK, (ClientData) NULL,  TEXT_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-font", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_FONT},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_CUSTOM, "-format", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DATA},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
     {TK_OPTION_CUSTOM, "-justify", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
@@ -2311,11 +2327,16 @@ static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementText, textObj),
      Tk_Offset(ElementText, text),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_TEXTOBJ},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
 #ifdef TEXTVAR
     {TK_OPTION_CUSTOM, "-textvariable", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
-     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_TEXTVAR},
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP | TEXT_CONF_TEXTVAR},
+#endif
+#ifdef TEXT_STYLE
+    {TK_OPTION_CUSTOM, "-underline", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Element, options),
+     TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DISPLAY},
 #endif
     {TK_OPTION_CUSTOM, "-width", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
@@ -2338,23 +2359,18 @@ static int WorldChangedProcText(ElementArgs *args)
     int flagS = args->change.flagSelf;
     int mask = 0;
 
-#ifdef TEXTVAR
-    if ((flagS | flagM) & (TEXT_CONF_DATA | TEXT_CONF_TEXTOBJ | TEXT_CONF_TEXTVAR)) {
-#else
-    if ((flagS | flagM) & (TEXT_CONF_DATA | TEXT_CONF_TEXTOBJ)) {
-#endif
+    if ((flagS | flagM) & TEXT_CONF_STRINGREP) {
 	elemX->stringRepInvalid = TRUE;
-	mask |= CS_DISPLAY | CS_LAYOUT;
     }
 
     if (elemX->stringRepInvalid ||
-	    ((flagS | flagM) & (TEXT_CONF_FONT | TEXT_CONF_LAYOUT)) ||
+	    ((flagS | flagM) & TEXT_CONF_LAYOUT) ||
 	    /* Not always needed */
 	    (flagT & TREE_CONF_FONT)) {
 	mask |= CS_DISPLAY | CS_LAYOUT;
     }
 
-    if ((flagS | flagM) & (TEXT_CONF_DRAW | TEXT_CONF_FILL))
+    if ((flagS | flagM) & TEXT_CONF_DISPLAY)
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -2859,7 +2875,7 @@ TextRedoLayoutIfNeeded(
     )
 {
     Element *elem = args->elem;
-    ElementText *elemX = (ElementText *) elem;
+/*    ElementText *elemX = (ElementText *) elem;*/
     ElementText *masterX = (ElementText *) elem->master;
     int doLayout = 0;
     int wrap = TEXT_WRAP_WORD;
@@ -2934,6 +2950,10 @@ static void DisplayProcText(ElementArgs *args)
     char *ellipsis = "...";
     TkRegion clipRgn = NULL;
     ElementTextLayout2 *etl2; 
+#ifdef TEXT_STYLE
+    ElementTextStyle *ets, *etsM = NULL;
+    int underline = TEXT_UNDERLINE_EMPTYVAL;
+#endif
 
     draw = DO_BooleanForState(tree, elem, 1002, state);
     if (!draw)
@@ -2971,6 +2991,17 @@ static void DisplayProcText(ElementArgs *args)
 	gc = tree->textGC;
     }
 
+#ifdef TEXT_STYLE
+    ets = (ElementTextStyle *) DynamicOption_FindData(elem->options, 1008);
+    if (ets != NULL && ets->underline != TEXT_UNDERLINE_EMPTYVAL)
+	underline = ets->underline;
+    else if (masterX != NULL) {
+	etsM = (ElementTextStyle *) DynamicOption_FindData(elem->master->options, 1008);
+	if (etsM != NULL && etsM->underline != TEXT_UNDERLINE_EMPTYVAL)
+	    underline = etsM->underline;
+    }
+#endif
+
     etl2 = TextRedoLayoutIfNeeded("DisplayProcText", args, args->display.width);
     if (etl2 != NULL && etl2->layout != NULL)
 	layout = etl2->layout;
@@ -2998,7 +3029,7 @@ static void DisplayProcText(ElementArgs *args)
 	    TkSetRegion(tree->display, gc, clipRgn);
 	}
 	TextLayout_Draw(tree->display, args->display.drawable, gc,
-		layout, x, y, 0, -1);
+		layout, x, y, 0, -1, underline);
 	if (clipRgn != NULL) {
 	    UnsetClipMask(tree, args->display.drawable, gc);
 	    TkDestroyRegion(clipRgn);
@@ -3045,11 +3076,29 @@ static void DisplayProcText(ElementArgs *args)
 	}
 	Tk_DrawChars(tree->display, args->display.drawable, gc,
 		tkfont, buf, bufLen, x, y + fm.ascent);
+#ifdef TEXT_STYLE
+	if (underline >= 0 && underline < Tcl_NumUtfChars(buf, abs(bytesThatFit))) {
+	    CONST char *fstBytePtr = Tcl_UtfAtIndex(buf, underline);
+	    CONST char *sndBytePtr = Tcl_UtfNext(fstBytePtr);
+	    Tk_UnderlineChars(tree->display, args->display.drawable, gc,
+		    tkfont, buf, x, y + fm.ascent, 
+		    fstBytePtr - buf, sndBytePtr - buf);
+	}
+#endif
 	if (buf != staticStr)
 	    ckfree(buf);
     } else {
 	Tk_DrawChars(tree->display, args->display.drawable, gc,
 		tkfont, text, textLen, x, y + fm.ascent);
+#ifdef TEXT_STYLE
+	if (underline >= 0 && underline < Tcl_NumUtfChars(text, textLen)) {
+	    CONST char *fstBytePtr = Tcl_UtfAtIndex(text, underline);
+	    CONST char *sndBytePtr = Tcl_UtfNext(fstBytePtr);
+	    Tk_UnderlineChars(tree->display, args->display.drawable, gc,
+		    tkfont, text, x, y + fm.ascent, 
+		    fstBytePtr - text, sndBytePtr - text);
+	}
+#endif
     }
     if (clipRgn != NULL) {
 	UnsetClipMask(tree, args->display.drawable, gc);
@@ -4152,6 +4201,19 @@ int TreeElement_Init(Tcl_Interp *interp)
 	Tk_Offset(struct ElementTextVar, varNameObj),
 	-1, &stringCO,
 	(DynamicOptionInitProc *) NULL);
+
+#ifdef TEXT_STYLE
+    DynamicCO_Init(elemTypeText.optionSpecs, "-underline",
+	1008, sizeof(ElementTextStyle),
+	-1,
+	Tk_Offset(ElementTextStyle, underline),
+	IntegerCO_Alloc("-underline",
+	    0,		/* min (ignored) */
+	    0,		/* max (ignored) */
+	    TEXT_UNDERLINE_EMPTYVAL,	/* empty */
+	    0x00),	/* flags */
+	ElementTextStyleInit);
+#endif
 
     PerStateCO_Init(elemTypeWindow.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
