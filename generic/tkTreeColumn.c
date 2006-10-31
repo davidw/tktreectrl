@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.52 2006/10/29 02:36:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.53 2006/10/31 23:12:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -822,6 +822,8 @@ typedef struct Qualifiers {
 #ifdef COLUMN_LOCK
     int lock;			/* COLUMN_LOCK_xxx or -1 */
 #endif
+    int ntail;			/* 1 for !tail,
+				 * 0 for unspecified. */
 } Qualifiers;
 
 /*
@@ -853,6 +855,7 @@ Qualifiers_Init(
 #ifdef COLUMN_LOCK
     q->lock = -1;
 #endif
+    q->ntail = 0;
 }
 
 /*
@@ -889,20 +892,20 @@ Qualifiers_Scan(
 #ifdef COLUMN_LOCK
 	"lock",
 #endif
-	"state", "tag", "visible", "!visible", NULL
+	"state", "tag", "visible", "!tail", "!visible", NULL
     };
     enum qualEnum {
 #ifdef COLUMN_LOCK
 	QUAL_LOCK,
 #endif
-	QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_VISIBLE
+	QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_TAIL, QUAL_NOT_VISIBLE
     };
     /* Number of arguments used by qualifiers[]. */
     static int qualArgs[] = {
 #ifdef COLUMN_LOCK
 	2,
 #endif
-	2, 2, 1, 1
+	2, 2, 1, 1, 1
     };
 
     *argsUsed = 0;
@@ -957,6 +960,11 @@ Qualifiers_Scan(
 		q->visible = 1;
 		break;
 	    }
+	    case QUAL_NOT_TAIL:
+	    {
+		q->ntail = 1;
+		break;
+	    }
 	    case QUAL_NOT_VISIBLE:
 	    {
 		q->visible = 0;
@@ -999,6 +1007,8 @@ Qualifies(
      * out of columns to check. */
     if (column == NULL)
 	return 1;
+    if ((q->ntail == 1) && (column == (Column *) column->tree->columnTail))
+	return 0;
     if ((q->visible == 1) && !column->visible)
 	return 0;
     else if ((q->visible == 0) && column->visible)
@@ -1048,19 +1058,23 @@ Qualifiers_Free(
  *
  *	Parse a Tcl_Obj column description to get a list of columns.
  *
+ * -- returning a single column --
  * ID MODIFIERS
- * TAG QUALIFIERS MODIFIERS
- * all QUALIFIERS
  * first QUALIFIERS MODIFIERS
  * end|last QUALIFIERS MODIFIERS
- * list listOfDescs
  * order N QUALIFIERS MODIFIERS
- * range first last QUALIFIERS
- * tag tagExpr QUALIFIERS
  * tail
  * tree
+ * -- returning multiple columns --
+ * all QUALIFIERS
+ * QUALIFIERS (like "all QUALIFIERS")
+ * list listOfDescs
+ * range first last QUALIFIERS
+ * tag tagExpr QUALIFIERS
+ * TAG-EXPR QUALIFIERS MODIFIERS
  *
  * MODIFIERS:
+ * -- returning a single column --
  * next QUALIFIERS
  * prev QUALIFIERS
  *
@@ -1069,6 +1083,7 @@ Qualifiers_Free(
  * tag tagExpr
  * visible
  * !visible
+ * !tail
  *
  * Results:
  *	A standard Tcl result.
@@ -4449,7 +4464,7 @@ Column_Draw(
 		column->textLayout,
 		x + layout.textLeft + sunken,
 		y + (height - h) / 2 + column->textPadY[PAD_TOP_LEFT] + sunken,
-		0, -1);
+		0, -1, -1);
 	Tk_FreeGC(tree->display, gc);
     } else if ((column->text != NULL) && (layout.bytesThatFit != 0)) {
 	XGCValues gcValues;
