@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.19 2006/10/04 03:57:52 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.20 2006/11/01 02:03:21 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -13,23 +13,32 @@ if {$tcl_platform(os) eq "Windows NT" && $tcl_platform(osVersion) == 5.1} {
 }
 
 proc DemoExplorerAux {scriptDir scriptFile} {
+	global Explorer
+	global Dir
 
 	set T .f2.f1.t
 
 	set clicks [clock clicks]
-	set globDirs [glob -nocomplain -types d -dir $::Dir *]
+	set globDirs [glob -nocomplain -types d -dir $Dir *]
 	set clickGlobDirs [expr {[clock clicks] - $clicks}]
 
 	set clicks [clock clicks]
 	set list [lsort -dictionary $globDirs]
 	set clickSortDirs [expr {[clock clicks] - $clicks}]
 
+	if {[file dirname $Dir] ne $Dir} {
+		lappend globDirs ".."
+		set list [concat ".." $list]
+	}
+
 	set clicks [clock clicks]
 	foreach file $list $scriptDir
 	set clickAddDirs [expr {[clock clicks] - $clicks}]
 
+	$T item tag add "root children" directory
+
 	set clicks [clock clicks]
-	set globFiles [glob -nocomplain -types f -dir $::Dir *]
+	set globFiles [glob -nocomplain -types f -dir $Dir *]
 	set clickGlobFiles [expr {[clock clicks] - $clicks}]
 
 	set clicks [clock clicks]
@@ -49,6 +58,12 @@ proc DemoExplorerAux {scriptDir scriptFile} {
 	puts "dirs([llength $globDirs]) glob/sort/add $gd/$sd/$ad    files([llength $globFiles]) glob/sort/add $gf/$sf/$af"
 
 	set ::TreeCtrl::Priv(DirCnt,$T) [llength $globDirs]
+
+	set Explorer(scriptDir) $scriptDir
+	set Explorer(scriptFile) $scriptFile
+	bind $T <Double-ButtonPress-1> {
+		ExplorerDoubleButton1 %W %x %y
+	}
 
 	return
 }
@@ -172,6 +187,10 @@ proc DemoExplorerDetails {} {
 			type txtType -text "Folder" , \
 			modified txtDate -data [file mtime $file]
 		if {$::shellicon} {
+			# The shellicon extension fails randomly (by putting GDB into the
+			# background!?) if the filename is not valid. MSDN says "relative
+			# paths are valid" but perhaps that is misinformation.
+			if {$file eq ".."} { set file [file dirname $::Dir] }
 			$T item element configure $item \
 				name elemImg -path $file
 		}
@@ -363,6 +382,10 @@ proc DemoExplorerLargeIcons {} {
 		$T item style set $item C0 STYLE
 		$T item text $item C0 [file tail $file]
 		if {$::shellicon} {
+			# The shellicon extension fails randomly (by putting GDB into the
+			# background!?) if the filename is not valid. MSDN says "relative
+			# paths are valid" but perhaps that is misinformation.
+			if {$file eq ".."} { set file [file dirname $::Dir] }
 			$T item element configure $item C0 \
 				elemImg -path $file
 		}
@@ -400,8 +423,12 @@ proc DemoExplorerLargeIcons {} {
 	$T activate [$T item id "root firstchild"]
 
 	$T notify bind $T <ActiveItem> {
-		%T item element configure %p C0 elemTxt -lines {}
-		%T item element configure %c C0 elemTxt -lines 3
+		if {[%T item compare %p != root]} {
+			%T item element configure %p C0 elemTxt -lines {}
+		}
+		if {[%T item compare %c != root]} {
+			%T item element configure %c C0 elemTxt -lines 3
+		}
 	}
 	$T item element configure active C0 elemTxt -lines 3
 
@@ -510,6 +537,10 @@ proc DemoExplorerList {} {
 		$T item style set $item C0 STYLE
 		$T item text $item C0 [file tail $file]
 		if {$::shellicon} {
+			# The shellicon extension fails randomly (by putting GDB into the
+			# background!?) if the filename is not valid. MSDN says "relative
+			# paths are valid" but perhaps that is misinformation.
+			if {$file eq ".."} { set file [file dirname $::Dir] }
 			$T item element configure $item C0 \
 				elemImg -path $file
 		}
@@ -551,3 +582,26 @@ proc DemoExplorerList {} {
 	return
 }
 
+proc ExplorerDoubleButton1 {w x y} {
+	global Explorer
+	global Dir
+	set id [$w identify $x $y]
+	if {[TreeCtrl::IsSensitive $w $x $y]} {
+		set item [lindex $id 1]
+		set column [lindex $id 3]
+		if {[$w item tag expr $item directory]} {
+			set name [$w item text $item $column]
+			if {$name eq ".."} {
+				set Dir [file dirname $Dir]
+			} else {
+				set Dir [file join $Dir $name]
+			}
+			$w item delete all
+			DemoExplorerAux $Explorer(scriptDir) $Explorer(scriptFile)
+			$w activate "root firstchild"
+			$w xview moveto 0.0
+			$w yview moveto 0.0
+		}
+	}
+	return
+}
