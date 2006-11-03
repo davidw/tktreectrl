@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.54 2006/11/03 18:49:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.55 2006/11/03 21:24:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -277,9 +277,6 @@ static CONST char *lockST[] = { "left", "none", "right", (char *) NULL };
 #define COLU_CONF_TEXT		0x0200
 #define COLU_CONF_BITMAP	0x0400
 #define COLU_CONF_RANGES	0x0800
-#define COLU_CONF_ARROWBMP	0x1000
-#define COLU_CONF_ARROWIMG	0x2000
-#define COLU_CONF_BG		0x4000
 
 static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_STRING_TABLE, "-arrow", (char *) NULL, (char *) NULL,
@@ -288,7 +285,7 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_CUSTOM, "-arrowbitmap", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(Column, arrowBitmap.obj), Tk_Offset(Column, arrowBitmap),
-     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWBMP |
+     TK_OPTION_NULL_OK, (ClientData) NULL,
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_STRING_TABLE, "-arrowgravity", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, arrowGravity),
@@ -296,7 +293,7 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_CUSTOM, "-arrowimage", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(Column, arrowImage.obj), Tk_Offset(Column, arrowImage),
-     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWIMG |
+     TK_OPTION_NULL_OK, (ClientData) NULL,
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowpadx", (char *) NULL, (char *) NULL,
      "6", Tk_Offset(Column, arrowPadXObj), Tk_Offset(Column, arrowPadX),
@@ -312,7 +309,7 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
      DEF_BUTTON_BG_COLOR,
      Tk_Offset(Column, border.obj), Tk_Offset(Column, border),
-     0, (ClientData) NULL, COLU_CONF_BG | COLU_CONF_DISPLAY},
+     0, (ClientData) NULL, COLU_CONF_DISPLAY},
     {TK_OPTION_BITMAP, "-bitmap", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Column, bitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL,
@@ -2034,7 +2031,7 @@ Column_Config(
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
-    int mask;
+    int mask, maskFree = 0;
     XGCValues gcValues;
     unsigned long gcMask;
 /*    int stateOld = Column_MakeState(column), stateNew;*/
@@ -2054,12 +2051,6 @@ Column_Config(
 	    /* Wouldn't have to do this if Tk_InitOptions() would return
 	     * a mask of configured options like Tk_SetOptions() does. */
 	    if (createFlag) {
-		if (column->arrowBitmap.obj != NULL)
-		    mask |= COLU_CONF_ARROWBMP;
-		if (column->arrowImage.obj != NULL)
-		    mask |= COLU_CONF_ARROWIMG;
-		if (column->border.obj != NULL)
-		    mask |= COLU_CONF_BG;
 		if (column->imageString != NULL)
 		    mask |= COLU_CONF_IMAGE;
 		if (column->itemBgObj != NULL)
@@ -2075,8 +2066,6 @@ Column_Config(
 	    if (mask & COLU_CONF_ITEMBG) {
 		saved.itemBgColor = column->itemBgColor;
 		saved.itemBgCount = column->itemBgCount;
-		column->itemBgColor = NULL;
-		column->itemBgCount = 0;
 	    }
 
 	    if ((column == (Column *) tree->columnTail) &&
@@ -2091,18 +2080,23 @@ Column_Config(
 	     */
 
 	    if (mask & COLU_CONF_IMAGE) {
-		column->image = NULL;
-		if (column->imageString != NULL) {
+		if (column->imageString == NULL) {
+		    column->image = NULL;
+		} else {
 		    column->image = Tk_GetImage(tree->interp, tree->tkwin,
 			    column->imageString, ImageChangedProc,
 			    (ClientData) column);
 		    if (column->image == NULL)
 			continue;
+		    maskFree |= COLU_CONF_IMAGE;
 		}
 	    }
 
 	    if (mask & COLU_CONF_ITEMBG) {
-		if (column->itemBgObj != NULL) {
+		if (column->itemBgObj == NULL) {
+		    column->itemBgColor = NULL;
+		    column->itemBgCount = 0;
+		} else {
 		    int i, length, listObjc;
 		    Tcl_Obj **listObjv;
 		    XColor **colors;
@@ -2129,6 +2123,7 @@ Column_Config(
 		    }
 		    column->itemBgColor = colors;
 		    column->itemBgCount = listObjc;
+		    maskFree |= COLU_CONF_ITEMBG;
 		}
 	    }
 
@@ -2149,13 +2144,20 @@ Column_Config(
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (mask & COLU_CONF_IMAGE) {
-		if (column->image != NULL)
-		    Tk_FreeImage(column->image);
-		column->image = saved.image;
-	    }
-	    if (mask & COLU_CONF_ITEMBG) {
+	    /*
+	     * Free new values.
+	     */
+	    if (maskFree & COLU_CONF_IMAGE)
+		Tk_FreeImage(column->image);
+	    if (maskFree & COLU_CONF_ITEMBG)
 		Column_FreeColors(column->itemBgColor, column->itemBgCount);
+
+	    /*
+	     * Restore old values.
+	     */
+	    if (mask & COLU_CONF_IMAGE)
+		column->image = saved.image;
+	    if (mask & COLU_CONF_ITEMBG) {
 		column->itemBgColor = saved.itemBgColor;
 		column->itemBgCount = saved.itemBgCount;
 	    }
