@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.48 2006/10/31 23:12:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.49 2006/11/03 18:54:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1294,6 +1294,7 @@ typedef struct LayoutInfo
 
 #ifdef TEXTLAYOUT_ALLOCHAX
 TCL_DECLARE_MUTEX(textLayoutMutex)
+/* FIXME: memory leak, list is never freed. */
 static LayoutInfo *freeLayoutInfo = NULL;
 #endif
 
@@ -2119,6 +2120,7 @@ PerStateInfo_Free(
 
     if (pInfo->data == NULL)
 	return;
+
 #ifdef TREECTRL_DEBUG
     if (pInfo->type != typePtr)
 	panic("PerStateInfo_Free type mismatch: got %s expected %s",
@@ -3232,10 +3234,13 @@ AllocHax_Free(
 #endif
 
     /*
-    * See comment from Tcl_DbCkfree before you change the following
-    * line.
-    */
-
+     * Comment from Tcl_DbCkfree:
+     * The following cast is *very* tricky.  Must convert the pointer
+     * to an integer before doing arithmetic on it, because otherwise
+     * the arithmetic will be done differently (and incorrectly) on
+     * word-addressed machines such as Crays (will subtract only bytes,
+     * even though BODY_OFFSET is in words on these machines).
+     */
     elem = (AllocElem *) (((unsigned long) ptr) - BODY_OFFSET);
 
 #ifdef TREECTRL_DEBUG
@@ -3651,7 +3656,7 @@ if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 		    TAG_INFO_SIZE(tagInfo->tagSpace));
 #else
 		tagInfo = (TagInfo *) ckrealloc((char *) tagInfo,
-		    TAG_INFO_SIZE(tagSpace));
+		    TAG_INFO_SIZE(tagInfo->tagSpace));
 #endif
 	    }
 	    tagInfo->tagPtr[tagInfo->numTags++] = tags[i];
@@ -4608,6 +4613,8 @@ OptionHax_Remember(
 	    panic("OptionHax_Remember: ptr is not new");
 	}
     }
+    if (tree->optionHaxCnt == sizeof(tree->optionHax) / sizeof(tree->optionHax[0]))
+	panic("OptionHax_Remember: too many options");
 #endif
     tree->optionHax[tree->optionHaxCnt++] = ptr;
 /*dbwin("OptionHax_Remember %p\n", ptr);*/
@@ -4687,9 +4694,9 @@ PerStateCO_Set(
 	new.obj = (*value);
 	new.data = NULL;
 	new.count = 0;
-	Tcl_IncrRefCount((*value));
+/*	Tcl_IncrRefCount((*value));*/
 	if (PerStateInfo_FromObj(tree, cd->proc, cd->typePtr, &new) != TCL_OK) {
-	    Tcl_DecrRefCount((*value));
+/*	    Tcl_DecrRefCount((*value));*/
 	    return TCL_ERROR;
 	}
     }
@@ -4734,16 +4741,26 @@ PerStateCO_Restore(
     char *saveInternalPtr
     )
 {
-    PerStateInfo *psi, *hax = *(PerStateInfo **) saveInternalPtr;
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    PerStateInfo *psi = (PerStateInfo *) internalPtr;
+    PerStateInfo *hax = *(PerStateInfo **) saveInternalPtr;
 /*dbwin("PerStateCO_Restore\n");*/
     if (hax != NULL) {
-	*(PerStateInfo *) internalPtr = *hax;
+#ifdef TREECTRL_DEBUG
+	psi->type = hax->type;
+#endif
+	psi->data = hax->data;
+	psi->count = hax->count;
+	ckfree((char *) hax);
     } else {
-	psi = (PerStateInfo *) internalPtr;
-	psi->obj = NULL;
+#ifdef TREECTRL_DEBUG
+	psi->type = NULL;
+#endif
+/*	psi->obj = NULL;*/
 	psi->data = NULL;
 	psi->count = 0;
     }
+    OptionHax_Forget(tree, saveInternalPtr);
 }
 
 static void
@@ -4771,8 +4788,8 @@ PerStateCO_Free(
 	objPtr = ((PerStateInfo *) internalPtr)->obj;
 	PerStateInfo_Free(tree, cd->typePtr, (PerStateInfo *) internalPtr);
     }
-    if (objPtr != NULL)
-	Tcl_DecrRefCount(objPtr);
+/*    if (objPtr != NULL)
+	Tcl_DecrRefCount(objPtr);*/
 }
 
 /*
@@ -4851,6 +4868,9 @@ PerStateCO_Init(
 
 	if (optionTable[i].clientData != NULL)
 	    return TCL_OK;
+
+	if (optionTable[i].objOffset < 0)
+	    panic("PerStateCO_Init %s objOffset < 0", optionName);
 
 	/* The Tk custom option record */
 	co = PerStateCO_Alloc(optionName, typePtr, proc);
@@ -5047,7 +5067,7 @@ DynamicCO_Set(
     DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
     DynamicOption **firstPtr, *opt;
     DynamicCOSave *save;
-    Tcl_Obj **objPtrPtr;
+    Tcl_Obj **objPtrPtr = NULL;
 
     /* Get pointer to the head of the list of dynamic options. */
     firstPtr = (DynamicOption **) (recordPtr + internalOffset);
@@ -5056,10 +5076,22 @@ DynamicCO_Set(
      * linked list of dynamic options. */
     opt = DynamicOption_AllocIfNeeded(tree, firstPtr, cd->id, cd->size, cd->init);
 
+    if (cd->objOffset >= 0)
+	objPtrPtr = (Tcl_Obj **) (opt->data + cd->objOffset);
+
     save = (DynamicCOSave *) ckalloc(sizeof(DynamicCOSave));
 #ifdef DEBUG_DYNAMIC
 dbwin("DynamicCO_Set id=%d saveInternalPtr=%p save=%p\n", cd->id, saveInternalPtr, save);
 #endif
+    if (objPtrPtr != NULL) {
+	save->objPtr = *objPtrPtr;
+#ifdef DEBUG_DYNAMIC
+if (save->objPtr)
+    dbwin("  old object '%s' refCount=%d\n", Tcl_GetString(save->objPtr), save->objPtr->refCount);
+else
+    dbwin("  old object NULL\n");
+#endif
+    }
     if (cd->custom->setProc(cd->custom->clientData, interp, tkwin, value,
 	    opt->data, cd->internalOffset, (char *) &save->internalForm,
 	    flags) != TCL_OK) {
@@ -5067,12 +5099,12 @@ dbwin("DynamicCO_Set id=%d saveInternalPtr=%p save=%p\n", cd->id, saveInternalPt
 	return TCL_ERROR;
     }
 
-    if (cd->objOffset >= 0) {
-	objPtrPtr = (Tcl_Obj **) (opt->data + cd->objOffset);
-	save->objPtr = *objPtrPtr;
-
+    if (objPtrPtr != NULL) {
 #ifdef DEBUG_DYNAMIC
-dbwin("saving object '%s'\n", *value ? Tcl_GetString(*value) : "NULL");
+if (*value)
+    dbwin("  new object '%s' refCount=%d\n", Tcl_GetString(*value), (*value)->refCount);
+else
+    dbwin("  new object NULL\n");
 #endif
 	*objPtrPtr = *value;
 	if (*value != NULL)
@@ -5104,6 +5136,10 @@ dbwin("DynamicCO_Get id=%d opt=%p objOffset=%d\n", cd->id, opt, cd->objOffset);
 	return NULL;
 
     if (cd->objOffset >= 0) {
+#ifdef TREECTRL_DEBUG
+Tcl_Obj *objPtr = *(Tcl_Obj **) (opt->data + cd->objOffset);
+if (objPtr && objPtr->refCount == 0) panic("DynamicCO_Get refCount=0");
+#endif
 	return *(Tcl_Obj **) (opt->data + cd->objOffset);
     }
 
@@ -5120,28 +5156,41 @@ DynamicCO_Restore(
     char *saveInternalPtr
     )
 {
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
     DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
     DynamicOption *first = *(DynamicOption **) internalPtr;
     DynamicOption *opt = DynamicOption_Find(first, cd->id);
-    DynamicCOSave *save;
+    DynamicCOSave *save = *(DynamicCOSave **)saveInternalPtr;
     Tcl_Obj **objPtrPtr;
 
     if (opt == NULL)
 	panic("DynamicCO_Restore: opt=NULL");
 #ifdef DEBUG_DYNAMIC
-dbwin("DynamicCO_Restore id=%d internalOffset=%d\n", cd->id, cd->internalOffset);
+dbwin("DynamicCO_Restore id=%d internalOffset=%d save=%p\n", cd->id, cd->internalOffset, save);
 #endif
     if (cd->internalOffset >= 0 && cd->custom->restoreProc != NULL)
 	cd->custom->restoreProc(cd->custom->clientData, tkwin,
-	    opt->data + cd->internalOffset, saveInternalPtr);
+	    opt->data + cd->internalOffset, (char *) &save->internalForm);
 
     if (cd->objOffset >= 0) {
 	objPtrPtr = (Tcl_Obj **) (opt->data + cd->objOffset);
-	if (*objPtrPtr != NULL)
-	    Tcl_DecrRefCount(*objPtrPtr);
-	save = (DynamicCOSave *) saveInternalPtr;
+#ifdef DEBUG_DYNAMIC
+if (*objPtrPtr)
+    dbwin("DynamicCO_Restore replace object '%s' refCount=%d\n", Tcl_GetString(*objPtrPtr), (*objPtrPtr)->refCount);
+else
+    dbwin("DynamicCO_Restore replace object NULL\n");
+if (save->objPtr)
+    dbwin("DynamicCO_Restore restore object '%s' refCount=%d\n", Tcl_GetString(save->objPtr), save->objPtr->refCount);
+else
+    dbwin("DynamicCO_Restore restore object NULL\n");
+#endif
+/*	if (*objPtrPtr != NULL)
+	    Tcl_DecrRefCount(*objPtrPtr);*/
 	*objPtrPtr = save->objPtr;
     }
+
+    ckfree((char *) save);
+    OptionHax_Forget(tree, saveInternalPtr);
 }
 
 static void
@@ -5153,10 +5202,8 @@ DynamicCO_Free(
 {
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
     DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
+    Tcl_Obj **objPtrPtr;
 
-#ifdef DEBUG_DYNAMIC
-dbwin("DynamicCO_Free id=%d internalPtr=%p...\n", cd->id, internalPtr);
-#endif
     if (OptionHax_Forget(tree, internalPtr)) {
 	DynamicCOSave *save = *(DynamicCOSave **) internalPtr;
 #ifdef DEBUG_DYNAMIC
@@ -5165,6 +5212,18 @@ dbwin("DynamicCO_Free id=%d internalPtr=%p save=%p\n", cd->id, internalPtr, save
 	if (cd->internalOffset >= 0 && cd->custom->freeProc != NULL)
 	    cd->custom->freeProc(cd->custom->clientData, tkwin,
 		    (char *) &save->internalForm);
+	if (cd->objOffset >= 0) {
+#ifdef DEBUG_DYNAMIC
+if (save->objPtr) {
+    dbwin("DynamicCO_Free free object '%s' refCount=%d-1\n", Tcl_GetString(save->objPtr), (save->objPtr)->refCount);
+    if (save->objPtr->refCount == 0) panic("DynamicCO_Free refCount=0");
+}
+else
+    dbwin("DynamicCO_Free free object NULL\n");
+#endif
+	    if (save->objPtr)
+		Tcl_DecrRefCount(save->objPtr);
+	}
 	ckfree((char *) save);
     } else {
 	DynamicOption *first = *(DynamicOption **) internalPtr;
@@ -5175,6 +5234,19 @@ dbwin("DynamicCO_Free id=%d internalPtr=%p save=NULL\n", cd->id, internalPtr);
 	if (opt != NULL && cd->internalOffset >= 0 && cd->custom->freeProc != NULL)
 	    cd->custom->freeProc(cd->custom->clientData, tkwin,
 		opt->data + cd->internalOffset);
+	if (opt != NULL && cd->objOffset >= 0) {
+	    objPtrPtr = (Tcl_Obj **) (opt->data + cd->objOffset);
+#ifdef DEBUG_DYNAMIC
+if (*objPtrPtr) {
+    dbwin("DynamicCO_Free free object '%s' refCount=%d-1\n", Tcl_GetString(*objPtrPtr), (*objPtrPtr)->refCount);
+    if ((*objPtrPtr)->refCount == 0) panic("DynamicCO_Free refCount=0");
+}
+else
+    dbwin("DynamicCO_Free free object NULL\n");
+#endif
+	    if (*objPtrPtr != NULL)
+		Tcl_DecrRefCount(*objPtrPtr);
+	}
     }
 }
 
@@ -5252,7 +5324,7 @@ DynamicCO_Init(
 	/* Update the option table */
 	optionTable[i].clientData = (ClientData) co;
 #ifdef DEBUG_DYNAMIC
-dbwin("DynamicCO_Init id=%d size=%d objOffset=%d internalOffset=%d custom->name=%s",
+dbwin("DynamicCO_Init id=%d size=%d objOffset=%d internalOffset=%d custom->name=%s\n",
     id, size, objOffset, internalOffset, custom->name);
 #endif
 	return TCL_OK;
@@ -5291,7 +5363,6 @@ DynamicOption_Free(
 
     while (opt != NULL) {
 	DynamicOption *next = opt->next;
-
 	for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
 
 	    if (optionTable[i].type != TK_OPTION_CUSTOM)
@@ -5311,8 +5382,8 @@ DynamicOption_Free(
 #else
 	    ckfree((char *) opt);
 #endif
+	    break;
 	}
-
 	opt = next;
     }
 }
