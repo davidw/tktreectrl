@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.53 2006/10/31 23:12:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.54 2006/11/03 18:49:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -286,14 +286,16 @@ static Tk_OptionSpec columnSpecs[] = {
      "none", -1, Tk_Offset(Column, arrow),
      0, (ClientData) arrowST, COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowbitmap", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(Column, arrowBitmap),
+     (char *) NULL,
+     Tk_Offset(Column, arrowBitmap.obj), Tk_Offset(Column, arrowBitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWBMP |
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_STRING_TABLE, "-arrowgravity", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, arrowGravity),
      0, (ClientData) arrowSideST, COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowimage", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(Column, arrowImage),
+     (char *) NULL,
+     Tk_Offset(Column, arrowImage.obj), Tk_Offset(Column, arrowImage),
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ARROWIMG |
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowpadx", (char *) NULL, (char *) NULL,
@@ -308,7 +310,8 @@ static Tk_OptionSpec columnSpecs[] = {
      /* NOTE: -background is a per-state option, so DEF_BUTTON_BG_COLOR
       * must be a list of one element */
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
-     DEF_BUTTON_BG_COLOR, -1, Tk_Offset(Column, border),
+     DEF_BUTTON_BG_COLOR,
+     Tk_Offset(Column, border.obj), Tk_Offset(Column, border),
      0, (ClientData) NULL, COLU_CONF_BG | COLU_CONF_DISPLAY},
     {TK_OPTION_BITMAP, "-bitmap", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Column, bitmap),
@@ -2072,6 +2075,8 @@ Column_Config(
 	    if (mask & COLU_CONF_ITEMBG) {
 		saved.itemBgColor = column->itemBgColor;
 		saved.itemBgCount = column->itemBgCount;
+		column->itemBgColor = NULL;
+		column->itemBgCount = 0;
 	    }
 
 	    if ((column == (Column *) tree->columnTail) &&
@@ -2097,8 +2102,6 @@ Column_Config(
 	    }
 
 	    if (mask & COLU_CONF_ITEMBG) {
-		column->itemBgColor = NULL;
-		column->itemBgCount = 0;
 		if (column->itemBgObj != NULL) {
 		    int i, length, listObjc;
 		    Tcl_Obj **listObjv;
@@ -3298,6 +3301,30 @@ TreeColumn_Squeeze(
     )
 {
     return ((Column *) column_)->squeeze;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_BackgroundCount --
+ *
+ *	Return the number of -itembackground colors for a column.
+ *
+ * Results:
+ *	column->itemBgCount.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeColumn_BackgroundCount(
+    TreeColumn column_		/* Column token. */
+    )
+{
+    return ((Column *) column_)->itemBgCount;
 }
 
 /*
