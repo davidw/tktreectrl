@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.23 2006/10/31 23:11:27 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.24 2006/11/03 18:58:17 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -82,6 +82,34 @@ namespace eval TreeCtrl {
     set Priv(edit,delay) 500
 }
 
+proc ::TreeCtrl::IsSensitive {T x y} {
+    variable Priv
+    set id [$T identify $x $y]
+    if {$id eq ""} {
+	return 0
+    }
+    if {[lindex $id 0] ne "item" || [llength $id] != 6} {
+	return 0
+    }
+    foreach {where item arg1 arg2 arg3 arg4} $id {}
+    if {$arg1 ne "column"} {
+	return 0
+    }
+    if {![$T item enabled $item]} {
+	return 0
+    }
+    foreach list $Priv(sensitive,$T) {
+	set C [lindex $list 0]
+	set S [lindex $list 1]
+	set eList [lrange $list 2 end]
+	if {[$T column compare $arg2 != $C]} continue
+	if {[$T item style set $item $C] ne $S} continue
+	if {[lsearch -exact $eList $arg4] == -1} continue
+	return 1
+    }
+    return 0
+}
+
 proc ::TreeCtrl::FileListButton1 {T x y} {
     variable Priv
     focus $T
@@ -98,11 +126,11 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
     if {$id eq ""} {
 	set marquee 1
 
-	# Click in header
+    # Click in header
     } elseif {[lindex $id 0] eq "header"} {
 	ButtonPress1 $T $x $y
 
-	# Click in item
+    # Click in item
     } else {
 	foreach {where item arg1 arg2 arg3 arg4} $id {}
 	switch $arg1 {
