@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.48 2006/10/31 23:12:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.49 2006/11/03 18:55:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -629,16 +629,20 @@ struct ElementBitmap
 
 static Tk_OptionSpec bitmapOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBitmap, bg),
+     (char *) NULL,
+     Tk_Offset(ElementBitmap, bg.obj), Tk_Offset(ElementBitmap, bg),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BG},
     {TK_OPTION_CUSTOM, "-bitmap", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBitmap, bitmap),
+     (char *) NULL,
+     Tk_Offset(ElementBitmap, bitmap.obj), Tk_Offset(ElementBitmap, bitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BITMAP},
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBitmap, draw),
+     (char *) NULL,
+     Tk_Offset(ElementBitmap, draw.obj), Tk_Offset(ElementBitmap, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_DRAW},
     {TK_OPTION_CUSTOM, "-foreground", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBitmap, fg),
+     (char *) NULL,
+     Tk_Offset(ElementBitmap, fg.obj), Tk_Offset(ElementBitmap, fg),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_FG},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
@@ -912,10 +916,12 @@ struct ElementBorder
 
 static Tk_OptionSpec borderOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBorder, border),
+     (char *) NULL,
+     Tk_Offset(ElementBorder, border.obj), Tk_Offset(ElementBorder, border),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_BG},
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBorder, draw),
+     (char *) NULL,
+     Tk_Offset(ElementBorder, draw.obj), Tk_Offset(ElementBorder, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_DRAW},
     {TK_OPTION_CUSTOM, "-filled", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementBorder, filled),
@@ -925,7 +931,8 @@ static Tk_OptionSpec borderOptionSpecs[] = {
      Tk_Offset(ElementBorder, height),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_SIZE},
     {TK_OPTION_CUSTOM, "-relief", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementBorder, relief),
+     (char *) NULL,
+     Tk_Offset(ElementBorder, relief.obj), Tk_Offset(ElementBorder, relief),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_RELIEF},
     {TK_OPTION_PIXELS, "-thickness", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementBorder, thicknessObj),
@@ -1542,14 +1549,16 @@ struct ElementImage
 
 static Tk_OptionSpec imageOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementImage, draw),
+     (char *) NULL,
+     Tk_Offset(ElementImage, draw.obj), Tk_Offset(ElementImage, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DRAW},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementImage, heightObj),
      Tk_Offset(ElementImage, height),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_SIZE},
     {TK_OPTION_CUSTOM, "-image", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementImage, image),
+     (char *) NULL,
+     Tk_Offset(ElementImage, image.obj), Tk_Offset(ElementImage, image),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_IMAGE},
     {TK_OPTION_CUSTOM, "-tiled", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementImage, tiled),
@@ -1831,10 +1840,12 @@ struct ElementRect
 
 static Tk_OptionSpec rectOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementRect, draw),
+     (char *) NULL,
+     Tk_Offset(ElementRect, draw.obj), Tk_Offset(ElementRect, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_DRAW},
     {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementRect, fill),
+     (char *) NULL,
+     Tk_Offset(ElementRect, fill.obj), Tk_Offset(ElementRect, fill),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_FILL},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementRect, heightObj),
@@ -1844,7 +1855,8 @@ static Tk_OptionSpec rectOptionSpecs[] = {
      (char *) NULL, -1, Tk_Offset(ElementRect, openString),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_OPEN},
     {TK_OPTION_CUSTOM, "-outline", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementRect, outline),
+     (char *) NULL,
+     Tk_Offset(ElementRect, outline.obj), Tk_Offset(ElementRect, outline),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_OUTLINE},
     {TK_OPTION_PIXELS, "-outlinewidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementRect, outlineWidthObj),
@@ -3431,7 +3443,8 @@ static Tk_OptionSpec windowOptionSpecs[] = {
      (char) NULL, -1, Tk_Offset(ElementWindow, destroy),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, 0},
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementWindow, draw),
+     (char *) NULL,
+     Tk_Offset(ElementWindow, draw.obj), Tk_Offset(ElementWindow, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, EWIN_CONF_DRAW},
     {TK_OPTION_WINDOW, "-window", (char *) NULL, (char *) NULL,
      (char) NULL, -1, Tk_Offset(ElementWindow, tkwin),
