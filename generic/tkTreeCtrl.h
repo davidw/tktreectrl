@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.62 2006/10/31 23:12:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.63 2006/11/03 18:43:48 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -223,8 +223,10 @@ struct TreeCtrl
 #define BG_MODE_ORDER 1
 #define BG_MODE_ORDERVIS 2
 #define BG_MODE_ROW 3
+#ifdef DEPRECATED
 #define BG_MODE_INDEX 4		/* compatibility */
 #define BG_MODE_VISINDEX 5	/* compatibility */
+#endif /* DEPRECATED */
     int backgroundMode;		/* -backgroundmode */
     int columnResizeMode;	/* -columnresizemode */
     int *itemPadX;		/* -itempadx */
