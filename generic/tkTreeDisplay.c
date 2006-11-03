@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.48 2006/10/28 01:20:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.49 2006/11/03 18:43:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2353,6 +2353,9 @@ DItem_Alloc(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
+#ifdef COLUMN_SPAN
+    int *spans = NULL, spanAlloc = 0;
+#endif
 
     dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
     if (dItem != NULL)
@@ -2362,7 +2365,10 @@ DItem_Alloc(
     if (dInfo->dItemFree != NULL) {
 	dItem = dInfo->dItemFree;
 	dInfo->dItemFree = dItem->next;
-
+#ifdef COLUMN_SPAN
+	spans = dItem->spans;
+	spanAlloc = dItem->spanAlloc;
+#endif
     /* No free DItems, alloc a new one */
     } else {
 	dItem = (DItem *) ckalloc(sizeof(DItem));
@@ -2376,6 +2382,10 @@ DItem_Alloc(
 #ifdef COLUMN_LOCK
     dItem->left.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
     dItem->right.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
+#endif
+#ifdef COLUMN_SPAN
+    dItem->spans = spans;
+    dItem->spanAlloc = spanAlloc;
 #endif
     TreeItem_SetDInfo(tree, rItem->item, (TreeItemDInfo) dItem);
     return dItem;
@@ -2832,7 +2842,7 @@ TrackOnScreenColumnsForItem(
     }
 
     if (n && tree->debug.enable && tree->debug.display)
-	dbwin("%s", buf);
+	dbwin("%s\n", buf);
 
     if (n > 0) {
 	ckfree((char *) value);
@@ -2899,10 +2909,14 @@ UpdateDInfoForRange(
 
 	    TreeItem_ToIndex(tree, item, &index, &indexVis);
 	    switch (tree->backgroundMode) {
+#ifdef DEPRECATED
 		case BG_MODE_INDEX:
+#endif
 		case BG_MODE_ORDER: break;
-		case BG_MODE_ORDERVIS:
-		case BG_MODE_VISINDEX: index = indexVis; break;
+#ifdef DEPRECATED
+		case BG_MODE_VISINDEX:
+#endif
+		case BG_MODE_ORDERVIS: index = indexVis; break;
 		case BG_MODE_COLUMN: index = range->index; break;
 		case BG_MODE_ROW: index = rItem->index; break;
 	    }
@@ -3010,10 +3024,14 @@ UpdateDInfoForRange(
 
 	    TreeItem_ToIndex(tree, item, &index, &indexVis);
 	    switch (tree->backgroundMode) {
+#ifdef DEPRECATED
 		case BG_MODE_INDEX:
+#endif
 		case BG_MODE_ORDER: break;
-		case BG_MODE_ORDERVIS:
-		case BG_MODE_VISINDEX: index = indexVis; break;
+#ifdef DEPRECATED
+		case BG_MODE_VISINDEX:
+#endif
+		case BG_MODE_ORDERVIS: index = indexVis; break;
 		case BG_MODE_COLUMN: index = rItem->index; break;
 		case BG_MODE_ROW: index = range->index; break;
 	    }
@@ -3282,10 +3300,14 @@ done:
 
 	    TreeItem_ToIndex(tree, rItem->item, &index, &indexVis);
 	    switch (tree->backgroundMode) {
+#ifdef DEPRECATED
 		case BG_MODE_INDEX:
+#endif
 		case BG_MODE_ORDER: break;
-		case BG_MODE_ORDERVIS:
-		case BG_MODE_VISINDEX: index = indexVis; break;
+#ifdef DEPRECATED
+		case BG_MODE_VISINDEX:
+#endif
+		case BG_MODE_ORDERVIS: index = indexVis; break;
 		case BG_MODE_COLUMN: index = range->index; break;
 		case BG_MODE_ROW: index = rItem->index; break;
 	    }
@@ -3659,18 +3681,18 @@ ScrollVerticalComplex(
 	    /* If an item was partially visible, invalidate the exposed area */
 	    if ((dItem->oldY < minY) && (offset > 0)) {
 		if (!dInfo->empty) {
-		    InvalidateDItemX(dItem, &dItem->area, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->area, dItem->oldX, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->area, dItem->oldY, dItem->oldY, minY - dItem->oldY);
 		    dItem->area.flags |= DITEM_DIRTY;
 		}
 #ifdef COLUMN_LOCK
 		if (!dInfo->emptyL) {
-		    InvalidateDItemX(dItem, &dItem->left, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->left, dItem->left.x, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->left, dItem->oldY, dItem->oldY, minY - dItem->oldY);
 		    dItem->left.flags |= DITEM_DIRTY;
 		}
 		if (!dInfo->emptyR) {
-		    InvalidateDItemX(dItem, &dItem->right, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->right, dItem->right.x, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->right, dItem->oldY, dItem->oldY, minY - dItem->oldY);
 		    dItem->right.flags |= DITEM_DIRTY;
 		}
@@ -3678,18 +3700,18 @@ ScrollVerticalComplex(
 	    }
 	    if ((dItem->oldY + dItem->height > maxY) && (offset < 0)) {
 		if (!dInfo->empty) {
-		    InvalidateDItemX(dItem, &dItem->area, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->area, dItem->oldX, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->area, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
 		    dItem->area.flags |= DITEM_DIRTY;
 		}
 #ifdef COLUMN_LOCK
 		if (!dInfo->emptyL) {
-		    InvalidateDItemX(dItem, &dItem->left, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->left, dItem->left.x, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->left, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
 		    dItem->left.flags |= DITEM_DIRTY;
 		}
 		if (!dInfo->emptyR) {
-		    InvalidateDItemX(dItem, &dItem->right, oldX, oldX, width);
+		    InvalidateDItemX(dItem, &dItem->right, dItem->right.x, oldX, width);
 		    InvalidateDItemY(dItem, &dItem->right, dItem->oldY, maxY, maxY - dItem->oldY + dItem->height);
 		    dItem->right.flags |= DITEM_DIRTY;
 		}
@@ -3709,18 +3731,18 @@ ScrollVerticalComplex(
 		    (dItem2->oldY + dItem2->height > y) &&
 		    (dItem2->oldY < y + height)) {
 		if (!dInfo->empty) {
-		    InvalidateDItemX(dItem2, &dItem2->area, oldX, oldX, width);
+		    InvalidateDItemX(dItem2, &dItem2->area, dItem2->oldX, oldX, width);
 		    InvalidateDItemY(dItem2, &dItem2->area, dItem2->oldY, y, height);
 		    dItem2->area.flags |= DITEM_DIRTY;
 		}
 #ifdef COLUMN_LOCK
 		if (!dInfo->emptyL) {
-		    InvalidateDItemX(dItem2, &dItem2->left, oldX, oldX, width);
+		    InvalidateDItemX(dItem2, &dItem2->left, dItem2->left.x, oldX, width);
 		    InvalidateDItemY(dItem2, &dItem2->left, dItem2->oldY, y, height);
 		    dItem2->left.flags |= DITEM_DIRTY;
 		}
 		if (!dInfo->emptyR) {
-		    InvalidateDItemX(dItem2, &dItem2->right, oldX, oldX, width);
+		    InvalidateDItemX(dItem2, &dItem2->right, dItem2->right.x, oldX, width);
 		    InvalidateDItemY(dItem2, &dItem2->right, dItem2->oldY, y, height);
 		    dItem2->right.flags |= DITEM_DIRTY;
 		}
@@ -4380,10 +4402,10 @@ CalcWhiteSpaceRegion(
 
     if (dInfo->empty)
 	return wsRgn;
-	minX = dInfo->bounds[0];
-	minY = dInfo->bounds[1];
-	maxX = dInfo->bounds[2];
-	maxY = dInfo->bounds[3];
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
 
     if (tree->vertical) {
 	/* Erase area to right of last Range */
@@ -4394,8 +4416,7 @@ CalcWhiteSpaceRegion(
 	    rect.height = maxY - minY;
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
-    }
-    else {
+    } else {
 	/* Erase area below last Range */
 	if (y + Tree_TotalHeight(tree) < maxY) {
 	    rect.x = minX;
@@ -4423,8 +4444,7 @@ CalcWhiteSpaceRegion(
 		rect.height = bottom - top;
 		TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	    }
-	}
-	else {
+	} else {
 	    left = MAX(x + range->totalWidth, minX);
 	    right = maxX;
 	    top = MAX(y + range->offset, minY);
@@ -4444,6 +4464,387 @@ CalcWhiteSpaceRegion(
     }
     return wsRgn;
 }
+
+#ifdef COMPLEX_WHITESPACE
+
+static int
+Tree_IntersectRect(
+    XRectangle *result,
+    XRectangle *r1,
+    XRectangle *r2
+    )
+{
+    if (r1->width == 0 || r1->height == 0) return 0;
+    if (r2->width == 0 || r2->height == 0) return 0;
+    if (r1->x >= r2->x + r2->width) return 0;
+    if (r2->x >= r1->x + r1->width) return 0;
+    if (r1->y >= r2->y + r2->height) return 0;
+    if (r2->y >= r1->y + r1->height) return 0;
+    
+    result->x = MAX(r1->x, r2->x);
+    result->width = MIN(r1->x + r1->width, r2->x + r2->width) - result->x;
+    result->y = MAX(r1->y, r2->y);
+    result->height = MIN(r1->y + r1->height, r2->y + r2->height) - result->y;
+    return 1;
+};
+
+static int
+GetItemBgIndex(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeColumn treeColumn,	/* Column to get background colors from. */
+    RItem *rItem
+    )
+{
+    Range *range = rItem->range;
+    int index, indexVis;
+
+    TreeItem_ToIndex(tree, rItem->item, &index, &indexVis);
+    if (tree->vertical) {
+	switch (tree->backgroundMode) {
+#ifdef DEPRECATED
+	    case BG_MODE_INDEX:
+#endif
+	    case BG_MODE_ORDER:
+		break;
+#ifdef DEPRECATED
+	    case BG_MODE_VISINDEX:
+#endif
+	    case BG_MODE_ORDERVIS:
+		index = indexVis;
+		break;
+	    case BG_MODE_COLUMN:
+		index = range->index;
+		if (treeColumn == tree->columnTail)
+		    index++;
+		break;
+	    case BG_MODE_ROW:
+		index = rItem->index;
+		break;
+	}
+    } else {
+	switch (tree->backgroundMode) {
+#ifdef DEPRECATED
+	    case BG_MODE_INDEX:
+#endif
+	    case BG_MODE_ORDER: break;
+#ifdef DEPRECATED
+	    case BG_MODE_VISINDEX:
+#endif
+	    case BG_MODE_ORDERVIS: index = indexVis; break;
+	    case BG_MODE_COLUMN: index = rItem->index; break;
+	    case BG_MODE_ROW: index = range->index; break;
+	}
+    }
+    return index;
+}
+
+static void
+DrawColumnBackground(
+    TreeCtrl *tree,		/* Widget info. */
+    Drawable drawable,		/* Where to draw. */
+    TreeColumn treeColumn,	/* Column to get background colors from. */
+    TkRegion dirtyRgn,		/* Area that needs painting. Will be
+				 * inside 'bounds' and inside borders. */
+    XRectangle *bounds,		/* Window coords of column to paint. */
+    Range *range,		/* Range to get row heights from, or NULL. */
+    int height,			/* Height of each row. */
+    int index,			/* Used for alternating background colors. */
+    int indexIncr		/* 1 or 0. */
+    )
+{
+    int bgCount = TreeColumn_BackgroundCount(treeColumn);
+    GC gc = None, backgroundGC;
+    XRectangle dirtyBox, drawBox, rowBox;
+    int top, bottom;
+    RItem *rItem = range ? range->first : NULL;
+
+    TkClipBox(dirtyRgn, &dirtyBox);
+    if (!dirtyBox.width || !dirtyBox.height)
+	return;
+
+    backgroundGC = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
+
+    /* If the column has zero -itembackground colors, paint with the
+     * treectrl's -background color. If a single -itembackground color
+     * is specified, then paint with it. */
+    if (bgCount < 2) {
+	if (bgCount == 1)
+	    gc = TreeColumn_BackgroundGC(treeColumn, 0);
+	if (gc == None)
+	    gc = backgroundGC;
+	Tk_FillRegion(tree->display, drawable, gc, dirtyRgn);
+	return;
+    }
+
+    top = bounds->y;
+    bottom = dirtyBox.y + dirtyBox.height;
+    while (top < bottom) {
+	/* Can't use clipping regions with XFillRectangle
+	 * because the clip region is ignored on Win32. */
+	rowBox.x = bounds->x;
+	rowBox.y = top;
+	rowBox.width = bounds->width;
+	rowBox.height = rItem ? rItem->size : height;
+	if (Tree_IntersectRect(&drawBox, &rowBox, &dirtyBox)) {
+
+	    if (rItem != NULL) {
+		index = GetItemBgIndex(tree, treeColumn, rItem);
+	    }
+
+	    gc = TreeColumn_BackgroundGC(treeColumn, index);
+	    if (gc == None)
+		gc = backgroundGC;
+	    XFillRectangle(tree->display, drawable, gc,
+		drawBox.x, drawBox.y, drawBox.width, drawBox.height);
+	}
+	if (rItem != NULL && rItem == range->last) {
+	    /* If we run past the bottom-most item in the range,
+	     * use its properties for following rows. */
+	    height = rItem->size;
+	    index = GetItemBgIndex(tree, treeColumn, rItem);
+	    if (tree->backgroundMode != BG_MODE_COLUMN) {
+		indexIncr = 1;
+	    } else {
+		indexIncr = 0;
+	    }
+	    rItem = NULL;
+	}
+	if (rItem != NULL) {
+	    height = rItem->size;
+	    rItem++;
+	}
+	index += indexIncr;
+	top += height;
+    }
+}
+
+static void
+DrawWhitespace(
+    TreeCtrl *tree,
+    Drawable drawable,
+    TkRegion dirtyRgn
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    int x, y, minX, minY, maxX, maxY;
+    int left, right, top, bottom;
+    int i, height, index = 0, indexIncr = 0;
+    XRectangle dirtyBox, columnBox;
+    TkRegion columnRgn;
+    Range *range;
+    RItem *rItem;
+    DItem *dItem;
+    TreeColumn treeColumn;
+
+    /* If no columns have -itembackground specified, just paint the entire
+     * dirty area with the treectrl's -background color. */
+    if (tree->columnBgCnt == 0) {
+	GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
+	Tk_FillRegion(tree->display, drawable, gc, dirtyRgn);
+	return;
+    }
+
+    x = 0 - tree->xOrigin;
+    y = 0 - tree->yOrigin;
+
+    TkClipBox(dirtyRgn, &dirtyBox);
+
+#ifdef COLUMN_LOCKxxx
+    /* Erase area below left columns */
+    if (!dInfo->emptyL) {
+	minX = dInfo->boundsL[0];
+	minY = dInfo->boundsL[1];
+	maxX = dInfo->boundsL[2];
+	maxY = dInfo->boundsL[3];
+	top = MAX(y + Tree_TotalHeight(tree), minY);
+	bottom = maxY;
+	if (top < bottom) {
+	    columnBox.x = minX;
+	    columnBox.y = top;
+	    for (i = TreeColumn_Index(tree->columnLockLeft);
+		    i < tree->columnCount; i++) {
+		treeColumn = dInfo->columns[i].column;
+		if (TreeColumn_Lock(treeColumn) != COLUMN_LOCK_LEFT)
+		    break;
+		if (dInfo->columns[i].width == 0)
+		    continue;
+		index = range->last->index + 1;
+		columnBox.width = dInfo->columns[i].width;
+		columnBox.height = bottom - top;
+		TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+		TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+		TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+		DrawColumnBackground(tree, drawable, treeColumn,
+			columnRgn, &columnBox, height, index, indexIncr);
+		columnBox.x += dInfo->columns[i].width;
+	    }
+	}
+    }
+
+    /* Erase area below right columns */
+    if (!dInfo->emptyR) {
+	minX = dInfo->boundsR[0];
+	minY = dInfo->boundsR[1];
+	maxX = dInfo->boundsR[2];
+	maxY = dInfo->boundsR[3];
+	if (y + Tree_TotalHeight(tree) < maxY) {
+	    rect.x = minX;
+	    rect.y = y + Tree_TotalHeight(tree);
+	    rect.width = maxX - minX;
+	    rect.height = maxY - (y + Tree_TotalHeight(tree));
+	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+	}
+    }
+#endif
+
+    if (dInfo->empty)
+	return;
+
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
+
+    columnRgn = TkCreateRegion();
+
+    if (tree->vertical) {
+	/* Erase area to right of last Range */
+	if (x + Tree_TotalWidth(tree) < maxX) {
+	    columnBox.x = x + Tree_TotalWidth(tree);
+	    columnBox.y = y; /* Top of the range */
+	    columnBox.width = maxX - columnBox.x;
+	    columnBox.height = maxY - columnBox.y;
+	    TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+	    TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+	    TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+	    DrawColumnBackground(tree, drawable, tree->columnTail,
+		    columnRgn, &columnBox, dInfo->rangeLastD, 0,
+		    0, 0);
+	}
+    } else {
+	/* Erase area below last Range */
+	if (y + Tree_TotalHeight(tree) < maxY) {
+
+	    /* FIXME: What should the height of each "row" be below the
+	     * actual items? For now, use the height of the last range
+	     * with a non-zero height. */
+	    range = dInfo->rangeLastD;
+	    while (range->totalHeight == 0 && range != NULL)
+		range = range->prev;
+	    if (range->totalHeight > 0)
+		height = range->totalHeight;
+	    else if (tree->itemHeight > 0)
+		height = tree->itemHeight;
+	    else if (tree->minItemHeight > 0)
+		height = tree->minItemHeight;
+	    else
+		height = maxY - y + Tree_TotalHeight(tree);
+
+	    for (rItem = range->first; rItem != NULL; rItem++) 
+
+	    columnBox.x = minX;
+	    columnBox.y = y + Tree_TotalHeight(tree);
+	    columnBox.width = maxX - minX;
+	    columnBox.height = maxY - columnBox.y;
+	}
+    }
+
+    for (range = dInfo->rangeFirstD;
+	 range != NULL;
+	 range = range->next) {
+	if (tree->vertical) {
+	    top = MAX(y + range->totalHeight, minY);
+	    bottom = maxY;
+
+	    /* FIXME: What should the height of each "row" be below the
+	     * actual items? For now, use the height of the last item in
+	     * this range with a non-zero height. */
+	    rItem = range->last;
+	    while (rItem->size == 0 && rItem != range->first)
+		rItem--;
+	    if (rItem->size > 0)
+		height = rItem->size;
+	    else if (tree->itemHeight > 0)
+		height = tree->itemHeight;
+	    else if (tree->minItemHeight > 0)
+		height = tree->minItemHeight;
+	    else
+		height = bottom - top;
+
+	    /* Erase area below Range */
+	    if (top < bottom) {
+		columnBox.x = x + range->offset;
+		columnBox.y = top;
+		for (i = 0; i < tree->columnCount; i++) {
+		    treeColumn = dInfo->columns[i].column;
+#ifdef COLUMN_LOCK
+		    if (TreeColumn_Lock(treeColumn) != COLUMN_LOCK_NONE)
+			continue;
+#endif
+		    if (dInfo->columns[i].width == 0)
+			continue;
+		    index = GetItemBgIndex(tree, treeColumn, range->last);
+		    if (tree->backgroundMode != BG_MODE_COLUMN) {
+			index++;
+			indexIncr = 1;
+		    } else {
+			indexIncr = 0;
+		    }
+		    columnBox.width = dInfo->columns[i].width;
+		    columnBox.height = bottom - top;
+		    TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+		    TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+		    TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+		    DrawColumnBackground(tree, drawable, treeColumn,
+			    columnRgn, &columnBox, (Range *) NULL, height,
+			    index, indexIncr);
+		    columnBox.x += dInfo->columns[i].width;
+		}
+	    }
+	} else {
+	    left = MAX(x + range->totalWidth, minX);
+	    right = maxX;
+	    top = MAX(y + range->offset, minY);
+	    bottom = MIN(y + range->offset + range->totalHeight, maxY);
+
+	    /* Erase area to right of Range */
+	    if (left < right) {
+		switch (tree->backgroundMode) {
+#ifdef DEPRECATED
+		    case BG_MODE_INDEX:
+		    case BG_MODE_VISINDEX:
+#endif
+		    case BG_MODE_ORDER:
+		    case BG_MODE_ORDERVIS:
+		    case BG_MODE_COLUMN:
+			dItem = (DItem *) TreeItem_GetDInfo(tree, range->last->item);
+			index = dItem->index + 1;
+			indexIncr = 1;
+			break;
+		    case BG_MODE_ROW:
+			index = range->index;
+			indexIncr = 0;
+			break;
+		}
+		columnBox.x = x + range->totalWidth;
+		columnBox.y = top;
+		columnBox.width = right - left;
+		columnBox.height = range->totalHeight;
+		TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+		TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+		TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+		DrawColumnBackground(tree, drawable, tree->columnTail,
+			columnRgn, &columnBox, (Range *) NULL, columnBox.height,
+			index, indexIncr);
+	    }
+	}
+	if (range == dInfo->rangeLastD)
+	    break;
+    }
+
+    TkDestroyRegion(columnRgn);
+}
+#endif /* COMPLEX_WHITESPACE */
 
 /*
  *----------------------------------------------------------------------
@@ -4916,7 +5317,6 @@ displayRetry:
 	 * clear an item's styles when the item is no longer displayed.
 	 */
 	if (TreeItemList_Count(&newV) || TreeItemList_Count(&newH)) {
-	    /* Possible <ItemVisibility> event. */
 	    TreeNotify_ItemVisibility(tree, &newV, &newH);
 	}
 
@@ -5051,13 +5451,19 @@ displayRetry:
 	TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
 	TkClipBox(wsRgnDif, &wsBox);
 	if ((wsBox.width > 0) && (wsBox.height > 0)) {
+#ifndef COMPLEX_WHITESPACE
 	    GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
+#endif
 	    if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
 		Tk_FillRegion(tree->display, Tk_WindowId(tkwin),
 			tree->debug.gcErase, wsRgnDif);
 		DisplayDelay(tree);
 	    }
+#ifdef COMPLEX_WHITESPACE
+	    DrawWhitespace(tree, drawable, wsRgnDif);
+#else
 	    Tk_FillRegion(tree->display, drawable, gc, wsRgnDif);
+#endif
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
 		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], wsBox.y);
@@ -6224,8 +6630,8 @@ TreeDisplay_ColumnDeleted(
 		    ++i;
 		}
 if (tree->debug.enable && tree->debug.display)
-    dbwin("TreeDisplay_ColumnDeleted item %d column %d",
-	TreeItem_GetID(tree, Tcl_GetHashKey(&dInfo->itemVisHash, hPtr)),
+    dbwin("TreeDisplay_ColumnDeleted item %d column %d\n",
+	TreeItem_GetID(tree, (TreeItem) Tcl_GetHashKey(&dInfo->itemVisHash, hPtr)),
 	TreeColumn_GetID(column));
 		break;
 	    }
@@ -6612,6 +7018,8 @@ TreeDInfo_Free(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     Range *range = dInfo->rangeFirst;
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
 
     if (dInfo->rItem != NULL)
 	ckfree((char *) dInfo->rItem);
@@ -6630,6 +7038,10 @@ TreeDInfo_Free(
     }
     while (dInfo->dItemFree != NULL) {
 	DItem *next = dInfo->dItemFree->next;
+#ifdef COLUMN_SPAN
+	if (dInfo->dItemFree->spans != NULL)
+	    ckfree((char *) dInfo->dItemFree->spans);
+#endif
 	WFREE(dInfo->dItemFree, DItem);
 	dInfo->dItemFree = next;
     }
@@ -6645,7 +7057,15 @@ TreeDInfo_Free(
     if (dInfo->yScrollIncrements != NULL)
 	ckfree((char *) dInfo->yScrollIncrements);
     TkDestroyRegion(dInfo->wsRgn);
+#ifdef DCOLUMN
+    hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
+    while (hPtr != NULL) {
+	ckfree((char *) Tcl_GetHashValue(hPtr));
+	hPtr = Tcl_NextHashEntry(&search);
+    }
+#endif
     Tcl_DeleteHashTable(&dInfo->itemVisHash);
+    ckfree((char *) dInfo->columns);
     WFREE(dInfo, DInfo);
 }
 
