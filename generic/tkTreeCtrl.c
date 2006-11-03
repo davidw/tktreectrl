@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.78 2006/11/03 18:46:10 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.79 2006/11/03 19:56:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1240,7 +1240,7 @@ TreeConfigure(
     TreeCtrl saved;
     Tk_SavedOptions savedOptions;
     int oldShowRoot = tree->showRoot;
-    int mask;
+    int mask, maskFree = 0;
     XGCValues gcValues;
     unsigned long gcMask;
 
@@ -1291,15 +1291,14 @@ TreeConfigure(
 	     */
 
 	    if (mask & TREE_CONF_BG_IMAGE) {
-		if (tree->backgroundImage != NULL) {
-		    Tree_FreeImage(tree, tree->backgroundImage);
+		if (tree->backgroundImageString == NULL) {
 		    tree->backgroundImage = NULL;
-		}
-		if (tree->backgroundImageString != NULL) {
+		} else {
 		    Tk_Image image = Tree_GetImage(tree, tree->backgroundImageString);
 		    if (image == NULL)
 			continue;
 		    tree->backgroundImage = image;
+		    maskFree |= TREE_CONF_BG_IMAGE;
 		}
 	    }
 
@@ -1331,6 +1330,7 @@ TreeConfigure(
 		    }
 		    if (i < listObjc)
 			continue;
+		    maskFree |= TREE_CONF_DEFSTYLE;
 		}
 	    }
 
@@ -1393,8 +1393,10 @@ badWrap:
 	     * Step 3: Free saved values
 	     */
 
-	    if (mask & TREE_CONF_BG_IMAGE)
-		; /* nothing to free */
+	    if (mask & TREE_CONF_BG_IMAGE) {
+		if (saved.backgroundImage != NULL)
+		    Tree_FreeImage(tree, saved.backgroundImage);
+	    }
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (saved.defaultStyle.styles != NULL)
 		    ckfree((char *) saved.defaultStyle.styles);
@@ -1407,6 +1409,17 @@ badWrap:
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
+	    /*
+	     * Free new values.
+	     */
+	    if (maskFree & TREE_CONF_BG_IMAGE)
+		Tree_FreeImage(tree, tree->backgroundImage);
+	    if (maskFree & TREE_CONF_DEFSTYLE)
+		ckfree((char *) tree->defaultStyle.styles);
+
+	    /*
+	     * Restore old values.
+	     */
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = saved.backgroundImage;
 	    }
@@ -1744,7 +1757,7 @@ TreeDestroy(
     while (hPtr != NULL) {
 	TreeImageRef *ref = (TreeImageRef *) Tcl_GetHashValue(hPtr);
 	Tk_FreeImage(ref->image);
-	ckfree((char *) ref->image);
+	ckfree((char *) ref);
 	hPtr = Tcl_NextHashEntry(&search);
     }
     Tcl_DeleteHashTable(&tree->imageNameHash);
