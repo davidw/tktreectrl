@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.77 2006/10/30 23:03:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.78 2006/11/03 18:46:10 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -42,7 +42,11 @@ typedef struct TreeImageRef {
 } TreeImageRef;
 
 static CONST char *bgModeST[] = {
-    "column", "order", "ordervisible", "row", "index", "visindex", (char *) NULL
+    "column", "order", "ordervisible", "row",
+#ifdef DEPRECATED
+    "index", "visindex",
+#endif
+    (char *) NULL
 };
 static CONST char *columnResizeModeST[] = {
     "proxy", "realtime", (char *) NULL
@@ -87,11 +91,13 @@ static Tk_OptionSpec optionSpecs[] = {
      "#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
     {TK_OPTION_CUSTOM, "-buttonbitmap", "buttonBitmap", "ButtonBitmap",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, buttonBitmap),
+     (char *) NULL,
+     Tk_Offset(TreeCtrl, buttonBitmap.obj), Tk_Offset(TreeCtrl, buttonBitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL,
      TREE_CONF_BUTTON | TREE_CONF_BUTBMP | TREE_CONF_RELAYOUT},
     {TK_OPTION_CUSTOM, "-buttonimage", "buttonImage", "ButtonImage",
-     (char *) NULL, -1, Tk_Offset(TreeCtrl, buttonImage),
+     (char *) NULL,
+     Tk_Offset(TreeCtrl, buttonImage.obj), Tk_Offset(TreeCtrl, buttonImage),
      TK_OPTION_NULL_OK, (ClientData) NULL,
      TREE_CONF_BUTTON | TREE_CONF_BUTIMG | TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-buttonsize", "buttonSize", "ButtonSize",
@@ -1746,6 +1752,9 @@ TreeDestroy(
 
     Tcl_DeleteHashTable(&tree->selection);
 
+    if (tree->defaultStyle.styles != NULL)
+	ckfree((char *) tree->defaultStyle.styles);
+
 #ifdef ALLOC_HAX
     AllocHax_Finalize(tree->allocData);
 #endif
@@ -3264,10 +3273,12 @@ TreeDebugCmd(
 	/* T debug alloc */
 	case COMMAND_ALLOC:
 	{
+#ifdef ALLOC_HAX
 #ifdef TREECTRL_DEBUG
 	    AllocHax_Stats(interp, tree->allocData);
 #else
 	    FormatResult(interp, "TREECTRL_DEBUG is not defined");
+#endif
 #endif
 	    break;
 	}
