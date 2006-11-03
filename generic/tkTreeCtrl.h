@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.63 2006/11/03 18:43:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.64 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -334,12 +334,13 @@ struct TreeCtrl
     int scanYOrigin;
 
     Tk_OptionTable styleOptionTable;
+#ifdef DEPRECATED
     struct {
 	Tcl_Obj *stylesObj;
 	TreeStyle *styles;
 	int numStyles;
     } defaultStyle;
-
+#endif /* DEPRECATED */
     Tk_OptionTable itemOptionTable;
     int itemPrefixLen;		/* -itemprefix */
     int columnPrefixLen;	/* -columnprefix */
@@ -678,12 +679,16 @@ extern TreeColumn TreeColumn_Prev(TreeColumn column_);
 extern int TreeColumn_FixedWidth(TreeColumn column_);
 extern int TreeColumn_MinWidth(TreeColumn column_);
 extern int TreeColumn_MaxWidth(TreeColumn column_);
-extern int TreeColumn_StepWidth(TreeColumn column_);
 extern int TreeColumn_NeededWidth(TreeColumn column_);
 extern int TreeColumn_UseWidth(TreeColumn column_);
 extern int TreeColumn_Offset(TreeColumn column_);
 extern Tk_Justify TreeColumn_Justify(TreeColumn column_);
+#ifdef DEPRECATED
 extern int TreeColumn_WidthHack(TreeColumn column_);
+extern int TreeColumn_StepWidth(TreeColumn column_);
+#endif
+extern TreeStyle TreeColumn_ItemStyle(TreeColumn column_);
+extern void TreeColumn_StyleDeleted(TreeColumn column_, TreeStyle style);
 extern int TreeColumn_Visible(TreeColumn column_);
 extern int TreeColumn_Squeeze(TreeColumn column_);
 extern GC TreeColumn_BackgroundGC(TreeColumn column_, int which);
@@ -1052,7 +1057,7 @@ extern int DynamicCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
 
 extern Tk_ObjCustomOption pixelsCO;
 extern Tk_ObjCustomOption stringCO;
-
+extern Tk_ObjCustomOption styleCO;
 
 /*****/
 

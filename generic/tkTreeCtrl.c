@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.79 2006/11/03 19:56:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.80 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -118,9 +118,11 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
      (char *) NULL, -1, Tk_Offset(TreeCtrl, cursor),
      TK_OPTION_NULL_OK, (ClientData) NULL, 0},
+#ifdef DEPRECATED
     {TK_OPTION_STRING, "-defaultstyle", "defaultStyle", "DefaultStyle",
      (char *) NULL, Tk_Offset(TreeCtrl, defaultStyle.stylesObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_DEFSTYLE},
+#endif /* DEPRECATED */
     {TK_OPTION_STRING_TABLE, "-doublebuffer",
      "doubleBuffer", "DoubleBuffer",
      "item", -1, Tk_Offset(TreeCtrl, doubleBuffer),
@@ -1261,8 +1263,10 @@ TreeConfigure(
 		    mask |= TREE_CONF_BUTBMP;
 		if (tree->buttonImage.obj != NULL)
 		    mask |= TREE_CONF_BUTIMG;
+#ifdef DEPRECATED
 		if (tree->defaultStyle.stylesObj != NULL)
 		    mask |= TREE_CONF_DEFSTYLE;
+#endif
 		if (tree->wrapObj != NULL)
 		    mask |= TREE_CONF_WRAP;
 		if (!ObjectIsEmpty(tree->itemWidthObj))
@@ -1277,10 +1281,12 @@ TreeConfigure(
 
 	    if (mask & TREE_CONF_BG_IMAGE)
 		saved.backgroundImage = tree->backgroundImage;
+#ifdef DEPRECATED
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		saved.defaultStyle.styles = tree->defaultStyle.styles;
 		saved.defaultStyle.numStyles = tree->defaultStyle.numStyles;
 	    }
+#endif
 	    if (mask & TREE_CONF_WRAP) {
 		saved.wrapMode = tree->wrapMode;
 		saved.wrapArg = tree->wrapArg;
@@ -1302,6 +1308,7 @@ TreeConfigure(
 		}
 	    }
 
+#ifdef DEPRECATED
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (tree->defaultStyle.stylesObj == NULL) {
 		    tree->defaultStyle.styles = NULL;
@@ -1333,6 +1340,7 @@ TreeConfigure(
 		    maskFree |= TREE_CONF_DEFSTYLE;
 		}
 	    }
+#endif /* DEPRECATED */
 
 	    /* Parse -wrap string into wrapMode and wrapArg */
 	    if (mask & TREE_CONF_WRAP) {
@@ -1397,11 +1405,12 @@ badWrap:
 		if (saved.backgroundImage != NULL)
 		    Tree_FreeImage(tree, saved.backgroundImage);
 	    }
+#ifdef DEPRECATED
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		if (saved.defaultStyle.styles != NULL)
 		    ckfree((char *) saved.defaultStyle.styles);
 	    }
-
+#endif
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -1414,19 +1423,22 @@ badWrap:
 	     */
 	    if (maskFree & TREE_CONF_BG_IMAGE)
 		Tree_FreeImage(tree, tree->backgroundImage);
+#ifdef DEPRECATED
 	    if (maskFree & TREE_CONF_DEFSTYLE)
 		ckfree((char *) tree->defaultStyle.styles);
-
+#endif
 	    /*
 	     * Restore old values.
 	     */
 	    if (mask & TREE_CONF_BG_IMAGE) {
 		tree->backgroundImage = saved.backgroundImage;
 	    }
+#ifdef DEPRECATED
 	    if (mask & TREE_CONF_DEFSTYLE) {
 		tree->defaultStyle.styles = saved.defaultStyle.styles;
 		tree->defaultStyle.numStyles = saved.defaultStyle.numStyles;
 	    }
+#endif
 	    if (mask & TREE_CONF_WRAP) {
 		tree->wrapMode = saved.wrapMode;
 		tree->wrapArg = saved.wrapArg;
@@ -1765,9 +1777,10 @@ TreeDestroy(
 
     Tcl_DeleteHashTable(&tree->selection);
 
+#ifdef DEPRECATED
     if (tree->defaultStyle.styles != NULL)
 	ckfree((char *) tree->defaultStyle.styles);
-
+#endif
 #ifdef ALLOC_HAX
     AllocHax_Finalize(tree->allocData);
 #endif

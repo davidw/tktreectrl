@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.40 2006/10/31 23:30:13 treectrl Exp $}
+  $Id: treectrl.man,v 1.41 2006/11/03 22:31:05 treectrl Exp $}
 ][manpage_begin treectrl n 2.1.1]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -145,6 +145,7 @@ be after resizing. For [const realtime], the column's size is changed while
 the user is dragging the right edge of the column.
 
 [tkoption_def -defaultstyle defaultStyle DefaultStyle]
+This option is deprecated; use the column option [option -itemstyle] instead.
 Specifies a list of styles, one per column, to apply to each item created by
 the [cmd "item create"] command. The number of styles in the list can be
 different from the number of tree columns.
@@ -2309,6 +2310,10 @@ it defaults to 0.
 Specifies a list of zero or more colors, which are used as
 alternating background colors for items in this column.
 See also the [option -backgroundmode] widget option for more on this.
+
+[opt_def [option -itemstyle] [arg style]]
+[arg Style] is the name of a style that should be set in this column
+for newly-created items.
 
 [opt_def [option -justify] [arg justification]]
 This option determines how the items (and the title) line up with each other.

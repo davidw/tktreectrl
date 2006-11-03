@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.39 2006/10/31 23:30:13 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.40 2006/11/03 22:31:04 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.39 2006/10/31 23:30:13 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.40 2006/11/03 22:31:04 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -397,6 +397,7 @@ the user is dragging the right edge of the column.
 Database Name:	<strong>defaultStyle</strong><br>
 Database Class:	<strong>DefaultStyle</strong><br>
 <dd>
+This option is deprecated; use the column option <strong>-itemstyle</strong> instead.
 Specifies a list of styles, one per column, to apply to each item created by
 the <b class='cmd'>item create</b> command. The number of styles in the list can be
 different from the number of tree columns.
@@ -3005,6 +3006,11 @@ it defaults to 0.
 Specifies a list of zero or more colors, which are used as
 alternating background colors for items in this column.
 See also the <strong>-backgroundmode</strong> widget option for more on this.
+
+<br><br>
+<dt><strong><strong>-itemstyle</strong></strong> <i class='arg'>style</i><dd>
+<i class='arg'>Style</i> is the name of a style that should be set in this column
+for newly-created items.
 
 <br><br>
 <dt><strong><strong>-justify</strong></strong> <i class='arg'>justification</i><dd>

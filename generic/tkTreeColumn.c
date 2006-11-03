@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.55 2006/11/03 21:24:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.56 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -57,6 +57,7 @@ struct Column
     PerStateInfo arrowImage;	/* -arrowimage */
     Pixmap bitmap;		/* -bitmap */
     Tcl_Obj *itemBgObj;		/* -itembackground */
+    TreeStyle itemStyle;	/* -itemstyle */
     int button;			/* -button */
     Tcl_Obj *textPadXObj;	/* -textpadx */
     int *textPadX;		/* -textpadx */
@@ -342,6 +343,9 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_STRING, "-itembackground", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, itemBgObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ITEMBG},
+    {TK_OPTION_CUSTOM, "-itemstyle", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Column, itemStyle),
+     TK_OPTION_NULL_OK, (ClientData) &styleCO, 0},
     {TK_OPTION_JUSTIFY, "-justify", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, justify),
      0, (ClientData) NULL, COLU_CONF_DISPLAY | COLU_CONF_JUSTIFY},
@@ -1870,6 +1874,7 @@ Column_Move(
 	hPtr = Tcl_NextHashEntry(&search);
     }
 
+#ifdef DEPRECATED
     /* Re-order -defaultstyle */
     numStyles = tree->defaultStyle.numStyles;
     if ((numStyles > 0) && ((before->index < numStyles) ||
@@ -1931,6 +1936,7 @@ Column_Move(
 	    tree->defaultStyle.numStyles = numStyles;
 	}
     }
+#endif /* DEPRECATED */
 
     /* Unlink. */
     prev = move->prev;
@@ -2068,11 +2074,17 @@ Column_Config(
 		saved.itemBgCount = column->itemBgCount;
 	    }
 
-	    if ((column == (Column *) tree->columnTail) &&
-		    (column->lock != COLUMN_LOCK_NONE)) {
-		FormatResult(tree->interp,
-			"can't change the -lock option of the tail column");
-		continue;
+	    if (column == (Column *) tree->columnTail) {
+		if (column->itemStyle != NULL) {
+		    FormatResult(tree->interp,
+			    "can't change the -itemstyle option of the tail column");
+		    continue;
+		}
+		if (column->lock != COLUMN_LOCK_NONE) {
+		    FormatResult(tree->interp,
+			    "can't change the -lock option of the tail column");
+		    continue;
+		}
 	    }
 
 	    /*
@@ -3364,6 +3376,59 @@ TreeColumn_BackgroundGC(
     if (color == NULL)
 	return None;
     return Tk_GCForColor(color, Tk_WindowId(column->tree->tkwin));
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_ItemStyle --
+ *
+ *	Return the value of the -itemstyle config option for a column.
+ *
+ * Results:
+ *	TreeStyle or NULL.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeStyle
+TreeColumn_ItemStyle(
+    TreeColumn column_		/* Column token. */
+    )
+{
+    return ((Column *) column_)->itemStyle;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_StyleDeleted --
+ *
+ *	Called when a master style is deleted.
+ *
+ * Results:
+ *	Clear the column's -itemstyle option if it is the style being
+ *	deleted.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeColumn_StyleDeleted(
+    TreeColumn column_,		/* Column token. */
+    TreeStyle style		/* Style that was deleted. */
+    )
+{
+    Column *column = (Column *) column_;
+
+    if (column->itemStyle == style)
+	column->itemStyle = NULL;
 }
 
 /*

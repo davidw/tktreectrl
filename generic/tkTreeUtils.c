@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.49 2006/11/03 18:54:12 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.50 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5595,8 +5595,8 @@ PixelsCO_Set(
     }
 
     if (internalPtr != NULL) {
-	*((int *) saveInternalPtr) = *((int *) internalPtr);
-	*((int *) internalPtr) = new;
+	*((int *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
     }
 
     return TCL_OK;
@@ -5632,6 +5632,100 @@ Tk_ObjCustomOption pixelsCO =
     PixelsCO_Set,
     PixelsCO_Get,
     PixelsCO_Restore,
+    NULL,
+    (ClientData) NULL
+};
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * StyleCO_Set --
+ * StyleCO_Get --
+ * StyleCO_Restore --
+ *
+ *	These procedures implement a TK_OPTION_CUSTOM where the custom
+ *	option is a TreeStyle.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+StyleCO_Set(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **valuePtr,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags
+    )
+{
+    TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
+    int objEmpty;
+    TreeStyle *internalPtr, new;
+
+    if (internalOffset >= 0)
+	internalPtr = (TreeStyle *) (recordPtr + internalOffset);
+    else
+	internalPtr = NULL;
+
+    objEmpty = ObjectIsEmpty((*valuePtr));
+
+    if ((flags & TK_OPTION_NULL_OK) && objEmpty) {
+	(*valuePtr) = NULL;
+	new = NULL;
+    } else {
+	if (TreeStyle_FromObj(tree, *valuePtr, &new) != TCL_OK)
+	    return TCL_ERROR;
+    }
+
+    if (internalPtr != NULL) {
+	*((TreeStyle *) saveInternalPtr) = *internalPtr;
+	*internalPtr = new;
+    }
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+StyleCO_Get(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset
+    )
+{
+    TreeStyle *internalPtr = (TreeStyle *) (recordPtr + internalOffset);
+
+    if (*internalPtr == NULL)
+	return NULL;
+    return TreeStyle_ToObj(*internalPtr);
+}
+
+static void
+StyleCO_Restore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr
+    )
+{
+    *(TreeStyle *) internalPtr = *(TreeStyle *) saveInternalPtr;
+}
+
+Tk_ObjCustomOption styleCO =
+{
+    "style",
+    StyleCO_Set,
+    StyleCO_Get,
+    StyleCO_Restore,
     NULL,
     (ClientData) NULL
 };

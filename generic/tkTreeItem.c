@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.74 2006/10/30 23:03:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.75 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4702,6 +4702,7 @@ ItemCreateCmd(
     Item *head = NULL, *tail = NULL;
     Tcl_Obj *listObj = NULL, *tagsObj = NULL;
     TagInfo *tagInfo = NULL;
+    TreeColumn treeColumn;
 
     for (i = 3; i < objc; i += 2) {
 	if (Tcl_GetIndexFromObj(interp, objv[i], optionNames, "option", 0,
@@ -4808,18 +4809,32 @@ ItemCreateCmd(
 	    item->state &= ~STATE_OPEN;
 	item->fixedHeight = height;
 
+	/* Apply each column's -itemstyle option. */
+	for (treeColumn = tree->columns; treeColumn != NULL;
+		treeColumn = TreeColumn_Next(treeColumn)) {
+	    TreeStyle style = TreeColumn_ItemStyle(treeColumn);
+	    if (style != NULL) {
+		Column *column = Item_CreateColumn(tree, item,
+			TreeColumn_Index(treeColumn), NULL);
+		column->style = TreeStyle_NewInstance(tree, style);
+	    }
+	}
+#ifdef DEPRECATED
 	/* Apply default styles */
 	if (tree->defaultStyle.numStyles) {
 	    int i, n = MIN(tree->columnCount, tree->defaultStyle.numStyles);
 
 	    for (i = 0; i < n; i++) {
 		Column *column = Item_CreateColumn(tree, item, i, NULL);
+		if (column->style != NULL)
+		    continue;
 		if (tree->defaultStyle.styles[i] != NULL) {
 		    column->style = TreeStyle_NewInstance(tree,
 			    tree->defaultStyle.styles[i]);
 		}
 	    }
 	}
+#endif /* DEPRECATED */
 
 	if (tagInfo != NULL) {
 	    if (count == 1) {

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.57 2006/11/03 18:54:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.58 2006/11/03 22:30:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4010,6 +4010,14 @@ Style_Deleted(
 	hPtr = Tcl_NextHashEntry(&search);
     }
 
+    /* Update each column's -itemstyle option */
+    treeColumn = tree->columns;
+    while (treeColumn != NULL) {
+	TreeColumn_StyleDeleted(treeColumn, (TreeStyle) masterStyle);
+	treeColumn = TreeColumn_Next(treeColumn);
+    }
+
+#ifdef DEPRECATED
     /* Update -defaultstyle option */
     if (tree->defaultStyle.stylesObj != NULL)
     {
@@ -4031,6 +4039,7 @@ Style_Deleted(
 	    Tcl_ListObjReplace(tree->interp, stylesObj, columnIndex, 1, 1, &emptyObj);
 	}
     }
+#endif /* DEPRECATED */
 }
 
 /*
