@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.49 2006/11/03 18:43:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.50 2006/11/04 23:10:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4465,6 +4465,7 @@ CalcWhiteSpaceRegion(
     return wsRgn;
 }
 
+#define COMPLEX_WHITESPACExxx
 #ifdef COMPLEX_WHITESPACE
 
 static int
@@ -4599,7 +4600,7 @@ DrawColumnBackground(
 	}
 	if (rItem != NULL && rItem == range->last) {
 	    /* If we run past the bottom-most item in the range,
-	     * use its properties for following rows. */
+	     * use its properties for the following rows. */
 	    height = rItem->size;
 	    index = GetItemBgIndex(tree, treeColumn, rItem);
 	    if (tree->backgroundMode != BG_MODE_COLUMN) {
@@ -4619,7 +4620,58 @@ DrawColumnBackground(
 }
 
 static void
-DrawWhitespace(
+DrawWhitespaceBelowItem(
+    TreeCtrl *tree,
+    Drawable drawable,
+    int left,
+    int top,
+    int bottom,
+    TkRegion dirtyRgn,
+    TkRegion columnRgn,
+    RItem *rItem,
+    int height
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    int i, index, indexIncr;
+    TreeColumn treeColumn;
+    XRectangle columnBox;
+
+    columnBox.x = left;
+    columnBox.y = top;
+    for (i = 0; i < tree->columnCount; i++) {
+	treeColumn = dInfo->columns[i].column;
+#ifdef COLUMN_LOCK
+	if (TreeColumn_Lock(treeColumn) != COLUMN_LOCK_NONE)
+	    continue;
+#endif
+	if (dInfo->columns[i].width == 0)
+	    continue;
+	index = GetItemBgIndex(tree, treeColumn, rItem);
+	if (tree->backgroundMode != BG_MODE_COLUMN) {
+	    index++;
+	    indexIncr = 1;
+	} else {
+	    indexIncr = 0;
+	}
+	if (treeColumn == tree->columnVis)
+	    columnBox.width = tree->vertical ? rItem->range->totalWidth :
+		rItem->size;
+	else
+	    columnBox.width = dInfo->columns[i].width;
+	columnBox.height = bottom - top;
+	TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+	TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+	TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+	DrawColumnBackground(tree, drawable, treeColumn,
+		columnRgn, &columnBox, (Range *) NULL, height,
+		index, indexIncr);
+	columnBox.x += dInfo->columns[i].width;
+    }
+}
+
+static void
+DrawWhitespaceVertical(
     TreeCtrl *tree,
     Drawable drawable,
     TkRegion dirtyRgn
@@ -4650,7 +4702,7 @@ DrawWhitespace(
     TkClipBox(dirtyRgn, &dirtyBox);
 
 #ifdef COLUMN_LOCKxxx
-    /* Erase area below left columns */
+    /* Draw below the left columns */
     if (!dInfo->emptyL) {
 	minX = dInfo->boundsL[0];
 	minY = dInfo->boundsL[1];
@@ -4681,7 +4733,7 @@ DrawWhitespace(
 	}
     }
 
-    /* Erase area below right columns */
+    /* Draw below the right columns */
     if (!dInfo->emptyR) {
 	minX = dInfo->boundsR[0];
 	minY = dInfo->boundsR[1];
@@ -4695,7 +4747,7 @@ DrawWhitespace(
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
     }
-#endif
+#endif /* COLUMN_LOCK */
 
     if (dInfo->empty)
 	return;
@@ -4707,58 +4759,52 @@ DrawWhitespace(
 
     columnRgn = TkCreateRegion();
 
-    if (tree->vertical) {
-	/* Erase area to right of last Range */
-	if (x + Tree_TotalWidth(tree) < maxX) {
-	    columnBox.x = x + Tree_TotalWidth(tree);
-	    columnBox.y = y; /* Top of the range */
-	    columnBox.width = maxX - columnBox.x;
-	    columnBox.height = maxY - columnBox.y;
-	    TkSubtractRegion(columnRgn, columnRgn, columnRgn);
-	    TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
-	    TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
-	    DrawColumnBackground(tree, drawable, tree->columnTail,
-		    columnRgn, &columnBox, dInfo->rangeLastD, 0,
-		    0, 0);
-	}
-    } else {
-	/* Erase area below last Range */
-	if (y + Tree_TotalHeight(tree) < maxY) {
-
-	    /* FIXME: What should the height of each "row" be below the
-	     * actual items? For now, use the height of the last range
-	     * with a non-zero height. */
-	    range = dInfo->rangeLastD;
-	    while (range->totalHeight == 0 && range != NULL)
-		range = range->prev;
-	    if (range->totalHeight > 0)
-		height = range->totalHeight;
-	    else if (tree->itemHeight > 0)
+    /* Draw to the right of the last Range. This is done using the tail
+     * column's -itembackground colors. The height of each row matches
+     * the height of the adjacent item in the right-most range. */
+    if (x + Tree_TotalWidth(tree) < maxX) {
+	if (dInfo->rangeLastD == NULL) {
+	    if (tree->itemHeight > 0)
 		height = tree->itemHeight;
 	    else if (tree->minItemHeight > 0)
 		height = tree->minItemHeight;
 	    else
-		height = maxY - y + Tree_TotalHeight(tree);
-
-	    for (rItem = range->first; rItem != NULL; rItem++) 
-
-	    columnBox.x = minX;
-	    columnBox.y = y + Tree_TotalHeight(tree);
-	    columnBox.width = maxX - minX;
-	    columnBox.height = maxY - columnBox.y;
+		height = maxY - minY;
+	    index = 0;
+	    if (tree->backgroundMode != BG_MODE_COLUMN) {
+		indexIncr = 1;
+	    } else {
+		indexIncr = 0;
+	    }
+	} else {
+	    height = 0;
+	    index = 0;
+	    indexIncr = 0;
 	}
+	columnBox.x = x + Tree_TotalWidth(tree);
+	columnBox.y = y; /* Top of the range */
+	columnBox.width = maxX - columnBox.x;
+	columnBox.height = maxY - columnBox.y;
+	TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+	TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+	TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+	DrawColumnBackground(tree, drawable, tree->columnTail,
+		columnRgn, &columnBox, dInfo->rangeLastD, height,
+		index, indexIncr);
     }
 
+    /* Draw below each range. */
     for (range = dInfo->rangeFirstD;
 	 range != NULL;
 	 range = range->next) {
-	if (tree->vertical) {
-	    top = MAX(y + range->totalHeight, minY);
-	    bottom = maxY;
 
+	top = MAX(y + range->totalHeight, minY);
+	bottom = maxY;
+
+	if (top < bottom) {
 	    /* FIXME: What should the height of each "row" be below the
-	     * actual items? For now, use the height of the last item in
-	     * this range with a non-zero height. */
+	    * actual items? For now, use the height of the last item in
+	    * this range with a non-zero height. */
 	    rItem = range->last;
 	    while (rItem->size == 0 && rItem != range->first)
 		rItem--;
@@ -4771,72 +4817,130 @@ DrawWhitespace(
 	    else
 		height = bottom - top;
 
-	    /* Erase area below Range */
-	    if (top < bottom) {
-		columnBox.x = x + range->offset;
-		columnBox.y = top;
-		for (i = 0; i < tree->columnCount; i++) {
-		    treeColumn = dInfo->columns[i].column;
-#ifdef COLUMN_LOCK
-		    if (TreeColumn_Lock(treeColumn) != COLUMN_LOCK_NONE)
-			continue;
-#endif
-		    if (dInfo->columns[i].width == 0)
-			continue;
-		    index = GetItemBgIndex(tree, treeColumn, range->last);
-		    if (tree->backgroundMode != BG_MODE_COLUMN) {
-			index++;
-			indexIncr = 1;
-		    } else {
-			indexIncr = 0;
-		    }
-		    columnBox.width = dInfo->columns[i].width;
-		    columnBox.height = bottom - top;
-		    TkSubtractRegion(columnRgn, columnRgn, columnRgn);
-		    TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
-		    TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
-		    DrawColumnBackground(tree, drawable, treeColumn,
-			    columnRgn, &columnBox, (Range *) NULL, height,
-			    index, indexIncr);
-		    columnBox.x += dInfo->columns[i].width;
-		}
+	    DrawWhitespaceBelowItem(tree, drawable, x + range->offset, top,
+		    bottom, dirtyRgn, columnRgn, range->last, height);
+	}
+	if (range == dInfo->rangeLastD)
+	    break;
+    }
+
+    TkDestroyRegion(columnRgn);
+}
+
+static void
+DrawWhitespaceHorizontal(
+    TreeCtrl *tree,
+    Drawable drawable,
+    TkRegion dirtyRgn
+    )
+{
+    DInfo *dInfo = (DInfo *) tree->dInfo;
+    int x, y, minX, minY, maxX, maxY;
+    int left, right, top, bottom;
+    int i, height, index = 0, indexIncr = 0;
+    XRectangle dirtyBox, columnBox;
+    TkRegion columnRgn;
+    Range *range;
+    RItem *rItem;
+    DItem *dItem;
+    TreeColumn treeColumn;
+
+    /* If no columns have -itembackground specified, just paint the entire
+     * dirty area with the treectrl's -background color. */
+    if (tree->columnBgCnt == 0) {
+	GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
+	Tk_FillRegion(tree->display, drawable, gc, dirtyRgn);
+	return;
+    }
+
+    x = 0 - tree->xOrigin;
+    y = 0 - tree->yOrigin;
+
+    TkClipBox(dirtyRgn, &dirtyBox);
+
+    if (dInfo->empty)
+	return;
+
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
+
+    columnRgn = TkCreateRegion();
+
+    /* Draw below the last Range */
+    if (y + Tree_TotalHeight(tree) < maxY) {
+
+	left = x;
+	top = y + Tree_TotalHeight(tree);
+	bottom = maxY;
+
+	/* FIXME: What should the height of each "row" be below the
+	* actual items? For now, use the height of the last range
+	* with a non-zero height. */
+	range = dInfo->rangeLastD;
+	while (range != NULL && range->totalHeight == 0)
+	    range = range->prev;
+	if (range != NULL)
+	    height = range->totalHeight;
+	else if (tree->itemHeight > 0)
+	    height = tree->itemHeight;
+	else if (tree->minItemHeight > 0)
+	    height = tree->minItemHeight;
+	else
+	    height = maxY - y + Tree_TotalHeight(tree);
+
+	if (range != NULL) {
+	    for (rItem = range->first; rItem != NULL; rItem++) {
+		DrawWhitespaceBelowItem(tree, drawable, left, top, bottom,
+			dirtyRgn, columnRgn, rItem, height);
+		left += rItem->size;
+		if (rItem == range->last)
+		    break;
 	    }
 	} else {
-	    left = MAX(x + range->totalWidth, minX);
-	    right = maxX;
-	    top = MAX(y + range->offset, minY);
-	    bottom = MIN(y + range->offset + range->totalHeight, maxY);
+	    
+	}
+    }
 
-	    /* Erase area to right of Range */
-	    if (left < right) {
-		switch (tree->backgroundMode) {
+    /* Draw to the right of each Range */
+    for (range = dInfo->rangeFirstD;
+	 range != NULL;
+	 range = range->next) {
+
+	left = MAX(x + range->totalWidth, minX);
+	right = maxX;
+	top = MAX(y + range->offset, minY);
+	bottom = MIN(y + range->offset + range->totalHeight, maxY);
+
+	if (left < right) {
+	    switch (tree->backgroundMode) {
 #ifdef DEPRECATED
-		    case BG_MODE_INDEX:
-		    case BG_MODE_VISINDEX:
+		case BG_MODE_INDEX:
+		case BG_MODE_VISINDEX:
 #endif
-		    case BG_MODE_ORDER:
-		    case BG_MODE_ORDERVIS:
-		    case BG_MODE_COLUMN:
-			dItem = (DItem *) TreeItem_GetDInfo(tree, range->last->item);
-			index = dItem->index + 1;
-			indexIncr = 1;
-			break;
-		    case BG_MODE_ROW:
-			index = range->index;
-			indexIncr = 0;
-			break;
-		}
-		columnBox.x = x + range->totalWidth;
-		columnBox.y = top;
-		columnBox.width = right - left;
-		columnBox.height = range->totalHeight;
-		TkSubtractRegion(columnRgn, columnRgn, columnRgn);
-		TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
-		TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
-		DrawColumnBackground(tree, drawable, tree->columnTail,
-			columnRgn, &columnBox, (Range *) NULL, columnBox.height,
-			index, indexIncr);
+		case BG_MODE_ORDER:
+		case BG_MODE_ORDERVIS:
+		case BG_MODE_COLUMN:
+		    dItem = (DItem *) TreeItem_GetDInfo(tree, range->last->item);
+		    index = dItem->index + 1;
+		    indexIncr = 1;
+		    break;
+		case BG_MODE_ROW:
+		    index = range->index;
+		    indexIncr = 0;
+		    break;
 	    }
+	    columnBox.x = x + range->totalWidth;
+	    columnBox.y = top;
+	    columnBox.width = right - left;
+	    columnBox.height = range->totalHeight;
+	    TkSubtractRegion(columnRgn, columnRgn, columnRgn);
+	    TkUnionRectWithRegion(&columnBox, columnRgn, columnRgn);
+	    TkIntersectRegion(dirtyRgn, columnRgn, columnRgn);
+	    DrawColumnBackground(tree, drawable, tree->columnTail,
+		    columnRgn, &columnBox, (Range *) NULL, columnBox.height,
+		    index, indexIncr);
 	}
 	if (range == dInfo->rangeLastD)
 	    break;
@@ -5460,7 +5564,10 @@ displayRetry:
 		DisplayDelay(tree);
 	    }
 #ifdef COMPLEX_WHITESPACE
-	    DrawWhitespace(tree, drawable, wsRgnDif);
+	    if (tree->vertical)
+		DrawWhitespaceVertical(tree, drawable, wsRgnDif);
+	    else
+		DrawWhitespaceHorizontal(tree, drawable, wsRgnDif);
 #else
 	    Tk_FillRegion(tree->display, drawable, gc, wsRgnDif);
 #endif
