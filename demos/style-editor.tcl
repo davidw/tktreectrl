@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.9 2006/10/28 01:24:13 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.10 2006/11/05 06:48:34 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -142,7 +142,7 @@ proc StyleEditor::SetListOfStyles {} {
 	$T style elements s1 {e2 e1}
 	$T style layout s1 e2 -union [list e1] -ipadx 2 -ipady 2 -iexpand e
 
-	$T configure -defaultstyle s1
+	$T column configure C0 -itemstyle s1
     }
 
     # Clear the list
@@ -200,7 +200,7 @@ proc StyleEditor::SetListOfElements {style} {
 	$T style elements s1 {e2 e1}
 	$T style layout s1 e2 -union [list e1] -ipadx 2 -ipady 2 -iexpand e
 
-	$T configure -defaultstyle s1
+	$T column configure C0 -itemstyle s1
     }
 
     # Clear the list
@@ -296,7 +296,7 @@ proc StyleEditor::SetPropertyList {} {
 	$T configure -font [[Info editor,pad].v1 cget -font] \
 	    -minitemheight $height
 
-	$T configure -defaultstyle s1
+	$T column configure 0 -itemstyle s1
     }
 
     $T item delete all
@@ -748,8 +748,8 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
 		}
 		if {$sameAsMaster} {
 		} elseif {$name eq "-window"} {
-		    $T style layout $style $E -width [winfo reqwidth $current] \
-			-height [winfo reqheight $current]
+		    $T style layout $style $E -width [winfo width $current] \
+			-height [winfo height $current]
 		} else {
 		    $T element configure $E $name $current
 		}
