@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: random.tcl,v 1.20 2006/10/28 01:24:48 treectrl Exp $
+# RCS: @(#) $Id: random.tcl,v 1.21 2006/11/05 06:49:35 treectrl Exp $
 
 set RandomN 500
 set RandomDepth 5
@@ -186,23 +186,7 @@ proc RandomButton1 {T x y} {
 				$T item toggle $arg2
 			}
 			column {
-				set ok 0
-				# Clicked an element
-				if {[llength $id] == 6} {
-					set column [lindex $id 3]
-					set E [lindex $id 5]
-					foreach list $Priv(sensitive,$T) {
-						set C [lindex $list 0]
-						set S [lindex $list 1]
-						set eList [lrange $list 2 end]
-						if {[$T column compare $column != $C]} continue
-						if {[$T item style set $item $C] ne $S} continue
-						if {[lsearch -exact $eList $E] == -1} continue
-						set ok 1
-						break
-					}
-				}
-				if {!$ok} {
+				if {![TreeCtrl::IsSensitive $T $x $y]} {
 					$T selection clear
 					return
 				}
@@ -277,23 +261,8 @@ proc RandomMotion {T x y} {
 			set cursor X_cursor
 			set drop ""
 			set id [$T identify $x $y]
-			set ok 0
-			if {($id ne "") && ([lindex $id 0] eq "item") && ([llength $id] == 6)} {
+			if {[TreeCtrl::IsSensitive $T $x $y]} {
 				set item [lindex $id 1]
-				set column [lindex $id 3]
-				set E [lindex $id 5]
-				foreach list $Priv(sensitive,$T) {
-					set C [lindex $list 0]
-					set S [lindex $list 1]
-					set eList [lrange $list 2 end]
-					if {[$T column compare $column != $C]} continue
-					if {[$T item style set $item $C] ne $S} continue
-					if {[lsearch -exact $eList $E] == -1} continue
-					set ok 1
-					break
-				}
-			}
-			if {$ok} {
 				# If the item is not in the pre-drag selection
 				# (i.e. not being dragged) see if we can drop on it
 				if {[lsearch -exact $Priv(selection) $item] == -1} {
