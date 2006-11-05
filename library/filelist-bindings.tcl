@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.24 2006/11/03 18:58:17 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.25 2006/11/05 06:43:28 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -85,16 +85,10 @@ namespace eval TreeCtrl {
 proc ::TreeCtrl::IsSensitive {T x y} {
     variable Priv
     set id [$T identify $x $y]
-    if {$id eq ""} {
-	return 0
-    }
     if {[lindex $id 0] ne "item" || [llength $id] != 6} {
 	return 0
     }
     foreach {where item arg1 arg2 arg3 arg4} $id {}
-    if {$arg1 ne "column"} {
-	return 0
-    }
     if {![$T item enabled $item]} {
 	return 0
     }
@@ -139,25 +133,7 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 		ButtonPress1 $T $x $y
 	    }
 	    column {
-		set ok 0
-		# Clicked an element
-		if {[llength $id] == 6} {
-		    set E [lindex $id 5]
-		    foreach list $Priv(sensitive,$T) {
-			set C [lindex $list 0]
-			set S [lindex $list 1]
-			set eList [lrange $list 2 end]
-			if {[$T column compare $arg2 != $C]} continue
-			if {[$T item style set $item $C] ne $S} continue
-			if {[lsearch -exact $eList $E] == -1} continue
-			set ok 1
-			break
-		    }
-		}
-		if {![$T item enabled $item]} {
-		    set ok 0
-		}
-		if {$ok} {
+		if {[IsSensitive $T $x $y]} {
 		    set Priv(drag,motion) 0
 		    set Priv(drag,click,x) $x
 		    set Priv(drag,click,y) $y
@@ -165,8 +141,8 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 		    set Priv(drag,y) [$T canvasy $y]
 		    set Priv(drop) ""
 		    set Priv(drag,wasSel) [$T selection includes $item]
-		    set Priv(drag,C) $C
-		    set Priv(drag,E) $E
+		    set Priv(drag,C) $arg2
+		    set Priv(drag,E) $arg4
 		    $T activate $item
 		    if {$Priv(selectMode) eq "add"} {
 			BeginExtend $T $item
@@ -216,6 +192,7 @@ proc ::TreeCtrl::FileListMotion1 {T x y} {
 	    Motion1 $T $x $y
 	}
     }
+    return
 }
 
 proc ::TreeCtrl::FileListMotion {T x y} {
@@ -230,6 +207,7 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 	    # Check items covered by the marquee
 	    foreach list [$T marque identify] {
 		set item [lindex $list 0]
+		if {![$T item enabled $item]} continue
 
 		# Check covered columns in this item
 		foreach sublist [lrange $list 1 end] {
@@ -295,23 +273,8 @@ proc ::TreeCtrl::FileListMotion {T x y} {
 	    # Find the element under the cursor
 	    set drop ""
 	    set id [$T identify $x $y]
-	    set ok 0
-	    if {($id ne "") && ([lindex $id 0] eq "item") && ([llength $id] == 6)} {
+	    if {[IsSensitive $T $x $y]} {
 		set item [lindex $id 1]
-		set column [lindex $id 3]
-		set E [lindex $id 5]
-		foreach list $Priv(sensitive,$T) {
-		    set C [lindex $list 0]
-		    set S [lindex $list 1]
-		    set eList [lrange $list 2 end]
-		    if {[$T column compare $column != $C]} continue
-		    if {[$T item style set $item $C] ne $S} continue
-		    if {[lsearch -exact $eList $E] == -1} continue
-		    set ok 1
-		    break
-		}
-	    }
-	    if {$ok} {
 		# If the item is not in the pre-drag selection
 		# (i.e. not being dragged) and it is a directory,
 		# see if we can drop on it
