@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.4 2006/10/31 06:19:29 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.5 2006/11/05 06:50:34 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -158,30 +158,30 @@ proc DemoColumnLock {} {
 
     $T item style set "root children" "range {first next} {last prev}" cell
 
-    $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover}
+    $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover #F7F7F7 CHECK}
     $T element create windowStyle.text text
-    $T element create windowStyle.w window -clip yes -destroy yes
+    $T element create windowStyle.window window -clip yes -destroy yes
     $T style create windowStyle -orient vertical
-    $T style elements windowStyle {windowStyle.rect windowStyle.text windowStyle.w}
+    $T style elements windowStyle {windowStyle.rect windowStyle.text windowStyle.window}
     $T style layout windowStyle windowStyle.rect -detach yes -iexpand xy
     $T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
-    $T style layout windowStyle windowStyle.w -iexpand x -padx 2 -pady {0 2}
+    $T style layout windowStyle windowStyle.window -iexpand x -padx 2 -pady {0 2}
 
     $T item style set "list {2 22}" "all lock none" windowStyle
 
-    foreach C [lrange [$T column list] 1 end-1] {
+    foreach C [$T column id "lock none !tail"] {
 	set ::DemoColumnLock(C$C) "C$C"
 
 	set I 2
 	set clip [frame $T.clipR${I}C$C -borderwidth 0]
 	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
-	$T item element configure $I $C windowStyle.w -window $clip + \
+	$T item element configure $I $C windowStyle.window -window $clip + \
 	    windowStyle.text -textvariable ::DemoColumnLock(C$C)
 
 	set I 22
 	set clip [frame $T.clipR${I}C$C -borderwidth 0]
 	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
-	$T item element configure $I $C windowStyle.w -window $clip + \
+	$T item element configure $I $C windowStyle.window -window $clip + \
 	    windowStyle.text -textvariable ::DemoColumnLock(C$C)
     }
 
