@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.30 2006/10/27 22:52:30 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.31 2006/11/05 06:38:20 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -243,7 +243,8 @@ proc ::TreeCtrl::ColumnCanMoveHere {w column before} {
 # ::TreeCtrl::CursorAction --
 #
 # If the given point is at the left or right edge of a resizable column, the
-# result is "column C".
+# result is "column resize C". If the given point is in a header with -button
+# TRUE, the result is "column button C".
 #
 # Arguments:
 # w		The treectrl widget.
@@ -253,27 +254,44 @@ proc ::TreeCtrl::ColumnCanMoveHere {w column before} {
 proc ::TreeCtrl::CursorAction {w x y} {
     variable Priv
     set id [$w identify $x $y]
-    if {([llength $id] == 3) && ([lindex $id 0] eq "header")} {
+
+    if {[lindex $id 0] eq "header"} {
 	set column [lindex $id 1]
 	set side [lindex $id 2]
 	if {$side eq "left"} {
+	    if {[$w column compare $column == tail]} {
+		set column [$w column id "last visible lock none"]
+		if {$column ne ""} {
+		    return "column resize $column"
+		}
+		# Can't -resize or -button the tail column
+		return ""
+	    }
 	    if {[ColumnCanResizeLeft $w $column]} {
 		if {[$w column cget $column -resize]} {
-		    return "column $column"
+		    return "column resize $column"
+		}
+	    } else {
+		# Resize the previous column
+		set lock [$w column cget $column -lock]
+		if {[$w column compare $column != "first visible lock $lock"]} {
+		    set column [$w column id "$column prev visible"]
+		    if {[$w column cget $column -resize]} {
+			return "column resize $column"
+		    }
 		}
 	    }
-	    if {[$w column compare $column != "first visible"]} {
-		set column [$w column id "$column prev visible"]
-		if {[$w column cget $column -resize]} {
-		    return "column $column"
-		}
-	    }
-	} else {
+	} elseif {$side eq "right"} {
 	    if {![ColumnCanResizeLeft $w $column]} {
 		if {[$w column cget $column -resize]} {
-		    return "column $column"
+		    return "column resize $column"
 		}
 	    }
+	}
+	if {[$w column compare $column == "tail"]} {
+	    # nothing
+	} elseif {[$w column cget $column -button]} {
+	    return "column button $column"
 	}
     }
     return ""
@@ -295,11 +313,11 @@ proc ::TreeCtrl::CursorAction {w x y} {
 proc ::TreeCtrl::CursorCheck {w x y} {
     variable Priv
     set action [CursorAction $w $x $y]
-    if {$action eq ""} {
+    if {[lindex $action 1] ne "resize"} {
 	CursorCancel $w
 	return
     }
-    if {[lindex $action 0] eq "column"} {
+    if {[lindex $action 1] eq "resize"} {
 	set cursor sb_h_double_arrow
     }
     if {![info exists Priv(cursor,$w)]} {
@@ -369,9 +387,9 @@ proc ::TreeCtrl::MotionInHeader {w args} {
     if {[llength $args]} {
 	set x [lindex $args 0]
 	set y [lindex $args 1]
-	set id [$w identify $x $y]
+	set action [CursorAction $w $x $y]
     } else {
-	set id ""
+	set action ""
     }
     if {[info exists Priv(inheader,$w)]} {
 	set prevColumn $Priv(inheader,$w)
@@ -379,25 +397,8 @@ proc ::TreeCtrl::MotionInHeader {w args} {
 	set prevColumn ""
     }
     set column ""
-    if {[lindex $id 0] eq "header"} {
-	set column [lindex $id 1]
-	set side [lindex $id 2]
-	if {$side eq "left"} {
-	    if {[ColumnCanResizeLeft $w $column]} {
-	    } elseif {[$w column compare $column != "first visible"]} {
-		set column [$w column id "$column prev visible"]
-	    }
-	} elseif {$side eq "right"} {
-	    if {![$w column cget $column -button]} {
-		set column ""
-	    }
-	} else {
-	    if {[$w column compare $column == "tail"]} {
-		set column ""
-	    } elseif {![$w column cget $column -button]} {
-		set column ""
-	    }
-	}
+    if {[lindex $action 0] eq "column"} {
+	set column [lindex $action 2]
     }
     if {$column ne $prevColumn} {
 	if {$prevColumn ne ""} {
@@ -426,12 +427,11 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     variable Priv
     focus $w
 
-    set action [CursorAction $w $x $y]
-
     set id [$w identify $x $y]
     if {$id eq ""} {
 	return
     }
+
     if {[lindex $id 0] eq "item"} {
 	foreach {where item arg1 arg2} $id {}
 	if {$arg1 eq "button"} {
@@ -444,19 +444,9 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     }
     set Priv(buttonMode) ""
     if {[lindex $id 0] eq "header"} {
-	set column [lindex $id 1]
-	if {[llength $id] == 3} {
-	    set side [lindex $id 2]
-	    if {$side eq "left"} {
-		if {[ColumnCanResizeLeft $w $column]} {
-		} else {
-		    if {[$w column compare $column == "first visible"]} return
-		    set column [$w column id "$column prev visible"]
-		}
-	    } else {
-		if {[ColumnCanResizeLeft $w $column]} return
-	    }
-	    if {![$w column cget $column -resize]} return
+	set action [CursorAction $w $x $y]
+	if {[lindex $action 1] eq "resize"} {
+	    set column [lindex $action 2]
 	    set Priv(buttonMode) resize
 	    set Priv(column) $column
 	    set Priv(x) $x
@@ -464,13 +454,14 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 	    set Priv(width) [$w column width $column]
 	    return
 	}
-	if {[$w column compare $column == "tail"]} return
-	if {![$w column cget $column -button]} {
-	    if {![$w column dragcget -enable]} return
-	    set Priv(buttonMode) dragColumnWait
-	} else {
+	set column [lindex $id 1]
+	if {[lindex $action 1] eq "button"} {
 	    set Priv(buttonMode) header
 	    $w column configure $column -state pressed
+	} else {
+	    if {[$w column compare $column == "tail"]} return
+	    if {![$w column dragcget -enable]} return
+	    set Priv(buttonMode) dragColumnWait
 	}
 	set Priv(column) $column
 	set Priv(columnDrag,x) $x
@@ -507,7 +498,6 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 
 proc ::TreeCtrl::DoubleButton1 {w x y} {
 
-    set action [CursorAction $w $x $y]
 
     set id [$w identify $x $y]
     if {$id eq ""} {
@@ -524,19 +514,10 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
 	}
     }
     if {[lindex $id 0] eq "header"} {
-	set column [lindex $id 1]
+	set action [CursorAction $w $x $y]
 	# Double-click between columns to set default column width
-	if {[llength $id] == 3} {
-	    set side [lindex $id 2]
-	    if {$side eq "left"} {
-		if {![ColumnCanResizeLeft $w $column]} {
-		    if {[$w column compare $column == "first visible"]} return
-		    set column [$w column id "$column prev visible"]
-		}
-	    } else {
-		if {[ColumnCanResizeLeft $w $column]} return
-	    }
-	    if {[$w column compare $column == "tail"]} return
+	if {[lindex $action 1] eq "resize"} {
+	    set column [lindex $action 2]
 	    $w column configure $column -width ""
 	    CursorCheck $w $x $y
 	    MotionInHeader $w $x $y
