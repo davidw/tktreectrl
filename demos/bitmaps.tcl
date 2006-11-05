@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: bitmaps.tcl,v 1.8 2006/10/04 03:57:31 treectrl Exp $
+# RCS: @(#) $Id: bitmaps.tcl,v 1.9 2006/11/05 06:44:53 treectrl Exp $
 
 #
 # Demo: Bitmaps
@@ -48,7 +48,7 @@ proc DemoBitmaps {} {
 	$T style layout $S elemTxt -expand we
 
 	# Set default item style
-	$T configure -defaultstyle [list $S]
+	$T column configure C0 -itemstyle $S
 
 	#
 	# Create items and assign styles

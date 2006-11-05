@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.48 2006/10/14 21:20:08 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.49 2006/11/05 06:44:53 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -269,7 +269,7 @@ proc MakeEventsWindow {} {
     set S [$T style create s3]
     $T style elements $S {e4}
 
-    $T configure -defaultstyle s1
+    $T column configure C0 -itemstyle s1
 
     RebuildEventsMenus $T $m
 
@@ -977,7 +977,7 @@ proc InitDemoList {} {
     # Tk listbox has linespace + 1 height
     $t style layout s1 e2 -union [list e1] -ipadx 2 -ipady {0 1} -iexpand e
 
-    $t configure -defaultstyle s1
+    $t column configure C0 -itemstyle s1
 
     #	"Picture Catalog" DemoPictureCatalog
     #	"Picture Catalog 2" DemoPictureCatalog2

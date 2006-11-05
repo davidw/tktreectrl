@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: imovie.tcl,v 1.12 2006/10/04 03:58:26 treectrl Exp $
+# RCS: @(#) $Id: imovie.tcl,v 1.13 2006/11/05 06:46:10 treectrl Exp $
 
 #
 # Demo: iMovie
@@ -64,7 +64,7 @@ proc DemoIMovie {} {
 		-ipadx 6 -padx {0 3} -pady {0 3}
 
 	# Set default item style
-	$T configure -defaultstyle [list $S]
+	$T column configure C0 -itemstyle $S
 
 	#
 	# Create items and assign styles

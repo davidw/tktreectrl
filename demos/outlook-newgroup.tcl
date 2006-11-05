@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.15 2006/10/04 04:08:25 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.16 2006/11/05 06:46:10 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -87,8 +87,11 @@ proc DemoOutlookNewsgroup {} {
 	$T style layout $S elemTxt -padx 6 -squeeze x -expand ns
 	$T style layout $S sel.w -detach yes -iexpand xy
 
-	# Set default item style
-	$T configure -defaultstyle [list "" "" "" s1 s2.we s2.we s2.w]
+	# Set default item styles
+	$T column configure subject -itemstyle s1
+	$T column configure from -itemstyle s2.we
+	$T column configure sent -itemstyle s2.we
+	$T column configure size -itemstyle s2.w
 
 	#
 	# Create items and assign styles
