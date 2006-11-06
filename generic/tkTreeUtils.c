@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.50 2006/11/03 22:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.51 2006/11/06 23:37:23 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -81,6 +81,37 @@ FormatResult(
     vsprintf(buf, fmt, ap);
     va_end(ap);
     Tcl_SetResult(interp, buf, TCL_VOLATILE);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * DStringAppendf --
+ *
+ *	Format a string and append it to a Tcl_DString.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+DStringAppendf(
+    Tcl_DString *dString,	/* Initialized dynamic string. */
+    char *fmt, ...		/* Format string and varargs. */
+    )
+{
+    va_list ap;
+    char buf[256];
+
+    va_start(ap, fmt);
+    vsprintf(buf, fmt, ap);
+    va_end(ap);
+    Tcl_DStringAppend(dString, buf, -1);
 }
 
 /*
@@ -3049,15 +3080,13 @@ AllocHax_Stats(
 {
     AllocData *data = (AllocData *) _data;
     AllocStats *stats = data->stats;
-    char buf[128];
     Tcl_DString dString;
 
     Tcl_DStringInit(&dString);
     while (stats != NULL) {
-	sprintf(buf, "%-20s: %8d : %8d B %5d KB\n",
+	DStringAppendf(&dString, "%-20s: %8d : %8d B %5d KB\n",
 		stats->id, stats->count,
 		stats->size, (stats->size + 1023) / 1024);
-	Tcl_DStringAppend(&dString, buf, -1);
 	stats = stats->next;
     }
     Tcl_DStringResult(interp, &dString);
