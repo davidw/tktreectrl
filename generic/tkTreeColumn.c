@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.56 2006/11/03 22:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.57 2006/11/06 23:45:52 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1874,6 +1874,10 @@ Column_Move(
 	hPtr = Tcl_NextHashEntry(&search);
     }
 
+#ifdef NEW_SPAN_CODE
+    TreeItem_SpansInvalidate(tree, NULL);
+#endif
+
 #ifdef DEPRECATED
     /* Re-order -defaultstyle */
     numStyles = tree->defaultStyle.numStyles;
@@ -2041,6 +2045,7 @@ Column_Config(
     XGCValues gcValues;
     unsigned long gcMask;
 /*    int stateOld = Column_MakeState(column), stateNew;*/
+    int visible = column->visible;
 #ifdef COLUMN_LOCK
     int lock = column->lock;
 #endif
@@ -2179,6 +2184,11 @@ Column_Config(
 	    return TCL_ERROR;
 	}
     }
+
+#ifdef NEW_SPAN_CODE
+    if (visible != column->visible || lock != column->lock)
+	TreeItem_SpansInvalidate(tree, NULL);
+#endif
 
     /* Wouldn't have to do this if Tk_InitOptions() would return
     * a mask of configured options like Tk_SetOptions() does. */
@@ -3924,6 +3934,9 @@ TreeColumnCmd(
 	    }
 #endif
 
+#ifdef NEW_SPAN_CODE
+	    TreeItem_SpansInvalidate(tree, NULL);
+#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 	    Tcl_SetObjResult(interp, TreeColumn_ToObj(tree, (TreeColumn) column));
 	    break;
@@ -4063,6 +4076,9 @@ doneDELETE:
 	    TreeItemList_Free(&columns);
 	    if (objc == 5)
 		TreeItemList_Free(&column2s);
+#ifdef NEW_SPAN_CODE
+	    TreeItem_SpansInvalidate(tree, NULL);
+#endif
 	    break;
 	}
 
