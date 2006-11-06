@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.80 2006/11/03 22:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.81 2006/11/06 23:49:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -389,6 +389,9 @@ TreeObjCmd(
 	    tkwin);
 
     Tcl_InitHashTable(&tree->itemHash, TCL_ONE_WORD_KEYS);
+#ifdef NEW_SPAN_CODE
+    Tcl_InitHashTable(&tree->itemSpansHash, TCL_ONE_WORD_KEYS);
+#endif
     Tcl_InitHashTable(&tree->elementHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->styleHash, TCL_STRING_KEYS);
     Tcl_InitHashTable(&tree->imageNameHash, TCL_STRING_KEYS);
@@ -1730,6 +1733,10 @@ TreeDestroy(
     }
     Tcl_DeleteHashTable(&tree->itemHash);
 
+#ifdef NEW_SPAN_CODE
+    Tcl_DeleteHashTable(&tree->itemSpansHash);
+#endif
+
     count = TreeItemList_Count(&tree->preserveItemList);
     for (i = 0; i < count; i++) {
 	item = TreeItemList_Nth(&tree->preserveItemList, i);
@@ -1989,6 +1996,12 @@ Tree_RemoveItem(
 
     if (TreeItem_GetSelected(tree, item))
 	Tree_RemoveFromSelection(tree, item);
+
+#ifdef NEW_SPAN_CODE
+    hPtr = Tcl_FindHashEntry(&tree->itemSpansHash, (char *) item);
+    if (hPtr != NULL)
+	Tcl_DeleteHashEntry(hPtr);
+#endif
 
     hPtr = Tcl_FindHashEntry(&tree->itemHash,
 	    (char *) TreeItem_GetID(tree, item));
@@ -3305,6 +3318,8 @@ TreeDebugCmd(
 #else
 	    FormatResult(interp, "TREECTRL_DEBUG is not defined");
 #endif
+#else
+	    FormatResult(interp, "ALLOC_HAX is not defined");
 #endif
 	    break;
 	}
@@ -3368,8 +3383,20 @@ TreeDebugCmd(
 
 	case COMMAND_DINFO:
 	{
-	    extern void DumpDInfo(TreeCtrl *tree);
-	    DumpDInfo(tree);
+	    extern void DumpDInfo(TreeCtrl *tree, int index);
+	    static CONST char *optionNames[] = {
+		"ditem", "onscreen", "range", (char *) NULL
+	    };
+
+	    if (objc != 4) {
+		Tcl_WrongNumArgs(interp, 3, objv, "option");
+		return TCL_ERROR;
+	    }
+	    if (Tcl_GetIndexFromObj(interp, objv[3], optionNames, "option", 0,
+		    &index) != TCL_OK) {
+		return TCL_ERROR;
+	    }
+	    DumpDInfo(tree, index);
 	    break;
 	}
 
