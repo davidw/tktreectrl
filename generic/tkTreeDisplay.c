@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.53 2006/11/06 02:50:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.54 2006/11/06 23:49:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -78,7 +78,9 @@ struct DItem
 #ifdef COLUMN_SPAN
     int *spans;			/* span[n] is the column index of the item
 				 * column displayed at the n'th tree column. */
+#ifndef NEW_SPAN_CODE
     int spanAlloc;		/* Size of spans[] */
+#endif
 #endif
 };
 
@@ -2357,7 +2359,9 @@ DItem_Alloc(
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
 #ifdef COLUMN_SPAN
+#ifndef NEW_SPAN_CODE
     int *spans = NULL, spanAlloc = 0;
+#endif
 #endif
 
     dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
@@ -2369,8 +2373,10 @@ DItem_Alloc(
 	dItem = dInfo->dItemFree;
 	dInfo->dItemFree = dItem->next;
 #ifdef COLUMN_SPAN
+#ifndef NEW_SPAN_CODE
 	spans = dItem->spans;
 	spanAlloc = dItem->spanAlloc;
+#endif
 #endif
     /* No free DItems, alloc a new one */
     } else {
@@ -2387,8 +2393,10 @@ DItem_Alloc(
     dItem->right.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
 #endif
 #ifdef COLUMN_SPAN
+#ifndef NEW_SPAN_CODE
     dItem->spans = spans;
     dItem->spanAlloc = spanAlloc;
+#endif
 #endif
     TreeItem_SetDInfo(tree, rItem->item, (TreeItemDInfo) dItem);
     return dItem;
@@ -2640,6 +2648,9 @@ UpdateSpansForItem(
     DItem *dItem		/* Display info for an item. */
     )
 {
+#ifdef NEW_SPAN_CODE
+    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
+#else
     int *spans = dItem->spans;
 
     if (spans == NULL) {
@@ -2651,6 +2662,7 @@ UpdateSpansForItem(
     }
     TreeItem_GetSpans(tree, dItem->item, spans);
     dItem->spans = spans;
+#endif
 }
 #endif
 
@@ -2678,7 +2690,7 @@ GetOnScreenColumnsForItemAux(
     TreeCtrl *tree,		/* Widget info. */
     DItem *dItem,		/* Display info for an item. */
     DItemArea *area,		/* Layout info. */
-    int bounds[4],		/* Window bounds of what's visible. */
+    int bounds[4],		/* TREE_AREA_xxx bounds. */
 #ifdef COLUMN_LOCK
     int lock,			/* Set of columns we care about. */
 #endif
@@ -2719,19 +2731,24 @@ GetOnScreenColumnsForItemAux(
 	    continue;
 	width = dInfo->columns[columnIndex].width;
 #ifdef COLUMN_SPAN
+#ifdef NEW_SPAN_CODE
+	if (dItem->spans != NULL) {
+#endif
 	if (dItem->spans[columnIndex] != columnIndex)
 	    goto next;
 	/* Start of a span */
 	for (i = columnIndex + 1; columnIndex < tree->columnCount &&
-		dItem->spans[i] == columnIndex; i++)
+		dItem->spans[i] == columnIndex; i++) {
 	    width += dInfo->columns[i].width;
+	}
+	columnIndex = i - 1;
+#ifdef NEW_SPAN_CODE
+	}
+#endif
 #endif
 	if (x < maxX && x + width > minX) {
 	    TreeColumnList_Append(columns, column);
 	}
-#ifdef COLUMN_SPAN
-	columnIndex = i - 1;
-#endif
 next:
 	x += width;
 	if (x >= maxX)
@@ -2764,6 +2781,13 @@ GetOnScreenColumnsForItem(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
 
+#ifdef COLUMN_LOCK
+    if (!dInfo->emptyL) {
+	GetOnScreenColumnsForItemAux(tree, dItem,
+	    &dItem->left, dInfo->boundsL, COLUMN_LOCK_LEFT,
+	    columns);
+    }
+#endif /* COLUMN_LOCK */
     if (!dInfo->empty && dInfo->rangeFirst != NULL) {
 	GetOnScreenColumnsForItemAux(tree, dItem, &dItem->area,
 	    dInfo->bounds,
@@ -2773,11 +2797,6 @@ GetOnScreenColumnsForItem(
 	    columns);
     }
 #ifdef COLUMN_LOCK
-    if (!dInfo->emptyL) {
-	GetOnScreenColumnsForItemAux(tree, dItem,
-	    &dItem->left, dInfo->boundsL, COLUMN_LOCK_LEFT,
-	    columns);
-    }
     if (!dInfo->emptyR) {
 	GetOnScreenColumnsForItemAux(tree, dItem,
 	    &dItem->right, dInfo->boundsR, COLUMN_LOCK_RIGHT,
@@ -2808,22 +2827,34 @@ GetOnScreenColumnsForItem(
 static void
 TrackOnScreenColumnsForItem(
     TreeCtrl *tree,		/* Widget info. */
-    DItem *dItem,		/* Item display info. */
+    TreeItem item,		/* Item token. */
     Tcl_HashEntry *hPtr		/* DInfo.itemVisHash entry. */
     )
 {
     TreeColumnList columns;
     TreeColumn column, *value;
+    DItem *dItem;
     int i, j, count = 0, n = 0;
-    char buf[256];
+    Tcl_DString dString;
 
     TreeColumnList_Init(tree, &columns, 0);
-    count = GetOnScreenColumnsForItem(tree, dItem, &columns);
+    Tcl_DStringInit(&dString);
+
+    /* dItem is NULL if the item just went offscreen. */
+    dItem = (DItem *) TreeItem_GetDInfo(tree, item);
+    if (dItem != NULL)
+	count = GetOnScreenColumnsForItem(tree, dItem, &columns);
 
     if (tree->debug.enable && tree->debug.display)
-	sprintf(buf, "item %d:", TreeItem_GetID(tree, dItem->item));
+	DStringAppendf(&dString, "onscreen columns for item %d:",
+		TreeItem_GetID(tree, item));
 
+    /* value is NULL if the item just came onscreen. */
     value = (TreeColumn *) Tcl_GetHashValue(hPtr);
+    if (value == NULL) {
+	value = (TreeColumn *) ckalloc(sizeof(TreeColumn) * (count + 1));
+	value[0] = NULL;
+    }
 
     /* Track newly-visible columns */
     for (i = 0; i < count; i++) {
@@ -2834,7 +2865,7 @@ TrackOnScreenColumnsForItem(
 	}
 	if (value[j] == NULL) {
 	    if (tree->debug.enable && tree->debug.display)
-		sprintf(buf + strlen(buf), " +%d", TreeColumn_GetID(column));
+		DStringAppendf(&dString, " +%d", TreeColumn_GetID(column));
 	    n++;
 	}
     }
@@ -2847,7 +2878,7 @@ TrackOnScreenColumnsForItem(
 		break;
 	}
 	if (i == count) {
-	    TreeItemColumn itemColumn = TreeItem_FindColumn(tree, dItem->item,
+	    TreeItemColumn itemColumn = TreeItem_FindColumn(tree, item,
 		TreeColumn_Index(column));
 	    if (itemColumn != NULL) {
 		TreeStyle style = TreeItemColumn_GetStyle(tree, itemColumn);
@@ -2855,21 +2886,24 @@ TrackOnScreenColumnsForItem(
 		    TreeStyle_OnScreen(tree, style, FALSE);
 	    }
 	    if (tree->debug.enable && tree->debug.display)
-		sprintf(buf + strlen(buf), " -%d", TreeColumn_GetID(column));
+		DStringAppendf(&dString, " -%d", TreeColumn_GetID(column));
 	    n++;
 	}
     }
 
     if (n && tree->debug.enable && tree->debug.display)
-	dbwin("%s\n", buf);
+	dbwin("%s\n", Tcl_DStringValue(&dString));
 
-    if (n > 0) {
-	ckfree((char *) value);
-	value = (TreeColumn *) ckalloc(sizeof(TreeColumn) * (count + 1));
+    /* Set the list of onscreen columns unless it is the same or the item
+    * is hidden. */
+    if (n > 0 && dItem != NULL) {
+	value = (TreeColumn *) ckrealloc((char *) value, sizeof(TreeColumn) * (count + 1));
 	memcpy(value, (TreeColumn *) columns.pointers, sizeof(TreeColumn) * count);
 	value[count] = NULL;
 	Tcl_SetHashValue(hPtr, (ClientData) value);
     }
+
+    Tcl_DStringFree(&dString);
     TreeColumnList_Free(&columns);
 }
 
@@ -5352,7 +5386,7 @@ displayRetry:
 	    /* The item was onscreen and still is. Figure out which
 	     * item-columns have become visible or hidden. */
 	    else {
-		TrackOnScreenColumnsForItem(tree, dItem, hPtr);
+		TrackOnScreenColumnsForItem(tree, dItem->item, hPtr);
 	    }
 #endif /* DCOLUMN */
 	}
@@ -5374,6 +5408,7 @@ displayRetry:
 	    item = TreeItemList_Nth(&newH, i);
 	    hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
 #ifdef DCOLUMN
+	    TrackOnScreenColumnsForItem(tree, item, hPtr);
 	    ckfree((char *) Tcl_GetHashValue(hPtr));
 #endif
 	    Tcl_DeleteHashEntry(hPtr);
@@ -5385,32 +5420,7 @@ displayRetry:
 	    item = TreeItemList_Nth(&newV, i);
 	    hPtr = Tcl_CreateHashEntry(&dInfo->itemVisHash, (char *) item, &isNew);
 #ifdef DCOLUMN
-	    {
-		TreeColumnList columns;
-		TreeColumn *value;
-		int i, count = 0;
-
-		dItem = (DItem *) TreeItem_GetDInfo(tree, item);
-
-		TreeColumnList_Init(tree, &columns, 0);
-		count = GetOnScreenColumnsForItem(tree, dItem, &columns);
-
-		value = (TreeColumn *) ckalloc(sizeof(TreeColumn) * (count + 1));
-		memcpy(value, (TreeColumn *) columns.pointers, sizeof(TreeColumn) * count);
-		value[count] = NULL;
-		Tcl_SetHashValue(hPtr, (ClientData) value);
-
-		TreeColumnList_Free(&columns);
-
-		if (tree->debug.enable && tree->debug.display) {
-		    char buf[256];
-		    sprintf(buf, "item %d:", TreeItem_GetID(tree, dItem->item));
-		    for (i = 0; i < count; i++)
-			sprintf(buf + strlen(buf), " +%d",
-			    TreeColumn_GetID(value[i]));
-		    dbwin("%s", buf);
-		}
-	    }
+	    TrackOnScreenColumnsForItem(tree, item, hPtr);
 #endif /* DCOLUMN */
 	}
 
@@ -6583,6 +6593,11 @@ Tree_InvalidateItemDInfo(
 		}
 
 #ifdef COLUMN_SPAN
+#ifdef NEW_SPAN_CODE
+		if (dItem->spans == NULL) {
+		    width = dInfo->columns[columnIndex].width;
+		} else {
+#endif
 		width = 0;
 		i = dItem->spans[columnIndex];
 		while (dItem->spans[i] == dItem->spans[columnIndex]) {
@@ -6590,6 +6605,9 @@ Tree_InvalidateItemDInfo(
 		    if (++i == tree->columnCount)
 			break;
 		}
+#ifdef NEW_SPAN_CODE
+		}
+#endif
 #endif
 
 #ifdef COLUMN_LOCK
@@ -7136,8 +7154,10 @@ TreeDInfo_Free(
     while (dInfo->dItem != NULL) {
 	DItem *next = dInfo->dItem->next;
 #ifdef COLUMN_SPAN
+#ifndef NEW_SPAN_CODE
 	if (dInfo->dItem->spans != NULL)
 	    ckfree((char *) dInfo->dItem->spans);
+#endif
 #endif
 	WFREE(dInfo->dItem, DItem);
 	dInfo->dItem = next;
@@ -7145,8 +7165,10 @@ TreeDInfo_Free(
     while (dInfo->dItemFree != NULL) {
 	DItem *next = dInfo->dItemFree->next;
 #ifdef COLUMN_SPAN
+#ifndef NEW_SPAN_CODE
 	if (dInfo->dItemFree->spans != NULL)
 	    ckfree((char *) dInfo->dItemFree->spans);
+#endif
 #endif
 	WFREE(dInfo->dItemFree, DItem);
 	dInfo->dItemFree = next;
@@ -7177,11 +7199,11 @@ TreeDInfo_Free(
 
 void
 DumpDInfo(
-    TreeCtrl *tree		/* Widget info. */
+    TreeCtrl *tree,		/* Widget info. */
+    int index
     )
 {
     Tcl_DString dString;
-    char buf[128];
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
     Range *range;
@@ -7189,80 +7211,88 @@ DumpDInfo(
 
     Tcl_DStringInit(&dString);
 
-    sprintf(buf, "DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
-	    dInfo->itemWidth, dInfo->itemHeight,
-	    dInfo->totalWidth, dInfo->totalHeight,
-	    dInfo->flags, tree->vertical, tree->itemVisCount);
-    Tcl_DStringAppend(&dString, buf, -1);
+    if (index == 0) {
+	DStringAppendf(&dString, "DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
+		dInfo->itemWidth, dInfo->itemHeight,
+		dInfo->totalWidth, dInfo->totalHeight,
+		dInfo->flags, tree->vertical, tree->itemVisCount);
 #ifdef COLUMN_LOCK
-    sprintf(buf, "    emptyL=%d boundsL=%d,%d,%d,%d\n", dInfo->emptyL,
-	    dInfo->boundsL[0], dInfo->boundsL[1],
-	    dInfo->boundsL[2], dInfo->boundsL[3]);
-    Tcl_DStringAppend(&dString, buf, -1);
-    sprintf(buf, "    emptyR=%d boundsR=%d,%d,%d,%d\n", dInfo->emptyR,
-	    dInfo->boundsR[0], dInfo->boundsR[1],
-	    dInfo->boundsR[2], dInfo->boundsR[3]);
-    Tcl_DStringAppend(&dString, buf, -1);
+	DStringAppendf(&dString, "    emptyL=%d boundsL=%d,%d,%d,%d\n", dInfo->emptyL,
+		dInfo->boundsL[0], dInfo->boundsL[1],
+		dInfo->boundsL[2], dInfo->boundsL[3]);
+	DStringAppendf(&dString, "    emptyR=%d boundsR=%d,%d,%d,%d\n", dInfo->emptyR,
+		dInfo->boundsR[0], dInfo->boundsR[1],
+		dInfo->boundsR[2], dInfo->boundsR[3]);
 #endif
-    dItem = dInfo->dItem;
-    while (dItem != NULL) {
-	if (dItem->item == NULL) {
-	    sprintf(buf, "    item NULL\n");
-	} else {
-	    sprintf(buf, "    item %d x,y,w,h %d,%d,%d,%d dirty %d,%d,%d,%d flags %0X\n",
-		    TreeItem_GetID(tree, dItem->item),
-		    dItem->area.x, dItem->y, dItem->area.width, dItem->height,
-		    dItem->area.dirty[LEFT], dItem->area.dirty[TOP],
-		    dItem->area.dirty[RIGHT], dItem->area.dirty[BOTTOM],
-		    dItem->area.flags);
+	dItem = dInfo->dItem;
+	while (dItem != NULL) {
+	    if (dItem->item == NULL) {
+		DStringAppendf(&dString, "    item NULL\n");
+	    } else {
+		DStringAppendf(&dString, "    item %d x,y,w,h %d,%d,%d,%d dirty %d,%d,%d,%d flags %0X\n",
+			TreeItem_GetID(tree, dItem->item),
+			dItem->area.x, dItem->y, dItem->area.width, dItem->height,
+			dItem->area.dirty[LEFT], dItem->area.dirty[TOP],
+			dItem->area.dirty[RIGHT], dItem->area.dirty[BOTTOM],
+			dItem->area.flags);
 #ifdef COLUMN_LOCK
-	    Tcl_DStringAppend(&dString, buf, -1);
-	    sprintf(buf, "       left:  dirty %d,%d,%d,%d flags %0X\n",
-		    dItem->left.dirty[LEFT], dItem->left.dirty[TOP],
-		    dItem->left.dirty[RIGHT], dItem->left.dirty[BOTTOM],
-		    dItem->left.flags);
-	    Tcl_DStringAppend(&dString, buf, -1);
-	    sprintf(buf, "       right: dirty %d,%d,%d,%d flags %0X\n",
-		    dItem->right.dirty[LEFT], dItem->right.dirty[TOP],
-		    dItem->right.dirty[RIGHT], dItem->right.dirty[BOTTOM],
-		    dItem->right.flags);
+		DStringAppendf(&dString, "       left:  dirty %d,%d,%d,%d flags %0X\n",
+			dItem->left.dirty[LEFT], dItem->left.dirty[TOP],
+			dItem->left.dirty[RIGHT], dItem->left.dirty[BOTTOM],
+			dItem->left.flags);
+		DStringAppendf(&dString, "       right: dirty %d,%d,%d,%d flags %0X\n",
+			dItem->right.dirty[LEFT], dItem->right.dirty[TOP],
+			dItem->right.dirty[RIGHT], dItem->right.dirty[BOTTOM],
+			dItem->right.flags);
 #endif
+	    }
+	    dItem = dItem->next;
 	}
-	Tcl_DStringAppend(&dString, buf, -1);
-	dItem = dItem->next;
     }
 
-    sprintf(buf, "  dInfo.rangeFirstD %p dInfo.rangeLastD %p\n",
-	    dInfo->rangeFirstD, dInfo->rangeLastD);
-    Tcl_DStringAppend(&dString, buf, -1);
-    for (range = dInfo->rangeFirstD;
-	 range != NULL;
-	 range = range->next) {
-	sprintf(buf, "  Range: totalW,H %d,%d offset %d\n", range->totalWidth,
-		range->totalHeight, range->offset);
-	Tcl_DStringAppend(&dString, buf, -1);
-	if (range == dInfo->rangeLastD)
-	    break;
+    if (index == 1) {
+	dItem = dInfo->dItem;
+	while (dItem != NULL) {
+	    Tcl_HashEntry *hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) dItem->item);
+	    TreeColumn *value = (TreeColumn *) Tcl_GetHashValue(hPtr);
+	    DStringAppendf(&dString, "item %d:", TreeItem_GetID(tree, dItem->item));
+	    while (*value != NULL) {
+		DStringAppendf(&dString, " %d", TreeColumn_GetID(*value));
+		++value;
+	    }
+	    DStringAppendf(&dString, "\n");
+	    dItem = dItem->next;
+	}
     }
 
-    sprintf(buf, "  dInfo.rangeFirst %p dInfo.rangeLast %p\n",
-	    dInfo->rangeFirst, dInfo->rangeLast);
-    Tcl_DStringAppend(&dString, buf, -1);
-    for (range = dInfo->rangeFirst;
-	 range != NULL;
-	 range = range->next) {
-	sprintf(buf, "   Range: first %p last %p totalW,H %d,%d offset %d\n",
-		range->first, range->last,
-		range->totalWidth, range->totalHeight, range->offset);
-	Tcl_DStringAppend(&dString, buf, -1);
-	rItem = range->first;
-	while (1) {
-	    sprintf(buf, "    RItem: item %d index %d offset %d size %d\n",
-		    TreeItem_GetID(tree, rItem->item), rItem->index, rItem->offset, rItem->size);
-	    Tcl_DStringAppend(&dString, buf, -1);
-	    if (rItem == range->last)
+    if (index == 2) {
+	DStringAppendf(&dString, "  dInfo.rangeFirstD %p dInfo.rangeLastD %p\n",
+		dInfo->rangeFirstD, dInfo->rangeLastD);
+	for (range = dInfo->rangeFirstD;
+	    range != NULL;
+	    range = range->next) {
+	    DStringAppendf(&dString, "  Range: totalW,H %d,%d offset %d\n", range->totalWidth,
+		    range->totalHeight, range->offset);
+	    if (range == dInfo->rangeLastD)
 		break;
-	    rItem++;
+	}
+
+	DStringAppendf(&dString, "  dInfo.rangeFirst %p dInfo.rangeLast %p\n",
+		dInfo->rangeFirst, dInfo->rangeLast);
+	for (range = dInfo->rangeFirst;
+	    range != NULL;
+	    range = range->next) {
+	    DStringAppendf(&dString, "   Range: first %p last %p totalW,H %d,%d offset %d\n",
+		    range->first, range->last,
+		    range->totalWidth, range->totalHeight, range->offset);
+	    rItem = range->first;
+	    while (1) {
+		DStringAppendf(&dString, "    RItem: item %d index %d offset %d size %d\n",
+			TreeItem_GetID(tree, rItem->item), rItem->index, rItem->offset, rItem->size);
+		if (rItem == range->last)
+		    break;
+		rItem++;
+	    }
 	}
     }
     Tcl_DStringResult(tree->interp, &dString);
