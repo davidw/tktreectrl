@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.18 2006/10/14 19:53:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.19 2006/11/06 01:47:47 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -435,7 +435,8 @@ DragImageCmd(
 	     * early without needing to check those arguments. */
 	    if (objc > 4)
 	    {
-		if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn, &columnIndex) != TCL_OK)
+		if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn,
+			&columnIndex) != TCL_OK)
 		    return TCL_ERROR;
 		if (objc > 5)
 		{
@@ -479,13 +480,7 @@ DragImageCmd(
 		if (!TreeColumn_Visible(treeColumn))
 		    goto doneAdd;
 		drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-		totalWidth = 0;
-		treeColumn = tree->columns;
-		for (i = 0; i < columnIndex; i++)
-		{
-		    totalWidth += TreeColumn_UseWidth(treeColumn);
-		    treeColumn = TreeColumn_Next(treeColumn);
-		}
+		totalWidth = TreeColumn_Offset(treeColumn);
 		if (treeColumn == tree->columnTree)
 		    indent = TreeItem_Indent(tree, item);
 		else
@@ -494,7 +489,6 @@ DragImageCmd(
 		drawArgs.x = x + totalWidth;
 		drawArgs.width = TreeColumn_UseWidth(treeColumn);
 		drawArgs.justify = TreeColumn_Justify(treeColumn);
-		if (objc - 5 > STATIC_SIZE)
 		STATIC_ALLOC(rects, XRectangle, objc - 5);
 		count = TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5, rects);
 		if (count == -1)
