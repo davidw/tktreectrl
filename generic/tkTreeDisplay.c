@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.52 2006/11/06 01:48:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.53 2006/11/06 02:50:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -70,6 +70,7 @@ struct DItem
     int oldX, oldY;		/* Where it was last drawn, window coords. */
     Range *range;		/* Range the TreeItem is in. */
     int index;			/* Used for alternating background colors. */
+    int oldIndex;		/* Used for alternating background colors. */
     DItem *next;
 #ifdef COLUMN_LOCK
     DItemArea left, right;
@@ -2940,11 +2941,11 @@ UpdateDInfoForRange(
 	    }
 
 	    dItem = (DItem *) TreeItem_GetDInfo(tree, item);
-	    area = &dItem->area;
 
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
+		area = &dItem->area;
 
 		/* This item is already marked for total redraw */
 		if (area->flags & DITEM_ALL_DIRTY)
@@ -2977,6 +2978,9 @@ UpdateDInfoForRange(
 		else if (tree->showLines &&
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
+#ifdef COLUMN_LOCK
+			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_NONE) &&
+#endif
 			((dItem->oldY & 1) != (y & 1)))
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
@@ -3055,11 +3059,11 @@ UpdateDInfoForRange(
 	    }
 
 	    dItem = (DItem *) TreeItem_GetDInfo(tree, item);
-	    area = &dItem->area;
 
 	    /* Re-use a previously allocated DItem */
 	    if (dItem != NULL) {
 		dItemHead = DItem_Unlink(dItemHead, dItem);
+		area = &dItem->area;
 
 		/* This item is already marked for total redraw */
 		if (area->flags & DITEM_ALL_DIRTY)
@@ -3289,6 +3293,7 @@ done:
     range = dInfo->rangeFirst;
     if ((range != NULL) && !range->totalHeight)
 	goto skipLock;
+
     {
 	int y = Tree_ContentTop(tree) + tree->yOrigin; /* Window -> Canvas */
 	int index, indexVis;
@@ -3384,19 +3389,36 @@ skipLock:
 		area->x = Tree_BorderLeft(tree);
 		area->width = dInfo->widthOfColumnsLeft;
 
-		if (!(area->flags & DITEM_ALL_DIRTY)) {
+		/* This item is already marked for total redraw */
+		if (area->flags & DITEM_ALL_DIRTY) {
+		    ; /* nothing */
 
-		    /* All display info is marked as invalid */
-		    if (dInfo->flags & DINFO_INVALIDATE) {
-			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		/* All display info is marked as invalid */
+		} else if (dInfo->flags & DINFO_INVALIDATE) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-		    /* We can't copy the item to its new position unless it
-		    * has the same part of the background image behind it */
-		    } else if ((tree->backgroundImage != NULL) &&
-			    ((dInfo->xOrigin % bgImgWidth) !=
-				    (tree->xOrigin % bgImgWidth))) {
-			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
-		    }
+		/* Items may have alternating background colors. */
+		} else if ((tree->columnBgCnt > 1) &&
+			((dItem->oldIndex % tree->columnBgCnt) !=
+				(dItem->index % tree->columnBgCnt))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		/* If we are displaying dotted lines and the item has moved
+		 * from odd-top to non-odd-top or vice versa, must redraw
+		 * the lines for this item. */
+		} else if (tree->showLines &&
+			(tree->lineStyle == LINE_STYLE_DOT) &&
+			tree->columnTreeVis &&
+			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_LEFT) &&
+			((dItem->oldY & 1) != (dItem->y & 1))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		/* We can't copy the item to its new position unless it
+		* has the same part of the background image behind it */
+		} else if ((tree->backgroundImage != NULL) &&
+			((dInfo->xOrigin % bgImgWidth) !=
+				(tree->xOrigin % bgImgWidth))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 		}
 	    }
 
@@ -3406,19 +3428,36 @@ skipLock:
 		area->x = Tree_ContentRight(tree);
 		area->width = dInfo->widthOfColumnsRight;
 
-		if (!(area->flags & DITEM_ALL_DIRTY)) {
+		/* This item is already marked for total redraw */
+		if (area->flags & DITEM_ALL_DIRTY) {
+		    ; /* nothing */
 
-		    /* All display info is marked as invalid */
-		    if (dInfo->flags & DINFO_INVALIDATE) {
-			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+		/* All display info is marked as invalid */
+		} else if (dInfo->flags & DINFO_INVALIDATE) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
-		    /* We can't copy the item to its new position unless it
-		    * has the same part of the background image behind it */
-		    } else if ((tree->backgroundImage != NULL) &&
-			    ((dInfo->xOrigin % bgImgWidth) !=
-				    (tree->xOrigin % bgImgWidth))) {
-			area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
-		    }
+		/* Items may have alternating background colors. */
+		} else if ((tree->columnBgCnt > 1) &&
+			((dItem->oldIndex % tree->columnBgCnt) !=
+				(dItem->index % tree->columnBgCnt))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		/* If we are displaying dotted lines and the item has moved
+		 * from odd-top to non-odd-top or vice versa, must redraw
+		 * the lines for this item. */
+		} else if (tree->showLines &&
+			(tree->lineStyle == LINE_STYLE_DOT) &&
+			tree->columnTreeVis &&
+			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_RIGHT) &&
+			((dItem->oldY & 1) != (dItem->y & 1))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
+
+		/* We can't copy the item to its new position unless it
+		* has the same part of the background image behind it */
+		} else if ((tree->backgroundImage != NULL) &&
+			((dInfo->xOrigin % bgImgWidth) !=
+				(tree->xOrigin % bgImgWidth))) {
+		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 		}
 	    }
 	}
@@ -5629,6 +5668,7 @@ displayRetry:
 
 	    dItem->oldX = dItem->area.x;
 	    dItem->oldY = dItem->y;
+	    dItem->oldIndex = dItem->index;
 	}
 	if (tree->doubleBuffer != DOUBLEBUFFER_NONE)
 	    Tk_FreePixmap(tree->display, pixmap);
