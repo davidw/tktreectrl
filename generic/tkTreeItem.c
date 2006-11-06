@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.78 2006/11/06 02:51:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.79 2006/11/06 23:45:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -21,7 +21,7 @@ struct Column {
     int cstate;		/* STATE_xxx flags manipulated with the
 			 * [item state forcolumn] command */
 #ifdef COLUMN_SPAN
-    int span;		/* Number of columns this column's style covers */
+    int span;		/* Number of tree-columns this column covers */
 #endif
     TreeStyle style;
     Column *next;	/* Column to the right of this one */
@@ -49,7 +49,20 @@ struct Item {
     TreeItemDInfo dInfo; /* display info, or NULL */
     TreeItemRInfo rInfo; /* range info, or NULL */
     Column *columns;
+#ifdef NEW_SPAN_CODE
+    int *spans;		/* 1 per tree-column. spans[N] is the column index of
+			 * the item-column displayed in column N. If all this
+			 * item's columns have a span of 1, this field is NULL. */
+    int spanAlloc;
+#endif
 #define ITEM_FLAG_DELETED	0x0001 /* Item is being deleted */
+#ifdef NEW_SPAN_CODE
+#define ITEM_FLAG_SPANS_SIMPLE	0x0002 /* All spans are 1 */
+#define ITEM_FLAG_SPANS_VALID	0x0004 /* Some spans are > 1, but we don't
+					* need to redo them. Also indicates
+					* we have an entry in
+					* TreeCtrl.itemSpansHash. */
+#endif /* NEW_SPAN_CODE */
     int flags;
     TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
@@ -594,6 +607,9 @@ Item_Alloc(
     if (tree->gotFocus)
 	item->state |= STATE_FOCUS;
     item->indexVis = -1;
+#ifdef NEW_SPAN_CODE
+    item->flags |= ITEM_FLAG_SPANS_SIMPLE;
+#endif
     Tree_AddItem(tree, (TreeItem) item);
     return item;
 }
@@ -3196,6 +3212,10 @@ TreeItem_FreeResources(
 	Tree_FreeItemDInfo(tree, item_, NULL);
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
+#ifdef NEW_SPAN_CODE
+    if (self->spans != NULL)
+	ckfree((char *) self->spans);
+#endif
     Tk_FreeConfigOptions((char *) self, tree->itemOptionTable, tree->tkwin);
 
     /* Add the item record to the "preserved" list. It will be freed later. */
@@ -3586,10 +3606,6 @@ int TreeItem_Indent(
  *	TreeCtrl -background color. If the TreeCtrl -backgroundimage
  *	option is specified then that image is tiled over the given area.
  *
- *	NOTE: The given area may span multiple columns due to column-
- *	spanning. In this case the -itembackground color of the first column
- *	is used (if any).
- *
  * Results:
  *	None.
  *
@@ -3631,13 +3647,199 @@ ItemDrawBackground(
 
 #ifdef COLUMN_SPAN
 
+#ifdef NEW_SPAN_CODE
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_SpansInvalidate --
+ *
+ *	Invalidates the Item.spans field of one or all items.
+ *
+ * Results:
+ *	The item(s) are removed from the TreeCtrl.itemSpansHash to
+ *	indicate that the list of spans must be recalculated.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 void
-TreeItem_GetSpans(
+TreeItem_SpansInvalidate(
     TreeCtrl *tree,		/* Widget info. */
-    TreeItem item_,		/* Item token. */
-    int *spans			/* Array of column-indices to return. */
+    TreeItem item_		/* Item token. NULL for all items. */
     )
 {
+    Item *item = (Item *) item_;
+    Tcl_HashEntry *hPtr;
+    Tcl_HashSearch search;
+    int count = 0;
+
+    if (item == NULL) {
+	hPtr = Tcl_FirstHashEntry(&tree->itemSpansHash, &search);
+	while (hPtr != NULL) {
+	    item = (Item *) Tcl_GetHashKey(&tree->itemSpansHash, hPtr);
+	    item->flags &= ~ITEM_FLAG_SPANS_VALID;
+	    count++;
+	    hPtr = Tcl_NextHashEntry(&search);
+	}
+	if (count) {
+	    Tcl_DeleteHashTable(&tree->itemSpansHash);
+	    Tcl_InitHashTable(&tree->itemSpansHash, TCL_ONE_WORD_KEYS);
+	}
+    } else if (item->flags & ITEM_FLAG_SPANS_VALID) {
+	hPtr = Tcl_FindHashEntry(&tree->itemSpansHash, (char *) item);
+	Tcl_DeleteHashEntry(hPtr);
+	item->flags &= ~ITEM_FLAG_SPANS_VALID;
+	count++;
+    }
+
+    if (count && tree->debug.enable && tree->debug.display)
+	dbwin("TreeItem_SpansInvalidate forgot %d items\n", count);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_SpansRedo --
+ *
+ *	Updates the Item.spans field of an item.
+ *
+ * Results:
+ *	Item.spans is resized if needed to (at least) the current number
+ *	of tree columns. For tree column N, the index of the item
+ *	column displayed there is written to spans[N].
+ *
+ *	The return value is 1 if every span is 1, otherwise 0.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+TreeItem_SpansRedo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
+{
+    Item *self = (Item *) item_;
+    TreeColumn treeColumn = tree->columns;
+    Column *itemColumn = self->columns;
+    int columnIndex = 0, spanner = 0, span = 1, simple = TRUE;
+#ifdef COLUMN_LOCK
+    int lock = TreeColumn_Lock(treeColumn);
+#endif
+
+    if (tree->debug.enable && tree->debug.display)
+	dbwin("TreeItem_SpansRedo item %d\n", self->id);
+
+    if (self->spans == NULL) {
+	self->spans = (int *) ckalloc(sizeof(int) * tree->columnCount);
+	self->spanAlloc = tree->columnCount;
+    } else if (self->spanAlloc < tree->columnCount) {
+	self->spans = (int *) ckrealloc((char *) self->spans,
+		sizeof(int) * tree->columnCount);
+	self->spanAlloc = tree->columnCount;
+    }
+
+    while (treeColumn != NULL) {
+#ifdef COLUMN_LOCK
+	/* End current span if column lock changes. */
+	if (TreeColumn_Lock(treeColumn) != lock) {
+	    lock = TreeColumn_Lock(treeColumn);
+	    span = 1;
+	}
+#endif
+	if (--span == 0) {
+	    if (TreeColumn_Visible(treeColumn))
+		span = itemColumn ? itemColumn->span : 1;
+	    else
+		span = 1;
+	    if (span > 1)
+		simple = FALSE;
+	    spanner = columnIndex;
+	}
+	self->spans[columnIndex] = spanner;
+	columnIndex++;
+	treeColumn = TreeColumn_Next(treeColumn);
+	if (itemColumn != NULL)
+	    itemColumn = itemColumn->next;
+    }
+
+    return simple;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_SpansRedoIfNeeded --
+ *
+ *	Updates the Item.spans field of an item if needed.
+ *
+ * Results:
+ *	If all spans are known to be 1, nothing is done. If the list of
+ *	spans is marked valid, nothing is done. Otherwise the list of
+ *	spans is recalculated; if any span is > 1 the item is added
+ *	to TreeCtrl.itemSpansHash.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeItem_SpansRedoIfNeeded(
+    TreeCtrl *tree,
+    TreeItem item_
+    )
+{
+    Item *item = (Item *) item_;
+
+    /* All the spans are 1. */
+    if (item->flags & ITEM_FLAG_SPANS_SIMPLE)
+	return;
+
+    /* Some spans > 1, but we calculated them already. */
+    if (item->flags & ITEM_FLAG_SPANS_VALID)
+	return;
+
+    if (TreeItem_SpansRedo(tree, item_)) {
+	/* Reverted to all spans=1. */
+	item->flags |= ITEM_FLAG_SPANS_SIMPLE;
+    } else {
+	int isNew;
+	Tcl_HashEntry *hPtr;
+
+	hPtr = Tcl_CreateHashEntry(&tree->itemSpansHash, (char *) item, &isNew);
+	Tcl_SetHashValue(hPtr, (ClientData) item);
+	item->flags |= ITEM_FLAG_SPANS_VALID;
+    }
+}
+
+#endif /* NEW_SPAN_CODE */
+
+int *
+TreeItem_GetSpans(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_		/* Item token. */
+    )
+{
+#ifdef NEW_SPAN_CODE
+
+    Item *self = (Item *) item_;
+
+    TreeItem_SpansRedoIfNeeded(tree, item_);
+    if (self->flags & ITEM_FLAG_SPANS_SIMPLE)
+	return NULL;
+    return self->spans;
+
+#else /* NEW_SPAN_CODE */
+
     Item *self = (Item *) item_;
     TreeColumn treeColumn = tree->columns;
     Column *column = self->columns;
@@ -3667,6 +3869,8 @@ TreeItem_GetSpans(
 	if (column != NULL)
 	    column = column->next;
     }
+
+#endif /* NEW_SPAN_CODE */
 }
 
 /*
@@ -3784,6 +3988,24 @@ typedef int (*TreeItemWalkSpansProc)(
     ClientData clientData
     );
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_WalkSpans --
+ *
+ *	Iterates over the spans of an item and calls a callback routine
+ *	for each span of non-zero width. This is used for drawing,
+ *	hit-testing and other purposes.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 void
 TreeItem_WalkSpans(
     TreeCtrl *tree,		/* Widget info. */
@@ -3886,9 +4108,9 @@ TreeItem_WalkSpans(
 /*
  *----------------------------------------------------------------------
  *
- * TreeItem_Draw --
+ * SpanWalkProc_Draw --
  *
- *	Draws part of an Item.
+ *	Callback routine to TreeItem_WalkSpans for TreeItem_Draw.
  *
  * Results:
  *	None.
@@ -3963,6 +4185,22 @@ SpanWalkProc_Draw(
     /* Stop walking if we went past the right edge of the dirty area. */
     return drawArgs->x + drawArgs->width >= data->maxX;
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_Draw --
+ *
+ *	Draws part of an Item.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn in a drawable.
+ *
+ *----------------------------------------------------------------------
+ */
 
 void
 TreeItem_Draw(
@@ -4334,10 +4572,10 @@ TreeItem_DrawButton(
 /*
  *----------------------------------------------------------------------
  *
- * TreeItem_UpdateWindowPositions --
+ * SpanWalkProc_UpdateWindowPositions --
  *
- *	Updates the geometry of any window elements. Called by the
- *	display code when an item was possibly scrolled.
+ *	Callback routine to TreeItem_WalkSpans for
+ *	TreeItem_UpdateWindowPositions.
  *
  * Results:
  *	None.
@@ -4368,6 +4606,23 @@ SpanWalkProc_UpdateWindowPositions(
     /* Stop walking if we went past the right edge of the display area. */
     return drawArgs->x + drawArgs->width >= drawArgs->bounds[3];
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_UpdateWindowPositions --
+ *
+ *	Updates the geometry of any on-screen window elements. Called
+ *	by the display code when an item was possibly scrolled.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Windows in window elements may be resized/repositioned.
+ *
+ *----------------------------------------------------------------------
+ */
 
 void
 TreeItem_UpdateWindowPositions(
@@ -4464,6 +4719,7 @@ TreeItem_OnScreen(
     int onScreen		/* TRUE if item is displayed. */
     )
 {
+#if 0
     Item *self = (Item *) item_;
     Column *column = self->columns;
 
@@ -4473,6 +4729,7 @@ TreeItem_OnScreen(
 	}
 	column = column->next;
     }
+#endif
 }
 
 /*
@@ -7978,6 +8235,12 @@ TreeItemCmd(
 			column = Item_CreateColumn(tree, item,
 				TreeColumn_Index(treeColumn), NULL);
 			if (column->span != cs[i].span) {
+#ifdef NEW_SPAN_CODE
+			    if (cs[i].span > 1) {
+				item->flags &= ~ITEM_FLAG_SPANS_SIMPLE;
+			    }
+			    TreeItem_SpansInvalidate(tree, _item);
+#endif
 			    column->span = cs[i].span;
 			    TreeItemColumn_InvalidateSize(tree,
 				(TreeItemColumn) column);
