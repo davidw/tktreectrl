@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.51 2006/11/05 06:35:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.52 2006/11/06 01:48:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2685,7 +2685,7 @@ GetOnScreenColumnsForItemAux(
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    int minX, maxX, columnIndex, x = 0, i, width;
+    int minX, maxX, columnIndex = 0, x = 0, i, width;
     TreeColumn column;
 
     minX = MAX(area->x, bounds[0]);
@@ -2694,11 +2694,27 @@ GetOnScreenColumnsForItemAux(
     minX -= area->x;
     maxX -= area->x;
 
-    for (columnIndex = 0; columnIndex < tree->columnCount; columnIndex++) {
+#ifdef COLUMN_LOCK
+    switch (lock) {
+	case COLUMN_LOCK_LEFT:
+	    columnIndex = TreeColumn_Index(tree->columnLockLeft);
+	    break;
+	case COLUMN_LOCK_NONE:
+	    columnIndex = TreeColumn_Index(tree->columnLockNone);
+	    break;
+	case COLUMN_LOCK_RIGHT:
+	    columnIndex = TreeColumn_Index(tree->columnLockRight);
+	    break;
+    }
+#endif
+
+    for (/* nothing */; columnIndex < tree->columnCount; columnIndex++) {
 	column = dInfo->columns[columnIndex].column;
-	if (!TreeColumn_Visible(column))
-	    continue;
+#ifdef COLUMN_LOCK
 	if (TreeColumn_Lock(column) != lock)
+	    break;
+#endif
+	if (!TreeColumn_Visible(column))
 	    continue;
 	width = dInfo->columns[columnIndex].width;
 #ifdef COLUMN_SPAN
