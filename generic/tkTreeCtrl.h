@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.64 2006/11/03 22:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.65 2006/11/06 01:48:42 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -691,6 +691,7 @@ extern TreeStyle TreeColumn_ItemStyle(TreeColumn column_);
 extern void TreeColumn_StyleDeleted(TreeColumn column_, TreeStyle style);
 extern int TreeColumn_Visible(TreeColumn column_);
 extern int TreeColumn_Squeeze(TreeColumn column_);
+extern int TreeColumn_BackgroundCount(TreeColumn column_);
 extern GC TreeColumn_BackgroundGC(TreeColumn column_, int which);
 extern void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y);
 extern int TreeColumn_WidthOfItems(TreeColumn column_);
