@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.81 2006/11/07 00:09:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.82 2006/11/07 01:24:46 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3717,9 +3717,7 @@ TreeItem_SpansRedo(
     TreeColumn treeColumn = tree->columns;
     Column *itemColumn = self->columns;
     int columnIndex = 0, spanner = 0, span = 1, simple = TRUE;
-#ifdef COLUMN_LOCK
     int lock = TreeColumn_Lock(treeColumn);
-#endif
 
     if (tree->debug.enable && tree->debug.display)
 	dbwin("TreeItem_SpansRedo item %d\n", self->id);
@@ -3734,13 +3732,11 @@ TreeItem_SpansRedo(
     }
 
     while (treeColumn != NULL) {
-#ifdef COLUMN_LOCK
 	/* End current span if column lock changes. */
 	if (TreeColumn_Lock(treeColumn) != lock) {
 	    lock = TreeColumn_Lock(treeColumn);
 	    span = 1;
 	}
-#endif
 	if (--span == 0) {
 	    if (TreeColumn_Visible(treeColumn))
 		span = itemColumn ? itemColumn->span : 1;
@@ -3850,7 +3846,6 @@ typedef struct SpanInfo {
  *----------------------------------------------------------------------
  */
 
-#ifdef COLUMN_LOCK
 static int
 Item_GetSpans(
     TreeCtrl *tree,		/* Widget info. */
@@ -3896,38 +3891,6 @@ next:
     }
     return spanCount;
 }
-#else
-static void
-Item_GetSpans(
-    TreeCtrl *tree,		/* Widget info. */
-    TreeItem item_,		/* Item token. */
-    SpanInfo spans[]		/* Returned span records. */
-    )
-{
-    Item *self = (Item *) item_;
-    TreeColumn treeColumn = tree->columns;
-    Column *column = self->columns;
-    int columnIndex = 0, itemColumnIndex = 0, span = 1;
-
-    while (treeColumn != NULL) {
-	if (--span == 0) {
-	    if (TreeColumn_Visible(treeColumn))
-		span = column ? column->span : 1;
-	    else
-		span = 1;
-	    itemColumnIndex = columnIndex;
-	}
-	spans[columnIndex].treeColumn = treeColumn;
-	spans[columnIndex].itemColumn = (TreeItemColumn) column;
-	spans[columnIndex].itemColumnIndex = itemColumnIndex;
-	spans[columnIndex].width = TreeColumn_UseWidth(treeColumn);
-	++columnIndex;
-	treeColumn = TreeColumn_Next(treeColumn);
-	if (column != NULL)
-	    column = column->next;
-    }
-}
-#endif
 
 typedef int (*TreeItemWalkSpansProc)(
     TreeCtrl *tree,
@@ -3959,9 +3922,7 @@ void
 TreeItem_WalkSpans(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-#ifdef COLUMN_LOCK
     int lock,			/* Which columns. */
-#endif
     int x, int y,		/* Drawable coordinates of the item. */
     int width, int height,	/* Total size of the item. */
     TreeItemWalkSpansProc proc,
@@ -3977,7 +3938,6 @@ TreeItem_WalkSpans(
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
     int area = TREE_AREA_CONTENT;
 
-#ifdef COLUMN_LOCK
     switch (lock) {
 	case COLUMN_LOCK_LEFT:
 	    treeColumn = tree->columnLockLeft;
@@ -3995,10 +3955,7 @@ TreeItem_WalkSpans(
     }
     STATIC_ALLOC(spans, SpanInfo, columnCount);
     spanCount = Item_GetSpans(tree, item_, treeColumn, spans);
-#else
-    STATIC_ALLOC(spans, SpanInfo, columnCount);
-    spanCount = Item_GetSpans(tree, item_, spans);
-#endif
+
     drawArgs.tree = tree;
     drawArgs.drawable = None;
 
@@ -4155,9 +4112,7 @@ void
 TreeItem_Draw(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-#ifdef COLUMN_LOCK
     int lock,			/* Which columns. */
-#endif
     int x, int y,		/* Drawable coordinates of the item. */
     int width, int height,	/* Total size of the item. */
     Drawable drawable,		/* Where to draw. */
@@ -4178,10 +4133,7 @@ TreeItem_Draw(
     clientData.maxX = maxX;
     clientData.index = index;
 
-    TreeItem_WalkSpans(tree, item_,
-#ifdef COLUMN_LOCK
-	    lock,
-#endif
+    TreeItem_WalkSpans(tree, item_, lock,
 	    x, y, width, height,
 	    SpanWalkProc_Draw, (ClientData) &clientData);
 }
@@ -4511,17 +4463,12 @@ void
 TreeItem_UpdateWindowPositions(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-#ifdef COLUMN_LOCK
     int lock,			/* Columns we care about. */
-#endif
     int x, int y,		/* Window coordinates of the item. */
     int width, int height	/* Total size of the item. */
     )
 {
-    TreeItem_WalkSpans(tree, item_,
-#ifdef COLUMN_LOCK
-	    lock,
-#endif
+    TreeItem_WalkSpans(tree, item_, lock,
 	    x, y, width, height,
 	    SpanWalkProc_UpdateWindowPositions, (ClientData) NULL);
 }
@@ -7316,7 +7263,6 @@ TreeItemCmd(
 	    TreeItem item_ = (TreeItem) item;
 	    XRectangle rect;
 
-#ifdef COLUMN_LOCK
 	    if (objc == 4) {
 		if (Tree_ItemBbox(tree, item_, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
 		    break;
@@ -7330,20 +7276,6 @@ TreeItemCmd(
 		totalWidth = TreeColumn_Offset(treeColumn);
 		columnIndex = TreeColumn_Index(treeColumn);
 		itemColumn = Item_FindColumn(tree, item, columnIndex);
-#else
-	    if (Tree_ItemBbox(tree, item_, &x, &y, &w, &h) < 0)
-		break;
-	    if (objc > 4) {
-		if (Item_FindColumnFromObj(tree, item, objv[4],
-			    &itemColumn, &columnIndex) != TCL_OK)
-		    goto errorExit;
-		totalWidth = 0;
-		treeColumn = tree->columns;
-		for (i = 0; i < columnIndex; i++) {
-		    totalWidth += TreeColumn_UseWidth(treeColumn);
-		    treeColumn = TreeColumn_Next(treeColumn);
-		}
-#endif
 		if (treeColumn == tree->columnTree)
 		    indent = TreeItem_Indent(tree, item_);
 		else
@@ -8445,9 +8377,7 @@ void
 TreeItem_Identify(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-#ifdef COLUMN_LOCK
     int lock,			/* Columns to hit-test. */
-#endif
     int x, int y,		/* Item coords to hit-test with. */
     char *buf			/* NULL-terminated string which may be
 				 * appended. */
@@ -8460,10 +8390,7 @@ TreeItem_Identify(
 	char *buf;
     } clientData;
 
-    if (Tree_ItemBbox(tree, item_,
-#ifdef COLUMN_LOCK
-	    lock,
-#endif
+    if (Tree_ItemBbox(tree, item_, lock,
 	    &left, &top, &width, &height) < 0)
 	return;
 
@@ -8472,10 +8399,7 @@ TreeItem_Identify(
     clientData.y = y;
     clientData.buf = buf;
 
-    TreeItem_WalkSpans(tree, item_,
-#ifdef COLUMN_LOCK
-	    lock,
-#endif
+    TreeItem_WalkSpans(tree, item_, lock,
 	    0, 0, width, height,
 	    SpanWalkProc_Identify, (ClientData) &clientData);
 }
@@ -8546,10 +8470,7 @@ TreeItem_Identify2(
 	Tcl_Obj *listObj;
     } clientData;
 
-    if (Tree_ItemBbox(tree, item_,
-#ifdef COLUMN_LOCK
-	    COLUMN_LOCK_NONE,
-#endif
+    if (Tree_ItemBbox(tree, item_, COLUMN_LOCK_NONE,
 	    &left, &top, &width, &height) < 0)
 	return;
 
@@ -8560,10 +8481,7 @@ TreeItem_Identify2(
     clientData.y2 = y2;
     clientData.listObj = listObj;
 
-    TreeItem_WalkSpans(tree, item_,
-#ifdef COLUMN_LOCK
-	    COLUMN_LOCK_NONE,
-#endif
+    TreeItem_WalkSpans(tree, item_, COLUMN_LOCK_NONE,
 	    left, top, width, height,
 	    SpanWalkProc_Identify2, (ClientData) &clientData);
 }

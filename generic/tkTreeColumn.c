@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.58 2006/11/07 00:01:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.59 2006/11/07 01:24:46 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -87,9 +87,7 @@ struct Column
 #define COLUMN_STATE_PRESSED 2
     int state;			/* -state */
 
-#ifdef COLUMN_LOCK
     int lock;			/* -lock */
-#endif
 
     TreeCtrl *tree;
     Tk_OptionTable optionTable;
@@ -263,9 +261,7 @@ Tk_ObjCustomOption uniformGroupCO =
 static char *arrowST[] = { "none", "up", "down", (char *) NULL };
 static char *arrowSideST[] = { "left", "right", (char *) NULL };
 static char *stateST[] = { "normal", "active", "pressed", (char *) NULL };
-#ifdef COLUMN_LOCK
 static CONST char *lockST[] = { "left", "none", "right", (char *) NULL };
-#endif
 
 #define COLU_CONF_IMAGE		0x0001
 #define COLU_CONF_NWIDTH	0x0002	/* neededWidth */
@@ -349,10 +345,8 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_JUSTIFY, "-justify", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(Column, justify),
      0, (ClientData) NULL, COLU_CONF_DISPLAY | COLU_CONF_JUSTIFY},
-#ifdef COLUMN_LOCK
     {TK_OPTION_STRING_TABLE, "-lock", (char *) NULL, (char *) NULL,
      "none", -1, Tk_Offset(Column, lock), 0, (ClientData) lockST, 0},
-#endif
     {TK_OPTION_PIXELS, "-maxwidth", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(Column, maxWidthObj),
      Tk_Offset(Column, maxWidth),
@@ -647,9 +641,7 @@ ImageChangedProc(
     column->neededHeight = -1;
     tree->headerHeight = -1;
     tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
     tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
     Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
 }
 
@@ -823,9 +815,7 @@ typedef struct Qualifiers {
     int states[3];		/* States that must be on or off. */
     TagExpr expr;		/* Tag expression. */
     int exprOK;			/* TRUE if expr is valid. */
-#ifdef COLUMN_LOCK
     int lock;			/* COLUMN_LOCK_xxx or -1 */
-#endif
     int ntail;			/* 1 for !tail,
 				 * 0 for unspecified. */
 } Qualifiers;
@@ -856,9 +846,7 @@ Qualifiers_Init(
     q->visible = -1;
     q->states[0] = q->states[1] = q->states[2] = 0;
     q->exprOK = FALSE;
-#ifdef COLUMN_LOCK
     q->lock = -1;
-#endif
     q->ntail = 0;
 }
 
@@ -893,23 +881,15 @@ Qualifiers_Scan(
     int qual, j = startIndex;
 
     static CONST char *qualifiers[] = {
-#ifdef COLUMN_LOCK
-	"lock",
-#endif
-	"state", "tag", "visible", "!tail", "!visible", NULL
+	"lock", "state", "tag", "visible", "!tail", "!visible", NULL
     };
     enum qualEnum {
-#ifdef COLUMN_LOCK
-	QUAL_LOCK,
-#endif
-	QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_TAIL, QUAL_NOT_VISIBLE
+	QUAL_LOCK, QUAL_STATE, QUAL_TAG, QUAL_VISIBLE, QUAL_NOT_TAIL,
+	QUAL_NOT_VISIBLE
     };
     /* Number of arguments used by qualifiers[]. */
     static int qualArgs[] = {
-#ifdef COLUMN_LOCK
-	2,
-#endif
-	2, 2, 1, 1, 1
+	2, 2, 2, 1, 1, 1
     };
 
     *argsUsed = 0;
@@ -924,7 +904,6 @@ Qualifiers_Scan(
 	    goto errorExit;
 	}
 	switch ((enum qualEnum) qual) {
-#ifdef COLUMN_LOCK
 	    case QUAL_LOCK:
 	    {
 		if (Tcl_GetIndexFromObj(interp, objv[j + 1], lockST,
@@ -932,7 +911,6 @@ Qualifiers_Scan(
 		    goto errorExit;
 		break;
 	    }
-#endif
 	    case QUAL_STATE:
 	    {
 		int i, listObjc;
@@ -1023,10 +1001,8 @@ Qualifies(
 	return 0;
     if (q->exprOK && !TagExpr_Eval(&q->expr, column->tagInfo))
 	return 0;
-#ifdef COLUMN_LOCK
     if ((q->lock != -1) && (column->lock != q->lock))
 	return 0;
-#endif
     return 1;
 }
 
@@ -1854,17 +1830,10 @@ Column_Move(
     TreeItem item;
     int index, numStyles;
 
-#ifdef COLUMN_LOCK
     if (move == before)
 	goto renumber;
     if (move->index == before->index - 1)
 	goto renumber;
-#else
-    if (move == before)
-	return;
-    if (move->index == before->index - 1)
-	return;
-#endif
 
     /* Move the column in every item */
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -1972,24 +1941,21 @@ Column_Move(
     }
 
     /* Renumber columns */
-#ifdef COLUMN_LOCK
 renumber:
     tree->columnLockLeft = NULL;
     tree->columnLockNone = NULL;
     tree->columnLockRight = NULL;
-#endif
+
     index = 0;
     column = (Column *) tree->columns;
     while (column != NULL) {
 	column->index = index++;
-#ifdef COLUMN_LOCK
 	if (column->lock == COLUMN_LOCK_LEFT && tree->columnLockLeft == NULL)
 	    tree->columnLockLeft = (TreeColumn) column;
 	if (column->lock == COLUMN_LOCK_NONE && tree->columnLockNone == NULL)
 	    tree->columnLockNone = (TreeColumn) column;
 	if (column->lock == COLUMN_LOCK_RIGHT && tree->columnLockRight == NULL)
 	    tree->columnLockRight = (TreeColumn) column;
-#endif
 	column = column->next;
     }
 
@@ -1997,9 +1963,7 @@ renumber:
 	/* Must update column widths because of expansion. */
 	/* Also update columnTreeLeft. */
 	tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
 	tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
 	Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH |
 		DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
 	/* BUG 784245 */
@@ -2045,9 +2009,7 @@ Column_Config(
     unsigned long gcMask;
 /*    int stateOld = Column_MakeState(column), stateNew;*/
     int visible = column->visible;
-#ifdef COLUMN_LOCK
     int lock = column->lock;
-#endif
 
     for (error = 0; error <= 1; error++) {
 	if (error == 0) {
@@ -2237,7 +2199,6 @@ Column_Config(
 	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
     }
 
-#ifdef COLUMN_LOCK
     if (!createFlag && (column->lock != lock)) {
 	Column *before = NULL;
 	switch (column->lock) {
@@ -2264,7 +2225,6 @@ Column_Config(
 	Column_Move(column, before);
 	Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
     }
-#endif
 
     if (mask & (COLU_CONF_NWIDTH | COLU_CONF_TWIDTH))
 	mask |= COLU_CONF_NHEIGHT;
@@ -2289,9 +2249,7 @@ Column_Config(
     /* Redraw everything */
     if (mask & (COLU_CONF_TWIDTH | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT)) {
 	tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
 	tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
 	Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
     }
 
@@ -2346,9 +2304,7 @@ Column_Alloc(
 #endif
     column->neededWidth = column->neededHeight = -1;
     tree->headerHeight = tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
     tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
     column->id = tree->nextColumnId++;
     tree->columnCount++;
     return column;
@@ -3486,7 +3442,6 @@ int TreeColumn_GetID(
     return ((Column *) column_)->id;
 }
 
-#ifdef COLUMN_LOCK
 /*
  *----------------------------------------------------------------------
  *
@@ -3509,7 +3464,6 @@ int TreeColumn_Lock(
 {
     return ((Column *) column_)->lock;
 }
-#endif
 
 /*
  *----------------------------------------------------------------------
@@ -3910,7 +3864,6 @@ TreeColumnCmd(
 	    tree->columnLast = (TreeColumn) column;
 	    ((Column *) tree->columnTail)->index++;
 
-#ifdef COLUMN_LOCK
 	    {
 		Column *before = NULL;
 		switch (column->lock) {
@@ -3930,7 +3883,6 @@ TreeColumnCmd(
 		    before = (Column *) tree->columnTail;
 		Column_Move(column, before);
 	    }
-#endif
 
 	    /* Indicate that all items must recalculate their list of spans. */
 	    TreeItem_SpansInvalidate(tree, NULL);
@@ -3979,11 +3931,10 @@ TreeColumnCmd(
 		    ((Column *) tree->columnTail)->index = 0;
 		    tree->columns = NULL;
 		    tree->columnLast = NULL;
-#ifdef COLUMN_LOCK
 		    tree->columnLockLeft = NULL;
 		    tree->columnLockNone = NULL;
 		    tree->columnLockRight = NULL;
-#endif
+
 		    /* Delete all TreeItemColumns */
 		    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		    while (hPtr != NULL) {
@@ -3995,9 +3946,7 @@ TreeColumnCmd(
 		    tree->columnTree = NULL;
 		    tree->columnDrag.column = tree->columnDrag.indColumn = NULL;
 		    tree->widthOfColumns = tree->headerHeight = -1;
-#ifdef COLUMN_LOCK
 		    tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
 		    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 		    goto doneDELETE;
 		}
@@ -4043,31 +3992,26 @@ TreeColumnCmd(
 		}
 	    }
 
-#ifdef COLUMN_LOCK
 	    tree->columnLockLeft = NULL;
 	    tree->columnLockNone = NULL;
 	    tree->columnLockRight = NULL;
-#endif
+
 	    index = 0;
 	    column = (Column *) tree->columns;
 	    while (column != NULL) {
 		column->index = index++;
-#ifdef COLUMN_LOCK
 		if (column->lock == COLUMN_LOCK_LEFT && tree->columnLockLeft == NULL)
 		    tree->columnLockLeft = (TreeColumn) column;
 		if (column->lock == COLUMN_LOCK_NONE && tree->columnLockNone == NULL)
 		    tree->columnLockNone = (TreeColumn) column;
 		if (column->lock == COLUMN_LOCK_RIGHT && tree->columnLockRight == NULL)
 		    tree->columnLockRight = (TreeColumn) column;
-#endif
 		column = column->next;
 	    }
 	    ((Column *) tree->columnTail)->index = index;
 
 	    tree->widthOfColumns = tree->headerHeight = -1;
-#ifdef COLUMN_LOCK
 	    tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
 	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 
 doneDELETE:
@@ -4226,9 +4170,8 @@ doneDELETE:
 	{
 	    TreeColumn _move, _before;
 	    Column *move, *before;
-#ifdef COLUMN_LOCK
 	    Column *first = NULL, *last = (Column *) tree->columnTail;
-#endif
+
 	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column before");
 		return TCL_ERROR;
@@ -4244,7 +4187,6 @@ doneDELETE:
 
 	    if ((move == before) || (move->index == before->index - 1))
 		break;
-#ifdef COLUMN_LOCK
 	    switch (move->lock) {
 		case COLUMN_LOCK_LEFT:
 		    first = (Column *) tree->columnLockLeft;
@@ -4269,8 +4211,10 @@ doneDELETE:
 		    tree->columnPrefix, before->id);
 		return TCL_ERROR;
 	    }
-#endif
 	    Column_Move(move, before);
+
+	    /* Indicate that all items must recalculate their list of spans. */
+	    TreeItem_SpansInvalidate(tree, NULL);
 	    break;
 	}
 
@@ -4688,7 +4632,6 @@ SetImageForColumn(
 	NULL, (ClientData) NULL);
 }
 
-#ifdef COLUMN_LOCK
 static void
 DrawHeaderLeft(
     TreeCtrl *tree,		/* Widget info. */
@@ -4748,7 +4691,6 @@ DrawHeaderRight(
 
     Tk_FreePixmap(tree->display, pixmap);
 }
-#endif /* COLUMN_LOCK */
 
 /*
  *----------------------------------------------------------------------
@@ -4791,12 +4733,8 @@ Tree_DrawHeader(
     else
 	pixmap = drawable;
 
-#ifdef COLUMN_LOCK
     column = (Column *) tree->columnLockNone;
     while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
-#else
-    while (column != NULL) {
-#endif
 	if (column->visible) {
 	    if ((x < maxX) && (x + column->useWidth > minX))
 		Column_Draw(column, pixmap, x, y, FALSE);
@@ -4823,10 +4761,8 @@ Tree_DrawHeader(
 	}
     }
 
-#ifdef COLUMN_LOCK
     DrawHeaderLeft(tree, pixmap);
     DrawHeaderRight(tree, pixmap);
-#endif
 
     {
 	Tk_Image image = NULL;
@@ -4990,9 +4926,7 @@ Tree_InvalidateColumnWidth(
 	column->widthOfItems = -1;
     }
     tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
     tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
     Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
 }
 
@@ -5156,7 +5090,6 @@ TreeColumn_Bbox(
     /* Get width (and update column layout) */
     *w = TreeColumn_UseWidth(column);
 
-#ifdef COLUMN_LOCK
     switch (TreeColumn_Lock(column)) {
 	case COLUMN_LOCK_LEFT:
 	    left = Tree_BorderLeft(tree);
@@ -5167,7 +5100,6 @@ TreeColumn_Bbox(
 	    left = Tree_ContentRight(tree);
 	    break;
     }
-#endif
 
     *x = left + TreeColumn_Offset(column);
     return 0;
@@ -5221,7 +5153,6 @@ Tree_HeaderUnderPoint(
 	    y = Tree_ContentTop(tree) - 1;
     }
 
-#ifdef COLUMN_LOCK
     /* Test the columns in reverse of drawing order. */
     column = tree->columnLockRight;
     while ((column != NULL) && (TreeColumn_Lock(column) == COLUMN_LOCK_RIGHT)) {
@@ -5252,16 +5183,6 @@ Tree_HeaderUnderPoint(
 	}
 	column = TreeColumn_Next(column);
     }
-#else
-    while (column != NULL) {
-	if (TreeColumn_Bbox(column, &left, &top, &width, &height) == 0) {
-	    if ((x >= left) && (x < left + width)) {
-		goto done;
-	    }
-	}
-	column = TreeColumn_Next(column);
-    }
-#endif
 
     column = tree->columnTail;
     left = Tree_WidthOfColumns(tree) - tree->xOrigin;
@@ -5273,8 +5194,6 @@ done:
     (*h) = Tree_HeaderHeight(tree);
     return column;
 }
-
-#ifdef COLUMN_LOCK
 
 /*
  *----------------------------------------------------------------------
@@ -5630,221 +5549,6 @@ Tree_WidthOfRightColumns(
     }
     return tree->widthOfColumnsRight;
 }
-
-#else /* COLUMN_LOCK */
-
-/*
- *----------------------------------------------------------------------
- *
- * Tree_LayoutColumns --
- *
- *	Calculates the display width of every column.
- *
- * Results:
- *	The useWidth field of every column is updated.
- *
- * Side effects:
- *	The size of elements and styles will be updated if they are
- *	marked out-of-date.
- *
- *----------------------------------------------------------------------
- */
-
-void
-Tree_LayoutColumns(
-    TreeCtrl *tree		/* Widget info. */
-    )
-{
-    Column *column = (Column *) tree->columns;
-    int width, visWidth, totalWidth = 0;
-    int numExpand = 0, numSqueeze = 0;
-#ifdef UNIFORM_GROUP
-    Tcl_HashEntry *hPtr;
-    Tcl_HashSearch search;
-    UniformGroup *uniform;
-    int uniformCount = 0;
-
-    hPtr = Tcl_FirstHashEntry(&tree->uniformGroupHash, &search);
-    while (hPtr != NULL) {
-	uniform = (UniformGroup *) Tcl_GetHashValue(hPtr);
-	uniform->minSize = 0;
-	hPtr = Tcl_NextHashEntry(&search);
-    }
-#endif
-
-    while (column != NULL) {
-	if (column->visible) {
-	    if (column->widthObj != NULL)
-		width = column->width;
-	    else {
-		width = TreeColumn_WidthOfItems((TreeColumn) column);
-		width = MAX(width, TreeColumn_NeededWidth((TreeColumn) column));
-		width = MAX(width, TreeColumn_MinWidth((TreeColumn) column));
-		if (TreeColumn_MaxWidth((TreeColumn) column) != -1)
-		    width = MIN(width, TreeColumn_MaxWidth((TreeColumn) column));
-#ifdef UNIFORM_GROUP
-		/* Track the maximum requested width of every column in this
-		 * column's uniform group considering -weight. */
-		if (column->uniform != NULL) {
-		    int weight = MAX(column->weight, 1);
-		    int minSize = (width + weight - 1) / weight;
-		    if (minSize > column->uniform->minSize)
-			column->uniform->minSize = minSize;
-		    uniformCount++;
-		}
-		if (column->expand)
-		    numExpand += MAX(column->weight, 0);
-		if (column->squeeze)
-		    numSqueeze += MAX(column->weight, 0);
-#else
-		if (column->expand)
-		    numExpand++;
-		if (column->squeeze)
-		    numSqueeze++;
-#endif
-	    }
-	    column->useWidth = width;
-	    totalWidth += width;
-	} else
-	    column->useWidth = 0;
-	column = column->next;
-    }
-
-#ifdef UNIFORM_GROUP
-    /* Apply the -uniform and -weight options. */
-    if (uniformCount > 0) {
-	column = (Column *) tree->columns;
-	while (column != NULL) {
-	    if (column->visible &&
-		    column->widthObj == NULL &&
-		    column->uniform != NULL) {
-		int weight = MAX(column->weight, 1);
-		totalWidth -= column->useWidth;
-		width = column->uniform->minSize * weight;
-		if (column->maxWidthObj != NULL)
-		    width = MIN(width, column->maxWidth);
-		column->useWidth = width;
-		totalWidth += width;
-	    }
-	    column = column->next;
-	}
-    }
-#endif /* UNIFORM_GROUP */
-
-    visWidth = Tree_ContentWidth(tree);
-    if (visWidth <= 0) return;
-
-    /* Squeeze columns */
-    if ((visWidth < totalWidth) && (numSqueeze > 0)) {
-	int spaceRemaining = totalWidth - visWidth;
-	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
-	    int each = (spaceRemaining >= numSqueeze) ?
-		spaceRemaining / numSqueeze : 1;
-	    numSqueeze = 0;
-	    column = (Column *) tree->columns;
-	    while (column != NULL) {
-		if (column->visible &&
-			column->squeeze &&
-			(column->widthObj == NULL)) {
-		    int min = MAX(0, TreeColumn_MinWidth((TreeColumn) column));
-		    if (column->useWidth > min) {
-			int sub = MIN(each, column->useWidth - min);
-			column->useWidth -= sub;
-			spaceRemaining -= sub;
-			if (!spaceRemaining) break;
-			if (column->useWidth > min)
-			    numSqueeze++;
-		    }
-		}
-		column = column->next;
-	    }
-	}
-    }
-
-    /* Expand columns */
-    if ((visWidth > totalWidth) && (numExpand > 0)) {
-	int spaceRemaining = visWidth - totalWidth;
-	while ((spaceRemaining > 0) && (numExpand > 0)) {
-	    int each = (spaceRemaining >= numExpand) ?
-		spaceRemaining / numExpand : 1;
-	    numExpand = 0;
-	    column = (Column *) tree->columns;
-	    while (column != NULL) {
-#ifdef UNIFORM_GROUP
-		int weight = MAX(column->weight, 0);
-		if (column->visible &&
-			column->expand && weight &&
-			(column->widthObj == NULL)) {
-		    int max = TreeColumn_MaxWidth((TreeColumn) column);
-		    if ((max == -1) || (column->useWidth < max)) {
-			int eachW = MIN(each * weight, spaceRemaining);
-			int add = (max == -1) ? eachW : MIN(eachW, max - column->useWidth);
-			column->useWidth += add;
-			spaceRemaining -= add;
-			if (!spaceRemaining) break;
-			if ((max == -1) || (column->useWidth < max))
-			    numExpand += weight;
-#else
-		if (column->visible &&
-			column->expand &&
-			(column->widthObj == NULL)) {
-		    int max = TreeColumn_MaxWidth((TreeColumn) column);
-		    if ((max == -1) || (column->useWidth < max)) {
-			int add = (max == -1) ? each : MIN(each, max - column->useWidth);
-			column->useWidth += add;
-			spaceRemaining -= add;
-			if (!spaceRemaining) break;
-			if ((max == -1) || (column->useWidth < max))
-			    numExpand++;
-#endif
-		    }
-		}
-		column = column->next;
-	    }
-	}
-    }
-}
-
-int
-Tree_WidthOfColumns(
-    TreeCtrl *tree		/* Widget info. */
-    )
-{
-    Column *column;
-    int width;
-
-    if (tree->widthOfColumns >= 0)
-	return tree->widthOfColumns;
-
-    Tree_LayoutColumns(tree);
-
-    tree->columnTreeLeft = 0;
-    tree->columnTreeVis = FALSE;
-    tree->columnVis = NULL;
-    tree->columnCountVis = 0;
-    width = 0;
-    column = (Column *) tree->columns;
-    while (column != NULL) {
-	if (column->visible) {
-	    if (tree->columnVis == NULL)
-		tree->columnVis = (TreeColumn) column;
-	    tree->columnCountVis++;
-	    if (column == (Column *) tree->columnTree) {
-		tree->columnTreeLeft = width;
-		tree->columnTreeVis = TRUE;
-	    }
-	    column->offset = width;
-	    width += column->useWidth;
-	}
-	column = column->next;
-    }
-
-    tree->widthOfColumns = width;
-
-    return tree->widthOfColumns;
-}
-
-#endif /* COLUMN_LOCK */
 
 /*
  *----------------------------------------------------------------------

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.68 2006/11/07 00:09:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.69 2006/11/07 01:24:46 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -35,7 +35,6 @@
 
 #define SELECTION_VISIBLE
 #define ALLOC_HAX
-#define COLUMN_LOCK
 #define DEPRECATED
 
 typedef struct TreeCtrl TreeCtrl;
@@ -271,7 +270,6 @@ struct TreeCtrl
     int columnTreeVis;		/* TRUE if columnTree is visible */
     int columnBgCnt;		/* Max -itembackground colors */
 
-#ifdef COLUMN_LOCK
 #define COLUMN_LOCK_LEFT 0
 #define COLUMN_LOCK_NONE 1
 #define COLUMN_LOCK_RIGHT 2
@@ -282,7 +280,7 @@ struct TreeCtrl
     int widthOfColumnsRight;	/* Sum of right-locked column widths */
     int columnCountVisLeft;	/* Number of visible left-locked columns */
     int columnCountVisRight;	/* Number of visible right-locked columns */
-#endif
+
 #define UNIFORM_GROUP
 #ifdef UNIFORM_GROUP
     Tcl_HashTable uniformGroupHash;	/* -uniform -> UniformGroup */
@@ -408,22 +406,12 @@ extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], in
 #define Tree_BorderBottom(tree) \
     (Tk_Height(tree->tkwin) - tree->inset)
 
-#if defined(COLUMN_LOCK)
 #define Tree_ContentLeft(tree) \
     (Tree_BorderLeft(tree) + Tree_WidthOfLeftColumns(tree))
-#else
-#define Tree_ContentLeft(tree) \
-    Tree_BorderLeft(tree)
-#endif
 #define Tree_ContentTop(tree) \
     (tree->inset + Tree_HeaderHeight(tree))
-#if defined(COLUMN_LOCK)
 #define Tree_ContentRight(tree) \
     (Tree_BorderRight(tree) - Tree_WidthOfRightColumns(tree))
-#else
-#define Tree_ContentRight(tree) \
-    Tree_BorderRight(tree)
-#endif
 #define Tree_ContentBottom(tree) \
     Tree_BorderBottom(tree)
 
@@ -507,13 +495,9 @@ extern void TreeItem_ListDescendants(TreeCtrl *tree, TreeItem item_, TreeItemLis
 extern int TreeItem_Height(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
-#ifdef COLUMN_LOCK
 extern void TreeItem_SpansInvalidate(TreeCtrl *tree, TreeItem item_);
 extern int *TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_);
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
-#else
-extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
-#endif
 extern void TreeItem_DrawLines(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
 extern void TreeItem_DrawButton(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
 extern int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem self);
@@ -527,24 +511,15 @@ extern TreeItem TreeItem_Next(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_NextVisible(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_Prev(TreeCtrl *tree, TreeItem item);
 extern TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item);
-#ifdef COLUMN_LOCK
 extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int lock, int x, int y, char *buf);
-#else
-extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int x, int y, char *buf);
-#endif
 extern void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	int x1, int y1, int x2, int y2, Tcl_Obj *listObj);
 extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
 extern void Tree_DeselectHidden(TreeCtrl *tree);
 extern int TreeItemCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-#ifdef COLUMN_LOCK
 extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
     int lock, int x, int y, int width, int height);
-#else
-extern void TreeItem_UpdateWindowPositions(TreeCtrl *tree, TreeItem item_,
-    int x, int y, int width, int height);
-#endif
 extern void TreeItem_OnScreen(TreeCtrl *tree, TreeItem item_, int onScreen);
 
 extern TreeItemColumn TreeItem_GetFirstColumn(TreeCtrl *tree, TreeItem item);
@@ -705,12 +680,10 @@ extern void Tree_InvalidateColumnHeight(TreeCtrl *tree, TreeColumn column);
 extern int Tree_HeaderHeight(TreeCtrl *tree);
 extern int TreeColumn_Bbox(TreeColumn column, int *x, int *y, int *w, int *h);
 extern TreeColumn Tree_HeaderUnderPoint(TreeCtrl *tree, int *x_, int *y_, int *w, int *h, int nearest);
-extern int Tree_WidthOfColumns(TreeCtrl *tree);
-#ifdef COLUMN_LOCK
 extern int TreeColumn_Lock(TreeColumn column_);
+extern int Tree_WidthOfColumns(TreeCtrl *tree);
 extern int Tree_WidthOfLeftColumns(TreeCtrl *tree);
 extern int Tree_WidthOfRightColumns(TreeCtrl *tree);
-#endif
 extern void TreeColumn_TreeChanged(TreeCtrl *tree, int flagT);
 
 /* tkTreeDrag.c */
@@ -734,11 +707,7 @@ extern int Tree_TotalWidth(TreeCtrl *tree);
 extern int Tree_TotalHeight(TreeCtrl *tree);
 extern TreeItem Tree_ItemUnderPoint(TreeCtrl *tree, int *x, int *y, int nearest);
 extern void Tree_FreeItemRInfo(TreeCtrl *tree, TreeItem item);
-#ifdef COLUMN_LOCK
 extern int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int lock, int *x, int *y, int *w, int *h);
-#else
-extern int Tree_ItemBbox(TreeCtrl *tree, TreeItem item, int *x, int *y, int *w, int *h);
-#endif
 extern TreeItem Tree_ItemAbove(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemBelow(TreeCtrl *tree, TreeItem item);
 extern TreeItem Tree_ItemLeft(TreeCtrl *tree, TreeItem item);
@@ -755,10 +724,8 @@ enum {
 TREE_AREA_NONE = 0,
 TREE_AREA_HEADER,
 TREE_AREA_CONTENT,
-#ifdef COLUMN_LOCK
 TREE_AREA_LEFT,
 TREE_AREA_RIGHT
-#endif
 };
 extern int Tree_HitTest(TreeCtrl *tree, int x, int y);
 

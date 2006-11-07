@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.82 2006/11/07 00:01:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.83 2006/11/07 01:24:46 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -563,12 +563,10 @@ static int TreeWidgetCmd(
 		TreeItem_ChangeState(tree, active, STATE_ACTIVE, 0);
 		tree->activeItem = item;
 		TreeItem_ChangeState(tree, tree->activeItem, 0, STATE_ACTIVE);
-#ifdef COLUMN_LOCK
+
 		/* FIXME: is it onscreen? */
+		/* FIXME: what if only lock columns displayed? */
 		if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) >= 0) {
-#else
-		if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) >= 0) {
-#endif
 		    Tk_SetCaretPos(tree->tkwin, x - tree->xOrigin,
 			    y - tree->yOrigin, h);
 		}
@@ -815,9 +813,7 @@ static int TreeWidgetCmd(
 	    TreeItem item;
 	    char buf[64];
 	    int hit;
-#ifdef COLUMN_LOCK
 	    int lock;
-#endif
 /*
   set id [$tree identify $x $y]
   "item I column C" : mouse is in column C of item I
@@ -876,7 +872,6 @@ static int TreeWidgetCmd(
 	    if (item == tree->root)
 		depth = (tree->showButtons && tree->showRootButton) ? 1 : 0;
 
-#ifdef COLUMN_LOCK
 	    lock = (hit == TREE_AREA_LEFT) ? COLUMN_LOCK_LEFT :
 		(hit == TREE_AREA_RIGHT) ? COLUMN_LOCK_RIGHT :
 		COLUMN_LOCK_NONE;
@@ -885,10 +880,6 @@ static int TreeWidgetCmd(
 	    if (tree->columnTreeVis &&
 		    (TreeColumn_Lock(tree->columnTree) == lock) &&
 		    (x >= tree->columnTreeLeft) &&
-#else
-	    /* Point is in a line or button */
-	    if (tree->columnTreeVis && (x >= tree->columnTreeLeft) &&
-#endif
 		    (x < tree->columnTreeLeft + TreeColumn_UseWidth(tree->columnTree)) &&
 		    (x < tree->columnTreeLeft + depth * tree->useIndent)) {
 		int column = (x - tree->columnTreeLeft) / tree->useIndent + 1;
@@ -909,11 +900,7 @@ static int TreeWidgetCmd(
 				TreeItem_GetID(tree, item)); /* TreeItem_ToObj() */
 		}
 	    } else {
-#ifdef COLUMN_LOCK
 		TreeItem_Identify(tree, item, lock, x, y, buf);
-#else
-		TreeItem_Identify(tree, item, x, y, buf);
-#endif
 	    }
 	    Tcl_SetResult(interp, buf, TCL_VOLATILE);
 	    break;
@@ -1122,11 +1109,7 @@ static int TreeWidgetCmd(
 		goto error;
 
 	    /* Canvas coords */
-#ifdef COLUMN_LOCK
 	    if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
-#else
-	    if (Tree_ItemBbox(tree, item, &x, &y, &w, &h) < 0)
-#endif
 		break;
 
 	    if ((C2Wx(x) > maxX) || (C2Wx(x + w) <= minX) || (w <= visWidth)) {
@@ -1621,9 +1604,7 @@ TreeEventProc(
 	    if ((tree->prevWidth != Tk_Width(tree->tkwin)) ||
 		    (tree->prevHeight != Tk_Height(tree->tkwin))) {
 		tree->widthOfColumns = -1;
-#ifdef COLUMN_LOCK
 		tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-#endif
 		Tree_RelayoutWindow(tree);
 		tree->prevWidth = Tk_Width(tree->tkwin);
 		tree->prevHeight = Tk_Height(tree->tkwin);
