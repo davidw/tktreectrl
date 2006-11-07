@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.82 2006/11/07 01:24:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.83 2006/11/07 20:52:58 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -7270,12 +7270,26 @@ TreeItemCmd(
 		if (TreeColumn_FromObj(tree, objv[4], &treeColumn,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		    goto errorExit;
+#if 1
+		/* Bounds of a column. */
+		if (objc == 5) {
+		    objc = 0;
+		    objv = NULL;
+
+		/* Single element in a column. */
+		} else {
+		    objc -= 5;
+		    objv += 5;
+		}
+		if (TreeItem_GetRects(tree, item_, treeColumn,
+			objc, objv, &rect) == 0)
+		    break;
+#else
 		if (Tree_ItemBbox(tree, item_, TreeColumn_Lock(treeColumn),
 			&x, &y, &w, &h) < 0)
 		    break;
 		totalWidth = TreeColumn_Offset(treeColumn);
 		columnIndex = TreeColumn_Index(treeColumn);
-		itemColumn = Item_FindColumn(tree, item, columnIndex);
 		if (treeColumn == tree->columnTree)
 		    indent = TreeItem_Indent(tree, item_);
 		else
@@ -7288,14 +7302,15 @@ TreeItemCmd(
 			    y + h - tree->yOrigin);
 		    break;
 		}
+		itemColumn = Item_FindColumn(tree, item, columnIndex);
 		if ((itemColumn == NULL) || (itemColumn->style == NULL)) {
 		    NoStyleMsg(tree, item, columnIndex);
 		    goto errorExit;
 		}
-		drawArgs.style = itemColumn->style;
 		drawArgs.tree = tree;
 		drawArgs.drawable = None;
-		drawArgs.state = TreeItem_GetState(tree, item_);
+		drawArgs.style = itemColumn->style;
+		drawArgs.state = item->state | itemColumn->state;
 		drawArgs.indent = indent;
 		drawArgs.x = x + totalWidth;
 		drawArgs.y = y;
@@ -7305,6 +7320,7 @@ TreeItemCmd(
 		if (TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5,
 			    &rect) == -1)
 		    goto errorExit;
+#endif
 		x = rect.x;
 		y = rect.y;
 		w = rect.width;
@@ -8484,6 +8500,96 @@ TreeItem_Identify2(
     TreeItem_WalkSpans(tree, item_, COLUMN_LOCK_NONE,
 	    left, top, width, height,
 	    SpanWalkProc_Identify2, (ClientData) &clientData);
+}
+
+static int
+SpanWalkProc_GetRects(
+    TreeCtrl *tree,
+    TreeItem item_,
+    SpanInfo *spanPtr,
+    StyleDrawArgs *drawArgs,
+    ClientData clientData
+    )
+{
+    int objc;
+    Tcl_Obj *CONST *objv;
+    struct {
+	TreeColumn treeColumn;
+	int count;
+	Tcl_Obj *CONST *objv;
+	XRectangle *rects;
+	int result;
+   } *data = clientData;
+
+    if (spanPtr->treeColumn != data->treeColumn)
+	return 0;
+
+    /* Bounds of span. */
+    if (data->count == 0) {
+	/* Not sure why I add 'indent' but for compatibility I will leave
+	 * it in. */
+	data->rects[0].x = drawArgs->x + drawArgs->indent;
+	data->rects[0].y = drawArgs->y;
+	data->rects[0].width = drawArgs->width - drawArgs->indent;
+	data->rects[0].height = drawArgs->height;
+	data->result = 1; /* # of rects */
+	return 1; /* stop */
+    }
+
+    if (drawArgs->style == NULL) {
+	NoStyleMsg(tree, (Item *) item_, TreeColumn_Index(spanPtr->treeColumn));
+	data->result = -1; /* error */
+	return 1; /* stop */
+    }
+
+    if (data->count == -1) {
+	/* All the elements. */
+	objc = 0;
+	objv = NULL;
+    } else {
+	objc = data->count;
+	objv = data->objv;
+    }
+
+    data->result = TreeStyle_GetElemRects(drawArgs, objc, objv, data->rects);
+    return 1; /* stop */
+}
+
+int
+TreeItem_GetRects(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItem item_,		/* Item token. */
+    TreeColumn treeColumn,
+    int count,
+    Tcl_Obj *CONST objv[],
+    XRectangle rects[]
+    )
+{
+    int left, top, width, height;
+    int lock = TreeColumn_Lock(treeColumn);
+    struct {
+	TreeColumn treeColumn;
+	int count;
+	Tcl_Obj *CONST *objv;
+	XRectangle *rects;
+	int result;
+    } clientData;
+
+    if (Tree_ItemBbox(tree, item_, lock,
+	    &left, &top, &width, &height) < 0)
+	return 0;
+
+    clientData.treeColumn = treeColumn;
+    clientData.count = count;
+    clientData.objv = objv;
+    clientData.rects = rects;
+    clientData.result = 0; /* -1 error, 0 no rects, 1+ success */
+
+    TreeItem_WalkSpans(tree, item_, lock,
+	    left, top, width, height,
+	    SpanWalkProc_GetRects, (ClientData) &clientData);
+
+    return clientData.result;
 }
 
 /*
