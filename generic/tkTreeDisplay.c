@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.55 2006/11/07 00:01:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.56 2006/11/07 00:09:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -75,10 +75,8 @@ struct DItem
 #ifdef COLUMN_LOCK
     DItemArea left, right;
 #endif
-#ifdef COLUMN_SPAN
     int *spans;			/* span[n] is the column index of the item
 				 * column displayed at the n'th tree column. */
-#endif
 };
 
 typedef struct ColumnInfo {
@@ -2685,7 +2683,6 @@ GetOnScreenColumnsForItemAux(
 	if (!TreeColumn_Visible(column))
 	    continue;
 	width = dInfo->columns[columnIndex].width;
-#ifdef COLUMN_SPAN
 	if (dItem->spans != NULL) {
 	    if (dItem->spans[columnIndex] != columnIndex)
 		goto next;
@@ -2696,7 +2693,6 @@ GetOnScreenColumnsForItemAux(
 	    }
 	    columnIndex = i - 1;
 	}
-#endif
 	if (x < maxX && x + width > minX) {
 	    TreeColumnList_Append(columns, column);
 	}
@@ -2990,9 +2986,7 @@ UpdateDInfoForRange(
 	    dItem->range = range;
 	    dItem->index = index;
 
-#ifdef COLUMN_SPAN
 	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
-#endif
 
 	    /* Keep track of the maximum item size */
 	    if (area->width > dInfo->itemWidth)
@@ -3103,9 +3097,7 @@ UpdateDInfoForRange(
 	    dItem->range = range;
 	    dItem->index = index;
 
-#ifdef COLUMN_SPAN
 	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
-#endif
 
 	    /* Keep track of the maximum item size */
 	    if (area->width > dInfo->itemWidth)
@@ -3324,9 +3316,7 @@ done:
 	    dItem->range = range;
 	    dItem->index = index;
 
-#ifdef COLUMN_SPAN
 	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
-#endif
 
 	    /* Keep track of the maximum item size */
 	    if (dItem->height > dInfo->itemHeight)
@@ -6543,7 +6533,6 @@ Tree_InvalidateItemDInfo(
 		    width = dInfo->columns[i].width;
 		}
 
-#ifdef COLUMN_SPAN
 		if (dItem->spans == NULL) {
 		    width = dInfo->columns[columnIndex].width;
 		} else {
@@ -6555,7 +6544,6 @@ Tree_InvalidateItemDInfo(
 			    break;
 		    }
 		}
-#endif
 
 #ifdef COLUMN_LOCK
 		switch (TreeColumn_Lock(column)) {

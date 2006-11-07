@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.67 2006/11/07 00:01:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.68 2006/11/07 00:09:34 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -35,7 +35,6 @@
 
 #define SELECTION_VISIBLE
 #define ALLOC_HAX
-#define COLUMN_SPAN
 #define COLUMN_LOCK
 #define DEPRECATED
 
