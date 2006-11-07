@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.12 2006/09/05 21:56:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.13 2006/11/07 23:08:41 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -824,12 +824,38 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int
     SetGWorld(destPort, 0);
     TkMacOSXSetUpClippingRgn(drawable);
 
+    /* Drawing the disclosure triangles produces a white background.
+     * To avoid this, set the clipping region to the exact area where
+     * pixels are drawn. */
+#define CLIP_BUTTON
+#ifdef CLIP_BUTTON
+    /* Save the old clipping region because we are going to modify it. */
+    if (oldClip == NULL)
+	oldClip = NewRgn();
+    GetClip(oldClip);
+
+    /* Create a clipping region containing the pixels of the button. */
+    if (boundsRgn == NULL)
+	boundsRgn = NewRgn();
+    (void) GetThemeButtonRegion(&bounds, kThemeDisclosureButton, &info,
+	boundsRgn);
+
+    /* Set the clipping region to the intersection of the two regions. */
+    SectRgn(oldClip, boundsRgn, boundsRgn);
+    SetClip(boundsRgn);
+#endif
+
     (void) DrawThemeButton(&bounds, kThemeDisclosureButton, &info,
 	NULL,	/*prevInfo*/
 	NULL,	/*eraseProc*/
 	NULL,	/*labelProc*/
 	NULL);	/*userData*/
-   
+
+#ifdef CLIP_BUTTON
+    /* Restore the original clipping region. */
+    SetClip(oldClip);
+#endif
+
     SetGWorld(saveWorld,saveDevice);
 
     return TCL_OK;
@@ -899,5 +925,5 @@ int TreeTheme_Init(Tcl_Interp *interp)
     return TCL_ERROR;
 }
 
-#endif /* WIN32 */
+#endif /* !WIN32 && !MAC_OSX_TK */
 
