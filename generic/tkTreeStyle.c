@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.58 2006/11/03 22:30:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.59 2006/11/07 20:51:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6321,6 +6321,8 @@ TreeStyle_GetSortData(
     return TCL_ERROR;
 }
 
+#if 0
+
 /*
  *----------------------------------------------------------------------
  *
@@ -6340,12 +6342,13 @@ TreeStyle_GetSortData(
 
 int
 TreeStyle_ValidateElements(
-    StyleDrawArgs *drawArgs,	/* Various args. */
+    TreeCtrl *tree,		/* Widget info. */
+    TreeStyle style_, 		/* Instance style. */
     int objc,			/* Number of element names. */
     Tcl_Obj *CONST objv[]	/* Array of element names. */
     )
 {
-    IStyle *style = (IStyle *) drawArgs->style;
+    IStyle *style = (IStyle *) style_;
     MStyle *master = style->master;
     Element *elem;
     MElementLink *eLink;
@@ -6353,13 +6356,13 @@ TreeStyle_ValidateElements(
 
     for (i = 0; i < objc; i++)
     {
-	if (Element_FromObj(drawArgs->tree, objv[i], &elem) != TCL_OK)
+	if (Element_FromObj(tree, objv[i], &elem) != TCL_OK)
 	    return TCL_ERROR;
 
-	eLink = MStyle_FindElem(drawArgs->tree, master, elem, NULL);
+	eLink = MStyle_FindElem(tree, master, elem, NULL);
 	if (eLink == NULL)
 	{
-	    FormatResult(drawArgs->tree->interp,
+	    FormatResult(tree->interp,
 		"style %s does not use element %s",
 		master->name, elem->name);
 	    return TCL_ERROR;
@@ -6367,6 +6370,8 @@ TreeStyle_ValidateElements(
     }
     return TCL_OK;
 }
+
+#endif /* 0 */
 
 /*
  *----------------------------------------------------------------------
@@ -6376,7 +6381,7 @@ TreeStyle_ValidateElements(
  *	Return a list of rectangles for specified elements in a style.
  *
  * Results:
- *	A standard Tcl result.
+ *	The number of rects[] written.
  *
  * Side effects:
  *	None.
