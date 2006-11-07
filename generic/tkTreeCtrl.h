@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.69 2006/11/07 01:24:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.70 2006/11/07 20:54:47 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -514,6 +514,8 @@ extern TreeItem TreeItem_PrevVisible(TreeCtrl *tree, TreeItem item);
 extern void TreeItem_Identify(TreeCtrl *tree, TreeItem item_, int lock, int x, int y, char *buf);
 extern void TreeItem_Identify2(TreeCtrl *tree, TreeItem item_,
 	int x1, int y1, int x2, int y2, Tcl_Obj *listObj);
+extern int TreeItem_GetRects(TreeCtrl *tree, TreeItem item_,
+    TreeColumn treeColumn, int objc, Tcl_Obj *CONST objv[], XRectangle rects[]);
 extern int TreeItem_Indent(TreeCtrl *tree, TreeItem item_);
 extern void Tree_UpdateItemIndex(TreeCtrl *tree);
 extern void Tree_DeselectHidden(TreeCtrl *tree);
@@ -590,7 +592,9 @@ extern void TreeStyle_TreeChanged(TreeCtrl *tree, int flagT);
 #define SORT_LONG 3
 #define SORT_COMMAND 4
 extern int TreeStyle_GetSortData(TreeCtrl *tree, TreeStyle style_, int elemIndex, int type, long *lv, double *dv, char **sv);
-extern int TreeStyle_ValidateElements(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[]);
+#if 0
+extern int TreeStyle_ValidateElements(TreeCtrl *tree, TreeStyle style_, int objc, Tcl_Obj *CONST objv[]);
+#endif
 extern int TreeStyle_GetElemRects(StyleDrawArgs *drawArgs, int objc, Tcl_Obj *CONST objv[], XRectangle rects[]);
 extern int TreeElementCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 extern int TreeStyleCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
