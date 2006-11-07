@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.66 2006/11/06 23:50:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.67 2006/11/07 00:01:04 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -38,7 +38,6 @@
 #define COLUMN_SPAN
 #define COLUMN_LOCK
 #define DEPRECATED
-#define NEW_SPAN_CODE
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -296,9 +295,7 @@ struct TreeCtrl
     int nextItemId;
     int nextColumnId;
     Tcl_HashTable itemHash;	/* TreeItem.id -> TreeItem */
-#ifdef NEW_SPAN_CODE
     Tcl_HashTable itemSpansHash; /* TreeItem -> nothing */
-#endif
     Tcl_HashTable elementHash;	/* Element.name -> Element */
     Tcl_HashTable styleHash;	/* Style.name -> Style */
     Tcl_HashTable imageNameHash;  /* image name -> TreeImageRef */
@@ -512,12 +509,8 @@ extern int TreeItem_Height(TreeCtrl *tree, TreeItem self);
 extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
 #ifdef COLUMN_LOCK
-#ifdef NEW_SPAN_CODE
 extern void TreeItem_SpansInvalidate(TreeCtrl *tree, TreeItem item_);
 extern int *TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_);
-#else
-extern void TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_, int *spans);
-#endif
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
 #else
 extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.57 2006/11/06 23:45:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.58 2006/11/07 00:01:03 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1874,9 +1874,8 @@ Column_Move(
 	hPtr = Tcl_NextHashEntry(&search);
     }
 
-#ifdef NEW_SPAN_CODE
+    /* Indicate that all items must recalculate their list of spans. */
     TreeItem_SpansInvalidate(tree, NULL);
-#endif
 
 #ifdef DEPRECATED
     /* Re-order -defaultstyle */
@@ -2185,10 +2184,9 @@ Column_Config(
 	}
     }
 
-#ifdef NEW_SPAN_CODE
+    /* Indicate that all items must recalculate their list of spans. */
     if (visible != column->visible || lock != column->lock)
 	TreeItem_SpansInvalidate(tree, NULL);
-#endif
 
     /* Wouldn't have to do this if Tk_InitOptions() would return
     * a mask of configured options like Tk_SetOptions() does. */
@@ -3934,9 +3932,9 @@ TreeColumnCmd(
 	    }
 #endif
 
-#ifdef NEW_SPAN_CODE
+	    /* Indicate that all items must recalculate their list of spans. */
 	    TreeItem_SpansInvalidate(tree, NULL);
-#endif
+
 	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 	    Tcl_SetObjResult(interp, TreeColumn_ToObj(tree, (TreeColumn) column));
 	    break;
@@ -4073,12 +4071,12 @@ TreeColumnCmd(
 	    Tree_DInfoChanged(tree, DINFO_REDO_COLUMN_WIDTH);
 
 doneDELETE:
+	    /* Indicate that all items must recalculate their list of spans. */
+	    TreeItem_SpansInvalidate(tree, NULL);
+
 	    TreeItemList_Free(&columns);
 	    if (objc == 5)
 		TreeItemList_Free(&column2s);
-#ifdef NEW_SPAN_CODE
-	    TreeItem_SpansInvalidate(tree, NULL);
-#endif
 	    break;
 	}
 

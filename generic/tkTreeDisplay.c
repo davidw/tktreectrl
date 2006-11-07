@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.54 2006/11/06 23:49:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.55 2006/11/07 00:01:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -78,9 +78,6 @@ struct DItem
 #ifdef COLUMN_SPAN
     int *spans;			/* span[n] is the column index of the item
 				 * column displayed at the n'th tree column. */
-#ifndef NEW_SPAN_CODE
-    int spanAlloc;		/* Size of spans[] */
-#endif
 #endif
 };
 
@@ -2358,11 +2355,6 @@ DItem_Alloc(
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
     DItem *dItem;
-#ifdef COLUMN_SPAN
-#ifndef NEW_SPAN_CODE
-    int *spans = NULL, spanAlloc = 0;
-#endif
-#endif
 
     dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
     if (dItem != NULL)
@@ -2372,12 +2364,6 @@ DItem_Alloc(
     if (dInfo->dItemFree != NULL) {
 	dItem = dInfo->dItemFree;
 	dInfo->dItemFree = dItem->next;
-#ifdef COLUMN_SPAN
-#ifndef NEW_SPAN_CODE
-	spans = dItem->spans;
-	spanAlloc = dItem->spanAlloc;
-#endif
-#endif
     /* No free DItems, alloc a new one */
     } else {
 	dItem = (DItem *) ckalloc(sizeof(DItem));
@@ -2391,12 +2377,6 @@ DItem_Alloc(
 #ifdef COLUMN_LOCK
     dItem->left.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
     dItem->right.flags = DITEM_DIRTY | DITEM_ALL_DIRTY;
-#endif
-#ifdef COLUMN_SPAN
-#ifndef NEW_SPAN_CODE
-    dItem->spans = spans;
-    dItem->spanAlloc = spanAlloc;
-#endif
 #endif
     TreeItem_SetDInfo(tree, rItem->item, (TreeItemDInfo) dItem);
     return dItem;
@@ -2641,31 +2621,6 @@ Tree_ItemsInArea(
     }
 }
 
-#ifdef COLUMN_SPAN
-static void
-UpdateSpansForItem(
-    TreeCtrl *tree,		/* Widget info. */
-    DItem *dItem		/* Display info for an item. */
-    )
-{
-#ifdef NEW_SPAN_CODE
-    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
-#else
-    int *spans = dItem->spans;
-
-    if (spans == NULL) {
-	spans = (int *) ckalloc(sizeof(int) * tree->columnCount);
-	dItem->spanAlloc = tree->columnCount;
-    } else if (dItem->spanAlloc < tree->columnCount) {
-	spans = (int *) ckrealloc((char *) spans, sizeof(int) * tree->columnCount);
-	dItem->spanAlloc = tree->columnCount;
-    }
-    TreeItem_GetSpans(tree, dItem->item, spans);
-    dItem->spans = spans;
-#endif
-}
-#endif
-
 #define DCOLUMN
 #ifdef DCOLUMN
 
@@ -2731,20 +2686,16 @@ GetOnScreenColumnsForItemAux(
 	    continue;
 	width = dInfo->columns[columnIndex].width;
 #ifdef COLUMN_SPAN
-#ifdef NEW_SPAN_CODE
 	if (dItem->spans != NULL) {
-#endif
-	if (dItem->spans[columnIndex] != columnIndex)
-	    goto next;
-	/* Start of a span */
-	for (i = columnIndex + 1; columnIndex < tree->columnCount &&
-		dItem->spans[i] == columnIndex; i++) {
-	    width += dInfo->columns[i].width;
+	    if (dItem->spans[columnIndex] != columnIndex)
+		goto next;
+	    /* Start of a span */
+	    for (i = columnIndex + 1; columnIndex < tree->columnCount &&
+		    dItem->spans[i] == columnIndex; i++) {
+		width += dInfo->columns[i].width;
+	    }
+	    columnIndex = i - 1;
 	}
-	columnIndex = i - 1;
-#ifdef NEW_SPAN_CODE
-	}
-#endif
 #endif
 	if (x < maxX && x + width > minX) {
 	    TreeColumnList_Append(columns, column);
@@ -3040,7 +2991,7 @@ UpdateDInfoForRange(
 	    dItem->index = index;
 
 #ifdef COLUMN_SPAN
-	    UpdateSpansForItem(tree, dItem);
+	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
 #endif
 
 	    /* Keep track of the maximum item size */
@@ -3153,7 +3104,7 @@ UpdateDInfoForRange(
 	    dItem->index = index;
 
 #ifdef COLUMN_SPAN
-	    UpdateSpansForItem(tree, dItem);
+	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
 #endif
 
 	    /* Keep track of the maximum item size */
@@ -3374,7 +3325,7 @@ done:
 	    dItem->index = index;
 
 #ifdef COLUMN_SPAN
-	    UpdateSpansForItem(tree, dItem);
+	    dItem->spans = TreeItem_GetSpans(tree, dItem->item);
 #endif
 
 	    /* Keep track of the maximum item size */
@@ -6593,21 +6544,17 @@ Tree_InvalidateItemDInfo(
 		}
 
 #ifdef COLUMN_SPAN
-#ifdef NEW_SPAN_CODE
 		if (dItem->spans == NULL) {
 		    width = dInfo->columns[columnIndex].width;
 		} else {
-#endif
-		width = 0;
-		i = dItem->spans[columnIndex];
-		while (dItem->spans[i] == dItem->spans[columnIndex]) {
-		    width += dInfo->columns[i].width;
-		    if (++i == tree->columnCount)
-			break;
+		    width = 0;
+		    i = dItem->spans[columnIndex];
+		    while (dItem->spans[i] == dItem->spans[columnIndex]) {
+			width += dInfo->columns[i].width;
+			if (++i == tree->columnCount)
+			    break;
+		    }
 		}
-#ifdef NEW_SPAN_CODE
-		}
-#endif
 #endif
 
 #ifdef COLUMN_LOCK
@@ -7153,23 +7100,11 @@ TreeDInfo_Free(
 #endif
     while (dInfo->dItem != NULL) {
 	DItem *next = dInfo->dItem->next;
-#ifdef COLUMN_SPAN
-#ifndef NEW_SPAN_CODE
-	if (dInfo->dItem->spans != NULL)
-	    ckfree((char *) dInfo->dItem->spans);
-#endif
-#endif
 	WFREE(dInfo->dItem, DItem);
 	dInfo->dItem = next;
     }
     while (dInfo->dItemFree != NULL) {
 	DItem *next = dInfo->dItemFree->next;
-#ifdef COLUMN_SPAN
-#ifndef NEW_SPAN_CODE
-	if (dInfo->dItemFree->spans != NULL)
-	    ckfree((char *) dInfo->dItemFree->spans);
-#endif
-#endif
 	WFREE(dInfo->dItemFree, DItem);
 	dInfo->dItemFree = next;
     }

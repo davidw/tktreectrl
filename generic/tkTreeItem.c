@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.79 2006/11/06 23:45:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.80 2006/11/07 00:01:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -49,20 +49,18 @@ struct Item {
     TreeItemDInfo dInfo; /* display info, or NULL */
     TreeItemRInfo rInfo; /* range info, or NULL */
     Column *columns;
-#ifdef NEW_SPAN_CODE
     int *spans;		/* 1 per tree-column. spans[N] is the column index of
-			 * the item-column displayed in column N. If all this
-			 * item's columns have a span of 1, this field is NULL. */
-    int spanAlloc;
-#endif
+			 * the item-column displayed in column N. If this
+			 * item's columns all have a span of 1, this field
+			 * is NULL (unless it was previously allocated
+			 * because some spans were > 1). */
+    int spanAlloc;	/* Size of spans[]. */
 #define ITEM_FLAG_DELETED	0x0001 /* Item is being deleted */
-#ifdef NEW_SPAN_CODE
 #define ITEM_FLAG_SPANS_SIMPLE	0x0002 /* All spans are 1 */
 #define ITEM_FLAG_SPANS_VALID	0x0004 /* Some spans are > 1, but we don't
 					* need to redo them. Also indicates
 					* we have an entry in
 					* TreeCtrl.itemSpansHash. */
-#endif /* NEW_SPAN_CODE */
     int flags;
     TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
@@ -607,9 +605,8 @@ Item_Alloc(
     if (tree->gotFocus)
 	item->state |= STATE_FOCUS;
     item->indexVis = -1;
-#ifdef NEW_SPAN_CODE
+    /* In the typical case all spans are 1. */
     item->flags |= ITEM_FLAG_SPANS_SIMPLE;
-#endif
     Tree_AddItem(tree, (TreeItem) item);
     return item;
 }
@@ -3212,10 +3209,8 @@ TreeItem_FreeResources(
 	Tree_FreeItemDInfo(tree, item_, NULL);
     if (self->rInfo != NULL)
 	Tree_FreeItemRInfo(tree, item_);
-#ifdef NEW_SPAN_CODE
     if (self->spans != NULL)
 	ckfree((char *) self->spans);
-#endif
     Tk_FreeConfigOptions((char *) self, tree->itemOptionTable, tree->tkwin);
 
     /* Add the item record to the "preserved" list. It will be freed later. */
@@ -3647,8 +3642,6 @@ ItemDrawBackground(
 
 #ifdef COLUMN_SPAN
 
-#ifdef NEW_SPAN_CODE
-
 /*
  *----------------------------------------------------------------------
  *
@@ -3821,56 +3814,18 @@ TreeItem_SpansRedoIfNeeded(
     }
 }
 
-#endif /* NEW_SPAN_CODE */
-
 int *
 TreeItem_GetSpans(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_		/* Item token. */
     )
 {
-#ifdef NEW_SPAN_CODE
-
     Item *self = (Item *) item_;
 
     TreeItem_SpansRedoIfNeeded(tree, item_);
     if (self->flags & ITEM_FLAG_SPANS_SIMPLE)
 	return NULL;
     return self->spans;
-
-#else /* NEW_SPAN_CODE */
-
-    Item *self = (Item *) item_;
-    TreeColumn treeColumn = tree->columns;
-    Column *column = self->columns;
-    int columnIndex = 0, itemColumnIndex = 0, span = 1;
-#ifdef COLUMN_LOCK
-    int lock = TreeColumn_Lock(treeColumn);
-#endif
-
-    while (treeColumn != NULL) {
-#ifdef COLUMN_LOCK
-	/* End current span if column lock changes. */
-	if (TreeColumn_Lock(treeColumn) != lock) {
-	    lock = TreeColumn_Lock(treeColumn);
-	    span = 1;
-	}
-#endif
-	if (--span == 0) {
-	    if (TreeColumn_Visible(treeColumn))
-		span = column ? column->span : 1;
-	    else
-		span = 1;
-	    itemColumnIndex = columnIndex;
-	}
-	spans[columnIndex] = itemColumnIndex;
-	++columnIndex;
-	treeColumn = TreeColumn_Next(treeColumn);
-	if (column != NULL)
-	    column = column->next;
-    }
-
-#endif /* NEW_SPAN_CODE */
 }
 
 /*
@@ -8235,12 +8190,10 @@ TreeItemCmd(
 			column = Item_CreateColumn(tree, item,
 				TreeColumn_Index(treeColumn), NULL);
 			if (column->span != cs[i].span) {
-#ifdef NEW_SPAN_CODE
 			    if (cs[i].span > 1) {
 				item->flags &= ~ITEM_FLAG_SPANS_SIMPLE;
 			    }
 			    TreeItem_SpansInvalidate(tree, _item);
-#endif
 			    column->span = cs[i].span;
 			    TreeItemColumn_InvalidateSize(tree,
 				(TreeItemColumn) column);
