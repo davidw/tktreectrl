@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.57 2006/11/07 01:24:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.58 2006/11/07 01:46:46 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1067,7 +1067,7 @@ RItemsToIncrementsX(
     )
 {
     DInfo *dInfo = (DInfo *) tree->dInfo;
-    Range *range;
+    Range *range, *rangeFirst = dInfo->rangeFirst;
     RItem *rItem;
     int visWidth = Tree_ContentWidth(tree);
     int totalWidth = Tree_TotalWidth(tree);
@@ -1082,25 +1082,35 @@ RItemsToIncrementsX(
     dInfo->xScrollIncrements = (int *) ckalloc(size * sizeof(int));
     dInfo->xScrollIncrements[dInfo->xScrollIncrementCount++] = 0;
 
-    x1 = 0;
-    while (1) {
-	x2 = totalWidth;
-	for (range = dInfo->rangeFirst;
-	     range != NULL;
-	     range = range->next) {
-	    if (x1 >= range->totalWidth)
-		continue;
-
-	    /* Find RItem whose right side is >= x1 by smallest amount */
-	    x = x1;
-	    rItem = Range_ItemUnderPoint(tree, range, &x, NULL);
-	    if (rItem->offset + rItem->size < x2)
-		x2 = rItem->offset + rItem->size;
+    if (rangeFirst->next == NULL) {
+	/* A single horizontal range is easy. Add one increment for the
+	 * left edge of each item. */
+	rItem = rangeFirst->first;
+	while (1) {
+	    size = Increment_AddX(tree, rItem->offset, size);
+	    if (rItem == rangeFirst->last)
+		break;
+	    rItem++;
 	}
-	if (x2 == totalWidth)
-	    break;
-	size = Increment_AddX(tree, x2, size);
-	x1 = x2;
+    } else {
+	x1 = 0;
+	while (1) {
+	    x2 = totalWidth;
+	    for (range = rangeFirst; range != NULL; range = range->next) {
+		if (x1 >= range->totalWidth)
+		    continue;
+
+		/* Find RItem whose right side is >= x1 by smallest amount */
+		x = x1;
+		rItem = Range_ItemUnderPoint(tree, range, &x, NULL);
+		if (rItem->offset + rItem->size < x2)
+		    x2 = rItem->offset + rItem->size;
+	    }
+	    if (x2 == totalWidth)
+		break;
+	    size = Increment_AddX(tree, x2, size);
+	    x1 = x2;
+	}
     }
     if ((visWidth > 1) && (totalWidth -
 		dInfo->xScrollIncrements[dInfo->xScrollIncrementCount - 1] > visWidth)) {
@@ -1154,23 +1164,35 @@ RItemsToIncrementsY(
     if (rangeFirst == NULL)
 	rangeFirst = dInfo->rangeLock;
 
-    y1 = 0;
-    while (1) {
-	y2 = totalHeight;
-	for (range = rangeFirst; range != NULL; range = range->next) {
-	    if (y1 >= range->totalHeight)
-		continue;
-
-	    /* Find RItem whose bottom edge is >= y1 by smallest amount */
-	    y = y1;
-	    rItem = Range_ItemUnderPoint(tree, range, NULL, &y);
-	    if (rItem->offset + rItem->size < y2)
-		y2 = rItem->offset + rItem->size;
+    if (rangeFirst->next == NULL) {
+	/* A single vertical range is easy. Add one increment for the
+	 * top edge of each item. */
+	rItem = rangeFirst->first;
+	while (1) {
+	    size = Increment_AddY(tree, rItem->offset, size);
+	    if (rItem == rangeFirst->last)
+		break;
+	    rItem++;
 	}
-	if (y2 == totalHeight)
-	    break;
-	size = Increment_AddY(tree, y2, size);
-	y1 = y2;
+    } else {
+	y1 = 0;
+	while (1) {
+	    y2 = totalHeight;
+	    for (range = rangeFirst; range != NULL; range = range->next) {
+		if (y1 >= range->totalHeight)
+		    continue;
+
+		/* Find RItem whose bottom edge is >= y1 by smallest amount */
+		y = y1;
+		rItem = Range_ItemUnderPoint(tree, range, NULL, &y);
+		if (rItem->offset + rItem->size < y2)
+		    y2 = rItem->offset + rItem->size;
+	    }
+	    if (y2 == totalHeight)
+		break;
+	    size = Increment_AddY(tree, y2, size);
+	    y1 = y2;
+	}
     }
 
     if ((visHeight > 1) && (totalHeight -
