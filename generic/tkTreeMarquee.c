@@ -5,18 +5,18 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.10 2006/10/14 20:04:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.11 2006/11/08 07:07:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
-typedef struct Marquee Marquee;
+typedef struct TreeMarquee_ TreeMarquee_;
 
 /*
  * The following structure holds info about the selection rectangle.
  * There is one of these per TreeCtrl.
  */
-struct Marquee
+struct TreeMarquee_
 {
     TreeCtrl *tree;
     Tk_OptionTable optionTable;
@@ -32,7 +32,7 @@ struct Marquee
 
 static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
-	"0", -1, Tk_Offset(Marquee, visible),
+	"0", -1, Tk_Offset(TreeMarquee_, visible),
 	0, (ClientData) NULL, MARQ_CONF_VISIBLE},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 	(char *) NULL, 0, -1, 0, 0, 0}
@@ -60,19 +60,19 @@ TreeMarquee_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    Marquee *marquee;
+    TreeMarquee marquee;
 
-    marquee = (Marquee *) ckalloc(sizeof(Marquee));
-    memset(marquee, '\0', sizeof(Marquee));
+    marquee = (TreeMarquee) ckalloc(sizeof(TreeMarquee_));
+    memset(marquee, '\0', sizeof(TreeMarquee_));
     marquee->tree = tree;
     marquee->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
     if (Tk_InitOptions(tree->interp, (char *) marquee, marquee->optionTable,
 	tree->tkwin) != TCL_OK)
     {
-	WFREE(marquee, Marquee);
+	WFREE(marquee, TreeMarquee_);
 	return TCL_ERROR;
     }
-    tree->marquee = (TreeMarquee) marquee;
+    tree->marquee = marquee;
     return TCL_OK;
 }
 
@@ -94,14 +94,12 @@ TreeMarquee_Init(
 
 void
 TreeMarquee_Free(
-    TreeMarquee marquee_	/* Marquee token. */
+    TreeMarquee marquee	/* Marquee token. */
     )
 {
-    Marquee *marquee = (Marquee *) marquee_;
-
     Tk_FreeConfigOptions((char *) marquee, marquee->optionTable,
 	marquee->tree->tkwin);
-    WFREE(marquee, Marquee);
+    WFREE(marquee, TreeMarquee_);
 }
 
 /*
@@ -123,17 +121,16 @@ TreeMarquee_Free(
 
 void
 TreeMarquee_Display(
-    TreeMarquee marquee_	/* Marquee token. */
+    TreeMarquee marquee		/* Marquee token. */
     )
 {
-    Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
 
     if (!marquee->onScreen && marquee->visible)
     {
 	marquee->sx = 0 - tree->xOrigin;
 	marquee->sy = 0 - tree->yOrigin;
-	TreeMarquee_Draw(marquee_, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
+	TreeMarquee_Draw(marquee, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
 	marquee->onScreen = TRUE;
     }
 }
@@ -156,15 +153,14 @@ TreeMarquee_Display(
 
 void
 TreeMarquee_Undisplay(
-    TreeMarquee marquee_	/* Marquee token. */
+    TreeMarquee marquee		/* Marquee token. */
     )
 {
-    Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
 
     if (marquee->onScreen)
     {
-	TreeMarquee_Draw(marquee_, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
+	TreeMarquee_Draw(marquee, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
 	marquee->onScreen = FALSE;
     }
 }
@@ -187,13 +183,12 @@ TreeMarquee_Undisplay(
 
 void
 TreeMarquee_Draw(
-    TreeMarquee marquee_,	/* Marquee token. */
+    TreeMarquee marquee,	/* Marquee token. */
     Drawable drawable,		/* Where to draw. */
     int x1, int y1		/* Offset of canvas from top-left corner
 				 * of the window. */
     )
 {
-    Marquee *marquee = (Marquee *) marquee_;
     TreeCtrl *tree = marquee->tree;
     int x, y, w, h;
     DotState dotState;
@@ -230,7 +225,7 @@ TreeMarquee_Draw(
 
 static int
 Marquee_Config(
-    Marquee *marquee,		/* Marquee record. */
+    TreeMarquee marquee,	/* Marquee record. */
     int objc,			/* Number of arguments. */
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
@@ -273,8 +268,8 @@ Marquee_Config(
 
     if (mask & MARQ_CONF_VISIBLE)
     {
-	TreeMarquee_Undisplay((TreeMarquee) marquee);
-	TreeMarquee_Display((TreeMarquee) marquee);
+	TreeMarquee_Undisplay(marquee);
+	TreeMarquee_Display(marquee);
     }
 
     return TCL_OK;
@@ -307,7 +302,7 @@ TreeMarqueeCmd(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    Marquee *marquee = (Marquee *) tree->marquee;
+    TreeMarquee marquee = tree->marquee;
     static CONST char *commandNames[] = { "anchor", "cget", "configure",
 	"coords", "corner", "identify", (char *) NULL };
     enum { COMMAND_ANCHOR, COMMAND_CGET, COMMAND_CONFIGURE, COMMAND_COORDS,

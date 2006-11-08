@@ -5,13 +5,13 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.21 2006/11/07 20:54:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.22 2006/11/08 07:07:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
+typedef struct TreeDragImage_ TreeDragImage_;
 typedef struct DragElem DragElem;
-typedef struct DragImage DragImage;
 
 /*
  * The following structure holds info about a single element of the drag
@@ -27,7 +27,7 @@ struct DragElem
  * The following structure holds info about the drag image. There is one of
  * these per TreeCtrl.
  */
-struct DragImage
+struct TreeDragImage_
 {
     TreeCtrl *tree;
     Tk_OptionTable optionTable;
@@ -43,7 +43,7 @@ struct DragImage
 
 static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
-	"0", -1, Tk_Offset(DragImage, visible),
+	"0", -1, Tk_Offset(TreeDragImage_, visible),
 	0, (ClientData) NULL, DRAG_CONF_VISIBLE},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
 	(char *) NULL, 0, -1, 0, 0, 0}
@@ -68,7 +68,7 @@ static Tk_OptionSpec optionSpecs[] = {
 
 static DragElem *
 DragElem_Alloc(
-    DragImage *dragImage	/* Drag image record. */
+    TreeDragImage dragImage	/* Drag image record. */
     )
 {
     DragElem *elem = (DragElem *) ckalloc(sizeof(DragElem));
@@ -103,7 +103,7 @@ DragElem_Alloc(
 
 static DragElem *
 DragElem_Free(
-    DragImage *dragImage,	/* Drag image record. */
+    TreeDragImage dragImage,	/* Drag image record. */
     DragElem *elem		/* Drag element to free. */
     )
 {
@@ -134,16 +134,16 @@ TreeDragImage_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DragImage *dragImage;
+    TreeDragImage dragImage;
 
-    dragImage = (DragImage *) ckalloc(sizeof(DragImage));
-    memset(dragImage, '\0', sizeof(DragImage));
+    dragImage = (TreeDragImage) ckalloc(sizeof(TreeDragImage_));
+    memset(dragImage, '\0', sizeof(TreeDragImage_));
     dragImage->tree = tree;
     dragImage->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
     if (Tk_InitOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
 	tree->tkwin) != TCL_OK)
     {
-	WFREE(dragImage, DragImage);
+	WFREE(dragImage, TreeDragImage_);
 	return TCL_ERROR;
     }
     tree->dragImage = (TreeDragImage) dragImage;
@@ -168,17 +168,16 @@ TreeDragImage_Init(
 
 void
 TreeDragImage_Free(
-    TreeDragImage dragImage_	/* Drag image token. */
+    TreeDragImage dragImage	/* Drag image token. */
     )
 {
-    DragImage *dragImage = (DragImage *) dragImage_;
     DragElem *elem = dragImage->elem;
 
     while (elem != NULL)
 	elem = DragElem_Free(dragImage, elem);
     Tk_FreeConfigOptions((char *) dragImage, dragImage->optionTable,
 	dragImage->tree->tkwin);
-    WFREE(dragImage, DragImage);
+    WFREE(dragImage, TreeDragImage_);
 }
 
 /*
@@ -200,17 +199,16 @@ TreeDragImage_Free(
 
 void
 TreeDragImage_Display(
-    TreeDragImage dragImage_	/* Drag image token. */
+    TreeDragImage dragImage	/* Drag image token. */
     )
 {
-    DragImage *dragImage = (DragImage *) dragImage_;
     TreeCtrl *tree = dragImage->tree;
 
     if (!dragImage->onScreen && dragImage->visible)
     {
 	dragImage->sx = 0 - tree->xOrigin;
 	dragImage->sy = 0 - tree->yOrigin;
-	TreeDragImage_Draw(dragImage_, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
+	TreeDragImage_Draw(dragImage, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
 	dragImage->onScreen = TRUE;
     }
 }
@@ -233,15 +231,14 @@ TreeDragImage_Display(
 
 void
 TreeDragImage_Undisplay(
-    TreeDragImage dragImage_	/* Drag image token. */
+    TreeDragImage dragImage	/* Drag image token. */
     )
 {
-    DragImage *dragImage = (DragImage *) dragImage_;
     TreeCtrl *tree = dragImage->tree;
 
     if (dragImage->onScreen)
     {
-	TreeDragImage_Draw(dragImage_, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
+	TreeDragImage_Draw(dragImage, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
 	dragImage->onScreen = FALSE;
     }
 }
@@ -268,7 +265,7 @@ TreeDragImage_Undisplay(
 
 static int
 DragImage_Config(
-    DragImage *dragImage,	/* Drag image record. */
+    TreeDragImage dragImage,	/* Drag image record. */
     int objc,			/* Number of arguments. */
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
@@ -334,9 +331,8 @@ DragImage_Config(
  *----------------------------------------------------------------------
  */
 
-void TreeDragImage_Draw(TreeDragImage dragImage_, Drawable drawable, int x, int y)
+void TreeDragImage_Draw(TreeDragImage dragImage, Drawable drawable, int x, int y)
 {
-    DragImage *dragImage = (DragImage *) dragImage_;
     TreeCtrl *tree = dragImage->tree;
     DragElem *elem = dragImage->elem;
     DotState dotState;
@@ -387,7 +383,7 @@ DragImageCmd(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    DragImage *dragImage = (DragImage *) tree->dragImage;
+    TreeDragImage dragImage = tree->dragImage;
     static CONST char *commandNames[] = { "add", "cget", "clear", "configure",
 	"offset", (char *) NULL };
     enum { COMMAND_ADD, COMMAND_CGET, COMMAND_CLEAR, COMMAND_CONFIGURE,
