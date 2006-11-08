@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.83 2006/11/07 20:52:58 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.84 2006/11/08 04:45:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3804,6 +3804,23 @@ TreeItem_SpansRedoIfNeeded(
     }
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_GetSpans --
+ *
+ *	Returns the spans[] array for an item.
+ *
+ * Results:
+ *	If all spans are known to be 1, the result is NULL. Otherwise the
+ *	list of spans is returned.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int *
 TreeItem_GetSpans(
     TreeCtrl *tree,		/* Widget info. */
@@ -3834,11 +3851,10 @@ typedef struct SpanInfo {
  *
  * Item_GetSpans --
  *
- *	Fills an array of SpanInfo records, one per tree column, with
- *	information about the Column displayed in each tree column.
+ *	Fills an array of SpanInfo records, one per visible span.
  *
  * Results:
- *	spans[] is filled in.
+ *	The return value is the number of SpanInfo records written.
  *
  * Side effects:
  *	None.
@@ -3925,15 +3941,15 @@ TreeItem_WalkSpans(
     int lock,			/* Which columns. */
     int x, int y,		/* Drawable coordinates of the item. */
     int width, int height,	/* Total size of the item. */
-    TreeItemWalkSpansProc proc,
-    ClientData clientData
+    TreeItemWalkSpansProc proc,	/* Callback routine. */
+    ClientData clientData	/* Data passed to callback routine. */
     )
 {
     Item *self = (Item *) item_;
-    int indent, columnWidth, totalWidth;
+    int columnWidth, totalWidth;
     Column *itemColumn;
     StyleDrawArgs drawArgs;
-    TreeColumn treeColumn = tree->columns;
+    TreeColumn treeColumn = tree->columnLockNone;
     int spanCount, spanIndex, columnCount = tree->columnCountVis;
     SpanInfo staticSpans[STATIC_SIZE], *spans = staticSpans;
     int area = TREE_AREA_CONTENT;
@@ -3945,7 +3961,6 @@ TreeItem_WalkSpans(
 	    area = TREE_AREA_LEFT;
 	    break;
 	case COLUMN_LOCK_NONE:
-	    treeColumn = tree->columnLockNone;
 	    break;
 	case COLUMN_LOCK_RIGHT:
 	    treeColumn = tree->columnLockRight;
@@ -3953,18 +3968,17 @@ TreeItem_WalkSpans(
 	    area = TREE_AREA_RIGHT;
 	    break;
     }
+
+    if (!Tree_AreaBbox(tree, area, &drawArgs.bounds[0], &drawArgs.bounds[1],
+	    &drawArgs.bounds[2], &drawArgs.bounds[3])) {
+	return;
+    }
+
     STATIC_ALLOC(spans, SpanInfo, columnCount);
     spanCount = Item_GetSpans(tree, item_, treeColumn, spans);
 
     drawArgs.tree = tree;
     drawArgs.drawable = None;
-
-    /* The area should never be empty. */
-    if (!Tree_AreaBbox(tree, area, &drawArgs.bounds[0], &drawArgs.bounds[1],
-	    &drawArgs.bounds[2], &drawArgs.bounds[3])) {
-	drawArgs.bounds[0] = drawArgs.bounds[2] = 0;
-	drawArgs.bounds[1] = drawArgs.bounds[3] = 0;
-    }
 
     totalWidth = 0;
     for (spanIndex = 0; spanIndex < spanCount; spanIndex++) {
@@ -3984,19 +3998,17 @@ TreeItem_WalkSpans(
 	if (columnWidth <= 0)
 	    continue;
 
-	if (treeColumn == tree->columnTree)
-	    indent = TreeItem_Indent(tree, item_);
-	else
-	    indent = 0;
-
 	if (itemColumn != NULL) {
 	    drawArgs.state = self->state | itemColumn->cstate;
-	    drawArgs.style = itemColumn->style;
+	    drawArgs.style = itemColumn->style; /* may be NULL */
 	} else {
 	    drawArgs.state = self->state;
 	    drawArgs.style = NULL;
 	}
-	drawArgs.indent = indent;
+	if (treeColumn == tree->columnTree)
+	    drawArgs.indent = TreeItem_Indent(tree, item_);
+	else
+	    drawArgs.indent = 0;
 	drawArgs.x = x + totalWidth;
 	drawArgs.y = y;
 	drawArgs.width = columnWidth;
@@ -7256,10 +7268,7 @@ TreeItemCmd(
 	case COMMAND_BBOX:
 	{
 	    int x, y, w, h;
-	    int i, columnIndex, indent, totalWidth;
 	    TreeColumn treeColumn;
-	    Column *itemColumn;
-	    StyleDrawArgs drawArgs;
 	    TreeItem item_ = (TreeItem) item;
 	    XRectangle rect;
 
@@ -7270,7 +7279,7 @@ TreeItemCmd(
 		if (TreeColumn_FromObj(tree, objv[4], &treeColumn,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
 		    goto errorExit;
-#if 1
+
 		/* Bounds of a column. */
 		if (objc == 5) {
 		    objc = 0;
@@ -7284,43 +7293,6 @@ TreeItemCmd(
 		if (TreeItem_GetRects(tree, item_, treeColumn,
 			objc, objv, &rect) == 0)
 		    break;
-#else
-		if (Tree_ItemBbox(tree, item_, TreeColumn_Lock(treeColumn),
-			&x, &y, &w, &h) < 0)
-		    break;
-		totalWidth = TreeColumn_Offset(treeColumn);
-		columnIndex = TreeColumn_Index(treeColumn);
-		if (treeColumn == tree->columnTree)
-		    indent = TreeItem_Indent(tree, item_);
-		else
-		    indent = 0;
-		if (objc == 5) {
-		    FormatResult(interp, "%d %d %d %d",
-			    x + totalWidth + indent - tree->xOrigin,
-			    y - tree->yOrigin,
-			    x + totalWidth + TreeColumn_UseWidth(treeColumn) - tree->xOrigin,
-			    y + h - tree->yOrigin);
-		    break;
-		}
-		itemColumn = Item_FindColumn(tree, item, columnIndex);
-		if ((itemColumn == NULL) || (itemColumn->style == NULL)) {
-		    NoStyleMsg(tree, item, columnIndex);
-		    goto errorExit;
-		}
-		drawArgs.tree = tree;
-		drawArgs.drawable = None;
-		drawArgs.style = itemColumn->style;
-		drawArgs.state = item->state | itemColumn->state;
-		drawArgs.indent = indent;
-		drawArgs.x = x + totalWidth;
-		drawArgs.y = y;
-		drawArgs.width = TreeColumn_UseWidth(treeColumn);
-		drawArgs.height = h;
-		drawArgs.justify = TreeColumn_Justify(treeColumn);
-		if (TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5,
-			    &rect) == -1)
-		    goto errorExit;
-#endif
 		x = rect.x;
 		y = rect.y;
 		w = rect.width;
@@ -8339,6 +8311,22 @@ int TreeItem_Debug(
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * SpanWalkProc_Identify --
+ *
+ *	Callback routine to TreeItem_WalkSpans for TreeItem_Identify.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static int
 SpanWalkProc_Identify(
     TreeCtrl *tree,
@@ -8419,6 +8407,22 @@ TreeItem_Identify(
 	    0, 0, width, height,
 	    SpanWalkProc_Identify, (ClientData) &clientData);
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * SpanWalkProc_Identify --
+ *
+ *	Callback routine to TreeItem_WalkSpans for TreeItem_Identify2.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
 
 static int
 SpanWalkProc_Identify2(
@@ -8502,6 +8506,22 @@ TreeItem_Identify2(
 	    SpanWalkProc_Identify2, (ClientData) &clientData);
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * SpanWalkProc_Identify --
+ *
+ *	Callback routine to TreeItem_WalkSpans for TreeItem_GetRects.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 static int
 SpanWalkProc_GetRects(
     TreeCtrl *tree,
@@ -8555,14 +8575,50 @@ SpanWalkProc_GetRects(
     return 1; /* stop */
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItem_GetRects --
+ *
+ *	Returns zero or more bounding boxes for an item-column or
+ *	element(s) in an item-column.
+ *
+ * Results:
+ *	If the item is not visible, or has zero height/width, or the given
+ *	column is obscurred by a preceding span, or the column has zero
+ *	width or is not visible, the return value is zero.
+ *
+ *	If count==0, the bounding box of the span is returned and the
+ *	return value is 1 (for a single rect).
+ *
+ *	If count!=0, and the item-column does not have a style assigned, an
+ *	error is left in the interpreter result and the return value is -1.
+ *
+ *	If count==-1, the bounding box of each element in the style is
+ *	returned and the return value is the number of elements in the style.
+ *
+ *	If count>0, the bounding box of each element specified by the objv[]
+ *	array is returned and the return value is equal to count. If any of
+ *	the objv[] elements in not in the style, an error is left in the
+ *	interpreter result and the return value is -1.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
 int
 TreeItem_GetRects(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item_,		/* Item token. */
-    TreeColumn treeColumn,
-    int count,
-    Tcl_Obj *CONST objv[],
-    XRectangle rects[]
+    TreeColumn treeColumn,	/* The column to get rects for. */
+    int count,			/* -1 means get rects for all elements.
+				 * 0 means get bounds of the span.
+				 * 1+ means objv[] contains names of elements
+				 *  to get rects for. */
+    Tcl_Obj *CONST objv[],	/* Array of element names or NULL. */
+    XRectangle rects[]		/* Out: returned bounding boxes. */
     )
 {
     int left, top, width, height;
