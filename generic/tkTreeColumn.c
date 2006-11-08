@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.59 2006/11/07 01:24:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.60 2006/11/08 04:45:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4584,7 +4584,7 @@ Column_Draw(
  *	created.
  *
  * Side effects:
- *	A photo image called "TreeCtrlColumnImage" will be created if
+ *	A photo image called "::TreeCtrl::ImageColumn" will be created if
  *	it doesn't exist. The image is set to contain a picture of the
  *	column header.
  *
@@ -4603,10 +4603,10 @@ SetImageForColumn(
     int height = tree->headerHeight;
     XImage *ximage;
 
-    photoH = Tk_FindPhoto(tree->interp, "TreeCtrlColumnImage");
+    photoH = Tk_FindPhoto(tree->interp, "::TreeCtrl::ImageColumn");
     if (photoH == NULL) {
-	Tcl_GlobalEval(tree->interp, "image create photo TreeCtrlColumnImage");
-	photoH = Tk_FindPhoto(tree->interp, "TreeCtrlColumnImage");
+	Tcl_GlobalEval(tree->interp, "image create photo ::TreeCtrl::ImageColumn");
+	photoH = Tk_FindPhoto(tree->interp, "::TreeCtrl::ImageColumn");
 	if (photoH == NULL)
 	    return NULL;
     }
@@ -4628,7 +4628,7 @@ SetImageForColumn(
     XDestroyImage(ximage);
     Tk_FreePixmap(tree->display, pixmap);
 
-    return Tk_GetImage(tree->interp, tree->tkwin, "TreeCtrlColumnImage",
+    return Tk_GetImage(tree->interp, tree->tkwin, "::TreeCtrl::ImageColumn",
 	NULL, (ClientData) NULL);
 }
 
@@ -4761,56 +4761,51 @@ Tree_DrawHeader(
 	}
     }
 
-    DrawHeaderLeft(tree, pixmap);
-    DrawHeaderRight(tree, pixmap);
+    if (Tree_WidthOfLeftColumns(tree) > 0)
+	DrawHeaderLeft(tree, pixmap);
+    if (Tree_WidthOfRightColumns(tree) > 0)
+	DrawHeaderRight(tree, pixmap);
 
-    {
-	Tk_Image image = NULL;
-	int imageX, imageW, indDraw = FALSE, indX;
-	int y, w, h;
+    if (tree->columnDrag.indColumn != NULL) {
+	int x, y, w, h;
+	GC gc;
 
-	if (tree->columnDrag.column != NULL) {
-	    if (TreeColumn_Bbox(tree->columnDrag.column, &imageX, &y, &imageW, &h) == 0) {
-		image = SetImageForColumn(tree, (Column *) tree->columnDrag.column);
-	    }
-	}
-	if (tree->columnDrag.indColumn != NULL) {
-	    if (TreeColumn_Bbox(tree->columnDrag.indColumn, &indX, &y, &w, &h) == 0) {
-		if (tree->columnDrag.indSide == SIDE_LEFT)
-		    indX -= 1;
-		else
-		    indX += w - 1;
-		indDraw = TRUE;
-	    }
-	}
-
-	if (indDraw) {
-	    GC gc = Tk_GCForColor(tree->columnDrag.indColor, Tk_WindowId(tree->tkwin));
+	if (TreeColumn_Bbox(tree->columnDrag.indColumn, &x, &y, &w, &h) == 0) {
+	    if (tree->columnDrag.indSide == SIDE_LEFT)
+		x -= 1;
+	    else
+		x += w - 1;
+	    gc = Tk_GCForColor(tree->columnDrag.indColor, Tk_WindowId(tree->tkwin));
 	    XFillRectangle(tree->display, pixmap, gc,
-		indX, y, 2, tree->headerHeight);
+		x, y, 2, tree->headerHeight);
 	}
-	if (image != NULL) {
+    }
+
+    if (tree->columnDrag.column != NULL) {
+	Tk_Image image;
+	int x, y, w, h;
+
+	if (TreeColumn_Bbox(tree->columnDrag.column, &x, &y, &w, &h) == 0) {
+	    int ix = 0, iy = 0, iw = w, ih = tree->headerHeight;
+
+	    image = SetImageForColumn(tree, (Column *) tree->columnDrag.column);
+	    x += tree->columnDrag.offset;
 #if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
-	    int ix = 0, iy = 0, iw = imageW, ih = tree->headerHeight;
 	    /*
 	     * Do boundary clipping, so that Tk_RedrawImage is passed
 	     * valid coordinates. [Tk Bug 979239]
 	     */
-	    imageX += tree->columnDrag.offset;
-	    if (imageX < minX) {
-		ix = minX - imageX;
+	    if (x < minX) {
+		ix = minX - x;
 		iw -= ix;
-		imageX = minX;
-	    } else if (imageX + imageW >= maxX) {
-		iw -= (imageX + imageW) - maxX;
+		x = minX;
+		w -= ix;
 	    }
-	    Tk_RedrawImage(image, ix, iy, iw, ih, pixmap,
-		imageX, y);
-#else
-	    Tk_RedrawImage(image, 0, 0, imageW,
-		tree->headerHeight, pixmap,
-		imageX + tree->columnDrag.offset, y);
+	    if (x + w > maxX) {
+		iw -= (x + w) - maxX;
+	    }
 #endif
+	    Tk_RedrawImage(image, ix, iy, iw, ih, pixmap, x, y);
 	    Tk_FreeImage(image);
 	}
     }
