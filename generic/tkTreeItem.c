@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.85 2006/11/08 07:07:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.86 2006/11/09 00:11:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -543,6 +543,9 @@ Tree_UpdateItemIndex(
     TreeItem item = tree->root;
     int index = 1, indexVis = 0;
 
+    if (!tree->updateIndex)
+	return;
+
     if (tree->debug.enable && tree->debug.data)
 	dbwin("Tree_UpdateItemIndex %s\n", Tk_PathName(tree->tkwin));
 
@@ -983,8 +986,7 @@ TreeItem_GetDepth(
     )
 {
 #if 0
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    Tree_UpdateItemIndex(tree);
 #endif
     return item->depth;
 }
@@ -1449,8 +1451,7 @@ TreeItem_ToIndex(
     int *indexVis		/* Returned Item.indexVis, may be NULL */
     )
 {
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    Tree_UpdateItemIndex(tree);
     if (index != NULL) (*index) = item->index;
     if (indexVis != NULL) (*indexVis) = item->indexVis;
 }
@@ -1892,8 +1893,8 @@ TreeItemList_FromObj(
 		 * clear the list of items and use "all". */
 		count = TreeItemList_Count(items);
 		for (i = 0; i < count; i++) {
-		    TreeItem item = TreeItemList_Nth(items, i);
-		    if (IS_ALL(item))
+		    TreeItem item2 = TreeItemList_Nth(items, i);
+		    if (IS_ALL(item2))
 			break;
 		}
 		if (i < count) {
@@ -3541,8 +3542,7 @@ int TreeItem_Indent(
     if (IS_ROOT(item))
 	return (tree->showRoot && tree->showButtons && tree->showRootButton) ? tree->useIndent : 0;
 
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    Tree_UpdateItemIndex(tree);
 
     indent = tree->useIndent * item->depth;
     if (tree->showRoot || tree->showButtons || tree->showLines)
@@ -3928,7 +3928,8 @@ TreeItem_WalkSpans(
 
     if (!Tree_AreaBbox(tree, area, &drawArgs.bounds[0], &drawArgs.bounds[1],
 	    &drawArgs.bounds[2], &drawArgs.bounds[3])) {
-	return;
+	drawArgs.bounds[0] = drawArgs.bounds[1] =
+	drawArgs.bounds[2] = drawArgs.bounds[3] = 0;
     }
 
     STATIC_ALLOC(spans, SpanInfo, columnCount);
@@ -4499,8 +4500,7 @@ int TreeItem_ReallyVisible(
     )
 {
 #if 0
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    Tree_UpdateItemIndex(tree);
     return item->indexVis != -1;
 #else
     if (!tree->updateIndex)
@@ -6648,7 +6648,6 @@ doneFORC:
 	case COMMAND_SET:
 	{
 	    TreeItemList itemList, item2List;
-	    TreeItem item;
 	    int states[3], stateOn, stateOff;
 	    ItemForEach iter;
 	    int result = TCL_OK;
@@ -6908,8 +6907,8 @@ Tree_DeselectHidden(
     if (tree->selectCount < 1)
 	return;
 
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    /* This call is slow for large lists. */
+    Tree_UpdateItemIndex(tree);
 
     TreeItemList_Init(tree, &items, tree->selectCount);
 
@@ -7192,8 +7191,8 @@ TreeItemCmd(
 	case COMMAND_BBOX:
 	{
 	    int x, y, w, h;
+	    int count;
 	    TreeColumn treeColumn;
-	    TreeItem item = item;
 	    XRectangle rect;
 
 	    if (objc == 4) {
@@ -7214,9 +7213,13 @@ TreeItemCmd(
 		    objc -= 5;
 		    objv += 5;
 		}
-		if (TreeItem_GetRects(tree, item, treeColumn,
-			objc, objv, &rect) == 0)
+
+		count = TreeItem_GetRects(tree, item, treeColumn,
+			objc, objv, &rect);
+		if (count == 0)
 		    break;
+		if (count == -1)
+		    goto errorExit;
 		x = rect.x;
 		y = rect.y;
 		w = rect.width;
@@ -7454,8 +7457,7 @@ TreeItemCmd(
 		}
 	    }
 	    if (visible) {
-		if (tree->updateIndex)
-		    Tree_UpdateItemIndex(tree);
+		Tree_UpdateItemIndex(tree);
 		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemVisCount));
 	    } else {
 		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
@@ -7583,8 +7585,7 @@ TreeItemCmd(
 	}
 	case COMMAND_DUMP:
 	{
-	    if (tree->updateIndex)
-		Tree_UpdateItemIndex(tree);
+	    Tree_UpdateItemIndex(tree);
 	    FormatResult(interp, "index %d indexVis %d",
 		    item->index, item->indexVis);
 	    break;
@@ -7742,8 +7743,7 @@ TreeItemCmd(
 		    goto errorExit;
 		}
 	    }
-	    if (tree->updateIndex)
-		Tree_UpdateItemIndex(tree);
+	    Tree_UpdateItemIndex(tree);
 	    Tcl_SetObjResult(interp,
 		    Tcl_NewIntObj(visible ? item->indexVis : item->index));
 	    break;
