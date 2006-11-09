@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.11 2006/10/29 02:42:16 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.12 2006/11/09 00:15:53 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -483,6 +483,31 @@ test column-9.3 {column neededwidth: tail column returns always 0} -body {
 test column-9.4 {column neededwidth} -body {
     .t column neededwidth column1
 } -result {77}
+
+test column-10.1 {-itemstyle: not for tail} -body {
+    .t column configure tail -itemstyle testStyle3
+} -returnCodes error -result {can't change the -itemstyle option of the tail column}
+
+test column-10.2 {-itemstyle: set} -body {
+    .t column configure column1 -itemstyle testStyle3
+    .t column cget column1 -itemstyle
+} -result {testStyle3}
+
+test column-10.3 {-itemstyle: unset} -body {
+    .t column configure column1 -itemstyle {}
+    .t column cget column1 -itemstyle
+} -result {}
+
+test column-10.4 {-itemstyle: change} -body {
+    .t style create testStyle2
+    .t column configure column1 -itemstyle testStyle2
+    .t column cget column1 -itemstyle
+} -result {testStyle2}
+
+test column-10.5 {-itemstyle: style is deleted} -body {
+    .t style delete testStyle2
+    .t column cget column1 -itemstyle
+} -result {}
 
 test column-99.1 {some needed cleanup} -body {
     destroy .t
