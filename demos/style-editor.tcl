@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.10 2006/11/05 06:48:34 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.11 2006/11/09 00:17:35 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -737,6 +737,16 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
     }
     if {$match ne ""} {
 	set I $match
+
+	foreach state [$Tdemo item state get $I] {
+	    if {[lsearch -exact [$Tdemo state names] $state] != -1} {
+		$T item state set root $state
+	    }
+	}
+	foreach state [$Tdemo item state forcolumn $I $C] {
+	    $T item state set root $state
+	}
+
 	foreach E [$Tdemo item style elements $I $C] {
 	    foreach list [$Tdemo item element configure $I $C $E] {
 		foreach {name x y default current} $list {}
