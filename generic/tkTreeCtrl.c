@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.83 2006/11/07 01:24:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.84 2006/11/09 00:14:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -788,8 +788,7 @@ static int TreeWidgetCmd(
 		Tcl_SetObjResult(interp, Tcl_NewIntObj(depth));
 		break;
 	    }
-	    if (tree->updateIndex)
-		Tree_UpdateItemIndex(tree);
+	    Tree_UpdateItemIndex(tree);
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->depth + 1));
 	    break;
 	}
