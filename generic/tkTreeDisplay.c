@@ -5,17 +5,17 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.58 2006/11/07 01:46:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.59 2006/11/09 00:14:19 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 
 #define COMPLEX_WHITESPACE
 
+typedef struct TreeDInfo_ TreeDInfo_;
 typedef struct RItem RItem;
 typedef struct Range Range;
 typedef struct DItem DItem;
-typedef struct DInfo DInfo;
 
 static void Range_RedoIfNeeded(TreeCtrl *tree);
 static int Range_TotalWidth(TreeCtrl *tree, Range *range_);
@@ -84,7 +84,7 @@ typedef struct ColumnInfo {
 } ColumnInfo;
 
 /* Display information for a TreeCtrl. */
-struct DInfo
+struct TreeDInfo_
 {
     GC scrollGC;
     int xOrigin;		/* Last seen TreeCtrl.xOrigin */
@@ -170,7 +170,7 @@ Range_Redo(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *rangeList = dInfo->rangeFirst;
     Range *range;
     RItem *rItem;
@@ -260,8 +260,7 @@ Range_Redo(
     }
 
     /* Speed up ReallyVisible() and get itemVisCount */
-    if (tree->updateIndex)
-	Tree_UpdateItemIndex(tree);
+    Tree_UpdateItemIndex(tree);
 
     if (dInfo->rItemMax < tree->itemVisCount) {
 	dInfo->rItem = (RItem *) ckrealloc((char *) dInfo->rItem,
@@ -378,8 +377,7 @@ freeRanges:
 	    tree->columnCountVisRight)) {
 
 	/* Speed up ReallyVisible() and get itemVisCount */
-	if (tree->updateIndex)
-	    Tree_UpdateItemIndex(tree);
+	Tree_UpdateItemIndex(tree);
 
 	if (tree->itemVisCount == 0)
 	    return;
@@ -670,7 +668,7 @@ Tree_TotalWidth(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range;
     int rangeWidth;
 
@@ -718,7 +716,7 @@ Tree_TotalHeight(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range;
     int rangeHeight;
 
@@ -782,7 +780,7 @@ Range_UnderPoint(
 				 * should be returned. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range;
     int x = *x_, y = *y_;
 
@@ -981,7 +979,7 @@ Increment_AddX(
     int size			/* Current size of DInfo.xScrollIncrements. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int visWidth = Tree_ContentWidth(tree);
 
     while ((visWidth > 1) &&
@@ -1024,7 +1022,7 @@ Increment_AddY(
     int size			/* Current size of DInfo.yScrollIncrements. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int visHeight = Tree_ContentHeight(tree);
 
     while ((visHeight > 1) &&
@@ -1066,7 +1064,7 @@ RItemsToIncrementsX(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range, *rangeFirst = dInfo->rangeFirst;
     RItem *rItem;
     int visWidth = Tree_ContentWidth(tree);
@@ -1143,7 +1141,7 @@ RItemsToIncrementsY(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range, *rangeFirst;
     RItem *rItem;
     int visHeight = Tree_ContentHeight(tree);
@@ -1226,7 +1224,7 @@ RangesToIncrementsX(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range = dInfo->rangeFirst;
     int visWidth = Tree_ContentWidth(tree);
     int totalWidth = Tree_TotalWidth(tree);
@@ -1276,7 +1274,7 @@ RangesToIncrementsY(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range = dInfo->rangeFirst;
     int visHeight = Tree_ContentHeight(tree);
     int totalHeight = Tree_TotalHeight(tree);
@@ -1325,7 +1323,7 @@ Increment_Redo(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     /* Free x */
     if (dInfo->xScrollIncrements != NULL)
@@ -1382,7 +1380,7 @@ Increment_RedoIfNeeded(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     Range_RedoIfNeeded(tree);
 
@@ -1470,7 +1468,7 @@ B_IncrementFindX(
     int offset			/* Offset to search with. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     return B_IncrementFind(
 	dInfo->xScrollIncrements,
@@ -1502,7 +1500,7 @@ B_IncrementFindY(
     int offset			/* Offset to search with. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     return B_IncrementFind(
 	dInfo->yScrollIncrements,
@@ -1539,7 +1537,7 @@ B_XviewCmd(
     )
 {
     Tcl_Interp *interp = tree->interp;
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (objc == 2) {
 	double fractions[2];
@@ -1644,7 +1642,7 @@ B_YviewCmd(
     )
 {
     Tcl_Interp *interp = tree->interp;
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (objc == 2) {
 	double fractions[2];
@@ -1754,7 +1752,7 @@ Tree_ItemUnderPoint(
 
     hit = Tree_HitTest(tree, *x_, *y_);
     if (!nearest && ((hit == TREE_AREA_LEFT) || (hit == TREE_AREA_RIGHT))) {
-	DInfo *dInfo = (DInfo *) tree->dInfo;
+	TreeDInfo dInfo = tree->dInfo;
 
 	Range_RedoIfNeeded(tree);
 	range = dInfo->rangeFirst;
@@ -2121,7 +2119,7 @@ Tree_ItemFL(
 				 * FALSE for bottom/right. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     RItem *rItem, *rItem2;
     Range *range;
     int i, l, u;
@@ -2251,7 +2249,7 @@ Tree_RNCToItem(
 				 * clipped to valid values. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range;
     RItem *rItem;
     int i, l, u;
@@ -2350,7 +2348,7 @@ DItem_Alloc(
     RItem *rItem		/* Range info for the item. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
 
     dItem = (DItem *) TreeItem_GetDInfo(tree, rItem->item);
@@ -2439,7 +2437,7 @@ DItem_Free(
     DItem *dItem		/* DItem to free. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *next = dItem->next;
 #ifdef TREECTRL_DEBUG
     if (strncmp(dItem->magic, "MAGC", 4) != 0)
@@ -2479,7 +2477,7 @@ FreeDItems(
 				 * from the DInfo.dItem list. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *prev;
 
     if (unlink) {
@@ -2527,7 +2525,7 @@ Tree_ItemsInArea(
 				 * included in the area. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int x, y, rx = 0, ry = 0, ix, iy, dx, dy;
     Range *range;
     RItem *rItem;
@@ -2645,7 +2643,7 @@ GetOnScreenColumnsForItemAux(
     TreeColumnList *columns	/* Initialized list to append to. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int minX, maxX, columnIndex = 0, x = 0, i, width;
     TreeColumn column;
 
@@ -2717,7 +2715,7 @@ GetOnScreenColumnsForItem(
     TreeColumnList *columns	/* Initialized list to append to. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (!dInfo->emptyL) {
 	GetOnScreenColumnsForItemAux(tree, dItem, &dItem->left,
@@ -2865,7 +2863,7 @@ UpdateDInfoForRange(
     int x, int y		/* Left & top window coordinates of rItem. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     DItemArea *area;
     TreeItem item;
@@ -3130,7 +3128,7 @@ Tree_UpdateDInfo(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItemHead = dInfo->dItem;
     int x, y, rx = 0, ry = 0, ix, iy, dx, dy;
     int minX, minY, maxX, maxY;
@@ -3532,7 +3530,7 @@ Range_RedoIfNeeded(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (dInfo->flags & DINFO_REDO_RANGES) {
 	dInfo->rangeFirstD = dInfo->rangeLastD = NULL;
@@ -3558,7 +3556,7 @@ DItemAllDirty(
     DItem *dItem
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     
     if ((!dInfo->empty && dInfo->rangeFirst != NULL) &&
 	    !(dItem->area.flags & DITEM_ALL_DIRTY))
@@ -3594,7 +3592,7 @@ ScrollVerticalComplex(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem, *dItem2;
     Range *range;
     TkRegion damageRgn;
@@ -3800,7 +3798,7 @@ ScrollHorizontalSimple(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     TkRegion damageRgn;
     int minX, minY, maxX, maxY;
@@ -3912,7 +3910,7 @@ ScrollVerticalSimple(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     TkRegion damageRgn;
     int minX, minY, maxX, maxY;
@@ -4016,7 +4014,7 @@ ScrollHorizontalComplex(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem, *dItem2;
     Range *range;
     TkRegion damageRgn;
@@ -4350,7 +4348,7 @@ CalcWhiteSpaceRegion(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int x, y, minX, minY, maxX, maxY;
     int left, right, top, bottom;
     TkRegion wsRgn;
@@ -4470,6 +4468,7 @@ CalcWhiteSpaceRegion(
  * Results:
  *	If the rectangles have non-zero size and overlap, resultPtr
  *	holds the area of overlap, and the return value is 1.
+ *	Otherwise 0 is returned and resultPtr is untouched.
  *
  * Side effects:
  *	None.
@@ -4669,7 +4668,7 @@ DrawWhitespaceBelowItem(
     int index			/* Used for alternating background colors. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int i = 0;
     TreeColumn treeColumn;
     XRectangle boundsBox, columnBox;
@@ -4712,6 +4711,23 @@ DrawWhitespaceBelowItem(
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * ComplexWhitespace --
+ *
+ *	Return 1 if -itembackground colors should be drawn into the
+ *	whitespace region.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
 ComplexWhitespace(
     TreeCtrl *tree
@@ -4730,6 +4746,26 @@ ComplexWhitespace(
     return 1;
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * DrawWhitespace --
+ *
+ *	Paints part of the whitespace region.
+ *
+ * Results:
+ *	If -itembackground colors are not being drawn into the
+ *	whitespace region, the dirtyRgn is filled with the treectrl's
+ *	-background color. Otherwise rows of color are drawn below
+ *	the last item and in the tail column if those columns have
+ *	any -itembackground colors specified.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static void
 DrawWhitespace(
     TreeCtrl *tree,
@@ -4737,7 +4773,7 @@ DrawWhitespace(
     TkRegion dirtyRgn
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int x, y, minX, minY, maxX, maxY;
     int top, bottom;
     int height, index;
@@ -4824,6 +4860,13 @@ DrawWhitespace(
 	    }
 	}
 
+	/* Draw below non-locked columns. */
+	if (!dInfo->empty && dInfo->rangeFirst != NULL) {
+	    DrawWhitespaceBelowItem(tree, drawable, COLUMN_LOCK_NONE,
+		    dInfo->bounds, x, top, dirtyRgn, columnRgn,
+		    height, index);
+	}
+
 	/* Draw below the left columns. */
 	if (!dInfo->emptyL) {
 	    minX = dInfo->boundsL[0];
@@ -4841,17 +4884,11 @@ DrawWhitespace(
 		    minX, top, dirtyRgn, columnRgn,
 		    height, index);
 	}
-
-	/* Draw below non-locked columns. */
-	if (!dInfo->empty && dInfo->rangeFirst != NULL) {
-	    DrawWhitespaceBelowItem(tree, drawable, COLUMN_LOCK_NONE,
-		    dInfo->bounds, x, top, dirtyRgn, columnRgn,
-		    height, index);
-	}
     }
 
     TkDestroyRegion(columnRgn);
 }
+
 #endif /* COMPLEX_WHITESPACE */
 
 /*
@@ -4946,7 +4983,7 @@ DisplayDItem(
     Drawable drawable		/* Where to copy to. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Tk_Window tkwin = tree->tkwin;
     int left, top, right, bottom;
 
@@ -5051,7 +5088,7 @@ Tree_Display(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     Tk_Window tkwin = tree->tkwin;
     Drawable drawable = Tk_WindowId(tkwin);
@@ -5760,7 +5797,7 @@ Increment_ToOffsetX(
     int index			/* Index of the increment. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (tree->xScrollIncrement <= 0) {
 	if (index < 0 || index >= dInfo->xScrollIncrementCount)
@@ -5793,7 +5830,7 @@ Increment_ToOffsetY(
     int index			/* Index of the increment. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     if (tree->yScrollIncrement <= 0) {
 	if (index < 0 || index >= dInfo->yScrollIncrementCount) {
@@ -5995,7 +6032,7 @@ Tree_SetOriginX(
 				 * to the nearest scroll increment. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int totWidth = Tree_TotalWidth(tree);
     int visWidth = Tree_ContentWidth(tree);
     int index, indexMax, offset;
@@ -6078,7 +6115,7 @@ Tree_SetOriginY(
 				 * to the nearest scroll increment. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int visHeight = Tree_ContentHeight(tree);
     int totHeight = Tree_TotalHeight(tree);
     int index, indexMax, offset;
@@ -6157,7 +6194,7 @@ Tree_EventuallyRedraw(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     dInfo->requests++;
     if ((dInfo->flags & DINFO_REDRAW_PENDING) ||
@@ -6192,7 +6229,7 @@ Tree_RelayoutWindow(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     FreeDItems(tree, dInfo->dItem, NULL, 0);
     dInfo->dItem = NULL;
@@ -6268,7 +6305,7 @@ Tree_FocusChanged(
 				 * otherwise FALSE. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     int redraw = FALSE;
     TreeItem item;
     Tcl_HashEntry *hPtr;
@@ -6324,7 +6361,7 @@ Tree_Activate(
 				 * active window, otherwise FALSE. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     tree->isActive = isActive;
 
@@ -6365,7 +6402,7 @@ Tree_FreeItemDInfo(
     TreeItem item2		/* Last item in the range, or NULL. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     TreeItem item = item1;
     int changed = 0;
@@ -6414,7 +6451,7 @@ Tree_InvalidateItemDInfo(
     TreeItem item2		/* Last item in the range, or NULL. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     TreeItem item = item1;
     int changed = 0;
@@ -6520,7 +6557,7 @@ TreeDisplay_ItemDeleted(
     TreeItem item		/* Item to remove. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Tcl_HashEntry *hPtr;
 
     hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) item);
@@ -6556,7 +6593,7 @@ TreeDisplay_ColumnDeleted(
     )
 {
 #ifdef DCOLUMN
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Tcl_HashSearch search;
     Tcl_HashEntry *hPtr;
     TreeColumn *value;
@@ -6605,7 +6642,7 @@ Tree_DInfoChanged(
     int flags			/* DINFO_xxx flags. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
 
     dInfo->flags |= flags;
     Tree_EventuallyRedraw(tree);
@@ -6638,7 +6675,7 @@ Tree_InvalidateArea(
 				 * coordinates. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
 
     if (x1 >= x2 || y1 >= y2)
@@ -6734,7 +6771,7 @@ Tree_InvalidateRegion(
 				 * coordinates. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     int minX = Tree_BorderLeft(tree), maxX = Tree_BorderRight(tree);
     int minY = Tree_BorderTop(tree), maxY = Tree_BorderBottom(tree);
@@ -6919,11 +6956,11 @@ TreeDInfo_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo;
+    TreeDInfo dInfo;
     XGCValues gcValues;
 
-    dInfo = (DInfo *) ckalloc(sizeof(DInfo));
-    memset(dInfo, '\0', sizeof(DInfo));
+    dInfo = (TreeDInfo) ckalloc(sizeof(TreeDInfo_));
+    memset(dInfo, '\0', sizeof(TreeDInfo_));
     gcValues.graphics_exposures = True;
     dInfo->scrollGC = Tk_GetGC(tree->tkwin, GCGraphicsExposures, &gcValues);
     dInfo->flags = DINFO_OUT_OF_DATE;
@@ -6931,7 +6968,7 @@ TreeDInfo_Init(
     dInfo->columns = (ColumnInfo *) ckalloc(sizeof(ColumnInfo) * dInfo->columnsSize);
     dInfo->wsRgn = TkCreateRegion();
     Tcl_InitHashTable(&dInfo->itemVisHash, TCL_ONE_WORD_KEYS);
-    tree->dInfo = (TreeDInfo) dInfo;
+    tree->dInfo = dInfo;
 }
 
 /*
@@ -6955,7 +6992,7 @@ TreeDInfo_Free(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     Range *range = dInfo->rangeFirst;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
@@ -6995,7 +7032,7 @@ TreeDInfo_Free(
 #endif
     Tcl_DeleteHashTable(&dInfo->itemVisHash);
     ckfree((char *) dInfo->columns);
-    WFREE(dInfo, DInfo);
+    WFREE(dInfo, TreeDInfo_);
 }
 
 void
@@ -7005,7 +7042,7 @@ DumpDInfo(
     )
 {
     Tcl_DString dString;
-    DInfo *dInfo = (DInfo *) tree->dInfo;
+    TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     Range *range;
     RItem *rItem;
