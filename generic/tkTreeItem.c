@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.86 2006/11/09 00:11:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.87 2006/11/10 22:31:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4407,7 +4407,7 @@ SpanWalkProc_UpdateWindowPositions(
     TreeStyle_UpdateWindowPositions(drawArgs);
 
     /* Stop walking if we went past the right edge of the display area. */
-    return drawArgs->x + drawArgs->width >= drawArgs->bounds[3];
+    return drawArgs->x + drawArgs->width >= drawArgs->bounds[2];
 }
 
 /*
@@ -8370,7 +8370,7 @@ SpanWalkProc_Identify2(
 		subListObj);
     }
     Tcl_ListObjAppendElement(tree->interp, data->listObj, subListObj);
-    return 0;
+    return drawArgs->x + drawArgs->width >= data->x2;
 }
 
 /*
