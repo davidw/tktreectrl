@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.84 2006/11/09 00:14:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.85 2006/11/10 22:27:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -584,7 +584,7 @@ static int TreeWidgetCmd(
 		goto error;
 	    }
 	    if (Tcl_GetIntFromObj(interp, objv[2], &x) != TCL_OK)
-		return TCL_ERROR;
+		goto error;
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(x + tree->xOrigin));
 	    break;
 	}
@@ -598,7 +598,7 @@ static int TreeWidgetCmd(
 		goto error;
 	    }
 	    if (Tcl_GetIntFromObj(interp, objv[2], &y) != TCL_OK)
-		return TCL_ERROR;
+		goto error;
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(y + tree->yOrigin));
 	    break;
 	}
