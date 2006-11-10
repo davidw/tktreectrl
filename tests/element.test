@@ -1,0 +1,59 @@
+# Commands covered:  [element]
+#
+# This file contains a collection of tests for the style widget command of
+# the tktreectrl extension.  Sourcing this file into Tcl runs the tests and
+# generates output for errors.  No output means no errors were found.
+#
+# Copyright (c) 2000 by Scriptics Corporation.
+# Copyright (c) 2002 by Christian Krone.
+#
+# See the file "license.terms" for information on usage and redistribution
+# of this file, and for a DISCLAIMER OF ALL WARRANTIES.
+#
+# CVS: @(#) $Id: element.test,v 1.1 2006/11/10 07:17:07 treectrl Exp $
+
+if {[lsearch [namespace children] ::tcltest] == -1} {
+    package require tcltest 2
+    namespace import ::tcltest::*
+}
+
+package require Tk
+package require treectrl
+
+test element-0.1 {some needed preparations} -body {
+    pack [treectrl .t]
+} -result {}
+
+test element-14.1 {element: missing command} -body {
+    .t element
+} -returnCodes error -result {wrong # args: should be ".t element command ?arg arg ...?"}
+
+test element-14.2 {element: invalid command} -body {
+    .t element foo
+} -returnCodes error -result {bad command "foo": must be *} -match glob
+
+test element-14.3 {element perstate: missing arg} -body {
+    .t element perstate
+} -returnCodes error -result {wrong # args: should be ".t element perstate element option stateList"}
+
+test element-14.4 {element perstate: too many args} -body {
+    .t element perstate a b c d
+} -returnCodes error -result {wrong # args: should be ".t element perstate element option stateList"}
+
+test element-14.5 {element perstate: empty stateList} -setup {
+    .t element create eText text -fill {red !selected blue {}}
+} -body {
+    .t element perstate eText -fill {}
+} -result {red}
+
+test element-14.6 {element perstate: non-empty statelist} -body {
+    .t element perstate eText -fill {selected}
+} -result {blue}
+
+test element-99.1 {some needed cleanup} -body {
+    destroy .t
+} -result {}
+
+# cleanup
+::tcltest::cleanupTests
+return
