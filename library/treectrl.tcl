@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.31 2006/11/05 06:38:20 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.32 2006/11/10 23:02:55 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -317,13 +317,13 @@ proc ::TreeCtrl::CursorCheck {w x y} {
 	CursorCancel $w
 	return
     }
-    if {[lindex $action 1] eq "resize"} {
-	set cursor sb_h_double_arrow
+    set cursor sb_h_double_arrow
+    if {$cursor ne [$w cget -cursor]} {
+	if {![info exists Priv(cursor,$w)]} {
+	    set Priv(cursor,$w) [$w cget -cursor]
+	}
+	$w configure -cursor $cursor
     }
-    if {![info exists Priv(cursor,$w)]} {
-	set Priv(cursor,$w) [$w cget -cursor]
-    }
-    $w configure -cursor $cursor
     if {[info exists Priv(cursor,afterId,$w)]} {
 	after cancel $Priv(cursor,afterId,$w)
     }
