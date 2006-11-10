@@ -5,10 +5,12 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.51 2006/11/06 23:37:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.52 2006/11/10 22:33:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
+#include "tclInt.h" /* TCL_ALIGN */
+
 #ifdef WIN32
 #include "tkWinInt.h"
 #endif
@@ -17,7 +19,6 @@
 #if defined(MAC_OSX_TK)
 #include <Carbon/Carbon.h>
 #include "tkMacOSXInt.h"
-#include "tclInt.h"
 static PixPatHandle gPenPat = NULL;
 #endif
 
@@ -2425,6 +2426,27 @@ PerStateInfo_ObjForState(
  *----------------------------------------------------------------------
  */
 
+Tcl_Obj *
+DuplicateListObj(
+    Tcl_Obj *objPtr
+    )
+{
+    int objc;
+    Tcl_Obj **objv;
+    int result;
+
+    /*
+     * Comment from TclLsetFlat:
+     * ... A plain Tcl_DuplicateObj
+     * will just increase the intrep's refCount without upping the sublists'
+     * refCount, so that their true shared status cannot be determined from
+     * their refCount.
+     */
+
+    result = Tcl_ListObjGetElements(NULL, objPtr, &objc, &objv);
+    return Tcl_NewListObj(objc, objv);
+}
+
 int PerStateInfo_Undefine(
     TreeCtrl *tree,		/* Widget info. */
     PerStateType *typePtr,	/* Type-specific functions and values. */
@@ -2448,14 +2470,14 @@ int PerStateInfo_Undefine(
 	    pData->stateOff &= ~state;
 	    pData->stateOn &= ~state;
 	    if (Tcl_IsShared(configObj)) {
-		configObj = Tcl_DuplicateObj(configObj);
+		configObj = DuplicateListObj(configObj);
 		Tcl_DecrRefCount(pInfo->obj);
 		Tcl_IncrRefCount(configObj);
 		pInfo->obj = configObj;
 	    }
 	    Tcl_ListObjIndex(tree->interp, configObj, i * 2 + 1, &listObj);
 	    if (Tcl_IsShared(listObj)) {
-		listObj = Tcl_DuplicateObj(listObj);
+		listObj = DuplicateListObj(listObj);
 		Tcl_ListObjReplace(tree->interp, configObj, i * 2 + 1, 1, 1, &listObj);
 	    }
 	    Tcl_ListObjLength(tree->interp, listObj, &numStates);
@@ -2477,6 +2499,7 @@ int PerStateInfo_Undefine(
 	}
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
+
     return modified;
 }
 
@@ -5250,8 +5273,9 @@ if (save->objPtr) {
 else
     dbwin("DynamicCO_Free free object NULL\n");
 #endif
-	    if (save->objPtr)
+	    if (save->objPtr) {
 		Tcl_DecrRefCount(save->objPtr);
+	    }
 	}
 	ckfree((char *) save);
     } else {
@@ -5273,8 +5297,9 @@ if (*objPtrPtr) {
 else
     dbwin("DynamicCO_Free free object NULL\n");
 #endif
-	    if (*objPtrPtr != NULL)
+	    if (*objPtrPtr != NULL) {
 		Tcl_DecrRefCount(*objPtrPtr);
+	    }
 	}
     }
 }
