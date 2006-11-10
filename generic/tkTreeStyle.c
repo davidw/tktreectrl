@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.59 2006/11/07 20:51:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.60 2006/11/10 22:34:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4851,7 +4851,7 @@ TreeElementCmd(
 	    ElementArgs args;
 
 	    if (objc != 6) {
-		Tcl_WrongNumArgs(tree->interp, 4, objv,
+		Tcl_WrongNumArgs(tree->interp, 3, objv,
 		    "element option stateList");
 		return TCL_ERROR;
 	    }
