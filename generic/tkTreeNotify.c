@@ -5,16 +5,11 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.17 2006/10/14 20:04:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.18 2006/11/10 22:28:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
-
-/* tkMacOSXPort.h should include this, I think, like the other platform
- * tk*Port.h files. Needed for TclFormatInt() */
-#if defined(MAC_OSX_TK)
-#include "tclInt.h"
-#endif
+#include "tclInt.h" /* TclFormatInt */
 
 static int EVENT_EXPAND,
     DETAIL_EXPAND_BEFORE,
