@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.59 2006/11/09 00:14:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.60 2006/11/10 22:26:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1900,7 +1900,7 @@ Tree_HitTest(
     if ((y < Tree_BorderTop(tree)) || (y >= Tree_BorderBottom(tree)))
 	return TREE_AREA_NONE;
 
-    if (y < tree->inset + Tree_HeaderHeight(tree)) {
+    if (y < Tree_HeaderBottom(tree)) {
 	return TREE_AREA_HEADER;
     }
     /* Right-locked columns are drawn over the left. */
@@ -5375,7 +5375,7 @@ displayRetry:
 
     if (dInfo->flags & DINFO_DRAW_HEADER) {
 	if (Tree_AreaBbox(tree, TREE_AREA_HEADER, &minX, &minY, &maxX, &maxY)) {
-	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, tree->inset);
+	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, Tree_HeaderTop(tree));
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		dInfo->dirty[LEFT] = minX;
 		dInfo->dirty[TOP] = minY;
@@ -6681,7 +6681,7 @@ Tree_InvalidateArea(
     if (x1 >= x2 || y1 >= y2)
 	return;
 
-    if ((y2 > tree->inset) && (y1 < tree->inset + Tree_HeaderHeight(tree)))
+    if ((y2 > Tree_HeaderTop(tree)) && (y1 < Tree_HeaderBottom(tree)))
 	dInfo->flags |= DINFO_DRAW_HEADER;
 
     dItem = dInfo->dItem;

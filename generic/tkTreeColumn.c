@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.61 2006/11/08 07:07:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.62 2006/11/10 22:26:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4615,11 +4615,11 @@ DrawHeaderLeft(
 {
     TreeColumn column = tree->columnLockLeft;
     Tk_Window tkwin = tree->tkwin;
-    int x = tree->inset, y = tree->inset;
+    int x = Tree_HeaderLeft(tree), y = Tree_HeaderTop(tree);
     Drawable pixmap;
 
     pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-	    Tk_Width(tkwin), tree->inset + tree->headerHeight, Tk_Depth(tkwin));
+	    Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
 
     while (column != NULL && column->lock == COLUMN_LOCK_LEFT) {
 	if (column->visible) {
@@ -4630,9 +4630,9 @@ DrawHeaderLeft(
     }
 
     XCopyArea(tree->display, pixmap, drawable,
-	    tree->copyGC, tree->inset, y,
-	    x - tree->inset, tree->headerHeight,
-	    tree->inset, y);
+	    tree->copyGC, Tree_HeaderLeft(tree), y,
+	    x - Tree_HeaderLeft(tree), tree->headerHeight,
+	    Tree_HeaderLeft(tree), y);
 
     Tk_FreePixmap(tree->display, pixmap);
 }
@@ -4645,11 +4645,11 @@ DrawHeaderRight(
 {
     TreeColumn column = tree->columnLockRight;
     Tk_Window tkwin = tree->tkwin;
-    int x = 0, y = tree->inset;
+    int x = 0, y = Tree_HeaderTop(tree);
     Drawable pixmap;
 
     pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-	    Tk_Width(tkwin), tree->inset + tree->headerHeight, Tk_Depth(tkwin));
+	    Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
 
     while (column != NULL && column->lock == COLUMN_LOCK_RIGHT) {
 	if (column->visible) {
@@ -4704,7 +4704,7 @@ Tree_DrawHeader(
 
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM)
 	pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-		Tk_Width(tkwin), tree->inset + tree->headerHeight, Tk_Depth(tkwin));
+		Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
     else
 	pixmap = drawable;
 
@@ -4787,9 +4787,9 @@ Tree_DrawHeader(
 
     if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
 	XCopyArea(tree->display, pixmap, drawable,
-		tree->copyGC, tree->inset, y,
-		Tk_Width(tkwin) - tree->inset * 2, tree->headerHeight,
-		tree->inset, y);
+		tree->copyGC, Tree_HeaderLeft(tree), y,
+		Tree_HeaderWidth(tree), tree->headerHeight,
+		Tree_HeaderLeft(tree), y);
 
 	Tk_FreePixmap(tree->display, pixmap);
     }
@@ -5043,7 +5043,7 @@ TreeColumn_Bbox(
     if (!tree->showHeader || !TreeColumn_Visible(column))
 	return -1;
 
-    *y = tree->inset;
+    *y = Tree_HeaderTop(tree);
     *h = Tree_HeaderHeight(tree);
 
     if (column == tree->columnTail) {
@@ -5154,7 +5154,7 @@ Tree_HeaderUnderPoint(
     width = Tk_Width(tkwin) - left;
 done:
     (*x_) = x - left;
-    (*y_) = y - tree->inset;
+    (*y_) = y - Tree_HeaderTop(tree);
     (*w) = width;
     (*h) = Tree_HeaderHeight(tree);
     return column;
