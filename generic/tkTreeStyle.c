@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.60 2006/11/10 22:34:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.61 2006/11/12 05:39:23 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4809,11 +4809,6 @@ TreeElementCmd(
 	    Element *elem;
 	    int i;
 
-	    if (objc < 3)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "?name ...?");
-		return TCL_ERROR;
-	    }
 	    for (i = 3; i < objc; i++)
 	    {
 		if (Element_FromObj(tree, objv[i], &elem) != TCL_OK)
@@ -4831,6 +4826,11 @@ TreeElementCmd(
 	    Tcl_HashEntry *hPtr;
 	    Element *elem;
 
+	    if (objc != 3)
+	    {
+		Tcl_WrongNumArgs(interp, 3, objv, NULL);
+		return TCL_ERROR;
+	    }
 	    listObj = Tcl_NewListObj(0, NULL);
 	    hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
 	    while (hPtr != NULL)
