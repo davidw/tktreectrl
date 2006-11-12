@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.20 2006/11/01 02:03:21 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.21 2006/11/12 05:48:22 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -61,7 +61,7 @@ proc DemoExplorerAux {scriptDir scriptFile} {
 
 	set Explorer(scriptDir) $scriptDir
 	set Explorer(scriptFile) $scriptFile
-	bind $T <Double-ButtonPress-1> {
+	bind DemoExplorer <Double-ButtonPress-1> {
 		ExplorerDoubleButton1 %W %x %y
 	}
 
@@ -232,7 +232,7 @@ proc DemoExplorerDetails {} {
 	set ::SortColumn name
 	$T notify bind $T <Header-invoke> { ExplorerHeaderInvoke %T %C }
 
-	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoExplorer TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
@@ -432,7 +432,7 @@ proc DemoExplorerLargeIcons {} {
 	}
 	$T item element configure active C0 elemTxt -lines 3
 
-	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoExplorer TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
@@ -577,7 +577,7 @@ proc DemoExplorerList {} {
 
 	$T activate [$T item firstchild root]
 
-	bindtags $T [list $T TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
+	bindtags $T [list $T DemoExplorer TreeCtrlFileList TreeCtrl [winfo toplevel $T] all]
 
 	return
 }
