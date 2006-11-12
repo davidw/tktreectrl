@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.49 2006/11/05 06:44:53 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.50 2006/11/12 05:49:18 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -514,6 +514,17 @@ proc ToggleStyleEditorWindow {} {
 MakeSourceWindow
 MakeMenuBar
 
+# http://wiki.tcl.tk/950
+proc sbset {sb first last} {
+    if {$first <= 0 && $last >= 1} {
+	grid remove $sb
+    } else {
+	grid $sb
+    }
+    $sb set $first $last
+    return
+}
+
 proc TreePlusScrollbarsInAFrame {f h v} {
     frame $f -borderwidth 1 -relief sunken
     switch -- $::thisPlatform {
@@ -538,13 +549,13 @@ proc TreePlusScrollbarsInAFrame {f h v} {
     if {$h} {
 	scrollbar $f.sh -orient horizontal -command "$f.t xview"
 	#		$f.t configure -xscrollcommand "$f.sh set"
-	$f.t notify bind $f.sh <Scroll-x> { %W set %l %u }
+	$f.t notify bind $f.sh <Scroll-x> { sbset %W %l %u }
 	bind $f.sh <ButtonPress-1> "focus $f.t"
     }
     if {$v} {
 	scrollbar $f.sv -orient vertical -command "$f.t yview"
 	#		$f.t configure -yscrollcommand "$f.sv set"
-	$f.t notify bind $f.sv <Scroll-y> { %W set %l %u }
+	$f.t notify bind $f.sv <Scroll-y> { sbset %W %l %u }
 	bind $f.sv <ButtonPress-1> "focus $f.t"
     }
     grid columnconfigure $f 0 -weight 1
@@ -608,19 +619,19 @@ proc MakeMainWindow {} {
     panedwindow .pw1 -orient vertical -borderwidth 0
 
     # Tree + scrollbar: demos
-    TreePlusScrollbarsInAFrame .f1 0 1
+    TreePlusScrollbarsInAFrame .f1 1 1
     .f1.t configure -showbuttons no -showlines no -showroot no -height 100
     .f1.t column create -text "List of Demos" -expand yes -button no -tags C0
     .f1.t configure -treecolumn C0
 
     # Tree + scrollbar: styles + elements in list
-    TreePlusScrollbarsInAFrame .f4 0 1
+    TreePlusScrollbarsInAFrame .f4 1 1
     .f4.t configure -showlines $::ShowLines -showroot no -height 140
     .f4.t column create -text "Elements and Styles" -expand yes -button no -tags C0
     .f4.t configure -treecolumn C0
 
     # Tree + scrollbar: styles + elements in selected item
-    TreePlusScrollbarsInAFrame .f3 0 1
+    TreePlusScrollbarsInAFrame .f3 1 1
     .f3.t configure -showlines $::ShowLines -showroot no
     .f3.t column create -text "Styles in Item" -expand yes -button no -tags C0
     .f3.t configure -treecolumn C0
