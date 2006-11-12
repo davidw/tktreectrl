@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.62 2006/11/10 22:26:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.63 2006/11/12 05:47:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2186,17 +2186,18 @@ Column_Config(
     }
 
     if (mask & COLU_CONF_ITEMBG) {
-	/* Set max -itembackground */
-	tree->columnBgCnt = 0;
-	walk = tree->columns;
-	while (walk != NULL) {
-	    if (walk->itemBgCount > tree->columnBgCnt)
-		tree->columnBgCnt = walk->itemBgCount;
-	    walk = walk->next;
+	if (!createFlag) {
+	    /* Set max -itembackground */
+	    tree->columnBgCnt = 0;
+	    walk = tree->columns;
+	    while (walk != NULL) {
+		if (walk->visible) {
+		    if (walk->itemBgCount > tree->columnBgCnt)
+			tree->columnBgCnt = walk->itemBgCount;
+		}
+		walk = walk->next;
+	    }
 	}
-	if (createFlag)
-	    if (column->itemBgCount > tree->columnBgCnt)
-		tree->columnBgCnt = column->itemBgCount;
 	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
     }
 

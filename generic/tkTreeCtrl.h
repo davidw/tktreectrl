@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.71 2006/11/10 22:26:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.72 2006/11/12 05:47:35 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -791,6 +791,7 @@ extern void Tree_DrawTiledImage(TreeCtrl *tree, Drawable drawable, Tk_Image imag
 #define DINFO_REDO_INCREMENTS 0x1000
 #define DINFO_REDO_COLUMN_WIDTH 0x2000
 #define DINFO_REDO_SELECTION 0x4000
+#define DINFO_DRAW_WHITESPACE 0x8000
 extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
 
 extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);

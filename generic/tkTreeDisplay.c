@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.60 2006/11/10 22:26:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.61 2006/11/12 05:47:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -117,6 +117,9 @@ struct TreeDInfo_
     int incrementTop;		/* yScrollIncrement[] index of item at top */
     int incrementLeft;		/* xScrollIncrement[] index of item at left */
     TkRegion wsRgn;		/* Region containing whitespace */
+#ifdef COMPLEX_WHITESPACE
+    int complexWhitespace;
+#endif
     Tcl_HashTable itemVisHash;	/* Table of visible items */
     int requests;		/* Incremented for every call to
 				   Tree_EventuallyRedraw */
@@ -130,6 +133,10 @@ struct TreeDInfo_
 				 * offset and height of each ReallyVisible
 				 * item for displaying locked columns. */
 };
+
+#ifdef COMPLEX_WHITESPACE
+static int ComplexWhitespace(TreeCtrl *tree);
+#endif
 
 /*========*/
 
@@ -677,6 +684,9 @@ Tree_TotalWidth(
     if (tree->totalWidth >= 0)
 	return tree->totalWidth;
 
+    if (dInfo->rangeFirst == NULL)
+	return tree->totalWidth = Tree_WidthOfColumns(tree);
+
     tree->totalWidth = 0;
     range = dInfo->rangeFirst;
     while (range != NULL) {
@@ -1080,7 +1090,9 @@ RItemsToIncrementsX(
     dInfo->xScrollIncrements = (int *) ckalloc(size * sizeof(int));
     dInfo->xScrollIncrements[dInfo->xScrollIncrementCount++] = 0;
 
-    if (rangeFirst->next == NULL) {
+    if (rangeFirst == NULL) {
+	/* Only the column headers are shown. */
+    } else if (rangeFirst->next == NULL) {
 	/* A single horizontal range is easy. Add one increment for the
 	 * left edge of each item. */
 	rItem = rangeFirst->first;
@@ -3539,7 +3551,9 @@ Range_RedoIfNeeded(
 	dInfo->flags &= ~DINFO_REDO_RANGES;
 
 #ifdef COMPLEX_WHITESPACE
-	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+	if (ComplexWhitespace(tree)) {
+	    dInfo->flags |= DINFO_DRAW_WHITESPACE;
+	}
 #endif
 
 	/* Do this after clearing REDO_RANGES to prevent infinite loop */
@@ -3809,8 +3823,13 @@ ScrollHorizontalSimple(
     if (dInfo->xOrigin == tree->xOrigin)
 	return;
 
+    /* Only column headers are visible. */
+    if (dInfo->rangeFirst == NULL)
+	return;
+
     if (dInfo->empty)
 	return;
+
     minX = dInfo->bounds[0];
     minY = dInfo->bounds[1];
     maxX = dInfo->bounds[2];
@@ -3928,8 +3947,13 @@ ScrollVerticalSimple(
 	dItem->oldY = dItem->y;
     }
 
-    if (!Tree_AreaBbox(tree, TREE_AREA_CONTENT, &minX, &minY, &maxX, &maxY))
+    if (dInfo->empty)
 	return;
+
+    minX = dInfo->bounds[0];
+    minY = dInfo->bounds[1];
+    maxX = dInfo->bounds[2];
+    maxY = dInfo->bounds[3];
 
     offset = dInfo->yOrigin - tree->yOrigin;
 
@@ -4398,13 +4422,23 @@ CalcWhiteSpaceRegion(
     maxX = dInfo->bounds[2];
     maxY = dInfo->bounds[3];
 
+    /* Only the header is visible. */
+    if (dInfo->rangeFirst == NULL) {
+	rect.x = minX;
+	rect.y = minY;
+	rect.width = maxX - rect.x;
+	rect.height = maxY - rect.y;
+	TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
+	return wsRgn;
+    }
+
     if (tree->vertical) {
 	/* Erase area to right of last Range */
 	if (x + Tree_TotalWidth(tree) < maxX) {
 	    rect.x = x + Tree_TotalWidth(tree);
 	    rect.y = minY;
 	    rect.width = maxX - rect.x;
-	    rect.height = maxY - minY;
+	    rect.height = maxY - rect.y;
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
     } else {
@@ -4412,7 +4446,7 @@ CalcWhiteSpaceRegion(
 	if (y + Tree_TotalHeight(tree) < maxY) {
 	    rect.x = minX;
 	    rect.y = y + Tree_TotalHeight(tree);
-	    rect.width = maxX - minX;
+	    rect.width = maxX - rect.x;
 	    rect.height = maxY - rect.y;
 	    TkUnionRectWithRegion(&rect, wsRgn, wsRgn);
 	}
@@ -4861,7 +4895,7 @@ DrawWhitespace(
 	}
 
 	/* Draw below non-locked columns. */
-	if (!dInfo->empty && dInfo->rangeFirst != NULL) {
+	if (!dInfo->empty && Tree_TotalWidth(tree)/* && dInfo->rangeFirst != NULL */) {
 	    DrawWhitespaceBelowItem(tree, drawable, COLUMN_LOCK_NONE,
 		    dInfo->bounds, x, top, dirtyRgn, columnRgn,
 		    height, index);
@@ -5096,6 +5130,9 @@ Tree_Display(
     int count;
     int numCopy = 0, numDraw = 0;
     TkRegion wsRgnNew, wsRgnDif;
+#ifdef COMPLEX_WHITESPACE
+    int complexWhitespace;
+#endif
     XRectangle wsBox;
     int requests;
 
@@ -5124,54 +5161,46 @@ displayRetry:
 	dInfo->flags &= ~(DINFO_REDO_SELECTION);
     }
 
-    /* A column was created or deleted */
-    if (dInfo->flags & DINFO_REDO_COLUMN_WIDTH) {
+    /* DINFO_REDO_COLUMN_WIDTH  - A column was created or deleted. */
+    /* DINFO_CHECK_COLUMN_WIDTH - The width of one or more columns
+    *				  *might* have changed. */
+    if (dInfo->flags & (DINFO_REDO_COLUMN_WIDTH | DINFO_CHECK_COLUMN_WIDTH)) {
 	TreeColumn treeColumn = tree->columns;
-	int columnIndex = 0;
+	ColumnInfo *cinfo;
+	int force = (dInfo->flags & DINFO_REDO_COLUMN_WIDTH) != 0;
+	int changed = force;
 
 	if (dInfo->columnsSize < tree->columnCount) {
 	    dInfo->columnsSize = tree->columnCount + 10;
 	    dInfo->columns = (ColumnInfo *) ckrealloc((char *) dInfo->columns,
 		    sizeof(ColumnInfo) * dInfo->columnsSize);
 	}
+
+	/* Set max -itembackground as well. */
+	tree->columnBgCnt = 0;
+
+	cinfo = dInfo->columns;
 	while (treeColumn != NULL) {
-	    dInfo->columns[columnIndex].column = treeColumn;
-	    dInfo->columns[columnIndex].offset = TreeColumn_Offset(treeColumn);
-	    dInfo->columns[columnIndex++].width = TreeColumn_UseWidth(treeColumn);
+	    cinfo->column = treeColumn;
+	    cinfo->offset = TreeColumn_Offset(treeColumn);
+	    if (force || (cinfo->width != TreeColumn_UseWidth(treeColumn))) {
+		cinfo->width = TreeColumn_UseWidth(treeColumn);
+		changed = TRUE;
+	    }
+	    if (TreeColumn_Visible(treeColumn) &&
+		    (TreeColumn_BackgroundCount(treeColumn) > tree->columnBgCnt))
+		tree->columnBgCnt = TreeColumn_BackgroundCount(treeColumn);
+	    ++cinfo;
 	    treeColumn = TreeColumn_Next(treeColumn);
 	}
 	dInfo->flags &= ~(DINFO_REDO_COLUMN_WIDTH | DINFO_CHECK_COLUMN_WIDTH);
-	dInfo->flags |=
-	    DINFO_INVALIDATE |
-	    DINFO_OUT_OF_DATE |
-	    DINFO_REDO_RANGES |
-	    DINFO_DRAW_HEADER;
-    }
-    /* The width of one or more columns *might* have changed */
-    if (dInfo->flags & DINFO_CHECK_COLUMN_WIDTH) {
-	TreeColumn treeColumn = tree->columns;
-	int columnIndex = 0;
-
-	if (dInfo->columnsSize < tree->columnCount) {
-	    dInfo->columnsSize = tree->columnCount + 10;
-	    dInfo->columns = (ColumnInfo *) ckrealloc((char *) dInfo->columns,
-		    sizeof(ColumnInfo) * dInfo->columnsSize);
+	if (changed) {
+	    dInfo->flags |=
+		DINFO_INVALIDATE |
+		DINFO_OUT_OF_DATE |
+		DINFO_REDO_RANGES |
+		DINFO_DRAW_HEADER;
 	}
-	while (treeColumn != NULL) {
-	    dInfo->columns[columnIndex].column = treeColumn;
-	    dInfo->columns[columnIndex].offset = TreeColumn_Offset(treeColumn);
-	    if (dInfo->columns[columnIndex].width != TreeColumn_UseWidth(treeColumn)) {
-		dInfo->columns[columnIndex].width = TreeColumn_UseWidth(treeColumn);
-		dInfo->flags |=
-		    DINFO_INVALIDATE |
-		    DINFO_OUT_OF_DATE |
-		    DINFO_REDO_RANGES |
-		    DINFO_DRAW_HEADER;
-	    }
-	    columnIndex++;
-	    treeColumn = TreeColumn_Next(treeColumn);
-	}
-	dInfo->flags &= ~DINFO_CHECK_COLUMN_WIDTH;
     }
     if (dInfo->headerHeight != Tree_HeaderHeight(tree)) {
 	dInfo->headerHeight = Tree_HeaderHeight(tree);
@@ -5237,12 +5266,18 @@ displayRetry:
      *    -itembackground colors change, or a column moves), or
      * c) item/column sizes change (handled by Range_RedoIfNeeded).
      */
-    if (ComplexWhitespace(tree)) {
+    complexWhitespace = ComplexWhitespace(tree);
+    if (complexWhitespace) {
 	if ((dInfo->xOrigin != tree->xOrigin) ||
 		(dInfo->yOrigin != tree->yOrigin) ||
 		(dInfo->flags & DINFO_INVALIDATE)) {
-	    TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+	    dInfo->flags |= DINFO_DRAW_WHITESPACE;
 	}
+    }
+    /* If tree->columnBgCnt was > 0 but is now 0, redraw whitespace. */
+    if (complexWhitespace != dInfo->complexWhitespace) {
+	dInfo->complexWhitespace = complexWhitespace;
+	dInfo->flags |= DINFO_DRAW_WHITESPACE;
     }
 #endif
     /*
@@ -5406,6 +5441,11 @@ displayRetry:
 	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], Tree_BorderRight(tree));
 	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], Tree_ContentBottom(tree));
 	}
+    }
+
+    if (dInfo->flags & DINFO_DRAW_WHITESPACE) {
+	TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+	dInfo->flags &= ~DINFO_DRAW_WHITESPACE;
     }
 
     if (tree->backgroundImage != NULL) {
@@ -6249,8 +6289,8 @@ Tree_RelayoutWindow(
     dInfo->xOrigin = tree->xOrigin;
     dInfo->yOrigin = tree->yOrigin;
 
-    /* Needed if background color changes */
-    TkSubtractRegion(dInfo->wsRgn, dInfo->wsRgn, dInfo->wsRgn);
+    /* Needed if -background color changes */
+    dInfo->flags |= DINFO_DRAW_WHITESPACE;
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	if (dInfo->pixmap == None) {
