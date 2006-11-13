@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.63 2006/11/12 05:47:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.64 2006/11/13 04:45:43 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4724,7 +4724,10 @@ Tree_DrawHeader(
 	column = tree->columnTail;
 	width = maxX - x + column->borderWidth;
 	height = tree->headerHeight;
-	if (tree->useTheme &&
+	if (!column->visible) {
+	    Tk_Fill3DRectangle(tkwin, pixmap, tree->border,
+		    x, y, width, height, 0, TK_RELIEF_FLAT);
+	} else if (tree->useTheme &&
 	    (TreeTheme_DrawHeaderItem(tree, pixmap, 0, 0, x, y, width, height) == TCL_OK)) {
 	} else {
 	    Tk_3DBorder border;
