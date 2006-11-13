@@ -5,10 +5,14 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.61 2006/11/12 05:47:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.62 2006/11/13 04:45:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
+
+/* Window -> Canvas */
+#define W2Cy(y) ((y) + tree->yOrigin)
+#define DW2Cy(y) ((y) + dInfo->yOrigin)
 
 #define COMPLEX_WHITESPACE
 
@@ -1085,10 +1089,8 @@ RItemsToIncrementsX(
     if (totalWidth <= 0 /* dInfo->rangeFirst == NULL */)
 	return;
 
-    /* First increment is zero */
     size = 10;
     dInfo->xScrollIncrements = (int *) ckalloc(size * sizeof(int));
-    dInfo->xScrollIncrements[dInfo->xScrollIncrementCount++] = 0;
 
     if (rangeFirst == NULL) {
 	/* Only the column headers are shown. */
@@ -1103,6 +1105,9 @@ RItemsToIncrementsX(
 	    rItem++;
 	}
     } else {
+	/* First increment is zero */
+	dInfo->xScrollIncrements[dInfo->xScrollIncrementCount++] = 0;
+
 	x1 = 0;
 	while (1) {
 	    x2 = totalWidth;
@@ -1164,10 +1169,8 @@ RItemsToIncrementsY(
     if (totalHeight <= 0 /* dInfo->rangeFirst == NULL */)
 	return;
 
-    /* First increment is zero */
     size = 10;
     dInfo->yScrollIncrements = (int *) ckalloc(size * sizeof(int));
-    dInfo->yScrollIncrements[dInfo->yScrollIncrementCount++] = 0;
 
     /* If only locked columns are visible, we still scroll vertically. */
     rangeFirst = dInfo->rangeFirst;
@@ -1185,6 +1188,9 @@ RItemsToIncrementsY(
 	    rItem++;
 	}
     } else {
+	/* First increment is zero */
+	dInfo->yScrollIncrements[dInfo->yScrollIncrementCount++] = 0;
+
 	y1 = 0;
 	while (1) {
 	    y2 = totalHeight;
@@ -2951,7 +2957,7 @@ UpdateDInfoForRange(
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
 			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_NONE) &&
-			((dItem->oldY & 1) != (y & 1)))
+			((DW2Cy(dItem->oldY) & 1) != (W2Cy(y) & 1)))
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
@@ -3062,7 +3068,7 @@ UpdateDInfoForRange(
 		else if (tree->showLines &&
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
-			((dItem->oldY & 1) != (y & 1)))
+			((DW2Cy(dItem->oldY) & 1) != (W2Cy(y) & 1)))
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
@@ -3370,7 +3376,7 @@ skipLock:
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
 			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_LEFT) &&
-			((dItem->oldY & 1) != (dItem->y & 1))) {
+			((DW2Cy(dItem->oldY) & 1) != (W2Cy(dItem->y) & 1))) {
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
@@ -3409,7 +3415,7 @@ skipLock:
 			(tree->lineStyle == LINE_STYLE_DOT) &&
 			tree->columnTreeVis &&
 			(TreeColumn_Lock(tree->columnTree) == COLUMN_LOCK_RIGHT) &&
-			((dItem->oldY & 1) != (dItem->y & 1))) {
+			((DW2Cy(dItem->oldY) & 1) != (W2Cy(dItem->y) & 1))) {
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* We can't copy the item to its new position unless it
@@ -5410,6 +5416,11 @@ displayRetry:
 
     if (dInfo->flags & DINFO_DRAW_HEADER) {
 	if (Tree_AreaBbox(tree, TREE_AREA_HEADER, &minX, &minY, &maxX, &maxY)) {
+	    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
+		XFillRectangle(tree->display, Tk_WindowId(tkwin),
+			tree->debug.gcDraw, minX, minY, maxX - minX, maxY - minY);
+		DisplayDelay(tree);
+	    }
 	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, Tree_HeaderTop(tree));
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		dInfo->dirty[LEFT] = minX;
@@ -6289,7 +6300,7 @@ Tree_RelayoutWindow(
     dInfo->xOrigin = tree->xOrigin;
     dInfo->yOrigin = tree->yOrigin;
 
-    /* Needed if -background color changes */
+    /* Needed if -background color changes. */
     dInfo->flags |= DINFO_DRAW_WHITESPACE;
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
@@ -6346,7 +6357,6 @@ Tree_FocusChanged(
     )
 {
     TreeDInfo dInfo = tree->dInfo;
-    int redraw = FALSE;
     TreeItem item;
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
@@ -6369,10 +6379,8 @@ Tree_FocusChanged(
 
     if (tree->highlightWidth > 0) {
 	dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
-	redraw = TRUE;
-    }
-    if (redraw)
 	Tree_EventuallyRedraw(tree);
+    }
 }
 
 /*
@@ -6813,8 +6821,7 @@ Tree_InvalidateRegion(
 {
     TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
-    int minX = Tree_BorderLeft(tree), maxX = Tree_BorderRight(tree);
-    int minY = Tree_BorderTop(tree), maxY = Tree_BorderBottom(tree);
+    int minX, minY, maxX, maxY;
     XRectangle rect;
     int x1, x2, y1, y2;
     TkRegion rgn;
@@ -6882,9 +6889,13 @@ Tree_InvalidateRegion(
 
     /* Could check border and highlight separately */
     if (tree->inset > 0) {
+	TkClipBox(region, &rect);
 	x1 = rect.x, x2 = rect.x + rect.width;
 	y1 = rect.y, y2 = rect.y + rect.height;
-	if ((x1 < minX) || (y1 < minY) || (x2 > maxX) || (y2 > maxY)) {
+	if ((x1 < Tree_BorderLeft(tree)) ||
+		(y1 < Tree_BorderTop(tree)) ||
+		(x2 > Tree_BorderRight(tree)) ||
+		(y2 > Tree_BorderBottom(tree))) {
 	    if (tree->highlightWidth > 0)
 		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
 	    if (tree->borderWidth > 0)
