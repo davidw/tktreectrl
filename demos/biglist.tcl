@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.9 2006/10/28 01:24:13 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.10 2006/11/13 04:45:09 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
@@ -126,19 +126,15 @@ if {$::clip} {
 	set BigList(nextWindowId) 0
 	set BigList(prev) ""
 
-	# Create a new window just to get the requested size. This will be the
-	# value of the item -height option for some items.
-	set w [BigListNewWindow $T root]
-	update idletasks
-if {$::clip} {
-	set height [winfo reqheight [lindex [winfo children $w] 0]]
-} else {
-	set height [winfo reqheight $w]
-}
-	# Add 1 pixel for the border
-	incr height
-	set BigList(windowHeight) $height
-	BigListFreeWindow $T $w
+	BigListGetWindowHeight $T
+	if {$::tile} {
+		bind DemoBigList <<ThemeChanged>> {
+			BigListGetWindowHeight .f2.f1.t
+			if {[.f2.f1.t item id {first visible tag info}] ne ""} {
+				.f2.f1.t item conf {tag info} -height $BigList(windowHeight)
+			}
+		}
+	}
 
 	bind DemoBigList <Double-ButtonPress-1> {
 		if {[lindex [%W identify %x %y] 0] eq "header"} {
@@ -164,6 +160,24 @@ if {$::clip} {
 
 	bindtags $T [list $T DemoBigList TreeCtrl [winfo toplevel $T] all]
 
+	return
+}
+
+proc BigListGetWindowHeight {T} {
+	global BigList
+	# Create a new window just to get the requested size. This will be the
+	# value of the item -height option for some items.
+	set w [BigListNewWindow $T root]
+	update idletasks
+if {$::clip} {
+	set height [winfo reqheight [lindex [winfo children $w] 0]]
+} else {
+	set height [winfo reqheight $w]
+}
+	# Add 1 pixel for the border
+	incr height
+	set BigList(windowHeight) $height
+	BigListFreeWindow $T $w
 	return
 }
 
@@ -315,7 +329,7 @@ if {$::clip} {
 		if {$::thisPlatform ne "windows"} {
 			set message [string map {\n ""} $message]
 		}
-		button $w.b3 -text "Anal Probe Wizard..." -command [list tk_messageBox \
+		$::buttonCmd $w.b3 -text "Anal Probe Wizard..." -command [list tk_messageBox \
 			-parent . -message $message -title "Anal Probe 2.0"]
 
 		grid $w.label1 -row 0 -column 0 -sticky w -padx {0 8}

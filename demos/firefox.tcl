@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.15 2006/10/28 01:24:13 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.16 2006/11/13 04:45:09 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -107,10 +107,10 @@ if {$::clip} { $T element configure eWindow -clip yes }
 		$T item element configure $I C0 eText1 -text $category
 if {$::clip} {
 		set wClip [frame $T.clip$I -background red]
-		set b [button $wClip.b$I -text "Clear" -command "" -width 11]
+		set b [$::buttonCmd $wClip.b$I -text "Clear" -command "" -width 11]
 		$T item element configure $I C0 eWindow -window $wClip
 } else {
-		set b [button $T.b$I -text "Clear" -command "" -width 11]
+		set b [$::buttonCmd $T.b$I -text "Clear" -command "" -width 11]
 		$T item element configure $I C0 eWindow -window $b
 }
 		$T item lastchild root $I
@@ -120,8 +120,8 @@ if {$::clip} {
 	set textBg $bg
 
 	if {$::tile} {
-		style configure DemoCheckbutton -background $bg
-		style layout DemoCheckbutton [style layout TCheckbutton]
+		ttk::style configure DemoCheckbutton -background $bg
+		ttk::style layout DemoCheckbutton [ttk::style layout TCheckbutton]
 	}
 
 	# History
@@ -162,7 +162,7 @@ if {$::clip} {
 		Bar is saved to make filling out forms and searching faster."
 	bindtags $f.t1 TextWrapBindTag
 	if {$::tile} {
-		checkbutton $f.cb1 -text "Save information I enter in web page forms and the Search Bar" \
+		$::checkbuttonCmd $f.cb1 -text "Save information I enter in web page forms and the Search Bar" \
 			-variable ::cbvar($f.cb1) -style DemoCheckbutton
 	} else {
 		checkbutton $f.cb1 -background $bg -highlightthickness 0 -text "Save\
@@ -197,7 +197,7 @@ if {$::clip} {
 		details every time you visit."
 	bindtags $fLeft.t1 TextWrapBindTag
 	if {$::tile} {
-		checkbutton $fLeft.cb1 -text "Remember Passwords" \
+		$::checkbuttonCmd $fLeft.cb1 -text "Remember Passwords" \
 			-variable ::cbvar($fLeft.cb1) -style DemoCheckbutton
 	} else {
 		checkbutton $fLeft.cb1 -background $bg -highlightthickness 0 \
@@ -208,8 +208,8 @@ if {$::clip} {
 	pack $fLeft.cb1 -side top -anchor w
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	button $fRight.b1 -text "View Saved Passwords"
-	button $fRight.b2 -text "Change Master Password..."
+	$::buttonCmd $fRight.b1 -text "View Saved Passwords"
+	$::buttonCmd $fRight.b2 -text "Change Master Password..."
 	pack $fRight.b1 -side top -expand yes -fill x
 	pack $fRight.b2 -side top -expand yes -fill x -pady {8 0}
 	pack $fLeft -side left -expand yes -fill x
@@ -285,7 +285,7 @@ if {$::clip} {
 
 	set fLeft [frame $f.fLeft -borderwidth 0 -background $bg]
 	if {$::tile} {
-		checkbutton $fLeft.cb1  -style DemoCheckbutton \
+		$::checkbuttonCmd $fLeft.cb1  -style DemoCheckbutton \
 			-text "Allow sites to set cookies" -variable ::cbvar($fLeft.cb1)
 	} else {
 		checkbutton $fLeft.cb1 -background $bg -highlightthickness 0 \
@@ -293,7 +293,7 @@ if {$::clip} {
 	}
 	set ::cbvar($fLeft.cb1) 1
 	if {$::tile} {
-		checkbutton $fLeft.cb2  -style DemoCheckbutton \
+		$::checkbuttonCmd $fLeft.cb2  -style DemoCheckbutton \
 			-text "for the originating web site only" \
 			-variable ::cbar($fLeft.cb2)
 	} else {
@@ -306,8 +306,8 @@ if {$::clip} {
 	pack $fLeft.cb2 -side top -anchor w -padx {20 0}
 
 	set fRight [frame $f.fRight -borderwidth 0 -background $bg]
-	button $fRight.b1 -text "Exceptions"
-	button $fRight.b2 -text "View Cookies"
+	$::buttonCmd $fRight.b1 -text "Exceptions"
+	$::buttonCmd $fRight.b2 -text "View Cookies"
 	pack $fRight.b1 -side left -padx {0 10}
 	pack $fRight.b2 -side left
 
@@ -420,6 +420,13 @@ if {$::clip} {
 	}
 	bind DemoFirefoxPrivacy <Leave> {
 		DemoFirefoxPrivacyMotion %W %x %y
+	}
+
+	if {$::tile} {
+		bind DemoFirefoxPrivacy <<ThemeChanged>> {
+			ttk::style configure DemoCheckbutton -background #FFFFCC
+			ttk::style layout DemoCheckbutton [ttk::style layout TCheckbutton]
+		}
 	}
 
 	set FirefoxPrivacy(prev) ""

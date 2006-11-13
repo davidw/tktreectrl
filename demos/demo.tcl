@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.50 2006/11/12 05:49:18 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.51 2006/11/13 04:45:09 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -56,16 +56,33 @@ if {[catch {
 }
 
 set tile 0
-set entryCmd ::entry
 catch {
-	package require tile 0.6
-	namespace import -force ::ttk::button ::ttk::checkbutton \
-		ttk::radiobutton
-	# Don't import this, it messes up our edit bindings, and I'm not
-	# sure how to get/set the equivalent -borderwidth, -selectborderwidth
-	# etc options of a TEntry.
-	set ::entryCmd ::ttk::entry
-	set tile 1
+    package require tile 0.7.8
+    namespace export style
+    namespace eval ::tile {
+	namespace export setTheme
+    }
+    namespace eval ::ttk {
+	namespace import ::style
+	namespace import ::tile::setTheme
+    }
+    set tile 1
+}
+if {$tile} {
+    # Don't import ttk::entry, it messes up the edit bindings, and I'm not
+    # sure how to get/set the equivalent -borderwidth, -selectborderwidth
+    # etc options of a TEntry.
+    set entryCmd ::ttk::entry
+    set buttonCmd ::ttk::button
+    set checkbuttonCmd ::ttk::checkbutton
+    set radiobuttonCmd ttk::radiobutton
+    set scrollbarCmd ::ttk::scrollbar
+} else {
+    set entryCmd ::entry
+    set buttonCmd ::button
+    set checkbuttonCmd ::checkbutton
+    set radiobuttonCmd ::radiobutton
+    set scrollbarCmd ::scrollbar
 }
 
 # This gets called if 'package require' won't work during development.
@@ -136,9 +153,9 @@ foreach list [info loaded] {
     break
 }
 if {[info exists env(TREECTRL_LIBRARY)]} {
-	puts "demo.tcl: TREECTRL_LIBRARY=$env(TREECTRL_LIBRARY)"
+    puts "demo.tcl: TREECTRL_LIBRARY=$env(TREECTRL_LIBRARY)"
 } else {
-	puts "demo.tcl: TREECTRL_LIBRARY undefined"
+    puts "demo.tcl: TREECTRL_LIBRARY undefined"
 }
 puts "demo.tcl: treectrl_library=$treectrl_library"
 
@@ -219,8 +236,20 @@ proc MakeMenuBar {} {
     $m2 add command -label "Style Editor" -command ToggleStyleEditorWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
     $m2 add command -label "Magnifier" -command ToggleLoupeWindow
-    $m2 add command -label Quit -command exit
-    $m add cascade -label File -menu $m2
+    $m2 add command -label "Quit" -command exit
+    $m add cascade -label "File" -menu $m2
+
+	if {$::tile} {
+	    set m2 [menu $m.mTheme -tearoff no]
+	    $m add cascade -label "Theme" -menu $m2
+	    foreach theme [lsort -dictionary [ttk::style theme names]] {
+		$m2 add radiobutton -label $theme -command [list ttk::setTheme $theme] \
+		    -variable ::DemoTheme -value $theme
+	    }
+	    $m2 add separator
+	    $m2 add command -label "Inspector" -command ToggleThemeWindow
+    }
+    
     return
 }
 
@@ -453,8 +482,8 @@ proc MakeSourceWindow {} {
     }
     text $f.t -font $font -tabs [font measure $font 1234] -wrap none \
 	-yscrollcommand "$f.sv set" -xscrollcommand "$f.sh set"
-    scrollbar $f.sv -orient vertical -command "$f.t yview"
-    scrollbar $f.sh -orient horizontal -command "$f.t xview"
+    $::scrollbarCmd $f.sv -orient vertical -command "$f.t yview"
+    $::scrollbarCmd $f.sh -orient horizontal -command "$f.t xview"
     pack $f -expand yes -fill both
     grid columnconfigure $f 0 -weight 1
     grid rowconfigure $f 0 -weight 1
@@ -511,6 +540,107 @@ proc ToggleStyleEditorWindow {} {
     return
 }
 
+proc MakeThemeWindow {} {
+    set w [toplevel .theme]
+    wm withdraw $w
+#    wm transient $w .
+    wm title $w "TkTreeCtrl Themes"
+
+    set m [menu $w.menubar]
+    $w configure -menu $m
+    set m1 [menu $m.m1 -tearoff 0]
+    $m1 add command -label "Set List" -command SetThemeWindow
+    $m add cascade -label "Theme" -menu $m1
+
+    TreePlusScrollbarsInAFrame $w.f 1 1
+    pack $w.f -expand yes -fill both
+
+    set T $w.f.t
+
+    $T configure -showheader no -showroot no -showrootlines no -height 300
+    $T column create -tags C0
+    $T configure -treecolumn C0
+
+    $T element create e1 text -fill [list $::SystemHighlightText {selected focus}]
+    $T element create e3 rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \
+	-showfocus yes
+
+    set S [$T style create s1]
+    $T style elements $S {e3 e1}
+    $T style layout $S e3 -union [list e1] -ipadx 1 -ipady {0 1}
+
+    $T column configure C0 -itemstyle s1
+
+    SetThemeWindow
+
+    wm protocol $w WM_DELETE_WINDOW "ToggleThemeWindow"
+
+    return
+}
+proc ToggleThemeWindow {} {
+    set w .theme
+    if {![winfo exists $w]} {
+	MakeThemeWindow
+    }
+    if {[winfo ismapped $w]} {
+	wm withdraw $w
+    } else {
+	wm deiconify $w
+    }
+    return
+}
+proc SetThemeWindow {} {
+    set w .theme
+    set T $w.f.t
+
+    $T item delete all
+    #
+    # Themes
+    #
+    foreach theme [lsort -dictionary [ttk::style theme names]] {
+	set I [$T item create -button yes -open no -tags theme -parent root]
+	$T item text $I C0 $theme
+	ttk::style theme settings $theme {
+	    set I2 [$T item create -button yes -open no -parent $I]
+	    $T item text $I2 C0 ELEMENTS
+	    #
+	    # Elements
+	    #
+	    foreach element [lsort -dictionary [ttk::style element names]] {
+		#
+		# Element options
+		#
+		set options [ttk::style element options $element]
+		set I3 [$T item create -button [llength $options] -open no -tags element -parent $I2]
+		$T item text $I3 C0 $element
+		foreach option [lsort -dictionary $options] {
+		    set I4 [$T item create -open no -tags {element option} -parent $I3]
+		    $T item text $I4 C0 $option
+		}
+	    }
+	    #
+	    # Styles
+	    #
+	    set I2 [$T item create -button yes -open no -parent $I]
+	    $T item text $I2 C0 STYLES
+	    set styles [list "."] ; # [ttk::style names] please!
+	    foreach style [lsort -dictionary $styles] {
+		#
+		# Style options
+		#
+		set cfg [ttk::style configure $style]
+		set I3 [$T item create -button [llength $cfg] -open no -tags style -parent $I2]
+		$T item text $I3 C0 $style
+		foreach {option value} $cfg {
+		    set I4 [$T item create -open no -tags {style option} -parent $I3]
+		    $T item text $I4 C0 "$option $value"
+		}
+	    }
+	}
+    }
+    return
+}
+
 MakeSourceWindow
 MakeMenuBar
 
@@ -526,7 +656,11 @@ proc sbset {sb first last} {
 }
 
 proc TreePlusScrollbarsInAFrame {f h v} {
-    frame $f -borderwidth 1 -relief sunken
+	if {$::tile} {
+	    frame $f -borderwidth 0
+	} else {
+		frame $f -borderwidth 1 -relief sunken
+    }
     switch -- $::thisPlatform {
 	macintosh {
 	    set font {Geneva 9}
@@ -545,15 +679,16 @@ proc TreePlusScrollbarsInAFrame {f h v} {
     }
     treectrl $f.t -highlightthickness 0 -borderwidth 0 -font $font
     $f.t configure -xscrollincrement 20
-    $f.t debug configure -enable no -display no
+    $f.t debug configure -enable no -display yes -erasecolor pink \
+	-drawcolor orange -displaydelay 30 -textlayout 0 -data 0
     if {$h} {
-	scrollbar $f.sh -orient horizontal -command "$f.t xview"
+	$::scrollbarCmd $f.sh -orient horizontal -command "$f.t xview"
 	#		$f.t configure -xscrollcommand "$f.sh set"
 	$f.t notify bind $f.sh <Scroll-x> { sbset %W %l %u }
 	bind $f.sh <ButtonPress-1> "focus $f.t"
     }
     if {$v} {
-	scrollbar $f.sv -orient vertical -command "$f.t yview"
+	$::scrollbarCmd $f.sv -orient vertical -command "$f.t yview"
 	#		$f.t configure -yscrollcommand "$f.sv set"
 	$f.t notify bind $f.sv <Scroll-y> { sbset %W %l %u }
 	bind $f.sv <ButtonPress-1> "focus $f.t"
@@ -644,11 +779,11 @@ proc MakeMainWindow {} {
     # Tree + scrollbars
     TreePlusScrollbarsInAFrame .f2.f1 1 1
     .f2.f1.t configure -indent 19
-    .f2.f1.t debug configure -enable no -display yes -erasecolor pink \
-	-drawcolor orange -displaydelay 30
 
     # Give it a big border to debug drawing
-    .f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
+    if {!$::tile} {
+	.f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
+    }
 
     grid columnconfigure .f2 0 -weight 1
     grid rowconfigure .f2 0 -weight 1
@@ -1275,8 +1410,8 @@ proc DemoClear {} {
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
 	-indent 19 -defaultstyle {} -backgroundimage "" \
-	-showrootlines yes -minitemheight 0 -borderwidth 6 \
-	-highlightthickness 3 -usetheme yes -cursor {} \
+	-showrootlines yes -minitemheight 0 -borderwidth [expr {$::tile ? 0 : 6}] \
+	-highlightthickness [expr {$::tile ? 0 : 3}] -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
 	-font [.f4.t cget -font]
 
