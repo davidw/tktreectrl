@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.85 2006/11/10 22:27:34 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.86 2006/11/15 23:52:13 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -60,7 +60,6 @@ static CONST char *lineStyleST[] = {
 static CONST char *orientStringTable[] = {
     "horizontal", "vertical", (char *) NULL
 };
-
 extern Tk_ObjCustomOption columnCO_NOT_TAIL;
 
 static Tk_OptionSpec optionSpecs[] = {
@@ -995,7 +994,6 @@ static int TreeWidgetCmd(
 	case COMMAND_RANGE:
 	{
 	    TreeItem item, itemFirst, itemLast;
-	    int indexFirst, indexLast;
 	    Tcl_Obj *listObj;
 
 	    if (objc != 4) {
@@ -1006,21 +1004,8 @@ static int TreeWidgetCmd(
 		goto error;
 	    if (TreeItem_FromObj(tree, objv[3], &itemLast, IFO_NOT_NULL) != TCL_OK)
 		goto error;
-	    if (TreeItem_RootAncestor(tree, itemFirst) !=
-		    TreeItem_RootAncestor(tree, itemLast)) {
-		FormatResult(interp,
-			"item %s%d and item %s%d don't share a common ancestor",
-			tree->itemPrefix, TreeItem_GetID(tree, itemFirst),
-			tree->itemPrefix, TreeItem_GetID(tree, itemLast));
+	    if (TreeItem_FirstAndLast(tree, &itemFirst, &itemLast) == 0)
 		goto error;
-	    }
-	    TreeItem_ToIndex(tree, itemFirst, &indexFirst, NULL);
-	    TreeItem_ToIndex(tree, itemLast, &indexLast, NULL);
-	    if (indexFirst > indexLast) {
-		item = itemFirst;
-		itemFirst = itemLast;
-		itemLast = item;
-	    }
 	    listObj = Tcl_NewListObj(0, NULL);
 	    item = itemFirst;
 	    while (item != NULL) {
