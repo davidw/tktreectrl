@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.51 2006/11/13 04:45:09 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.52 2006/11/15 23:50:08 treectrl Exp $
 
 set VERSION 2.1.1
 
@@ -56,6 +56,7 @@ if {[catch {
 }
 
 set tile 0
+set tileFull 0 ; # 1 if using tile-aware treectrl
 catch {
     package require tile 0.7.8
     namespace export style
@@ -239,15 +240,15 @@ proc MakeMenuBar {} {
     $m2 add command -label "Quit" -command exit
     $m add cascade -label "File" -menu $m2
 
-	if {$::tile} {
-	    set m2 [menu $m.mTheme -tearoff no]
-	    $m add cascade -label "Theme" -menu $m2
-	    foreach theme [lsort -dictionary [ttk::style theme names]] {
-		$m2 add radiobutton -label $theme -command [list ttk::setTheme $theme] \
-		    -variable ::DemoTheme -value $theme
-	    }
-	    $m2 add separator
-	    $m2 add command -label "Inspector" -command ToggleThemeWindow
+    if {$::tile} {
+	set m2 [menu $m.mTheme -tearoff no]
+	$m add cascade -label "Theme" -menu $m2
+	foreach theme [lsort -dictionary [ttk::style theme names]] {
+	    $m2 add radiobutton -label $theme -command [list ttk::setTheme $theme] \
+		-variable ::DemoTheme -value $theme
+	}
+	$m2 add separator
+	$m2 add command -label "Inspector" -command ToggleThemeWindow
     }
     
     return
@@ -656,10 +657,10 @@ proc sbset {sb first last} {
 }
 
 proc TreePlusScrollbarsInAFrame {f h v} {
-	if {$::tile} {
-	    frame $f -borderwidth 0
-	} else {
-		frame $f -borderwidth 1 -relief sunken
+    if {$::tileFull} {
+	frame $f -borderwidth 0
+    } else {
+	frame $f -borderwidth 1 -relief sunken
     }
     switch -- $::thisPlatform {
 	macintosh {
@@ -679,6 +680,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
     }
     treectrl $f.t -highlightthickness 0 -borderwidth 0 -font $font
     $f.t configure -xscrollincrement 20
+    $f.t configure -itemprefix item# -columnprefix column#
     $f.t debug configure -enable no -display yes -erasecolor pink \
 	-drawcolor orange -displaydelay 30 -textlayout 0 -data 0
     if {$h} {
@@ -781,7 +783,7 @@ proc MakeMainWindow {} {
     .f2.f1.t configure -indent 19
 
     # Give it a big border to debug drawing
-    if {!$::tile} {
+    if {!$::tileFull} {
 	.f2.f1.t configure -borderwidth 6 -relief ridge -highlightthickness 3
     }
 
@@ -992,6 +994,8 @@ proc MakeHeaderPopup {T} {
     $m2 add radiobutton -label "Right" -variable Popup(lock) -value right \
 	-command {$Popup(T) column configure $Popup(column) -lock right}
 
+    $m add checkbutton -label "Resize" -variable Popup(resize) \
+	-command {$Popup(T) column configure $Popup(column) -resize $Popup(resize)}
     $m add checkbutton -label "Squeeze" -variable Popup(squeeze) \
 	-command {$Popup(T) column configure $Popup(column) -squeeze $Popup(squeeze)}
     $m add checkbutton -label "Tree Column" -variable Popup(treecolumn) \
@@ -1026,6 +1030,7 @@ proc ShowPopup {T x y X Y} {
 	    set Popup(arrow,gravity) [$T column cget $Popup(column) -arrowgravity]
 	    set Popup(button) [$T column cget $Popup(column) -button]
 	    set Popup(expand) [$T column cget $Popup(column) -expand]
+	    set Popup(resize) [$T column cget $Popup(column) -resize]
 	    set Popup(squeeze) [$T column cget $Popup(column) -squeeze]
 	    set Popup(justify) [$T column cget $Popup(column) -justify]
 	    set Popup(lock) [$T column cget $Popup(column) -lock]
@@ -1410,8 +1415,8 @@ proc DemoClear {} {
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
 	-indent 19 -defaultstyle {} -backgroundimage "" \
-	-showrootlines yes -minitemheight 0 -borderwidth [expr {$::tile ? 0 : 6}] \
-	-highlightthickness [expr {$::tile ? 0 : 3}] -usetheme yes -cursor {} \
+	-showrootlines yes -minitemheight 0 -borderwidth [expr {$::tileFull ? 0 : 6}] \
+	-highlightthickness [expr {$::tileFull ? 0 : 3}] -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
 	-font [.f4.t cget -font]
 
