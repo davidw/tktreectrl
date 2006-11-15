@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.32 2006/11/10 23:02:55 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.33 2006/11/15 23:54:10 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -261,7 +261,7 @@ proc ::TreeCtrl::CursorAction {w x y} {
 	if {$side eq "left"} {
 	    if {[$w column compare $column == tail]} {
 		set column [$w column id "last visible lock none"]
-		if {$column ne ""} {
+		if {$column ne "" && [$w column cget $column -resize]} {
 		    return "column resize $column"
 		}
 		# Can't -resize or -button the tail column
@@ -497,7 +497,6 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
 # y		Window y coord.
 
 proc ::TreeCtrl::DoubleButton1 {w x y} {
-
 
     set id [$w identify $x $y]
     if {$id eq ""} {
