@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.87 2006/11/10 22:31:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.88 2006/11/15 23:53:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -7178,6 +7178,8 @@ TreeItemCmd(
 	    Tcl_Obj *listObj;
 	    TreeItem parent = item->parent;
 
+	    if (parent == NULL)
+		break; /* empty list */
 	    listObj = Tcl_NewListObj(0, NULL);
 	    while (parent != NULL) {
 		Tcl_ListObjAppendElement(interp, listObj,
