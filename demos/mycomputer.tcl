@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: mycomputer.tcl,v 1.3 2006/10/28 01:26:03 treectrl Exp $
+# RCS: @(#) $Id: mycomputer.tcl,v 1.4 2006/11/15 23:50:28 treectrl Exp $
 
 proc DemoMyComputer {} {
 
@@ -93,8 +93,8 @@ proc DemoMyComputer {} {
     } {
 	set I [$T item create]
 	if {$type eq ""} {
-	    $T item style set $I 0 styHeader
-	    $T item span $I 0 5
+	    $T item style set $I first styHeader
+	    $T item span $I first [$T column count]
 	    # The headers are disabled so they can't be selected and
 	    # keyboard navigation skips over them.
 	    $T item enabled $I false

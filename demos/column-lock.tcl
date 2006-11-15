@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.5 2006/11/05 06:50:34 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.6 2006/11/15 23:48:48 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -128,10 +128,10 @@ proc DemoColumnLock {} {
     $T style layout labelR4 labelR4.rect -detach yes -iexpand xy
     $T style layout labelR4 labelR4.img -expand news -padx 2 -pady 2
 
-    $T item style set {range 1 10} last labelR1
-    $T item style set {range 11 20} last labelR2
-    $T item style set {range 21 30} last labelR3
-    $T item style set {range 31 40} last labelR4
+    $T item style set {range R1 R10} last labelR1
+    $T item style set {range R11 R20} last labelR2
+    $T item style set {range R21 R30} last labelR3
+    $T item style set {range R31 R40} last labelR4
 
     #
     # Create styles for the non-locked columns
@@ -167,18 +167,18 @@ proc DemoColumnLock {} {
     $T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
     $T style layout windowStyle windowStyle.window -iexpand x -padx 2 -pady {0 2}
 
-    $T item style set "list {2 22}" "all lock none" windowStyle
+    $T item style set "list {R2 R22}" "all lock none" windowStyle
 
     foreach C [$T column id "lock none !tail"] {
-	set ::DemoColumnLock(C$C) "C$C"
+	set ::DemoColumnLock(C$C) [$T column cget $C -tags]
 
-	set I 2
+	set I R2
 	set clip [frame $T.clipR${I}C$C -borderwidth 0]
 	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
 	$T item element configure $I $C windowStyle.window -window $clip + \
 	    windowStyle.text -textvariable ::DemoColumnLock(C$C)
 
-	set I 22
+	set I R22
 	set clip [frame $T.clipR${I}C$C -borderwidth 0]
 	$::entryCmd $clip.e -width 4 -textvariable ::DemoColumnLock(C$C)
 	$T item element configure $I $C windowStyle.window -window $clip + \
