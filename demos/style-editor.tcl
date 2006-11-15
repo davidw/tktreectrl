@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.11 2006/11/09 00:17:35 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.12 2006/11/15 23:50:59 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -27,7 +27,7 @@ proc StyleEditor::Init {Tdemo} {
 
     panedwindow $w.pwH.pwV -orient vertical -borderwidth 0
 
-    TreePlusScrollbarsInAFrame $w.pwH.pwV.styleList 0 1
+    TreePlusScrollbarsInAFrame $w.pwH.pwV.styleList 1 1
     set T $w.pwH.pwV.styleList.t
     $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
     $T column create -text "Styles" -expand yes -button no -tags C0
@@ -39,7 +39,7 @@ proc StyleEditor::Init {Tdemo} {
 
     Info styleList $T
 
-    TreePlusScrollbarsInAFrame $w.pwH.pwV.elementList 0 1
+    TreePlusScrollbarsInAFrame $w.pwH.pwV.elementList 1 1
     set T $w.pwH.pwV.elementList.t
     $T configure -showbuttons no -showlines no -showroot no -width 100 -height 200
     $T column create -text "Elements" -expand yes -button no -tags C0
@@ -59,12 +59,12 @@ proc StyleEditor::Init {Tdemo} {
     # Property editor
     #
 
-    TreePlusScrollbarsInAFrame $fRight.propertyList 0 1
+    TreePlusScrollbarsInAFrame $fRight.propertyList 1 1
     set T $fRight.propertyList.t
     $T configure -showbuttons no -showlines no -showroot no
-    $T column create -text "Property" -expand yes -button no -tags property \
+    $T column create -text "Property" -expand yes -button no -tags {C0 property} \
 	-itembackground {#E8E8E8 ""}
-    $T column create -text "Value" -expand yes -button no -tags value \
+    $T column create -text "Value" -expand yes -button no -tags {C1 value} \
 	-itembackground {#E8E8E8 ""}
     $T configure -treecolumn property
 
@@ -81,8 +81,8 @@ proc StyleEditor::Init {Tdemo} {
     set fCanvas [frame $fRight.fCanvas -borderwidth 0]
     set canvas [canvas $fCanvas.canvas -background white \
 	-scrollregion {0 0 0 0} -borderwidth 0 -highlightthickness 0 \
-	-xscrollcommand [list $fCanvas.xscroll set] \
-	-yscrollcommand [list $fCanvas.yscroll set]]
+	-xscrollcommand [list sbset $fCanvas.xscroll] \
+	-yscrollcommand [list sbset $fCanvas.yscroll]]
     scrollbar $fCanvas.xscroll -orient horizontal \
 	-command [list $canvas xview]
     scrollbar $fCanvas.yscroll -orient vertical \
@@ -296,7 +296,7 @@ proc StyleEditor::SetPropertyList {} {
 	$T configure -font [[Info editor,pad].v1 cget -font] \
 	    -minitemheight $height
 
-	$T column configure 0 -itemstyle s1
+	$T column configure C0 -itemstyle s1
     }
 
     $T item delete all
@@ -331,19 +331,20 @@ proc StyleEditor::SetPropertyList {} {
     } {
  	set I [$T item create]
 	if {$header ne ""} {
-	    $T item style set $I 0 sHeader
-	    $T item span $I 0 2
-	    $T item element configure $I 0 e1 -text $header -fill White
+	    $T item style set $I C0 sHeader
+	    $T item span $I C0 2
+	    $T item element configure $I C0 e1 -text $header -fill White
 	    $T item state set $I header
 	    $T item enabled $I false
+	    $T item tag add $I header
 	} else {
-	    $T item style set $I 1 s1
-	    $T item text $I 0 $option 1 [$Tdemo style layout $style $element $option]
+	    $T item style set $I value s1
+	    $T item text $I property $option value [$Tdemo style layout $style $element $option]
 	}
 	$T item lastchild root $I
    }
 
-    $T column configure 0 -width [expr {[$T column neededwidth 0] * 1.0}]
+    $T column configure C0 -width [expr {[$T column neededwidth C0] * 1.0}]
 
     return
 }
@@ -357,10 +358,10 @@ proc StyleEditor::SelectProperty {select deselect} {
 
     if {[llength $deselect] && ($element ne "")} { 
 	set I [lindex $deselect 0]
-	set option [$T item text $I 0]
-	if {[string index $option 0] eq "-"} {
-	    $T item style set $I 1 s1
-	    $T item text $I 1 [$Tdemo style layout $style $element $option]
+	if {[$T item tag expr $I !header]} {
+	    set option [$T item text $I property]
+	    $T item style set $I value s1
+	    $T item text $I value [$Tdemo style layout $style $element $option]
 	}
     }
 
@@ -371,20 +372,20 @@ proc StyleEditor::SelectProperty {select deselect} {
     }
 
     set I [lindex $selection 0]
-    set option [$T item text $I 0]
-    if {[string index $option 0] ne "-"} {
+    if {[$T item tag expr $I header]} {
 	Info selectedOption ""
 	return
     }
+    set option [$T item text $I property]
     Info selectedOption $option
 
-    $T item style set $I 1 sWindow
+    $T item style set $I value sWindow
     switch -- $option {
 	-padx -
 	-pady -
 	-ipadx -
 	-ipady {
-	    $T item element configure $I 1 eWindow -window [Info editor,pad]
+	    $T item element configure $I value eWindow -window [Info editor,pad]
 	    set pad [$Tdemo style layout $style $element $option]
 	    if {[llength $pad] == 2} {
 		Info -pad,1 [lindex $pad 0]
@@ -399,14 +400,14 @@ proc StyleEditor::SelectProperty {select deselect} {
 	}
 	-expand -
 	-sticky {
-	    $T item element configure $I 1 eWindow -window [Info editor,expand]
+	    $T item element configure $I value eWindow -window [Info editor,expand]
 	    set value [$Tdemo style layout $style $element $option]
 	    foreach flag {n s w e} {
 		Info -expand,$flag [expr {[string first $flag $value] != -1}]
 	    }
 	}
 	-iexpand {
-	    $T item element configure $I 1 eWindow -window [Info editor,iexpand]
+	    $T item element configure $I value eWindow -window [Info editor,iexpand]
 	    set value [$Tdemo style layout $style $element $option]
 	    foreach flag {x y n s w e} {
 		Info -iexpand,$flag [expr {[string first $flag $value] != -1}]
@@ -414,11 +415,11 @@ proc StyleEditor::SelectProperty {select deselect} {
 	}
 	-detach -
 	-indent {
-	    $T item element configure $I 1 eWindow -window [Info editor,boolean]
+	    $T item element configure $I value eWindow -window [Info editor,boolean]
 	    Info -boolean [$Tdemo style layout $style $element $option]
 	}
 	-squeeze {
-	    $T item element configure $I 1 eWindow -window [Info editor,squeeze]
+	    $T item element configure $I value eWindow -window [Info editor,squeeze]
 	    set value [$Tdemo style layout $style $element $option]
 	    foreach flag {x y} {
 		Info -squeeze,$flag [expr {[string first $flag $value] != -1}]
@@ -430,7 +431,7 @@ proc StyleEditor::SelectProperty {select deselect} {
 	-minwidth -
 	-width -
 	-maxwidth {
-	    $T item element configure $I 1 eWindow -window [Info editor,pixels]
+	    $T item element configure $I value eWindow -window [Info editor,pixels]
 	    Info -pixels [$Tdemo style layout $style $element $option]
 	    if {[Info -pixels] eq ""} {
 		Info -pixels,empty 1
@@ -454,7 +455,7 @@ proc StyleEditor::MakePadEditor {parent} {
     spinbox $f.v2 -from 0 -to 100 -width 3 \
 	-command {StyleEditor::Sync_pad 2} \
 	-textvariable ::StyleEditor::Info(-pad,2)
-    checkbutton $f.cb -text "Equal" \
+    $::checkbuttonCmd $f.cb -text "Equal" \
 	-command {StyleEditor::Sync_pad_equal} \
 	-variable ::StyleEditor::Info(-pad,equal)
     pack $f.v1 -side left -padx {0 10} -pady 0
@@ -475,7 +476,7 @@ proc StyleEditor::MakeExpandEditor {parent} {
 
     set f [frame $parent.editExpand -borderwidth 0]
     foreach flag {w n e s} {
-	checkbutton $f.$flag -text $flag -width 1 \
+	$::checkbuttonCmd $f.$flag -text $flag -width 1 \
 	    -variable ::StyleEditor::Info(-expand,$flag) \
 	    -command {StyleEditor::Sync_expand}
 	pack $f.$flag -side left -padx 10
@@ -488,7 +489,7 @@ proc StyleEditor::MakeIExpandEditor {parent} {
 
     set f [frame $parent.editIExpand -borderwidth 0]
     foreach flag {x y w n e s} {
-	checkbutton $f.$flag -text $flag -width 1 \
+	$::checkbuttonCmd $f.$flag -text $flag -width 1 \
 	    -variable ::StyleEditor::Info(-iexpand,$flag) \
 	    -command {StyleEditor::Sync_iexpand}
 	pack $f.$flag -side left -padx 10
@@ -504,7 +505,7 @@ proc StyleEditor::MakePixelsEditor {parent} {
 	-command {StyleEditor::Sync_pixels} \
 	-textvariable ::StyleEditor::Info(-pixels) \
 	-validate key -validatecommand {string is integer %P}
-    checkbutton $f.cb -text "Unspecified" \
+    $::checkbuttonCmd $f.cb -text "Unspecified" \
 	-command {StyleEditor::Sync_pixels} \
 	-variable ::StyleEditor::Info(-pixels,empty)
     pack $f.v1 -side left -padx 0 -pady 0
@@ -521,7 +522,7 @@ proc StyleEditor::MakeSqueezeEditor {parent} {
 
     set f [frame $parent.editSqueeze -borderwidth 0]
     foreach flag {x y} {
-	checkbutton $f.$flag -text $flag -width 1 \
+	$::checkbuttonCmd $f.$flag -text $flag -width 1 \
 	    -variable ::StyleEditor::Info(-squeeze,$flag) \
 	    -command {StyleEditor::Sync_squeeze}
 	pack $f.$flag -side left -padx 10
@@ -534,7 +535,7 @@ proc StyleEditor::MakeBooleanEditor {parent} {
 
     set f [frame $parent.editBoolean -borderwidth 0]
     foreach value {yes no} {
-	radiobutton $f.$value -text $value \
+	$::radiobuttonCmd $f.$value -text $value \
 	    -variable ::StyleEditor::Info(-boolean) \
 	    -value $value \
 	    -command {StyleEditor::Sync_boolean}
@@ -711,26 +712,22 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
     # Find a selected item using the style to copy element config info from
     set match ""
     foreach I [$Tdemo selection get] {
-	set C 0
-	foreach S [$Tdemo item style set $I] {
+	foreach S [$Tdemo item style set $I] C [$Tdemo column list] {
 	    if {$S eq $style} {
 		set match $I
 		break
 	    }
-	    incr C
 	}
 	if {$match ne ""} break
     }
     # No selected item uses the current style, look for an unselected item
     if {$match eq ""} {
 	foreach I [$Tdemo item range first last] {
-	    set C 0
-	    foreach S [$Tdemo item style set $I] {
+	    foreach S [$Tdemo item style set $I] C [$Tdemo column list] {
 		if {$S eq $style} {
 		    set match $I
 		    break
 		}
-		incr C
 	    }
 	    if {$match ne ""} break
 	}
