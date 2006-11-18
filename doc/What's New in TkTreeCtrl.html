@@ -1,7 +1,7 @@
 <!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
 <html>
 <head>
-<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.18 2006/11/09 00:07:28 treectrl Exp $ -->
+<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.19 2006/11/18 04:40:10 treectrl Exp $ -->
 
 
 
@@ -10,6 +10,12 @@
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -25,9 +31,18 @@
 
 
 
+
+
+
   
 
 
+  
+  
+  
+  
+  
+  
   
   
   
@@ -55,6 +70,9 @@
 
 
 
+
+
+
 <h1>What's New in TkTreeCtrl 2.2</h1>
 
 
@@ -64,7 +82,13 @@
 
 
 
+
+
+
 <h2>TreeCtrl Configuration Options</h2>
+
+
+
 
 
 
@@ -90,7 +114,13 @@
     
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
 
+
+
+
   <tbody>
+
+
+
 
     <tr>
 
@@ -101,7 +131,13 @@
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204); width: 50%;">Deprecated</th>
+
+
+
 
 
 
@@ -121,7 +157,13 @@ instead</th>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -139,7 +181,13 @@ instead</th>
 
 
 
+
+
+
       <td>-defaultstyle</td>
+
+
+
 
 
 
@@ -150,11 +198,23 @@ instead</th>
 
       <td>The -itemstyle option of a column.</td>
 
+
+
+
     </tr>
 
+
+
+
+  
+  
+  
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -180,6 +240,9 @@ instead</th>
 
 
 
+
+
+
   
 
 
@@ -190,8 +253,17 @@ instead</th>
 
     
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
   <tbody>
+
+
+
     <tr>
+
+
+
 
 
 
@@ -210,8 +282,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -229,7 +307,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -247,11 +331,32 @@ changed</th>
 
 
 
-      <td>The return value is an empty string if the content area is totally obscurred by column headers, borders, and/or locked columns. Typically this will only happen if the window is too small.</td>
+
+
+
+      <td>The return value is an empty string if the
+content area is totally obscurred by column headers, borders, and/or
+locked columns. Typically this will only happen if the window is too
+small.</td>
+
+
+
     </tr>
+
+
+
+  
+  
+  
   </tbody>
 </table>
+
+
+
 <h2>Column Configuration Options</h2>
+
+
+
 
 
 
@@ -269,7 +374,13 @@ changed</th>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -287,6 +398,9 @@ changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204); width: 50%;">Renamed<br>
 
 
@@ -296,7 +410,13 @@ changed</th>
 
 
 
+
+
+
       </th>
+
+
+
 
 
 
@@ -315,6 +435,9 @@ name</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -324,7 +447,13 @@ name</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -342,7 +471,13 @@ name</th>
 
 
 
+
+
+
       <td>-tags</td>
+
+
+
 
 
 
@@ -360,7 +495,13 @@ name</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -378,7 +519,13 @@ name</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -396,6 +543,9 @@ name</th>
 
 
 
+
+
+
     <tr>
 
 
@@ -405,7 +555,13 @@ name</th>
 
 
 
+
+
+
       <td>-lock</td>
+
+
+
 
 
 
@@ -426,7 +582,13 @@ horizontally. Valid values for this option are <span style="font-weight: bold;">
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -437,15 +599,30 @@ horizontally. Valid values for this option are <span style="font-weight: bold;">
 
     <tr>
 
+
+
+
       <td>-itemstyle</td>
+
+
+
 
       <td>Specifies the name of a style to set in this column for
 newly-created items. This option replaces the treectrl option
 -defaultstyle.</td>
 
+
+
+
     </tr>
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -455,6 +632,9 @@ newly-created items. This option replaces the treectrl option
 
 
       <td>-uniform</td>
+
+
+
 
 
 
@@ -474,6 +654,12 @@ For example:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -490,6 +676,9 @@ For example:<br>
 
 
 
+
+
+
 will give columns 0 and 1 the same requested width, whichever is the larger of the two columns. And:<br>
 
 
@@ -498,6 +687,12 @@ will give columns 0 and 1 the same requested width, whichever is the larger of t
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -513,6 +708,9 @@ will give columns 0 and 1 the same requested width, whichever is the larger of t
 
 
 
+
+
+
 will give column 0 twice the maximum of the requested widths of columns 0 and 1. And:<br>
 
 
@@ -520,6 +718,12 @@ will give column 0 twice the maximum of the requested widths of columns 0 and 1.
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -533,7 +737,13 @@ will give column 0 twice the maximum of the requested widths of columns 0 and 1.
 
 
 
+
+
+
 will give column 0 twice the extra space as column 1.</td>
+
+
+
 
 
 
@@ -551,7 +761,13 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -569,6 +785,9 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -578,6 +797,12 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -595,7 +820,13 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
 <h2>Column Command</h2>
+
+
+
 
 
 
@@ -613,6 +844,9 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
   <tbody>
 
 
@@ -622,7 +856,34 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
     <tr>
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">Arguments/Result
+Changed</th>
+      <th style="background-color: rgb(204, 255, 255);">What
+changed</th>
+    </tr>
+    <tr>
+      <td>column count</td>
+      <td>Takes an optional column-description argument; the result is
+the number of columns that match the column description. For example:<br>
+
+      
+      <pre>.t column count visible</pre>
+
+will return the number of columns whose -visible option is true, and:<br>
+
+      
+      <pre>.t column count {tag a^b}</pre>
+
+will return the number of columns with either tag "a" or "b", but not both.</td>
+    </tr>
+    <tr>
+
+
+
 
 
 
@@ -640,7 +901,13 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -658,6 +925,9 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
     <tr>
 
 
@@ -667,7 +937,13 @@ will give column 0 twice the extra space as column 1.</td>
 
 
 
+
+
+
       <td>column tag add</td>
+
+
+
 
 
 
@@ -688,6 +964,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     </tr>
 
 
@@ -697,7 +976,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -715,6 +1000,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     </tr>
 
 
@@ -724,7 +1012,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -742,6 +1036,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     </tr>
 
 
@@ -751,7 +1048,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -769,6 +1072,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     </tr>
 
 
@@ -778,6 +1084,12 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -795,7 +1107,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
 <h2>Item Configuration Options</h2>
+
+
+
 
 
 
@@ -813,6 +1131,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
   <tbody>
 
 
@@ -822,7 +1143,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -840,7 +1167,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -858,6 +1191,9 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
     <tr>
 
 
@@ -867,7 +1203,13 @@ word "tail" in column descriptions. </td>
 
 
 
+
+
+
       <td>-tags</td>
+
+
+
 
 
 
@@ -894,6 +1236,9 @@ found in the <a href="treectrl.html#item_tags">man page</a>.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -903,6 +1248,12 @@ found in the <a href="treectrl.html#item_tags">man page</a>.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -920,7 +1271,13 @@ found in the <a href="treectrl.html#item_tags">man page</a>.</td>
 
 
 
+
+
+
 <h2>Item Command</h2>
+
+
+
 
 
 
@@ -938,6 +1295,9 @@ found in the <a href="treectrl.html#item_tags">man page</a>.</td>
 
 
 
+
+
+
   <tbody>
 
 
@@ -947,7 +1307,13 @@ found in the <a href="treectrl.html#item_tags">man page</a>.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -966,8 +1332,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -985,7 +1357,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -1003,9 +1381,24 @@ changed</th>
 
 
 
-      <td>New option <span style="font-weight: bold;">-visible</span>
-added to return the number of items that are displayed (i.e., those
-whose ancestors are all expanded etc).</td>
+
+
+
+      <td>Takes an optional item-description argument; the result is the number of items that match the item description. For example:<br>
+
+      
+      <pre>.t item count visible</pre>
+
+will return the number of items that are displayed (i.e., those
+whose ancestors are all expanded, -visible options are true, etc), and:<br>
+
+      
+      <pre>.t item count {tag a^b}</pre>
+
+will return the number of items with either tag "a" or "b", but not both.</td>
+
+
+
 
 
 
@@ -1023,6 +1416,9 @@ whose ancestors are all expanded etc).</td>
 
 
 
+
+
+
     <tr>
 
 
@@ -1032,7 +1428,13 @@ whose ancestors are all expanded etc).</td>
 
 
 
+
+
+
       <td>item create</td>
+
+
+
 
 
 
@@ -1051,7 +1453,13 @@ specifies an initial list of tags for created items.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -1069,7 +1477,13 @@ specifies an initial list of tags for created items.</td>
 
 
 
+
+
+
       <td>item id</td>
+
+
+
 
 
 
@@ -1088,6 +1502,12 @@ matches multiple items. For example:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1096,6 +1516,9 @@ matches multiple items. For example:<br>
       
       
       <pre>.t item id all</pre>
+
+
+
 
 
 
@@ -1113,6 +1536,12 @@ will return a list of ids for all items, and:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1121,6 +1550,9 @@ will return a list of ids for all items, and:<br>
       
       
       <pre>.t item id "$item children"</pre>
+
+
+
 
 
 
@@ -1138,6 +1570,9 @@ will return the ids of every child of an item.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -1147,7 +1582,13 @@ will return the ids of every child of an item.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -1165,7 +1606,13 @@ will return the ids of every child of an item.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -1183,6 +1630,9 @@ will return the ids of every child of an item.</td>
 
 
 
+
+
+
     <tr>
 
 
@@ -1192,7 +1642,13 @@ will return the ids of every child of an item.</td>
 
 
 
+
+
+
       <td>item descendants</td>
+
+
+
 
 
 
@@ -1211,7 +1667,13 @@ an item.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -1229,7 +1691,13 @@ an item.</td>
 
 
 
+
+
+
       <td>item enabled</td>
+
+
+
 
 
 
@@ -1250,6 +1718,9 @@ and mouse bindings.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -1259,7 +1730,13 @@ and mouse bindings.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -1277,6 +1754,9 @@ and mouse bindings.</td>
 
 
 
+
+
+
       <td>Add tags to items. For example:<br>
 
 
@@ -1286,6 +1766,12 @@ and mouse bindings.</td>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1294,6 +1780,9 @@ and mouse bindings.</td>
       
       
       <pre>.t item tag add all {a b c}</pre>
+
+
+
 
 
 
@@ -1311,7 +1800,13 @@ will add tags "a", "b" and "c" to every item.<br>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -1329,7 +1824,13 @@ will add tags "a", "b" and "c" to every item.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -1347,6 +1848,9 @@ will add tags "a", "b" and "c" to every item.<br>
 
 
 
+
+
+
       <td>Evaluate a tag expression against items. For example:<br>
 
 
@@ -1356,6 +1860,12 @@ will add tags "a", "b" and "c" to every item.<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1364,6 +1874,9 @@ will add tags "a", "b" and "c" to every item.<br>
       
       
       <pre>.t item tag expr $item a</pre>
+
+
+
 
 
 
@@ -1381,6 +1894,12 @@ returns 1 if&nbsp;an item has tag "a". Also:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1389,6 +1908,9 @@ returns 1 if&nbsp;an item has tag "a". Also:<br>
       
       
       <pre>.t item tag expr $item a||b</pre>
+
+
+
 
 
 
@@ -1406,7 +1928,13 @@ returns 1 if &nbsp;an item has tag "a" or "b".</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -1424,7 +1952,13 @@ returns 1 if &nbsp;an item has tag "a" or "b".</td>
 
 
 
+
+
+
       <td>item tag names</td>
+
+
+
 
 
 
@@ -1443,6 +1977,12 @@ example:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1451,6 +1991,9 @@ example:<br>
       
       
       <pre>.t item tag names $item</pre>
+
+
+
 
 
 
@@ -1468,6 +2011,12 @@ returns the tag list for an item, and:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1476,6 +2025,9 @@ returns the tag list for an item, and:<br>
       
       
       <pre>.t item tag names all</pre>
+
+
+
 
 
 
@@ -1493,7 +2045,13 @@ returns every tag assigned to any item.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -1511,7 +2069,13 @@ returns every tag assigned to any item.</td>
 
 
 
+
+
+
       <td>item tag remove</td>
+
+
+
 
 
 
@@ -1529,6 +2093,12 @@ returns every tag assigned to any item.</td>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -1537,6 +2107,9 @@ returns every tag assigned to any item.</td>
       
       
       <pre>.t item tag remove all {b c}</pre>
+
+
+
 
 
 
@@ -1554,6 +2127,9 @@ will remove tags "b" and "c" from any items that have them.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -1563,6 +2139,12 @@ will remove tags "b" and "c" from any items that have them.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -1573,7 +2155,13 @@ will remove tags "b" and "c" from any items that have them.</td>
   </tbody>
 </table>
 
+
+
+
 <h2>Text Element</h2>
+
+
+
 
 The new option <span style="font-weight: bold;">-underline</span> draws an underline under a single character of the displayed text.<br>
 
@@ -1584,7 +2172,13 @@ The new option <span style="font-weight: bold;">-underline</span> draws an under
 
 
 
+
+
+
 <h2>Window Element</h2>
+
+
+
 
 
 
@@ -1607,7 +2201,13 @@ a window element, you would change this code:<br>
 
 
 
+
+
+
 <pre style="margin-left: 40px;">set canvas [canvas .t.canvas ...]<br>.t item element configure $item $column myElement -window $canvas</pre>
+
+
+
 
 
 
@@ -1625,7 +2225,13 @@ to this:<br>
 
 
 
+
+
+
 <pre style="margin-left: 40px;">set frame [frame .t.clip -borderwidth 0]<br>set canvas [canvas $frame.canvas ...]<br>.t item element configure $item $column myElement -window $frame -clip yes</pre>
+
+
+
 
 
 
@@ -1650,7 +2256,13 @@ demos.
 
 
 
+
+
+
 New keywords were added to allow multiple items to be specified by an <a href="treectrl.html#item_description">item description</a>:<br>
+
+
+
 
 
 
@@ -1668,8 +2280,14 @@ New keywords were added to allow multiple items to be specified by an <a href="t
 
 
 
+
+
+
   <li>The keyword <span style="font-weight: bold;">list</span>
 specifies a list of other item descriptions:
+    
+    
+    
     
     
     
@@ -1686,7 +2304,13 @@ specifies a list of other item descriptions:
 
 
 
+
+
+
   </li>
+
+
+
 
 
 
@@ -1705,7 +2329,13 @@ range</span> command:
     
     
     
+    
+    
+    
     <pre>.t item id "range $first $last"</pre>
+
+
+
 
 
 
@@ -1719,13 +2349,22 @@ range</span> command:
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
 
 New modifiers were added to match multiple items:
 <ul>
+
+
+
 
 
 
@@ -1744,6 +2383,9 @@ ancestors</span> command:
     
     
     
+    
+    
+    
     <pre>.t item id "$item ancestors"</pre>
 
 
@@ -1753,7 +2395,13 @@ ancestors</span> command:
 
 
 
+
+
+
   </li>
+
+
+
 
 
 
@@ -1772,6 +2420,9 @@ children</span> command:
     
     
     
+    
+    
+    
     <pre>.t item id "$item children"</pre>
 
 
@@ -1781,7 +2432,13 @@ children</span> command:
 
 
 
+
+
+
   </li>
+
+
+
 
 
 
@@ -1800,7 +2457,13 @@ descendants</span> command:
     
     
     
+    
+    
+    
     <pre>.t item id "$item descendants"</pre>
+
+
+
 
 
 
@@ -1818,7 +2481,13 @@ descendants</span> command:
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -1836,7 +2505,13 @@ New qualifiers were added to refine which items are matched:<br>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -1851,7 +2526,13 @@ New qualifiers were added to refine which items are matched:<br>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -1864,7 +2545,13 @@ New qualifiers were added to refine which items are matched:<br>
 
 
 
+
+
+
 </div>
+
+
+
 
 
 
@@ -1876,8 +2563,14 @@ New qualifiers were added to refine which items are matched:<br>
 
 
 
+
+
+
   <li>The qualifier <span style="font-weight: bold;">!visible</span>
 matches items that are not displayed:
+    
+    
+    
     
     
     
@@ -1894,7 +2587,13 @@ matches items that are not displayed:
 
 
 
+
+
+
   </li>
+
+
+
 
 
 
@@ -1912,6 +2611,9 @@ matches items that have certain states set (or not set if '!' is used):
     
     
     
+    
+    
+    
     <pre>.t item id "first state&nbsp;{selected !open}" ; # find the first item that is selected and collapsed</pre>
 
 
@@ -1921,7 +2623,13 @@ matches items that have certain states set (or not set if '!' is used):
 
 
 
+
+
+
   </li>
+
+
+
 
 
 
@@ -1939,7 +2647,13 @@ matches items that meet a tag expression:
     
     
     
+    
+    
+    
     <pre>.t item id "$item children tag {a &amp;&amp; !b}" ; # find children of $item that have tag "a" but not tag "b"</pre>
+
+
+
 
 
 
@@ -1957,12 +2671,21 @@ matches items that meet a tag expression:
 
 
 
+
+
+
 </ul>
 
 
 
 
+
+
+
 <br>
+
+
+
 
 
 
@@ -1977,7 +2700,13 @@ may now be followed by a list of qualifiers. For example:<br>
 
 
 
+
+
+
 <pre style="margin-left: 40px;">.t item id "all !visible state myState" ; # find every item that is not displayed with user-defined state "myState"</pre>
+
+
+
 
 
 
@@ -1989,8 +2718,14 @@ qualifiers. For example:<br>
 
 
 
+
+
+
 <div style="margin-left: 40px;">
 <pre>.t item id "!visible state myState" ; # same as the previous example</pre>
+
+
+
 
 
 
@@ -2000,7 +2735,13 @@ qualifiers. For example:<br>
 
 
 
+
+
+
 <h2>Column Descriptions</h2>
+
+
+
 
 
 
@@ -2016,6 +2757,9 @@ match multiple columns.<br>
 
 
 
+
+
+
 New qualifiers <span style="font-weight: bold;">state</span>,
 <span style="font-weight: bold;">tag</span>, <span style="font-weight: bold;">!tail</span> and <span style="font-weight: bold;">!visible</span> can be used
 to restrict which columns are specified.<br>
@@ -2023,7 +2767,13 @@ to restrict which columns are specified.<br>
 
 
 
+
+
+
 The keyword <span style="font-weight: bold;">all</span> may be followed by a list of qualifiers.<br>
+
+
+
 
 
 
@@ -2036,16 +2786,25 @@ qualifiers.
 
 
 
+
+
+
 Many commands can now operate on multiple items and/or columns by using
 the improved item descriptions and column descriptions mentioned above.
 For example:
 <div style="margin-left: 40px;">
-<pre>.t column configure "range 1 10" -tags {a b c}<br>.t column delete "tag a"<br>.t column id "tag {a || b}"<br>.t item configure "depth 1" -button yes<br>.t item element configure "root children" all elem1 -text "Hello"<br>.t item id "visible"<br>.t item image all all image1<br>.t item style map "tag {a &amp;&amp; !b}" "tag c" style2 {style1.elem1 style2.elem2}<br>.t item style set all all style1<br>.t item state forcolumn all all state1<br>.t item state set "tag current" ~mouseover<br>.t item remove "state selected"<br>.t item span "range 1 10" "range 10 last" 2<br>.t item text "root children" all "Hello"</pre>
+<pre>.t column configure "range 1 10" -tags {a b c}<br>.t column delete "tag a"<br>.t column id "tag {a || b}"<br>.t item configure "depth 1" -button yes<br>.t item count visible<br>.t item element configure "root children" all elem1 -text "Hello"<br>.t item id "visible"<br>.t item image all all image1<br>.t item style map "tag {a &amp;&amp; !b}" "tag c" style2 {style1.elem1 style2.elem2}<br>.t item style set all all style1<br>.t item state forcolumn all all state1<br>.t item state set "tag current" ~mouseover<br>.t item remove "state selected"<br>.t item span "range 1 10" "range 10 last" 2<br>.t item text "root children" all "Hello"</pre>
+
+
+
 
 
 
 
 </div>
+
+
+
 
 
 
@@ -2059,7 +2818,13 @@ For example:
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -2078,8 +2843,14 @@ headers.</li>
 
 
 
+
+
+
   <li>New demo "Column Locking". Demonstrates columns that do not
 scroll horizontally.</li>
+
+
+
 
 
 
@@ -2099,7 +2870,33 @@ option of window elements.</li>
 
 
 
+
+
+
 </ul>
+
+
+<h2>Misc Changes</h2>
+
+
+<ul>
+
+
+  <li>The tail column header will not be drawn if the tail column's <span style="font-weight: bold;">-visible</span> option is false. This can look nicer with some themes.</li>
+
+
+  <li>The <span style="font-weight: bold;">-itembackground</span> colors for a column are now extended below any items in the simplest (and most typical) case where the treectrl's <span style="font-weight: bold;">-orient</span> option is vertical and <span style="font-weight: bold;">-wrap</span> option is unspecified. The height of the rows is determined by the <span style="font-weight: bold;">-itemheight</span> or <span style="font-weight: bold;">-minitemheight</span> options; if neither of those options is specified, then <span style="font-weight: bold;">-itembackground</span> colors are not drawn below the items.</li>
+
+
+  <li>If <span style="font-weight: bold;">-itembackground</span> colors are specified for the tail column, then they are drawn.</li>
+
+  <li>Memory usage is improved, especially for text elements.</li>
+
+
+</ul>
+
+
+
 
 
 
@@ -2117,7 +2914,13 @@ option of window elements.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -2138,10 +2941,16 @@ options could specify an orphan item.</li>
 
 
 
+
+
+
   <li><span style="font-weight: bold;">item delete</span>:
 Stopped items possibly being double-deleted by nested calls through <span style="font-weight: bold;">&lt;Selection&gt;</span>
 and <span style="font-weight: bold;">&lt;ItemDelete&gt;</span>
 binding scripts.</li>
+
+
+
 
 
 
@@ -2158,8 +2967,14 @@ binding scripts.</li>
 
 
 
+
+
+
   <li>Fixed a crash and a redisplay problem when a master element was
 configured with a -textvariable and the associated variable changed.</li>
+
+
+
 
 
 
@@ -2178,8 +2993,17 @@ column, the window might be improperly sized during display updates.</li>
 
 
 
+
+
+
   <li>Windows in window elements would not always be unmapped if
 columns or items were hidden, or if the span of an item-column changed.</li>
+
+
+  <li>The disclosure triangles (i.e., the item buttons) are drawn without a white background under OSX.</li>
+
+
+
 
 
 
@@ -2189,6 +3013,9 @@ columns or items were hidden, or if the span of an item-column changed.</li>
 
 
 </ul>
+
+
+
 
 
 
@@ -2207,7 +3034,13 @@ columns or items were hidden, or if the span of an item-column changed.</li>
 
 
 
+
+
+
 <h2>Column Command</h2>
+
+
+
 
 
 
@@ -2225,6 +3058,9 @@ columns or items were hidden, or if the span of an item-column changed.</li>
 
 
 
+
+
+
   <tbody>
 
 
@@ -2234,7 +3070,13 @@ columns or items were hidden, or if the span of an item-column changed.</li>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2253,8 +3095,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -2272,7 +3120,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2290,7 +3144,13 @@ changed</th>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -2309,6 +3169,9 @@ columns to be deleted.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -2318,6 +3181,12 @@ columns to be deleted.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -2335,6 +3204,9 @@ columns to be deleted.</td>
 
 
 
+
+
+
 <h2>Bug Fixes</h2>
 
 
@@ -2344,7 +3216,13 @@ columns to be deleted.</td>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -2365,8 +3243,14 @@ pivot-finding code of quicksort which resulted in the slow-down.</li>
 
 
 
+
+
+
   <li>A&nbsp;column header will be redisplayed if an image in
 the header is altered.</li>
+
+
+
 
 
 
@@ -2385,7 +3269,13 @@ problems.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -2403,7 +3293,13 @@ problems.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -2423,6 +3319,9 @@ application and IME on Windows, as well as XIM under Unix.</li>
 
 
 
+
+
+
   <li>Improved the appearance of the column headers under OSX.</li>
 
 
@@ -2432,7 +3331,13 @@ application and IME on Windows, as well as XIM under Unix.</li>
 
 
 
+
+
+
   <li>Added &lt;MouseWheel&gt; support to OSX.</li>
+
+
+
 
 
 
@@ -2455,7 +3360,13 @@ the next display update.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -2473,7 +3384,13 @@ the next display update.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -2484,6 +3401,9 @@ the next display update.</li>
 
   <li>New demo "Column Spanning". Demonstrates a 100-column list
 where styles span from 1 to 20 columns each.</li>
+
+
+
 
 
 
@@ -2503,6 +3423,9 @@ on Windows and OSX thanks to Jeff Hobbs.</li>
 
 
 
+
+
+
   <li>The screen-magnifier image now resizes with the "loupe"
 window.</li>
 
@@ -2513,7 +3436,13 @@ window.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -2532,8 +3461,14 @@ window.</li>
 
 
 
+
+
+
 This version should be backwards compatible with 2.0, except for a few
 obscure changes.<br>
+
+
+
 
 
 
@@ -2551,7 +3486,13 @@ obscure changes.<br>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -2569,7 +3510,13 @@ obscure changes.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2587,7 +3534,13 @@ obscure changes.<br>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -2605,7 +3558,13 @@ obscure changes.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2623,7 +3582,13 @@ obscure changes.<br>
 
 
 
+
+
+
       <td><br>
+
+
+
 
 
 
@@ -2641,6 +3606,9 @@ obscure changes.<br>
 
 
 
+
+
+
     </tr>
 
 
@@ -2650,7 +3618,13 @@ obscure changes.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2668,7 +3642,13 @@ obscure changes.<br>
 
 
 
+
+
+
       <td>Deprecates the column -widthhack option.</td>
+
+
+
 
 
 
@@ -2686,7 +3666,13 @@ obscure changes.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2704,7 +3690,13 @@ obscure changes.<br>
 
 
 
+
+
+
       <td>Deprecates the column -stepwidth option.</td>
+
+
+
 
 
 
@@ -2722,6 +3714,12 @@ obscure changes.<br>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -2731,6 +3729,9 @@ obscure changes.<br>
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -2748,7 +3749,13 @@ obscure changes.<br>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -2766,7 +3773,13 @@ obscure changes.<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2784,9 +3797,15 @@ obscure changes.<br>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 to use
 instead</th>
+
+
+
 
 
 
@@ -2804,7 +3823,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2822,7 +3847,13 @@ instead</th>
 
 
 
+
+
+
       <td>treectrl's -itemwidthmultiple option</td>
+
+
+
 
 
 
@@ -2840,7 +3871,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2858,7 +3895,13 @@ instead</th>
 
 
 
+
+
+
       <td>treectrl's -itemwidthequal option</td>
+
+
+
 
 
 
@@ -2876,6 +3919,12 @@ instead</th>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -2885,6 +3934,9 @@ instead</th>
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -2902,7 +3954,13 @@ instead</th>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -2920,7 +3978,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2938,7 +4002,13 @@ instead</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -2956,7 +4026,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -2974,7 +4050,13 @@ instead</th>
 
 
 
+
+
+
       <td>Like [item element perstate].</td>
+
+
+
 
 
 
@@ -2992,6 +4074,12 @@ instead</th>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -3001,6 +4089,9 @@ instead</th>
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -3018,7 +4109,13 @@ instead</th>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -3036,7 +4133,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3054,7 +4157,13 @@ instead</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -3072,7 +4181,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3090,7 +4205,13 @@ instead</th>
 
 
 
+
+
+
       <td>Overrides the treectrl's -itemheight option</td>
+
+
+
 
 
 
@@ -3108,6 +4229,12 @@ instead</th>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -3125,7 +4252,13 @@ instead</th>
 
 
 
+
+
+
 <h2>Item Command</h2>
+
+
+
 
 
 
@@ -3143,7 +4276,13 @@ instead</th>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -3161,7 +4300,13 @@ instead</th>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204);">Deprecated</th>
+
+
+
 
 
 
@@ -3181,6 +4326,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -3190,7 +4338,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3208,7 +4362,13 @@ instead</th>
 
 
 
+
+
+
       <td>item element perstate</td>
+
+
+
 
 
 
@@ -3226,7 +4386,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3244,7 +4410,13 @@ instead</th>
 
 
 
+
+
+
       <td>item element configure</td>
+
+
+
 
 
 
@@ -3262,7 +4434,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3281,8 +4459,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -3300,7 +4484,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3318,8 +4508,14 @@ changed</th>
 
 
 
+
+
+
       <td>No longer returns an error if no style had been
 assigned to the column.</td>
+
+
+
 
 
 
@@ -3337,7 +4533,13 @@ assigned to the column.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3355,8 +4557,14 @@ assigned to the column.</td>
 
 
 
+
+
+
       <td>No longer returns an error if no style had been
 assigned to the column.</td>
+
+
+
 
 
 
@@ -3374,6 +4582,9 @@ assigned to the column.</td>
 
 
 
+
+
+
     <tr>
 
 
@@ -3383,7 +4594,13 @@ assigned to the column.</td>
 
 
 
+
+
+
       <td>item style set</td>
+
+
+
 
 
 
@@ -3404,8 +4621,14 @@ losing the element config info if the old and new styles were the same.<br>
 
 
 
+
+
+
       <span style="color: rgb(255, 0, 0);">Potential
 incompatibility</span></td>
+
+
+
 
 
 
@@ -3423,7 +4646,13 @@ incompatibility</span></td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3442,8 +4671,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -3461,6 +4696,9 @@ changed</th>
 
 
 
+
+
+
     <tr>
 
 
@@ -3470,7 +4708,13 @@ changed</th>
 
 
 
+
+
+
       <td>item create</td>
+
+
+
 
 
 
@@ -3491,7 +4735,13 @@ call using the -count option.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -3509,7 +4759,13 @@ call using the -count option.</td>
 
 
 
+
+
+
       <td>item element configure</td>
+
+
+
 
 
 
@@ -3530,7 +4786,13 @@ columns. See the docs.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -3548,7 +4810,13 @@ columns. See the docs.</td>
 
 
 
+
+
+
       <td>item style set</td>
+
+
+
 
 
 
@@ -3570,8 +4838,14 @@ column(s).<br>
 
 
 
+
+
+
       <span style="color: rgb(255, 0, 0);">Potential
 incompatibility</span></td>
+
+
+
 
 
 
@@ -3589,6 +4863,9 @@ incompatibility</span></td>
 
 
 
+
+
+
     <tr>
 
 
@@ -3598,7 +4875,13 @@ incompatibility</span></td>
 
 
 
+
+
+
       <td>item text</td>
+
+
+
 
 
 
@@ -3617,6 +4900,9 @@ string per column.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -3626,7 +4912,13 @@ string per column.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3644,7 +4936,13 @@ string per column.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -3662,7 +4960,13 @@ string per column.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3680,7 +4984,13 @@ string per column.</td>
 
 
 
+
+
+
       <td>Partner to the [item text] command.</td>
+
+
+
 
 
 
@@ -3698,6 +5008,9 @@ string per column.</td>
 
 
 
+
+
+
     <tr>
 
 
@@ -3707,7 +5020,13 @@ string per column.</td>
 
 
 
+
+
+
       <td>item element perstate</td>
+
+
+
 
 
 
@@ -3729,7 +5048,13 @@ option.<br>
 
 
 
+
+
+
       <br>
+
+
+
 
 
 
@@ -3748,6 +5073,12 @@ option itself does not have a value specified:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -3756,6 +5087,9 @@ option itself does not have a value specified:<br>
       
       
       <ul>
+
+
+
 
 
 
@@ -3773,7 +5107,13 @@ option itself does not have a value specified:<br>
 
 
 
+
+
+
         <li>border -relief</li>
+
+
+
 
 
 
@@ -3791,6 +5131,12 @@ option itself does not have a value specified:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -3799,6 +5145,9 @@ option itself does not have a value specified:<br>
       
       
       </ul>
+
+
+
 
 
 
@@ -3817,7 +5166,13 @@ incompatibility</span></td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -3835,7 +5190,13 @@ incompatibility</span></td>
 
 
 
+
+
+
       <td>item span</td>
+
+
+
 
 
 
@@ -3854,7 +5215,13 @@ columns.<br>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -3872,6 +5239,12 @@ columns.<br>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -3881,6 +5254,9 @@ columns.<br>
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -3899,7 +5275,13 @@ Command</h2>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -3917,7 +5299,13 @@ Command</h2>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3935,7 +5323,13 @@ Command</h2>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -3953,7 +5347,13 @@ Command</h2>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -3971,7 +5371,13 @@ Command</h2>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -3990,6 +5396,9 @@ call.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -3999,6 +5408,12 @@ call.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -4016,6 +5431,9 @@ call.</td>
 
 
 
+
+
+
 <h2>Style Layout Changes</h2>
 
 
@@ -4025,7 +5443,13 @@ call.</td>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -4044,6 +5468,9 @@ elements in 2 situations which previously had no effect (<span style="color: rgb
 
 
 
+
+
+
 </ul>
 
 
@@ -4053,7 +5480,13 @@ elements in 2 situations which previously had no effect (<span style="color: rgb
 
 
 
+
+
+
 <ol style="margin-left: 40px;">
+
+
+
 
 
 
@@ -4072,8 +5505,14 @@ other elements.</li>
 
 
 
+
+
+
   <li>If an element had -iexpand x specified as well as
 -maxwidth, leaving some space available.</li>
+
+
+
 
 
 
@@ -4091,7 +5530,13 @@ other elements.</li>
 
 
 
+
+
+
 <h2>Element Changes</h2>
+
+
+
 
 
 
@@ -4109,8 +5554,14 @@ other elements.</li>
 
 
 
+
+
+
   <li>Bitmap, image and text elements are drawn clipped if given
 less space than they need.</li>
+
+
+
 
 
 
@@ -4130,8 +5581,14 @@ incompatibility</span>).</li>
 
 
 
+
+
+
   <li>The text -wrap option can now be <span style="font-weight: bold;">none</span> to disable line
 wrapping.</li>
+
+
+
 
 
 
@@ -4149,6 +5606,9 @@ wrapping.</li>
 
 
 
+
+
+
 <h2>Event Changes</h2>
 
 
@@ -4158,7 +5618,13 @@ wrapping.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -4182,7 +5648,13 @@ file, and the new demo "Big List".</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -4200,7 +5672,13 @@ file, and the new demo "Big List".</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -4220,7 +5698,13 @@ is true.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -4238,7 +5722,13 @@ is true.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -4250,6 +5740,9 @@ is true.</li>
   <li>New demo "Big List". Demonstrates the new <span style="font-weight: bold;">&lt;ItemVisibility&gt;</span>
 event, using &lt;Expand-before&gt; to add items on demand, and
 column spanning.</li>
+
+
+
 
 
 
@@ -4270,6 +5763,9 @@ command in the help file.</li>
 
 
 
+
+
+
   <li>Under WinXP, the "Explorer" demos will use the new <span style="font-weight: bold;">shellicon</span>
 extension if available. This extension allows a treectrl to display
 file/folder icons using the Win32 Shell API. It may work on other
@@ -4282,7 +5778,13 @@ versions of Windows but it hasn't been tested.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -4301,7 +5803,13 @@ versions of Windows but it hasn't been tested.</li>
 
 
 
+
+
+
 <h2>TreeCtrl Configuration Options</h2>
+
+
+
 
 
 
@@ -4319,7 +5827,13 @@ versions of Windows but it hasn't been tested.</li>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -4337,7 +5851,13 @@ versions of Windows but it hasn't been tested.</li>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204); width: 50%;">Replaced</th>
+
+
+
 
 
 
@@ -4357,6 +5877,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -4366,7 +5889,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4384,7 +5913,13 @@ instead</th>
 
 
 
+
+
+
       <td>-buttonimage</td>
+
+
+
 
 
 
@@ -4402,7 +5937,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4420,7 +5961,13 @@ instead</th>
 
 
 
+
+
+
       <td>-buttonimage</td>
+
+
+
 
 
 
@@ -4438,7 +5985,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4456,7 +6009,13 @@ instead</th>
 
 
 
+
+
+
       <td>-buttonbitmap</td>
+
+
+
 
 
 
@@ -4474,7 +6033,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4492,7 +6057,13 @@ instead</th>
 
 
 
+
+
+
       <td>-buttonbitmap</td>
+
+
+
 
 
 
@@ -4510,7 +6081,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4529,8 +6106,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">How
 it changed</th>
+
+
+
 
 
 
@@ -4548,6 +6131,9 @@ it changed</th>
 
 
 
+
+
+
     <tr>
 
 
@@ -4557,7 +6143,13 @@ it changed</th>
 
 
 
+
+
+
       <td>-backgroundmode</td>
+
+
+
 
 
 
@@ -4580,7 +6172,13 @@ index" command.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -4598,7 +6196,13 @@ index" command.</td>
 
 
 
+
+
+
       <td>-treecolumn</td>
+
+
+
 
 
 
@@ -4620,6 +6224,9 @@ buttons/lines.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -4629,7 +6236,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4647,7 +6260,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4665,7 +6284,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4683,7 +6308,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4701,7 +6332,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4719,7 +6356,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4737,7 +6380,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4755,7 +6404,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4773,7 +6428,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4791,7 +6452,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4809,7 +6476,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4827,7 +6500,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4845,7 +6524,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4863,7 +6548,13 @@ buttons/lines.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -4881,6 +6572,12 @@ buttons/lines.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -4890,6 +6587,9 @@ buttons/lines.</td>
   
   </tbody>
 </table>
+
+
+
 
 
 
@@ -4907,7 +6607,13 @@ buttons/lines.</td>
 
 
 
+
+
+
 <table style="text-align: left; width: 100%;" border="1" cellpadding="2" cellspacing="2">
+
+
+
 
 
 
@@ -4925,7 +6631,13 @@ buttons/lines.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4943,9 +6655,15 @@ buttons/lines.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 to use
 instead</th>
+
+
+
 
 
 
@@ -4963,7 +6681,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -4981,7 +6705,13 @@ instead</th>
 
 
 
+
+
+
       <td>item compare</td>
+
+
+
 
 
 
@@ -4999,7 +6729,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5017,7 +6753,13 @@ instead</th>
 
 
 
+
+
+
       <td>item id</td>
+
+
+
 
 
 
@@ -5035,7 +6777,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5053,7 +6801,13 @@ instead</th>
 
 
 
+
+
+
       <td>column count</td>
+
+
+
 
 
 
@@ -5071,7 +6825,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5089,7 +6849,13 @@ instead</th>
 
 
 
+
+
+
       <td>item count</td>
+
+
+
 
 
 
@@ -5107,7 +6873,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5125,7 +6897,13 @@ instead</th>
 
 
 
+
+
+
       <td>item range</td>
+
+
+
 
 
 
@@ -5143,6 +6921,12 @@ instead</th>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -5160,7 +6944,13 @@ instead</th>
 
 
 
+
+
+
 <h2>Column Configuration Options</h2>
+
+
+
 
 
 
@@ -5178,7 +6968,13 @@ instead</th>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -5196,7 +6992,13 @@ instead</th>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204); width: 50%;">Removed</th>
+
+
+
 
 
 
@@ -5216,6 +7018,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -5225,7 +7030,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5243,7 +7054,13 @@ instead</th>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -5261,6 +7078,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -5270,7 +7090,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5288,7 +7114,13 @@ instead</th>
 
 
 
+
+
+
       <td>-state</td>
+
+
+
 
 
 
@@ -5306,7 +7138,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5324,7 +7162,13 @@ instead</th>
 
 
 
+
+
+
       </th>
+
+
+
 
 
 
@@ -5343,6 +7187,9 @@ name</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -5352,7 +7199,13 @@ name</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5370,7 +7223,13 @@ name</th>
 
 
 
+
+
+
       <td>-arrowpadx</td>
+
+
+
 
 
 
@@ -5388,7 +7247,13 @@ name</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5407,8 +7272,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">How
 it changed</th>
+
+
+
 
 
 
@@ -5426,6 +7297,9 @@ it changed</th>
 
 
 
+
+
+
     <tr>
 
 
@@ -5435,7 +7309,13 @@ it changed</th>
 
 
 
+
+
+
       <td>-background</td>
+
+
+
 
 
 
@@ -5455,6 +7335,9 @@ for valid state names.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -5464,7 +7347,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5482,7 +7371,13 @@ for valid state names.</td>
 
 
 
+
+
+
       </th>
+
+
+
 
 
 
@@ -5500,6 +7395,9 @@ for valid state names.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -5509,7 +7407,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5527,7 +7431,13 @@ for valid state names.</td>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -5545,6 +7455,9 @@ for valid state names.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -5554,7 +7467,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5572,7 +7491,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5590,7 +7515,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5608,7 +7539,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5626,7 +7563,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5644,7 +7587,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5662,7 +7611,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5680,7 +7635,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5698,7 +7659,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5716,7 +7683,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5734,7 +7707,13 @@ for valid state names.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5752,7 +7731,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -5770,6 +7755,12 @@ for valid state names.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -5787,7 +7778,13 @@ for valid state names.</td>
 
 
 
+
+
+
 <h2>Column Command</h2>
+
+
+
 
 
 
@@ -5805,7 +7802,13 @@ for valid state names.</td>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -5823,7 +7826,13 @@ for valid state names.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204);">Deprecated</th>
+
+
+
 
 
 
@@ -5843,6 +7852,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -5852,7 +7864,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5870,7 +7888,13 @@ instead</th>
 
 
 
+
+
+
       <td>column id</td>
+
+
+
 
 
 
@@ -5888,7 +7912,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5907,8 +7937,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -5926,7 +7962,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -5944,7 +7986,13 @@ changed</th>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -5964,7 +8012,13 @@ option-value pair is given.<br>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -5982,6 +8036,9 @@ option-value pair is given.<br>
 
 
 
+
+
+
     <tr>
 
 
@@ -5991,7 +8048,13 @@ option-value pair is given.<br>
 
 
 
+
+
+
       <td>column create</td>
+
+
+
 
 
 
@@ -6012,6 +8075,9 @@ index in the list of columns.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -6021,7 +8087,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6039,7 +8111,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td>A column description of "all" is allowed.</td>
+
+
+
 
 
 
@@ -6057,7 +8135,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6075,7 +8159,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -6093,7 +8183,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6111,7 +8207,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -6129,7 +8231,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6147,7 +8255,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td>replaces "numcolumns"</td>
+
+
+
 
 
 
@@ -6165,7 +8279,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6183,7 +8303,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -6201,7 +8327,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6219,7 +8351,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -6237,7 +8375,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6255,7 +8399,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td>replaces "column index"</td>
+
+
+
 
 
 
@@ -6273,7 +8423,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6291,7 +8447,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -6309,7 +8471,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6327,7 +8495,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -6345,6 +8519,12 @@ index in the list of columns.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -6362,7 +8542,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
 <h2>Item Command</h2>
+
+
+
 
 
 
@@ -6380,7 +8566,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
   <tbody>
+
+
+
 
 
 
@@ -6398,7 +8590,13 @@ index in the list of columns.</td>
 
 
 
+
+
+
       <th style="background-color: rgb(255, 255, 204);">Removed</th>
+
+
+
 
 
 
@@ -6418,6 +8616,9 @@ instead</th>
 
 
 
+
+
+
     </tr>
 
 
@@ -6427,7 +8628,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6445,7 +8652,13 @@ instead</th>
 
 
 
+
+
+
       <td>item order</td>
+
+
+
 
 
 
@@ -6463,7 +8676,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6481,7 +8700,13 @@ instead</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+
+
 
 
 
@@ -6499,7 +8724,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6517,7 +8748,13 @@ instead</th>
 
 
 
+
+
+
       <td>replaces "compare"</td>
+
+
+
 
 
 
@@ -6535,7 +8772,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6553,7 +8796,13 @@ instead</th>
 
 
 
+
+
+
       <td>replaces "numitems"</td>
+
+
+
 
 
 
@@ -6571,7 +8820,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6589,7 +8844,13 @@ instead</th>
 
 
 
+
+
+
       <td>replaces "index"</td>
+
+
+
 
 
 
@@ -6607,7 +8868,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6625,7 +8892,13 @@ instead</th>
 
 
 
+
+
+
       <td>replaces "item index"</td>
+
+
+
 
 
 
@@ -6643,7 +8916,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6661,7 +8940,13 @@ instead</th>
 
 
 
+
+
+
       <td>replaces "range"</td>
+
+
+
 
 
 
@@ -6679,6 +8964,12 @@ instead</th>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -6696,7 +8987,13 @@ instead</th>
 
 
 
+
+
+
 <h2>Notify Command</h2>
+
+
+
 
 
 
@@ -6714,6 +9011,9 @@ instead</th>
 
 
 
+
+
+
   <tbody>
 
 
@@ -6723,7 +9023,13 @@ instead</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6742,8 +9048,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">What
 changed</th>
+
+
+
 
 
 
@@ -6761,7 +9073,13 @@ changed</th>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6779,7 +9097,13 @@ changed</th>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -6798,6 +9122,9 @@ argument</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -6807,7 +9134,13 @@ argument</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6825,6 +9158,9 @@ argument</td>
 
 
 
+
+
+
       <td>Old syntax (supported but deprecated):<br>
 
 
@@ -6834,6 +9170,12 @@ argument</td>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6850,6 +9192,12 @@ argument</td>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6858,6 +9206,9 @@ argument</td>
       
       
       <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install detail</span> <span style="font-style: italic;">eventName</span> <span style="font-style: italic;">detail</span></pre>
+
+
+
 
 
 
@@ -6875,6 +9226,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6891,6 +9248,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6899,6 +9262,9 @@ New syntax:<br>
       
       
       <pre style="margin-left: 40px;"><span style="font-weight: bold;">notify install</span> &lt;<span style="font-style: italic;">eventName</span>-<span style="font-style: italic;">detail</span>&gt;</pre>
+
+
+
 
 
 
@@ -6916,6 +9282,9 @@ New syntax:<br>
 
 
 
+
+
+
     </tr>
 
 
@@ -6925,7 +9294,13 @@ New syntax:<br>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -6943,6 +9318,9 @@ New syntax:<br>
 
 
 
+
+
+
       <td>Old syntax (supported but deprecated):<br>
 
 
@@ -6952,6 +9330,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6960,6 +9344,9 @@ New syntax:<br>
       
       
       <div style="margin-left: 40px;">
+      
+      
+      
       
       
       
@@ -6976,6 +9363,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -6992,7 +9385,13 @@ New syntax:<br>
 
 
 
+
+
+
       </div>
+
+
+
 
 
 
@@ -7010,6 +9409,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -7018,6 +9423,9 @@ New syntax:<br>
       
       
       <div style="margin-left: 40px;">
+      
+      
+      
       
       
       
@@ -7034,6 +9442,12 @@ New syntax:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -7042,6 +9456,9 @@ New syntax:<br>
       
       
       <pre><span style="font-weight: bold;">notify linkage</span> &lt;<span style="font-style: italic;">eventName</span>-<span style="font-style: italic;">detail</span>&gt;</pre>
+
+
+
 
 
 
@@ -7059,7 +9476,13 @@ New syntax:<br>
 
 
 
+
+
+
       </td>
+
+
+
 
 
 
@@ -7077,6 +9500,9 @@ New syntax:<br>
 
 
 
+
+
+
     <tr>
 
 
@@ -7086,7 +9512,13 @@ New syntax:<br>
 
 
 
+
+
+
       <td>notify uninstall</td>
+
+
+
 
 
 
@@ -7106,6 +9538,9 @@ above</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -7115,6 +9550,12 @@ above</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -7132,7 +9573,13 @@ above</td>
 
 
 
+
+
+
 <h2>Style Layout Options</h2>
+
+
+
 
 
 
@@ -7150,6 +9597,9 @@ above</td>
 
 
 
+
+
+
   <tbody>
 
 
@@ -7159,7 +9609,13 @@ above</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7178,8 +9634,14 @@ Changed</th>
 
 
 
+
+
+
       <th style="background-color: rgb(204, 255, 255);">How
 it changed</th>
+
+
+
 
 
 
@@ -7197,6 +9659,9 @@ it changed</th>
 
 
 
+
+
+
     <tr>
 
 
@@ -7206,7 +9671,13 @@ it changed</th>
 
 
 
+
+
+
       <td>-iexpand</td>
+
+
+
 
 
 
@@ -7228,6 +9699,12 @@ update your code, you will probably want to change this:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -7236,6 +9713,9 @@ update your code, you will probably want to change this:<br>
       
       
       <div style="margin-left: 40px;">
+      
+      
+      
       
       
       
@@ -7252,7 +9732,13 @@ update your code, you will probably want to change this:<br>
 
 
 
+
+
+
       </div>
+
+
+
 
 
 
@@ -7270,6 +9756,12 @@ to this:<br>
 
 
 
+
+
+
+      
+      
+      
       
       
       
@@ -7278,6 +9770,9 @@ to this:<br>
       
       
       <div style="margin-left: 40px;">
+      
+      
+      
       
       
       
@@ -7294,7 +9789,13 @@ to this:<br>
 
 
 
+
+
+
       </div>
+
+
+
 
 
 
@@ -7314,6 +9815,9 @@ surrounds.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -7323,7 +9827,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7341,7 +9851,13 @@ surrounds.</td>
 
 
 
+
+
+
       </th>
+
+
+
 
 
 
@@ -7359,6 +9875,9 @@ surrounds.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -7368,7 +9887,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7386,7 +9911,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -7404,7 +9935,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7422,7 +9959,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -7440,7 +9983,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7458,7 +10007,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -7476,7 +10031,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7494,7 +10055,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -7512,7 +10079,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7530,7 +10103,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
+
+
+
 
 
 
@@ -7548,7 +10127,13 @@ surrounds.</td>
 
 
 
+
+
+
     <tr>
+
+
+
 
 
 
@@ -7566,6 +10151,9 @@ surrounds.</td>
 
 
 
+
+
+
       <td></td>
 
 
@@ -7575,7 +10163,13 @@ surrounds.</td>
 
 
 
+
+
+
     </tr>
+
+
+
 
 
 
@@ -7593,7 +10187,13 @@ surrounds.</td>
 
 
 
+
+
+
       <td>-width</td>
+
+
+
 
 
 
@@ -7611,6 +10211,9 @@ surrounds.</td>
 
 
 
+
+
+
     </tr>
 
 
@@ -7620,6 +10223,12 @@ surrounds.</td>
 
 
 
+
+
+
+  
+  
+  
   
   
   
@@ -7637,6 +10246,9 @@ surrounds.</td>
 
 
 
+
+
+
 <h2>Element Changes</h2>
 
 
@@ -7646,7 +10258,13 @@ surrounds.</td>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -7667,8 +10285,14 @@ file.</li>
 
 
 
+
+
+
   <li>All element types have a new
 per-state boolean option called <span style="font-weight: bold;">-draw</span>.</li>
+
+
+
 
 
 
@@ -7690,7 +10314,13 @@ See the new demo
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -7708,7 +10338,13 @@ See the new demo
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -7730,9 +10366,15 @@ file.</li>
 
 
 
+
+
+
   <li>The new static event <span style="font-weight: bold;">&lt;ItemDelete&gt;</span>
 is generated when items are deleted. See the EVENTS AND SCRIPT
 SUBSTITUTIONS section in the help file.</li>
+
+
+
 
 
 
@@ -7750,7 +10392,13 @@ SUBSTITUTIONS section in the help file.</li>
 
 
 
+
+
+
 <h2>Library Script Changes</h2>
+
+
+
 
 
 
@@ -7768,7 +10416,13 @@ SUBSTITUTIONS section in the help file.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -7789,10 +10443,16 @@ Previously only elements in the first column could be edited.</li>
 
 
 
+
+
+
   <li>3 new commands in the TreeCtrl namespace should be used to
 access
 the Priv(dragimage), Priv(edit) and Priv(sensitive) variables. The
 commands are SetDragImage, SetEditable and SetSensitive.</li>
+
+
+
 
 
 
@@ -7813,7 +10473,13 @@ generated when editing a file name.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -7831,7 +10497,13 @@ generated when editing a file name.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -7852,7 +10524,13 @@ by Apple's user-interface guidelines.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -7870,7 +10548,13 @@ by Apple's user-interface guidelines.</li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -7883,6 +10567,9 @@ by Apple's user-interface guidelines.</li>
 drawn
 using the system theme if <span style="font-weight: bold;">-usetheme</span>
 is true. The sort arrow is drawn the old-fashioned way.</li>
+
+
+
 
 
 
@@ -7907,9 +10594,15 @@ options.</li>
 
 
 
+
+
+
   <li>Columns can be moved by drag-and-drop. See <span style="font-weight: bold;">column dragconfigure</span>
 in the help
 file.</li>
+
+
+
 
 
 
@@ -7929,6 +10622,9 @@ section in the help file.</li>
 
 
 
+
+
+
   <li>Added new section DYNAMIC EVENTS to the help file.</li>
 
 
@@ -7938,7 +10634,13 @@ section in the help file.</li>
 
 
 
+
+
+
   <li>Added new section PER-STATE OPTIONS to the help file.</li>
+
+
+
 
 
 
@@ -7959,8 +10661,14 @@ file and the new demo "Firefox Privacy".</li>
 
 
 
+
+
+
   <li>The new item description <span style="font-weight: bold;">end</span>
 is equivalent to <span style="font-weight: bold;">last</span>.</li>
+
+
+
 
 
 
@@ -7984,7 +10692,13 @@ scripts are found.</span></span></li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 
@@ -8002,7 +10716,13 @@ scripts are found.</span></span></li>
 
 
 
+
+
+
 <ul>
+
+
+
 
 
 
@@ -8022,9 +10742,15 @@ style layout option.</li>
 
 
 
+
+
+
   <li>New demo "Textvariable". Demonstrates the new <span style="font-weight: bold;">-textvariable</span> option
 of the <span style="font-weight: bold;">text</span>
 element.</li>
+
+
+
 
 
 
@@ -8044,9 +10770,15 @@ the main treectrl widget.</li>
 
 
 
+
+
+
   <li>The context menu can be popped up in all the demo lists. A
 &lt;Control-ButtonPress-1&gt; binding for this was added under
 OSX/Aqua.</li>
+
+
+
 
 
 
@@ -8066,7 +10798,13 @@ the file name.</li>
 
 
 
+
+
+
 </ul>
+
+
+
 
 
 

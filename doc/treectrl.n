@@ -6,14 +6,14 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.57 2006/11/03 22:31:05 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.58 2006/11/18 04:40:10 treectrl Exp $
 .so man.macros
-.TH "treectrl" n 2.1.1 treectrl "Tk Commands"
+.TH "treectrl" n 2.2 treectrl "Tk Commands"
 .BS
 .SH "NAME"
 treectrl \- Create and manipulate hierarchical multicolumn widgets
 .SH "SYNOPSIS"
-package require \fBtreectrl  2.1.1\fR
+package require \fBtreectrl  2.2\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .sp
@@ -37,7 +37,7 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBcolumn compare\fR \fIcolumn1\fR \fIop\fR \fIcolumn2\fR
 .sp
-\fIpathName\fR \fBcolumn count\fR
+\fIpathName\fR \fBcolumn count\fR ?\fIcolumnDesc\fR?
 .sp
 \fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?
 .sp
@@ -145,7 +145,7 @@ package require \fBtreectrl  2.1.1\fR
 .sp
 \fIpathName\fR \fBitem configure\fR \fIitemDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBitem count\fR ?\fI-visible\fR?
+\fIpathName\fR \fBitem count\fR ?\fIitemDesc\fR?
 .sp
 \fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?
 .sp
@@ -1082,12 +1082,12 @@ for the column specified by the
 .TP
 \fIpathName\fR \fBcolumn configure\fR \fIcolumnDesc\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 This command is similar to the \fBconfigure\fR widget command except
-that it modifies options associated with the column specified by the
+that it modifies options associated with the columns specified by the
 \fBcolumn description\fR \fIcolumnDesc\fR
 instead of modifying options for the overall treectrl widget.
 \fIColumnDesc\fR may be the string \fBtail\fR to specify the tail column.
-If \fIcolumnDesc\fR is the string \fBall\fR, at least one option-value pair
-must be given; in this case all the columns are configured.
+If \fIcolumnDesc\fR refers to more than one column, then at least one option-value pair
+must be given.
 If no \fIoption\fR is specified, the command returns a list describing
 all of the available options for \fIcolumnDesc\fR (see \fBTk_ConfigureInfo\fR
 for information on the format of this list).
@@ -1111,11 +1111,13 @@ or \fB!=\fR.
 The return value of this command is 1 if the comparison evaluated to true,
 0 otherwise.
 .TP
-\fIpathName\fR \fBcolumn count\fR
-Returns a decimal string giving the number of
+\fIpathName\fR \fBcolumn count\fR ?\fIcolumnDesc\fR?
+If no additional arguments are given, the result is a decimal string giving the number of
 columns created by the \fBcolumn create\fR widget command which haven't been
-deleted by the \fBcolumn delete\fR widget command. The \fBtail\fR column
+deleted by the \fBcolumn delete\fR widget command; in this case the \fBtail\fR column
 is not counted.
+If \fIcolumnDesc\fR is given, then the result is the number of columns that
+match that \fBcolumn description\fR.
 .TP
 \fIpathName\fR \fBcolumn create\fR ?\fIoption value ...\fR?
 This command creates a new column in the treectrl widget. The new column is
@@ -1286,7 +1288,8 @@ The following forms of the command are supported:
 .RS
 .TP
 \fIpathName\fR \fBdebug alloc\fR
-Returns a string giving partial statistics on memory allocations.
+Returns a string giving partial statistics on memory allocations, if the package
+was built with TREECTRL_DEBUG defined.
 .TP
 \fIpathName\fR \fBdebug cget\fR \fIoption\fR
 This command returns the current value of the debugging option
@@ -1364,12 +1367,12 @@ Returns a string useful for debugging vertical scrolling.
 .RE
 .TP
 \fIpathName\fR \fBdepth\fR ?\fIitemDesc\fR?
-If the additional argument \fIitemDesc\fR is specified,
-returns a decimal string giving the depth of
-the item describing by \fIitemDesc\fR, whereas depth is defined as
-the number of steps you must go upward to reach to root item.
-If no \fIitemDesc\fR is specified, the maximum depth of all
+If the additional argument \fIitemDesc\fR is given,
+then the result is a decimal string giving the depth of
+the item described by \fIitemDesc\fR.
+If no \fIitemDesc\fR is specified, then the maximum depth of all
 items in the treectrl widget is returned instead.
+Depth is defined as the number of ancestors an item has.
 .TP
 \fIpathName\fR \fBdragimage\fR \fIoption\fR ?\fIarg ...\fR?
 This command is used to manipulate the dragimage,
@@ -1561,20 +1564,12 @@ of the item specified by \fIitemDesc\fR in the correct order from
 the first child to the last child.
 .TP
 \fIpathName\fR \fBitem collapse\fR \fIitemDesc\fR ?\fB-recurse\fR?
-Switches off the \fBopen\fR state of the item(s)
-described by \fIitemDesc\fR.
-If the item has descendants, they are no longer displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options \fB-buttonimage\fR or \fB-buttonbitmap\fR,
-or a \fI+\fR sign if no image or bitmap is configured.
-If the item is already closed, this command has no effect.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case all items of the treectrl widget are collapsed.
-If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
-will also be collapsed.
-For every item, that actually will be collapsed,
-two events are generated:
+Switches off the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
+If an item has descendants, then they are no longer displayed.
+If an item is already closed, then this command has no effect on that item.
+If \fB-recurse\fR is specified, then all descendants of the items described
+by \fIitemDesc\fR will also be collapsed.
+For every item that actually will be collapsed, two events are generated:
 a \fB<Collapse-before>\fR event before the item state is changed,
 and a \fB<Collapse-after>\fR event after the item state was changed.
 .TP
@@ -1593,7 +1588,7 @@ instead. For every column of the treectrl there may be specified one \fIlist\fR.
 Each \fIlist\fR should look like this:
 .nf
 
-{ {element option value...} {element option value...} ...}
+{ {element option value ...} {element option value ...} ...}
 
 .fi
 Every \fIoption\fR must be known by the element's type
@@ -1627,14 +1622,13 @@ the meaning of each option):
 \fB\fB-visible\fR\fR \fIboolean\fR
 .RE
 .TP
-\fIpathName\fR \fBitem count\fR ?\fI-visible\fR?
-Returns a decimal string giving the number of
+\fIpathName\fR \fBitem count\fR ?\fIitemDesc\fR?
+If no additional arguments are given, the result is a decimal string giving the number of
 items created by the \fBitem create\fR widget command which haven't been
 deleted by the \fBitem delete\fR widget command, plus 1 for the ever-present
-root item. If the optional argument \fI-visible\fR is given, only the items
-whose ancestors are expanded, and whose -visible option is true, get counted.
-Additionally, for the root item, the treectrl option \fB-showroot\fR must
-be true for the root item to be counted.
+root item.
+If the optional argument \fIitemDesc\fR is given, then the result is the
+number of items that match that \fBitem description\fR.
 .TP
 \fIpathName\fR \fBitem create\fR ?\fIoption value ...\fR?
 Creates some new items and optionally returns a list of unique identifiers for
@@ -1652,7 +1646,8 @@ indicates whether or not an expand/collapse button should be drawn next to this
 item, typically to indicate the item has children. The button will only be
 displayed if:
 a) the column specified by the treectrl option \fB-treecolumn\fR is visible;
-and b) the treectrl option \fB-showbuttons\fR is true
+and b) the treectrl option \fB-showbuttons\fR is true;
+and c) for the root item, the treectrl option \fB-showrootbutton\fR is true.
 .TP
 \fB\fB-count\fR\fR \fInumItems\fR
 Specifies the number of items to create. Must be >= 0. Defaults to 1.
@@ -1712,7 +1707,7 @@ in all cases the specification of the root item is ignored.
 For each call to this command, two events may be generated.
 If any of the deleted items are selected, then a \fB<Selection>\fR event
 is generated just before the items are deleted.
-If any items were actually deleted, then an \fB<ItemDelete>\fR event event is generated just before the items
+If any items are going to be deleted, then an \fB<ItemDelete>\fR event event is generated just before the items
 are deleted.
 .TP
 \fIpathName\fR \fBitem descendants\fR \fIitemDesc\fR
@@ -1788,21 +1783,16 @@ Returns 1 if the item described by \fIitemDesc\fR has the
 state \fBenabled\fR switched on, 0 otherwise. If \fIboolean\fR is specified,
 then the \fBenabled\fR state of every item described by the
 \fBitem description\fR \fIitemDesc\fR is set accordingly.
+All items are enabled when first created. Disabled items cannot be selected,
+and are ignored by the default key-navigation and mouse bindings.
 .TP
 \fIpathName\fR \fBitem expand\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Switches on the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
-If the item has descendants, they are now displayed.
-If the item is configured to have a button,
-the button will now display the image or bitmap configured with the
-widget options \fB-buttonimage\fR or \fB-buttonbitmap\fR,
-or a \fI-\fR sign if no image or bitmap is configured.
-If the item is already open, this command has no effect.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case all items of the treectrl widget are expanded.
-If \fB-recurse\fR is specified, all descendants of \fIitemDesc\fR
-will also be expanded.
-For every item, that actually will be expanded,
-two events are generated:
+If an item has descendants, then they are now displayed.
+If an item is already open, then this command has no effect on that item.
+If \fB-recurse\fR is specified, then all descendants of the items described by
+\fIitemDesc\fR will also be expanded.
+For every item that actually will be expanded, two events are generated:
 an \fB<Expand-before>\fR event before the item state is changed,
 and an \fB<Expand-after>\fR event after the item state was changed.
 .TP
@@ -2095,13 +2085,11 @@ want to set or retrieve the value of the -text option for a specific text elemen
 .TP
 \fIpathName\fR \fBitem toggle\fR \fIitemDesc\fR ?\fB-recurse\fR?
 Changes the \fBopen\fR state of the item(s) described by \fIitemDesc\fR.
-If the state is currently switched off,
-this command does the same as the \fBitem expand\fR widget command,
+If the \fBopen\fR state is currently switched off, then
+this command does the same as the \fBitem expand\fR widget command;
 otherwise the same as the \fBitem collapse\fR widget command.
-\fIItemDesc\fR may also be the string \fBall\fR,
-in which case the state of all items of the treectrl widget are toggled.
-If \fB-recurse\fR is specified, the state of all descendants of
-\fIitemDesc\fR will also be toggled.
+If \fB-recurse\fR is specified, then the \fBopen\fR state of all descendants of
+the items described by \fIitemDesc\fR will also be toggled.
 .RE
 .TP
 \fIpathName\fR \fBmarquee\fR \fIoption\fR ?\fIarg ...\fR?
@@ -2170,15 +2158,21 @@ If two coordinates are specified,
 sets the corner to the given coordinates \fIx\fR and \fIy\fR.
 .TP
 \fIpathName\fR \fBmarquee identify\fR
-Returns a list with information about the items inside the marquee.
-The list has as elements a list itself
-for every item which is displayed inside the marquee.
-The first element of these lists is the numerical item id,
-followed by another list with information about every column of the
-item inside the marque.
-These lists start with the column number,
-followed by the elements of the style defined for the item in this column
-if there are any.
+Returns a list with information about any items intersecting the marquee.
+The format of the returned list is:
+.nf
+
+{
+    {item {column element element ...} {column element element ...} ...}
+    {item {column element element ...} {column element element ...} ...}
+    ...
+}
+
+.fi
+There may be zero sublists following an item id if the marquee is in the
+button/line area of an item. There may be zero element names following a
+column id if the item-column has no style or if the marquee does not
+intersect any elements in that column.
 .RE
 .TP
 \fIpathName\fR \fBnotify\fR \fIoption\fR ?\fIarg ...\fR?
@@ -2816,8 +2810,10 @@ determines this).
 The value may have any of the forms acceptable to \fBTk_GetPixels\fR.
 .TP
 \fB\fB-button\fR\fR \fIboolean\fR
-Indicates whether or not a mouse click on the column header should
-change the sorting order of the tree.
+Indicates whether or not the column header should be treated like a pushbutton.
+When this option is true, the default bindings track <Button-1> events
+in the header and generate a <Header-invoke> event when a <ButtonRelease-1>
+event occurs in the header. See \fBDYNAMIC EVENTS\fR.
 .TP
 \fB\fB-expand\fR\fR \fIboolean\fR
 Indicates whether or not any extra horizontal space should be distributed
@@ -2876,7 +2872,7 @@ This option has no effect if the \fB-width\fR option is set.
 .TP
 \fB\fB-resize\fR\fR \fIboolean\fR
 Specifies a boolean value that indicates whether the user should be allowed to
-resize the column by dragging the right edge of the column's header. Default is true.
+resize the column by dragging the edge of the column's header. Default is true.
 .TP
 \fB\fB-squeeze\fR\fR \fIboolean\fR
 Specifies a boolean value that indicates whether or not the column should
@@ -2981,7 +2977,7 @@ This keyword cannot be followed by any modifiers unless a single column is
 matched. You may run into trouble if \fItagExpr\fR looks like a column id
 or other keyword; also, \fItagExpr\fR must look like a single list element
 since column descriptions are properly-formed lists. To be safe you may want to
-use the \fBtag\fR keyword followed by \fItagExpr\fR.
+use the \fBtag\fR qualifier followed by \fItagExpr\fR.
 .TP
 \fBall\fR \fIQUALIFIERS\fR
 Indicates every column, including the tail column if the command allows it,
@@ -3429,7 +3425,7 @@ This keyword cannot be followed by any modifiers unless a single item is
 matched. You may run into trouble if \fItagExpr\fR looks like an item id
 or other keyword; also, \fItagExpr\fR must look like a single list element
 since item descriptions are properly-formed lists. To be safe you may want to
-use the \fBtag\fR keyword followed by \fItagExpr\fR.
+use the \fBtag\fR qualifier followed by \fItagExpr\fR.
 .TP
 \fBactive\fR
 Indicates the item that is currently active, i.e. normally
