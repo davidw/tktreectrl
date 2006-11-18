@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.64 2006/11/13 04:45:43 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.65 2006/11/18 01:16:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4066,7 +4066,7 @@ doneDELETE:
 	case COMMAND_COUNT:
 	{
 	    if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
+		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->columnCount));
@@ -4750,10 +4750,15 @@ Tree_DrawHeader(
 	GC gc;
 
 	if (TreeColumn_Bbox(tree->columnDrag.indColumn, &x, &y, &w, &h) == 0) {
-	    if (tree->columnDrag.indSide == SIDE_LEFT)
+	    if (tree->columnDrag.indSide == SIDE_LEFT) {
 		x -= 1;
-	    else
+		if (x == Tree_HeaderLeft(tree) - 1)
+		    x += 1;
+	    } else {
 		x += w - 1;
+		if (x == Tree_HeaderRight(tree) - 1)
+		    x -= 1;
+	    }
 	    gc = Tk_GCForColor(tree->columnDrag.indColor, Tk_WindowId(tree->tkwin));
 	    XFillRectangle(tree->display, pixmap, gc,
 		x, y, 2, tree->headerHeight);
