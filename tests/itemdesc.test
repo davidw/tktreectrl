@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: itemdesc.test,v 1.1 2006/10/29 02:39:45 treectrl Exp $
+# RCS: @(#) $Id: itemdesc.test,v 1.2 2006/11/18 04:43:23 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -34,6 +34,10 @@ test itemdesc-0.1 {some needed preparations} -body {
 test itemdesc-1.1 {bogus itemdesc} -body {
     .t item id ""
 } -returnCodes error -result {bad item description ""}
+
+test itemdesc-1.1.1 {bogus itemdesc} -body {
+    .t item id "\{all"
+} -returnCodes error -result "bad item description \"\{all\""
 
 test itemdesc-1.2 {all} -setup {
     .t item create -count 10
