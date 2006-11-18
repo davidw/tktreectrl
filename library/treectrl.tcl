@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.33 2006/11/15 23:54:10 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.34 2006/11/18 04:37:49 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -260,9 +260,9 @@ proc ::TreeCtrl::CursorAction {w x y} {
 	set side [lindex $id 2]
 	if {$side eq "left"} {
 	    if {[$w column compare $column == tail]} {
-		set column [$w column id "last visible lock none"]
-		if {$column ne "" && [$w column cget $column -resize]} {
-		    return "column resize $column"
+		set column2 [$w column id "last visible lock none"]
+		if {$column2 ne "" && [$w column cget $column2 -resize]} {
+		    return "column resize $column2"
 		}
 		# Can't -resize or -button the tail column
 		return ""
@@ -275,9 +275,9 @@ proc ::TreeCtrl::CursorAction {w x y} {
 		# Resize the previous column
 		set lock [$w column cget $column -lock]
 		if {[$w column compare $column != "first visible lock $lock"]} {
-		    set column [$w column id "$column prev visible"]
-		    if {[$w column cget $column -resize]} {
-			return "column resize $column"
+		    set column2 [$w column id "$column prev visible"]
+		    if {[$w column cget $column2 -resize]} {
+			return "column resize $column2"
 		    }
 		}
 	    }
@@ -774,8 +774,8 @@ set Priv(prev) ""
 		}
 		$w configure -columnproxy {}
 		$w column configure $Priv(column) -width $width
-		CursorCheck $w $x $y
 	    }
+	    CursorCheck $w $x $y
 	}
     }
     unset Priv(buttonMode)
