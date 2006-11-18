@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.65 2006/11/18 01:16:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.66 2006/11/18 04:34:50 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3707,7 +3707,7 @@ TreeColumnCmd(
     int index;
     TreeColumnList columns;
     TreeColumn column;
-    ColumnForEach iter;
+    ColumnForEach citer;
 
     if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
@@ -3812,13 +3812,13 @@ TreeColumnCmd(
 		Tcl_SetObjResult(interp, resultObjPtr);
 		break;
 	    }
-	    /* If "all" is specified, return a list of columns instead of
+	    /* If "all" is specified, get a list of columns instead of
 	     * COLUMN_ALL, since changing the -lock option of a column
 	     * may reorder columns. */
 	    if (TreeColumnList_FromObj(tree, objv[3], &columns,
 		    CFO_LIST_ALL | CFO_NOT_NULL) != TCL_OK)
 		return TCL_ERROR;
-	    COLUMN_FOR_EACH(column, &columns, NULL, &iter) {
+	    COLUMN_FOR_EACH(column, &columns, NULL, &citer) {
 		if (Column_Config(column, objc - 4, objv + 4, FALSE) != TCL_OK)
 		    goto errorExit;
 	    }
@@ -3883,7 +3883,6 @@ TreeColumnCmd(
 	    TreeColumnList columns, column2s;
 	    TreeColumn prev, next;
 	    int flags = CFO_NOT_NULL | CFO_NOT_TAIL;
-	    ColumnForEach citer;
 	    TreeItem item;
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
@@ -4065,18 +4064,27 @@ doneDELETE:
 
 	case COMMAND_COUNT:
 	{
-	    if (objc != 3) {
-		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
+	    int count = tree->columnCount;
+
+	    if (objc < 3 || objc > 4) {
+		Tcl_WrongNumArgs(interp, 3, objv, "?columnDesc?");
 		return TCL_ERROR;
 	    }
-	    Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->columnCount));
+	    if (objc == 4) {
+		if (TreeColumnList_FromObj(tree, objv[3], &columns, 0)
+			!= TCL_OK)
+		    return TCL_ERROR;
+		count = 0;
+		COLUMN_FOR_EACH(column, &columns, NULL, &citer) {
+		    count++;
+		}
+	    }
+	    Tcl_SetObjResult(interp, Tcl_NewIntObj(count));
 	    break;
 	}
 
 	case COMMAND_WIDTH:
 	{
-	    TreeColumn column;
-
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
@@ -4105,7 +4113,7 @@ doneDELETE:
 	    if (TreeColumnList_FromObj(tree, objv[3], &columns, 0) != TCL_OK)
 		return TCL_ERROR;
 	    listObj = Tcl_NewListObj(0, NULL);
-	    COLUMN_FOR_EACH(column, &columns, NULL, &iter) {
+	    COLUMN_FOR_EACH(column, &columns, NULL, &citer) {
 		Tcl_ListObjAppendElement(interp, listObj,
 			TreeColumn_ToObj(tree, column));
 	    }
