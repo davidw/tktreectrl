@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.88 2006/11/15 23:53:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.89 2006/11/18 01:18:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6956,64 +6956,11 @@ TreeItemCmd(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) clientData;
-    static CONST char *commandNames[] = {
-	"ancestors",
-	"children",
-	"create",
-	"delete",
-	"firstchild",
-	"lastchild",
-	"nextsibling",
-	"numchildren",
-	"parent",
-	"prevsibling",
-	"remove",
-
-	"bbox",
-	"cget",
-	"collapse",
-	"compare",
-#ifdef DEPRECATED
-	"complex",
-#endif
-	"configure",
-	"count",
-	"descendants",
-	"dump",
-	"element",
-	"enabled",
-	"expand",
-	"id",
-	"image",
-	"isancestor",
-	"isopen",
-	"order",
-	"range",
-	"rnc",
-	"sort",
-	"span",
-	"state",
-	"style",
-	"tag",
-	"text",
-	"toggle",
-	(char *) NULL
-    };
     enum {
 	COMMAND_ANCESTORS,
-	COMMAND_CHILDREN,
-	COMMAND_CREATE,
-	COMMAND_DELETE,
-	COMMAND_FIRSTCHILD,
-	COMMAND_LASTCHILD,
-	COMMAND_NEXTSIBLING,
-	COMMAND_NUMCHILDREN,
-	COMMAND_PARENT,
-	COMMAND_PREVSIBLING,
-	COMMAND_REMOVE,
-
 	COMMAND_BBOX,
 	COMMAND_CGET,
+	COMMAND_CHILDREN,
 	COMMAND_COLLAPSE,
 	COMMAND_COMPARE,
 #ifdef DEPRECATED
@@ -7021,17 +6968,26 @@ TreeItemCmd(
 #endif
 	COMMAND_CONFIGURE,
 	COMMAND_COUNT,
+	COMMAND_CREATE,
+	COMMAND_DELETE,
 	COMMAND_DESCENDANTS,
 	COMMAND_DUMP,
 	COMMAND_ELEMENT,
 	COMMAND_ENABLED,
 	COMMAND_EXPAND,
+	COMMAND_FIRSTCHILD,
 	COMMAND_ID,
 	COMMAND_IMAGE,
 	COMMAND_ISANCESTOR,
 	COMMAND_ISOPEN,
+	COMMAND_LASTCHILD,
+	COMMAND_NEXTSIBLING,
+	COMMAND_NUMCHILDREN,
 	COMMAND_ORDER,
+	COMMAND_PARENT,
+	COMMAND_PREVSIBLING,
 	COMMAND_RANGE,
+	COMMAND_REMOVE,
 	COMMAND_RNC,
 	COMMAND_SORT,
 	COMMAND_SPAN,
@@ -7046,6 +7002,7 @@ TreeItemCmd(
 #define AF_SAMEROOT	0x00040000 /* both items must be descendants of a common ancestor */
 #define AF_NOT_ITEM	0x00080000 /* arg is not an Item */
     struct {
+	char *cmdName;
 	int minArgs;
 	int maxArgs;
 	int flags;	/* AF_xxx | IFO_xxx for 1st arg. */
@@ -7054,46 +7011,46 @@ TreeItemCmd(
 	char *argString;
 	Tcl_ObjCmdProc *proc;
     } argInfo[] = {
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* ancestors */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* children */
-	{ 0, 0, 0, 0, 0, NULL, ItemCreateCmd }, /* create */
-	{ 1, 2, IFO_NOT_NULL, IFO_NOT_NULL | AF_SAMEROOT, 0, "first ?last?", NULL }, /* delete */
-	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newFirstChild?", NULL }, /* firstchild */
-	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newLastChild?", NULL }, /* lastchild */
-	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newNextSibling?", NULL }, /* nextsibling */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* numchildren */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* parent */
-	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newPrevSibling?", NULL }, /* prevsibling */
-	{ 1, 1, IFO_NOT_NULL | IFO_NOT_ROOT, 0, 0, "item", NULL }, /* remove */
-    
-	{ 1, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?element?", NULL }, /* bbox */
-	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item option", NULL }, /* cget */
-	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* collapse */
-	{ 3, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, "item1 op item2", NULL }, /* compare */
+	{ "ancestors", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "bbox", 1, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?element?", NULL },
+	{ "cget", 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item option", NULL },
+	{ "children", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "collapse", 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL},
+	{ "compare", 3, 3, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, "item1 op item2", NULL },
 #ifdef DEPRECATED
-	{ 2, 100000, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL }, /* complex */
+	{ "complex", 2, 100000, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL },
 #endif
-	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL }, /* configure */
-	{ 0, 1, AF_NOT_ITEM, 0, 0, "?-visible?" , NULL}, /* count */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* descendants */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* dump */
-	{ 0, 0, 0, 0, 0, NULL, ItemElementCmd }, /* element */
-	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?boolean?", NULL }, /* enabled */
-	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* expand */
-	{ 1, 1, 0, 0, 0, "item", NULL }, /* id */
-	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?", NULL }, /* image */
-	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL, 0, "item item2", NULL }, /* isancestor */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* isopen */
-	{ 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-visible?", NULL }, /* order */
-	{ 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, 0, "first last", NULL }, /* range */
-	{ 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL }, /* rnc */
-	{ 0, 0, 0, 0, 0, NULL, ItemSortCmd }, /* sort */
-	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?span? ?column span ...?", NULL }, /* span */
-	{ 0, 0, 0, 0, 0, NULL, ItemStateCmd }, /* state */
-	{ 0, 0, 0, 0, 0, NULL, ItemStyleCmd }, /* style */
-	{ 0, 0, 0, 0, 0, NULL, ItemTagCmd }, /* tag */
-	{ 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?", NULL }, /* text */
-	{ 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL}, /* toggle */
+	{ "configure", 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL },
+	{ "count", 0, 1, AF_NOT_ITEM, 0, 0, "?-visible?" , NULL},
+	{ "create", 0, 0, 0, 0, 0, NULL, ItemCreateCmd },
+	{ "delete", 1, 2, IFO_NOT_NULL, IFO_NOT_NULL | AF_SAMEROOT, 0, "first ?last?", NULL },
+	{ "descendants", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "dump", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "element", 0, 0, 0, 0, 0, NULL, ItemElementCmd },
+	{ "enabled", 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?boolean?", NULL },
+	{ "expand", 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL},
+	{ "firstchild", 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newFirstChild?", NULL },
+	{ "id", 1, 1, 0, 0, 0, "item", NULL },
+	{ "image", 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?image? ?column image ...?", NULL },
+	{ "isancestor", 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL, 0, "item item2", NULL },
+	{ "isopen", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "lastchild", 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newLastChild?", NULL },
+	{ "nextsibling", 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newNextSibling?", NULL },
+	{ "numchildren", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "order", 1, 2, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-visible?", NULL },
+	{ "parent", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "prevsibling", 1, 2, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | IFO_NOT_ORPHAN, IFO_NOT_MANY | IFO_NOT_NULL | IFO_NOT_ROOT | AF_NOT_ANCESTOR | AF_NOT_EQUAL, 0, "item ?newPrevSibling?", NULL },
+	{ "range", 2, 2, IFO_NOT_MANY | IFO_NOT_NULL, IFO_NOT_MANY | IFO_NOT_NULL | AF_SAMEROOT, 0, "first last", NULL },
+	{ "remove", 1, 1, IFO_NOT_NULL | IFO_NOT_ROOT, 0, 0, "item", NULL },
+	{ "rnc", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
+	{ "sort", 0, 0, 0, 0, 0, NULL, ItemSortCmd },
+	{ "span", 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?span? ?column span ...?", NULL },
+	{ "state", 0, 0, 0, 0, 0, NULL, ItemStateCmd },
+	{ "style", 0, 0, 0, 0, 0, NULL, ItemStyleCmd },
+	{ "tag", 0, 0, 0, 0, 0, NULL, ItemTagCmd },
+	{ "text", 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?column? ?text? ?column text ...?", NULL },
+	{ "toggle", 1, 2, IFO_NOT_NULL, AF_NOT_ITEM, 0, "item ?-recurse?", NULL},
+	{ NULL }
     };
     int index;
     int numArgs = objc - 3;
@@ -7106,8 +7063,8 @@ TreeItemCmd(
 	return TCL_ERROR;
     }
 
-    if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-		&index) != TCL_OK) {
+    if (Tcl_GetIndexFromObjStruct(interp, objv[2], argInfo, sizeof(argInfo[0]),
+	    "command", 0, &index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
