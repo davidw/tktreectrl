@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.89 2006/11/18 01:18:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.90 2006/11/18 04:35:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -7021,7 +7021,7 @@ TreeItemCmd(
 	{ "complex", 2, 100000, IFO_NOT_MANY | IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item list ...", NULL },
 #endif
 	{ "configure", 1, 100000, IFO_NOT_NULL, AF_NOT_ITEM, AF_NOT_ITEM, "item ?option? ?value? ?option value ...?", NULL },
-	{ "count", 0, 1, AF_NOT_ITEM, 0, 0, "?-visible?" , NULL},
+	{ "count", 0, 1, 0, 0, 0, "?itemDesc?" , NULL},
 	{ "create", 0, 0, 0, 0, 0, NULL, ItemCreateCmd },
 	{ "delete", 1, 2, IFO_NOT_NULL, IFO_NOT_NULL | AF_SAMEROOT, 0, "first ?last?", NULL },
 	{ "descendants", 1, 1, IFO_NOT_MANY | IFO_NOT_NULL, 0, 0, "item", NULL },
@@ -7056,6 +7056,7 @@ TreeItemCmd(
     int numArgs = objc - 3;
     TreeItemList itemList, item2List;
     TreeItem item = NULL, item2 = NULL, child;
+    ItemForEach iter;
     int result = TCL_OK;
 
     if (objc < 3) {
@@ -7226,7 +7227,6 @@ TreeItemCmd(
 	    int mode = 0; /* lint */
 	    int i, count;
 	    TreeItemList items;
-	    ItemForEach iter;
 
 	    if (numArgs == 2) {
 		int len;
@@ -7376,8 +7376,6 @@ TreeItemCmd(
 	/* T item configure I ?option? ?value? ?option value ...? */
 	case COMMAND_CONFIGURE:
 	{
-	    ItemForEach iter;
-
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
 
@@ -7403,31 +7401,21 @@ TreeItemCmd(
 	}
 	case COMMAND_COUNT:
 	{
-	    int visible = FALSE;
+	    int count = tree->itemCount;
+
 	    if (objc == 4) {
-		int len;
-		char *s = Tcl_GetStringFromObj(objv[3], &len);
-		if ((s[0] == '-') && (strncmp(s, "-visible", len) == 0))
-		    visible = TRUE;
-		else {
-		    FormatResult(interp, "bad switch \"%s\": must be -visible",
-			s);
-		    goto errorExit;
+		count = 0;
+		ITEM_FOR_EACH(item, &itemList, &item2List, &iter) {
+		    count++;
 		}
 	    }
-	    if (visible) {
-		Tree_UpdateItemIndex(tree);
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemVisCount));
-	    } else {
-		Tcl_SetObjResult(interp, Tcl_NewIntObj(tree->itemCount));
-	    }
+	    Tcl_SetObjResult(interp, Tcl_NewIntObj(count));
 	    break;
 	}
 	case COMMAND_DELETE:
 	{
 	    TreeItemList deleted, selected;
 	    int i, count;
-	    ItemForEach iter;
 
 	    /* The root is never deleted */
 	    if (tree->itemCount == 1)
@@ -7555,7 +7543,6 @@ TreeItemCmd(
 	    int enabled;
 	    TreeItemList newD;
 	    int stateOff, stateOn;
-	    ItemForEach iter;
 
 	    if (objc == 4) {
 		if (IS_ALL(item) || (TreeItemList_Count(&itemList) > 1)) {
@@ -7615,7 +7602,6 @@ TreeItemCmd(
 	case COMMAND_ID:
 	{
 	    Tcl_Obj *listObj;
-	    ItemForEach iter;
 
 	    listObj = Tcl_NewListObj(0, NULL);
 	    ITEM_FOR_EACH(item, &itemList, NULL, &iter) {
@@ -7760,7 +7746,6 @@ TreeItemCmd(
 	}
 	case COMMAND_REMOVE:
 	{
-	    ItemForEach iter;
 	    int removed = FALSE;
 
 	    ITEM_FOR_EACH(item, &itemList, NULL, &iter) {
@@ -7800,7 +7785,6 @@ TreeItemCmd(
 		int span;
 	    } staticCS[STATIC_SIZE], *cs = staticCS;
 	    int i, count = 0, span, changed = FALSE;
-	    ItemForEach iter;
 	    ColumnForEach citer;
 
 	    if ((objc < 6) && (IS_ALL(item) ||
@@ -7901,7 +7885,6 @@ doneSPAN:
 		Tcl_Obj *obj;
 	    } staticCO[STATIC_SIZE], *co = staticCO;
 	    int i, count = 0, changed = FALSE, columnIndex;
-	    ItemForEach iter;
 	    ColumnForEach citer;
 
 	    if ((objc < 6) && (IS_ALL(item) ||
