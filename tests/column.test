@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: column.test,v 1.12 2006/11/09 00:15:53 treectrl Exp $
+# CVS: @(#) $Id: column.test,v 1.13 2006/11/18 04:42:14 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -46,7 +46,7 @@ test column-1.4 {configure: no column exists with tag} -body {
 
 test column-1.5 {configure: create and fill a column} -body {
 	.t column create
-    .t column configure 0 -tag column0
+    .t column configure 0 -tags column0
     .t element create e rect -width 482
     .t style create s
     .t style elements s e
@@ -57,7 +57,7 @@ test column-1.5 {configure: create and fill a column} -body {
 
 test column-1.6 {configure: create another column} -body {
 	.t column create
-    .t column configure 1 -tag column1
+    .t column configure 1 -tags column1
 } -result {}
 
 test column-2.1 {column bbox: missing args} -body {
@@ -331,25 +331,25 @@ test column-3.49 {column configure/cget: -widthhack} -constraints {
     .t column cget column1 -widthhack
 } -result {1}
 
-test column-4.1 {column configure: -tag} -body {
-    .t column configure column1 -tag column2
-    .t column cget column1 -tag
+test column-4.1 {column configure: -tags} -body {
+    .t column configure column1 -tags column2
+    .t column cget column1 -tags
 } -returnCodes error -result {column "column1" doesn't exist}
 
-test column-4.2 {column configure: -tag} -body {
-    .t column cget column2 -tag
+test column-4.2 {column configure: -tags} -body {
+    .t column cget column2 -tags
 } -result {column2}
 
-test column-4.3 {column cget: -tag of tail} -body {
-    .t column cget tail -tag
+test column-4.3 {column cget: -tags of tail} -body {
+    .t column cget tail -tags
 } -result {tail}
 
-test column-4.4 {column configure/cget: -tag of tail} -body {
-    .t column configure tail -tag head
+test column-4.4 {column configure/cget: -tags of tail} -body {
+    .t column configure tail -tags head
 } -returnCodes error -result {can't change tag of tail column}
 
 test column-4.5 {column cget: specify tail by its tag} -body {
-    .t column cget head -tag
+    .t column cget head -tags
 } -returnCodes error -result {column "head" doesn't exist}
 
 test column-5.1 {column delete: missing args} -body {
@@ -365,7 +365,7 @@ test column-5.3 {column delete: first column} -body {
 } -result {}
 
 test column-5.4 {deleted column doesn't exist} -body {
-    .t column cget 0 -tag
+    .t column cget 0 -tags
 } -returnCodes error -result {column "0" doesn't exist}
 
 test column-5.5 {column delete: all} -body {
@@ -374,10 +374,10 @@ test column-5.5 {column delete: all} -body {
 } -result {}
 
 test column-5.6 {column delete: range of 1} -body {
-    .t column create -tag column1
-    .t column create -tag column2
-    .t column create -tag column3
-    .t column create -tag column4    
+    .t column create -tags column1
+    .t column create -tags column2
+    .t column create -tags column3
+    .t column create -tags column4    
     .t column delete column1 column1
     .t column list
 } -result {1 2 3}
@@ -424,8 +424,8 @@ test column-7.2 {column move: invalid column} -body {
 } -returnCodes error -result {column "0" doesn't exist}
 
 test column-7.3 {column move: move column2} -body {
-    .t column create -tag column1
-    .t column create -tag column3
+    .t column create -tags column1
+    .t column create -tags column3
     .t column move column2 column3
     .t column order column2
 } -result {1}
@@ -433,7 +433,7 @@ test column-7.3 {column move: move column2} -body {
 test column-7.4 {correct moved?} -body {
     set res {}
     for {set x 0} {$x < [.t column count]} {incr x} {
-	lappend res [.t column cget "order $x" -tag]
+	lappend res [.t column cget "order $x" -tags]
     }
     set res
 } -result {column1 column2 column3}
@@ -508,6 +508,26 @@ test column-10.5 {-itemstyle: style is deleted} -body {
     .t style delete testStyle2
     .t column cget column1 -itemstyle
 } -result {}
+
+test column-11.1 {column count: too many args} -body {
+    .t column count a b
+} -returnCodes error -result {wrong # args: should be ".t column count ?columnDesc?"}
+
+test column-11.2 {column count: no args} -body {
+    .t column count
+} -result {3}
+
+test column-11.3 {column count: with desc} -body {
+    .t column count "range first last"
+} -result {3}
+
+test column-11.4 {column count: all includes tail} -body {
+    .t column count all
+} -result {4}
+
+test column-11.5 {column count: unknown tag} -body {
+    .t column count {tag foo}
+} -result {0}
 
 test column-99.1 {some needed cleanup} -body {
     destroy .t
