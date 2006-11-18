@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: item.test,v 1.17 2006/10/29 02:41:58 treectrl Exp $
+# CVS: @(#) $Id: item.test,v 1.18 2006/11/18 04:42:47 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -1145,6 +1145,44 @@ test item-20.42 {item tag: [expr]} -body {
 
 test item-20.43 {item tag: [expr]} -body {
     .t item tag expr 100 e^b
+} -cleanup {
+    .t item delete all
+} -result {1}
+
+test item-21.1 {item count: too many args} -body {
+    .t item count a b
+} -returnCodes error -result {wrong # args: should be ".t item count ?itemDesc?"}
+
+test item-21.2 {item count: no args, only root} -body {
+    .t item count
+} -result {1}
+
+test item-21.2 {item count: no args, many items} -setup {
+    .t item create -count 50 -parent root
+} -body {
+    .t item count
+} -result {51}
+
+test item-21.3 {item count: double-check with range} -body {
+    expr {[.t item count] == [llength [.t item range first last]]}
+} -result {1}
+
+test item-21.4 {item count: double-check with range} -body {
+    expr {[.t item count] == [.t item count "range first last"]}
+} -result {1}
+
+test item-21.5 {item count: all is same as no args} -body {
+    expr {[.t item count] == [.t item count all]}
+} -result {1}
+
+test item-21.6 {item count: depth test} -body {
+    .t item count "depth 1"
+} -result {50}
+
+test item-21.7 {item count: double-check with selection} -setup {
+    .t selection add "range 10 20"
+} -body {
+     expr {[.t item count "state selected"] == [.t selection count]}
 } -result {1}
 
 test item-99.1 {some needed cleanup} -body {
