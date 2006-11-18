@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: treectrl.test,v 1.32 2006/11/09 00:15:30 treectrl Exp $
+# RCS: @(#) $Id: treectrl.test,v 1.33 2006/11/18 04:44:12 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -539,32 +539,20 @@ test treectrl-11.3 {orphans: no orphans} -body {
     .t orphans
 } -result {}
 
-test treectrl-12.1 {item count: too many args} -body {
-    .t item count foo bar
-} -returnCodes error -result {wrong # args: should be ".t item count ?-visible?"}
-
-test treectrl-12.2 {item count} -body {
-    .t item count
-} -result {9}
-
-test treectrl-12.3 {item count: simple double check with range} -body {
-    expr {[.t item count] == [llength [.t item range first last]]}
-} -result {1}
-
-test treectrl-12.4 {contentbox: too many args} -body {
+test treectrl-12.1 {contentbox: too many args} -body {
     .t contentbox foo
 } -returnCodes error -result {wrong # args: should be ".t contentbox"}
 
-test treectrl-12.5 {contentbox} -body {
+test treectrl-12.2 {contentbox} -body {
     .t contentbox
 } -result {3 3 203 203}
 
-test treectrl-12.6 {contentbox: simple double check with borders} -body {
+test treectrl-12.3 {contentbox: simple double check with borders} -body {
     expr {[lindex [.t contentbox] 0] \
 		== ([.t cget -bd]+[.t cget -highlightthickness])}
 } -result {1}
 
-test treectrl-12.99 {element delete while item is still displayed} -body {
+test treectrl-12.4 {element delete while item is still displayed} -body {
     .t element create elText text -text hallo
     .t style create stText
     .t style element stText elText
