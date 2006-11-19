@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.34 2006/11/18 04:37:49 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.35 2006/11/19 00:49:36 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -195,6 +195,13 @@ namespace eval ::TreeCtrl {
     variable Priv
     array set Priv {
 	prev {}
+    }
+
+    if {[info procs ::lassign] eq ""} {
+	proc lassign {values args} {
+	    uplevel 1 [list foreach $args [linsert $values end {}] break]
+	    lrange $values [llength $args] end
+	}
     }
 }
 
@@ -433,7 +440,7 @@ proc ::TreeCtrl::ButtonPress1 {w x y} {
     }
 
     if {[lindex $id 0] eq "item"} {
-	foreach {where item arg1 arg2} $id {}
+	lassign $id where item arg1 arg2
 	if {$arg1 eq "button"} {
 	    $w item toggle $item
 	    return
@@ -503,7 +510,7 @@ proc ::TreeCtrl::DoubleButton1 {w x y} {
 	return
     }
     if {[lindex $id 0] eq "item"} {
-	foreach {where item arg1 arg2} $id {}
+	lassign $id where item arg1 arg2
 	if {$arg1 eq "button"} {
 	    $w item toggle $item
 	    return

@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: filelist-bindings.tcl,v 1.25 2006/11/05 06:43:28 treectrl Exp $
+# RCS: @(#) $Id: filelist-bindings.tcl,v 1.26 2006/11/19 00:49:36 treectrl Exp $
 
 bind TreeCtrlFileList <Double-ButtonPress-1> {
     TreeCtrl::FileListEditCancel %W
@@ -88,7 +88,7 @@ proc ::TreeCtrl::IsSensitive {T x y} {
     if {[lindex $id 0] ne "item" || [llength $id] != 6} {
 	return 0
     }
-    foreach {where item arg1 arg2 arg3 arg4} $id {}
+    lassign $id where item arg1 arg2 arg3 arg4
     if {![$T item enabled $item]} {
 	return 0
     }
@@ -126,7 +126,7 @@ proc ::TreeCtrl::FileListButton1 {T x y} {
 
     # Click in item
     } else {
-	foreach {where item arg1 arg2 arg3 arg4} $id {}
+	lassign $id where item arg1 arg2 arg3 arg4
 	switch $arg1 {
 	    button -
 	    line {
