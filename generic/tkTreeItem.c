@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.90 2006/11/18 04:35:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.91 2006/11/19 00:48:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6486,6 +6486,48 @@ ItemSortCmd(
     }
 
     return result;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeItemList_Sort --
+ *
+ *	Sorts a list of items.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+TILSCompare(
+    CONST VOID *first_,
+    CONST VOID *second_
+    )
+{
+    TreeItem first = *(TreeItem *) first_;
+    TreeItem second = *(TreeItem *) second_;
+
+    return first->index - second->index;
+}
+
+void
+TreeItemList_Sort(
+    TreeItemList *items
+    )
+{
+    Tree_UpdateItemIndex(items->tree);
+
+    /* TkTable uses this, but mentions possible lack of thread-safety. */
+    qsort((VOID *) TreeItemList_Items(items),
+	    (size_t) TreeItemList_Count(items),
+	    sizeof(TreeItem),
+	    TILSCompare);
 }
 
 /*

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.86 2006/11/15 23:52:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.87 2006/11/19 00:48:11 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2724,10 +2724,70 @@ doneCLEAR:
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 
+#ifdef SELECTION_VISIBLE
+	    if (objc < 3 || objc > 5) {
+		Tcl_WrongNumArgs(interp, 3, objv, "?first? ?last?");
+		return TCL_ERROR;
+	    }
+	    if (objc > 3) {
+		int first, last;
+		TreeItemList items;
+
+		if (TclGetIntForIndex(interp, objv[3], tree->selectCount - 1,
+			&first) != TCL_OK) {
+		    return TCL_ERROR;
+		}
+		if (first < 0)
+		    first = 0;
+		last = first;
+		if (objc == 5) {
+		    if (TclGetIntForIndex(interp, objv[4], tree->selectCount - 1,
+			    &last) != TCL_OK) {
+			return TCL_ERROR;
+		    }
+		}
+		if (last >= tree->selectCount)
+		    last = tree->selectCount - 1;
+		if (first > last)
+		    break;
+
+		/* Build a list of selected items. */
+		TreeItemList_Init(tree, &items, tree->selectCount);
+		hPtr = Tcl_FirstHashEntry(&tree->selection, &search);
+		while (hPtr != NULL) {
+		    item = (TreeItem) Tcl_GetHashKey(&tree->selection, hPtr);
+		    TreeItemList_Append(&items, item);
+		    hPtr = Tcl_NextHashEntry(&search);
+		}
+
+		/* Sort it. */
+		TreeItemList_Sort(&items);
+
+		if (first == last) {
+		    item = TreeItemList_Nth(&items, first);
+		    Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item));
+		} else {
+		    listObj = Tcl_NewListObj(0, NULL);
+		    for (index = first; index <= last; index++) {
+			item = TreeItemList_Nth(&items, index);
+			Tcl_ListObjAppendElement(interp, listObj,
+				TreeItem_ToObj(tree, item));
+		    }
+		    Tcl_SetObjResult(interp, listObj);
+		}
+
+		TreeItemList_Free(&items);
+		break;
+	    }
+#else /* SELECTION_VISIBLE */
+	    /* If any item may be selected, including orphans, then getting
+	     * a sorted list of selected items is impossible. */
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
+#endif /* SELECTION_VISIBLE */
+
 	    if (tree->selectCount < 1)
 		break;
 	    listObj = Tcl_NewListObj(0, NULL);

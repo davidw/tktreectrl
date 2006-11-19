@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.72 2006/11/12 05:47:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.73 2006/11/19 00:48:14 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -950,6 +950,7 @@ extern void TreePtrList_Free(TreePtrList *tilPtr);
 #define TreeItemList_Items(L) ((TreeItem *) (L)->pointers)
 #define TreeItemList_Nth(L,n) ((TreeItem) (L)->pointers[n])
 #define TreeItemList_Count(L) ((L)->count)
+extern void TreeItemList_Sort(TreeItemList *items);
 
 #define TreeColumnList_Init TreePtrList_Init
 #define TreeColumnList_Append TreePtrList_Append
