@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: imovie.tcl,v 1.13 2006/11/05 06:46:10 treectrl Exp $
+# RCS: @(#) $Id: imovie.tcl,v 1.14 2006/11/19 00:53:51 treectrl Exp $
 
 #
 # Demo: iMovie
@@ -118,7 +118,7 @@ proc iMovieButton1 {T x y} {
 	} elseif {[lindex $id 0] eq "item"} {
 		::TreeCtrl::ButtonPress1 $T $x $y
 		update
-		foreach {where item arg1 arg2 arg3 arg4} $id {}
+		lassign $id where item arg1 arg2 arg3 arg4
 		switch $arg1 {
 			column {
 				set I [lindex $id 1]

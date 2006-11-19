@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.12 2006/11/15 23:50:59 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.13 2006/11/19 00:55:51 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -697,7 +697,7 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
     foreach E [$Tdemo style elements $style] {
 	$T element create $E [$Tdemo element type $E]
 	foreach list [$Tdemo element configure $E] {
-	    foreach {name x y default current} $list {}
+	    lassign $list name x y default current
 	    $T element configure $E $name $current
 	}
     }
@@ -746,7 +746,7 @@ proc StyleEditor::StyleToCanvas {{scroll 0}} {
 
 	foreach E [$Tdemo item style elements $I $C] {
 	    foreach list [$Tdemo item element configure $I $C $E] {
-		foreach {name x y default current} $list {}
+		lassign $list name x y default current
 		set masterDefault [$Tdemo element cget $E $name]
 		set sameAsMaster [string equal $masterDefault $current]
 		if {!$sameAsMaster && ![string length $current]} {
@@ -767,8 +767,7 @@ if 0 {
     # Do this after creating styles so -defaultstyle works
     foreach list [$Tdemo configure] {
 	if {[llength $list] == 2} continue
-	foreach {name x y default current} $list {}
-	
+	lassign $list name x y default current
 	$T configure $name $current
     }
 }

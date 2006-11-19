@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: random.tcl,v 1.21 2006/11/05 06:49:35 treectrl Exp $
+# RCS: @(#) $Id: random.tcl,v 1.22 2006/11/19 00:55:37 treectrl Exp $
 
 set RandomN 500
 set RandomDepth 5
@@ -177,7 +177,7 @@ proc RandomButton1 {T x y} {
 
 	# Click in item
 	} else {
-		foreach {where item arg1 arg2 arg3 arg4} $id {}
+		lassign $id where item arg1 arg2 arg3 arg4
 		switch $arg1 {
 			button {
 				$T item toggle $item

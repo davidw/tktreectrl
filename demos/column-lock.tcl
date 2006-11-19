@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.6 2006/11/15 23:48:48 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.7 2006/11/19 00:51:46 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -156,6 +156,13 @@ proc DemoColumnLock {} {
     $T style layout cell cell.selW -detach yes -expand e -iexpand y
     $T style layout cell cell.selE -detach yes -expand w -iexpand y
 
+    # NOTE 1: the following column descriptions are equivalent in this demo:
+    #   "range {first next} {last prev}"
+    #   "all lock none" (see note #2 below)
+    #   "lock none !tail"
+    # The above item descriptions all specify the unlocked columns between
+    # the left-locked and right-locked columns.
+
     $T item style set "root children" "range {first next} {last prev}" cell
 
     $T element create windowStyle.rect rect -fill {#e0e8f0 mouseover #F7F7F7 CHECK}
@@ -166,6 +173,11 @@ proc DemoColumnLock {} {
     $T style layout windowStyle windowStyle.rect -detach yes -iexpand xy
     $T style layout windowStyle windowStyle.text -expand we -padx 2 -pady 2
     $T style layout windowStyle windowStyle.window -iexpand x -padx 2 -pady {0 2}
+
+    # NOTE 2: "all lock none" also matches the tail column, however the
+    # [item style set] command does not operate on the tail column so it is
+    # ignored. Explicitly naming the tail column would result in an error
+    # however. Another example of this behaviour is [column delete all].
 
     $T item style set "list {R2 R22}" "all lock none" windowStyle
 
@@ -209,7 +221,7 @@ proc ColumnLockButton1 {w x y} {
     set id [$w identify $x $y]
     set ColumnLock(selecting) 0
     if {[lindex $id 0] eq "item"} {
-	foreach {what item where arg1 arg2 arg3} $id {}
+	lassign $id what item where arg1 arg2 arg3
 	if {$where eq "column"} {
 	    if {[$w column compare $arg1 == last]} {
 		$w item state set $item ~CHECK
@@ -230,7 +242,7 @@ proc ColumnLockMotion1 {w x y} {
     global ColumnLock
     set id [$w identify $x $y]
     if {[lindex $id 0] eq "item"} {
-	foreach {what item where arg1 arg2 arg3} $id {}
+	lassign $id what item where arg1 arg2 arg3
 	if {$where eq "column"} {
 	    if {[$w column cget $arg1 -lock] eq "none"} {
 		if {$ColumnLock(selecting)} {
