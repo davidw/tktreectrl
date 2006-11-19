@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.52 2006/11/10 22:33:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.53 2006/11/19 23:43:58 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4693,6 +4693,37 @@ OptionHax_Forget(
 /*
  *----------------------------------------------------------------------
  *
+ * OptionSpec_Find --
+ *
+ *	Return a pointer to a name Tk_OptionSpec in a table.
+ *
+ * Results:
+ *	Returns a pointer or panics.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+Tk_OptionSpec *
+OptionSpec_Find(
+    Tk_OptionSpec *optionTable,
+    CONST char *optionName
+    )
+{
+    while (optionTable->type != TK_OPTION_END) {
+	if (strcmp(optionTable->optionName, optionName) == 0)
+	    return optionTable;
+	optionTable++;
+    }
+    panic("OptionSpec_Find: can't find %s", optionName);
+    return NULL;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
  * PerStateCO_Set --
  * PerStateCO_Get --
  * PerStateCO_Restore --
@@ -4911,27 +4942,17 @@ PerStateCO_Init(
     StateFromObjProc proc
     )
 {
-    Tk_ObjCustomOption *co;
-    int i;
+    Tk_OptionSpec *specPtr;
 
-    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
-	if (strcmp(optionTable[i].optionName, optionName))
-	    continue;
-
-	if (optionTable[i].clientData != NULL)
-	    return TCL_OK;
-
-	if (optionTable[i].objOffset < 0)
-	    panic("PerStateCO_Init %s objOffset < 0", optionName);
-
-	/* The Tk custom option record */
-	co = PerStateCO_Alloc(optionName, typePtr, proc);
-    
-	/* Update the option table */
-	optionTable[i].clientData = (ClientData) co;
+    specPtr = OptionSpec_Find(optionTable, optionName);
+    if (specPtr->type != TK_OPTION_CUSTOM)
+	panic("PerStateCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+    if (specPtr->clientData != NULL)
 	return TCL_OK;
-    }
-    return TCL_ERROR;
+
+    specPtr->clientData = PerStateCO_Alloc(optionName, typePtr, proc);
+
+    return TCL_OK;
 }
 
 #define DEBUG_DYNAMICxxx
@@ -5340,50 +5361,44 @@ DynamicCO_Init(
 				 * NULL. */
     )
 {
+    Tk_OptionSpec *specPtr;
     DynamicCOClientData *cd;
     Tk_ObjCustomOption *co;
-    int i;
 
     if (size <= 0)
 	panic("DynamicCO_Init: option %s size=%d", optionName, size);
 
-    for (i = 0; optionTable[i].type != TK_OPTION_END; i++) {
-	if (strcmp(optionTable[i].optionName, optionName))
-	    continue;
+    specPtr = OptionSpec_Find(optionTable, optionName);
+    if (specPtr->type != TK_OPTION_CUSTOM)
+	panic("DynamicCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+    if (specPtr->clientData != NULL)
+	return TCL_OK;
 
-	if (optionTable[i].clientData != NULL)
-	    return TCL_OK;
+    /* ClientData for the Tk custom option record */
+    cd = (DynamicCOClientData *) ckalloc(sizeof(DynamicCOClientData));
+    cd->id = id;
+    cd->size = size;
+    cd->objOffset = objOffset;
+    cd->internalOffset = internalOffset;
+    cd->custom = custom;
+    cd->init = init;
 
-	if (optionTable[i].type != TK_OPTION_CUSTOM)
-	    panic("DynamicCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+    /* The Tk custom option record */
+    co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+    co->name = (char *) optionName + 1;
+    co->setProc = DynamicCO_Set;
+    co->getProc = DynamicCO_Get;
+    co->restoreProc = DynamicCO_Restore;
+    co->freeProc = DynamicCO_Free;
+    co->clientData = (ClientData) cd;
 
-	/* ClientData for the Tk custom option record */
-	cd = (DynamicCOClientData *) ckalloc(sizeof(DynamicCOClientData));
-	cd->id = id;
-	cd->size = size;
-	cd->objOffset = objOffset;
-	cd->internalOffset = internalOffset;
-	cd->custom = custom;
-	cd->init = init;
-
-	/* The Tk custom option record */
-	co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
-	co->name = (char *) optionName + 1;
-	co->setProc = DynamicCO_Set;
-	co->getProc = DynamicCO_Get;
-	co->restoreProc = DynamicCO_Restore;
-	co->freeProc = DynamicCO_Free;
-	co->clientData = (ClientData) cd;
-
-	/* Update the option table */
-	optionTable[i].clientData = (ClientData) co;
+    /* Update the option table */
+    specPtr->clientData = co;
 #ifdef DEBUG_DYNAMIC
 dbwin("DynamicCO_Init id=%d size=%d objOffset=%d internalOffset=%d custom->name=%s\n",
     id, size, objOffset, internalOffset, custom->name);
 #endif
-	return TCL_OK;
-    }
-    return TCL_ERROR;
+    return TCL_OK;
 }
 
 /*
@@ -5783,4 +5798,119 @@ Tk_ObjCustomOption styleCO =
     NULL,
     (ClientData) NULL
 };
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * BooleanFlagCO_Set --
+ * BooleanFlagCO_Get --
+ * BooleanFlagCO_Restore --
+ *
+ *	These procedures implement a TK_OPTION_CUSTOM where the custom
+ *	option is a boolean value whose internal rep is a single bit of
+ *	an int rather than the entire int.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+BooleanFlagCO_Set(
+    ClientData clientData,
+    Tcl_Interp *interp,
+    Tk_Window tkwin,
+    Tcl_Obj **value,
+    char *recordPtr,
+    int internalOffset,
+    char *saveInternalPtr,
+    int flags
+    )
+{
+    int theFlag = (int) clientData;
+    int new, *internalPtr;
+
+    if (internalOffset >= 0)
+	internalPtr = (int *) (recordPtr + internalOffset);
+    else
+	internalPtr = NULL;
+
+    if (Tcl_GetBooleanFromObj(interp, (*value), &new) != TCL_OK)
+	return TCL_ERROR;
+
+    if (internalPtr != NULL) {
+	*((int *) saveInternalPtr) = *internalPtr;
+	if (new)
+	    *internalPtr |= theFlag;
+	else
+	    *internalPtr &= ~theFlag;
+    }
+
+    return TCL_OK;
+}
+
+static Tcl_Obj *
+BooleanFlagCO_Get(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *recordPtr,
+    int internalOffset
+    )
+{
+    int theFlag = (int) clientData;
+    int value = *(int *) (recordPtr + internalOffset);
+
+    return Tcl_NewBooleanObj(value & theFlag);
+}
+
+static void
+BooleanFlagCO_Restore(
+    ClientData clientData,
+    Tk_Window tkwin,
+    char *internalPtr,
+    char *saveInternalPtr
+    )
+{
+    int theFlag = (int) clientData;
+    int value = *(int *) saveInternalPtr;
+
+    if (value & theFlag)
+	*((int *) internalPtr) |= theFlag;
+    else
+	*((int *) internalPtr) &= ~theFlag;
+}
+
+int
+BooleanFlagCO_Init(
+    Tk_OptionSpec *optionTable,
+    CONST char *optionName,
+    int theFlag
+    )
+{
+    Tk_OptionSpec *specPtr;
+    Tk_ObjCustomOption *co;
+
+    specPtr = OptionSpec_Find(optionTable, optionName);
+    if (specPtr->type != TK_OPTION_CUSTOM)
+	panic("IntegerCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+    if (specPtr->clientData != NULL)
+	return TCL_OK;
+
+    /* The Tk custom option record */
+    co = (Tk_ObjCustomOption *) ckalloc(sizeof(Tk_ObjCustomOption));
+    co->name = "boolean";
+    co->setProc = BooleanFlagCO_Set;
+    co->getProc = BooleanFlagCO_Get;
+    co->restoreProc = BooleanFlagCO_Restore;
+    co->freeProc = NULL;
+    co->clientData = (ClientData) theFlag;
+
+    specPtr->clientData = co;
+
+    return TCL_OK;
+}
 
