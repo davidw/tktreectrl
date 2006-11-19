@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.63 2006/11/15 23:52:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.64 2006/11/19 23:37:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5139,7 +5139,7 @@ DebugDrawBorder(
 	    XFillRectangle(tree->display, Tk_WindowId(tkwin),
 		    tree->debug.gcDraw,
 		    inset, Tk_Height(tkwin) - inset - bottom,
-		    Tk_Width(tkwin), bottom);
+		    Tk_Width(tkwin) - inset * 2, bottom);
 	}
 	DisplayDelay(tree);
     }
