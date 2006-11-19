@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.14 2006/11/09 00:08:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.15 2006/11/19 23:42:24 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -95,6 +95,12 @@ typedef struct
     SIZE buttonClosed;
 } XPThemeData;
 
+typedef struct TreeThemeData_
+{
+    HTHEME hThemeHEADER;
+    HTHEME hThemeTREEVIEW;
+} TreeThemeData_;
+
 static XPThemeProcs *procs = NULL;
 static XPThemeData *themeData = NULL; 
 TCL_DECLARE_MUTEX(themeMutex)
@@ -174,8 +180,6 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     int arrow, int x, int y, int width, int height)
 {
-    Window win = Tk_WindowId(tree->tkwin);
-    HWND hwnd = Tk_GetHWND(win);
     HTHEME hTheme;
     HDC hDC;
     TkWinDCState dcState;
@@ -194,7 +198,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     if (!themeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
-    hTheme = procs->OpenThemeData(hwnd, L"HEADER");
+    hTheme = tree->themeData->hThemeHEADER;
     if (!hTheme)
 	return TCL_ERROR;
 
@@ -204,7 +208,6 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
 	iPartId,
 	iStateId))
     {
-	procs->CloseThemeData(hTheme);
 	return TCL_ERROR;
     }
 #endif
@@ -274,7 +277,6 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
 	&rc,
 	NULL);
 
-    procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
 
     if (hr != S_OK)
@@ -286,7 +288,6 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
 int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4])
 {
     Window win = Tk_WindowId(tree->tkwin);
-    HWND hwnd = Tk_GetHWND(win);
     HTHEME hTheme;
     HDC hDC;
     TkWinDCState dcState;
@@ -305,7 +306,7 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
     if (!themeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
-    hTheme = procs->OpenThemeData(hwnd, L"HEADER");
+    hTheme = tree->themeData->hThemeHEADER;
     if (!hTheme)
 	return TCL_ERROR;
 
@@ -323,7 +324,6 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
 	NULL,
 	&margins);
 
-    procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(win, hDC, &dcState);
 
     if (hr != S_OK)
@@ -385,7 +385,7 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
     if (!themeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
-    hTheme = procs->OpenThemeData(hwnd, L"HEADER");
+    hTheme = tree->themeData->hThemeHEADER;
     if (!hTheme)
 	return TCL_ERROR;
 
@@ -394,7 +394,6 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
 	iPartId,
 	iStateId))
     {
-	procs->CloseThemeData(hTheme);
 	return TCL_ERROR;
     }
 
@@ -413,7 +412,6 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
 	&rc,
 	NULL);
 
-    procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
     return TCL_OK;
 #endif /* 0 */
@@ -422,8 +420,6 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
 int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
     int x, int y, int width, int height)
 {
-    Window win = Tk_WindowId(tree->tkwin);
-    HWND hwnd = Tk_GetHWND(win);
     HTHEME hTheme;
     HDC hDC;
     TkWinDCState dcState;
@@ -437,7 +433,7 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
     iPartId  = TVP_GLYPH;
     iStateId = open ? GLPS_OPENED : GLPS_CLOSED;
 
-    hTheme = procs->OpenThemeData(hwnd, L"TREEVIEW");
+    hTheme = tree->themeData->hThemeTREEVIEW;
     if (!hTheme)
 	return TCL_ERROR;
 
@@ -447,7 +443,6 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
 	iPartId,
 	iStateId))
     {
-	procs->CloseThemeData(hTheme);
 	return TCL_ERROR;
     }
 #endif
@@ -466,7 +461,6 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
 	&rc,
 	NULL);
 
-    procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
 
     if (hr != S_OK)
@@ -478,8 +472,6 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
 int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     int *widthPtr, int *heightPtr)
 {
-    Window win = Tk_WindowId(tree->tkwin);
-    HWND hwnd = Tk_GetHWND(win);
     HTHEME hTheme;
     HDC hDC;
     TkWinDCState dcState;
@@ -501,7 +493,7 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     iPartId  = TVP_GLYPH;
     iStateId = open ? GLPS_OPENED : GLPS_CLOSED;
 
-    hTheme = procs->OpenThemeData(hwnd, L"TREEVIEW");
+    hTheme = tree->themeData->hThemeTREEVIEW;
     if (!hTheme)
 	return TCL_ERROR;
 
@@ -511,7 +503,6 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
 	iPartId,
 	iStateId))
     {
-	procs->CloseThemeData(hTheme);
 	return TCL_ERROR;
     }
 #endif
@@ -529,7 +520,6 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
 	&size
     );
 
-    procs->CloseThemeData(hTheme);
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
 
     /* With RandomN of 10000, I eventually get hr=E_HANDLE, invalid handle */
@@ -638,7 +628,58 @@ static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
     ckfree((char *) data);
 }
 
-int TreeTheme_Init(Tcl_Interp *interp)
+void TreeTheme_ThemeChanged(TreeCtrl *tree)
+{
+    Window win = Tk_WindowId(tree->tkwin);
+    HWND hwnd = Tk_GetHWND(win);
+
+    if (tree->themeData->hThemeHEADER != NULL) {
+	procs->CloseThemeData(tree->themeData->hThemeHEADER);
+	tree->themeData->hThemeHEADER = NULL;
+    }
+    if (tree->themeData->hThemeTREEVIEW != NULL) {
+	procs->CloseThemeData(tree->themeData->hThemeTREEVIEW);
+	tree->themeData->hThemeTREEVIEW = NULL;
+    }
+
+    if (!themeData->themeEnabled || !procs)
+	return;
+
+    tree->themeData->hThemeHEADER = procs->OpenThemeData(hwnd, L"HEADER");
+    tree->themeData->hThemeTREEVIEW = procs->OpenThemeData(hwnd, L"TREEVIEW");
+}
+
+int TreeTheme_Init(TreeCtrl *tree)
+{
+    Window win = Tk_WindowId(tree->tkwin);
+    HWND hwnd = Tk_GetHWND(win);
+
+    if (!themeData->themeEnabled || !procs)
+	return TCL_ERROR;
+
+    tree->themeData = (TreeThemeData) ckalloc(sizeof(TreeThemeData_));
+
+    /* http://www.codeproject.com/cs/miscctrl/themedtabpage.asp?msg=1445385#xx1445385xx */
+    /* http://msdn2.microsoft.com/en-us/library/ms649781.aspx */
+
+    tree->themeData->hThemeHEADER = procs->OpenThemeData(hwnd, L"HEADER");
+    tree->themeData->hThemeTREEVIEW = procs->OpenThemeData(hwnd, L"TREEVIEW");
+    return TCL_OK;
+}
+
+int TreeTheme_Free(TreeCtrl *tree)
+{
+    if (tree->themeData != NULL) {
+	if (tree->themeData->hThemeHEADER != NULL)
+	    procs->CloseThemeData(tree->themeData->hThemeHEADER);
+	if (tree->themeData->hThemeTREEVIEW != NULL)
+	    procs->CloseThemeData(tree->themeData->hThemeTREEVIEW);
+	ckfree((char *) tree->themeData);
+    }
+    return TCL_OK;
+}
+
+int TreeTheme_InitInterp(Tcl_Interp *interp)
 {
     HWND hwnd;
     PerInterpData *data;
@@ -879,7 +920,21 @@ int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *width
     return TCL_ERROR;
 }
 
-int TreeTheme_Init(Tcl_Interp *interp)
+void TreeTheme_ThemeChanged(TreeCtrl *tree)
+{
+}
+
+int TreeTheme_Init(TreeCtrl *tree)
+{
+    return TCL_OK;
+}
+
+int TreeTheme_Free(TreeCtrl *tree)
+{
+    return TCL_OK;
+}
+
+int TreeTheme_InitInterp(Tcl_Interp *interp)
 {
     return TCL_OK;
 }
@@ -916,9 +971,23 @@ int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *width
     return TCL_ERROR;
 }
 
-int TreeTheme_Init(Tcl_Interp *interp)
+void TreeTheme_ThemeChanged(TreeCtrl *tree)
 {
-    return TCL_ERROR;
+}
+
+int TreeTheme_Init(TreeCtrl *tree)
+{
+    return TCL_OK;
+}
+
+int TreeTheme_Free(TreeCtrl *tree)
+{
+    return TCL_OK;
+}
+
+int TreeTheme_InitInterp(Tcl_Interp *interp)
+{
+    return TCL_OK;
 }
 
 #endif /* !WIN32 && !MAC_OSX_TK */
