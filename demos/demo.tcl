@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.53 2006/11/18 04:39:45 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.54 2006/11/19 00:51:03 treectrl Exp $
 
 set VERSION 2.2
 
@@ -47,6 +47,14 @@ proc InitPics {args} {
 	}
     }
     return
+}
+
+# http://wiki.tcl.tk/1530
+if {[info procs lassign] eq ""} {
+    proc lassign {values args} {
+	uplevel 1 [list foreach $args [linsert $values end {}] break]
+	lrange $values [llength $args] end
+    }
 }
 
 if {[catch {
@@ -1194,8 +1202,7 @@ proc DemoSet {cmd file} {
 
 .f1.t notify bind .f1.t <Selection> {
     if {%c == 1} {
-	set selection [%T selection get]
-	set item [lindex $selection 0]
+	set item [%T selection get 0]
 	DemoSet $DemoCmd($item) $DemoFile($item)
     }
 }
@@ -1233,7 +1240,7 @@ proc DisplayStylesInList {} {
 
 	# One item for each configuration option for this element
 	foreach list [$T element configure $elem] {
-	    foreach {name x y default current} $list {}
+	    lassign $list name x y default current
 	    set item2 [$t item create]
 	    if {[string equal $default $current]} {
 		$t item style set $item2 C0 s1
@@ -1327,7 +1334,7 @@ proc DisplayStylesInItem {item} {
 
 		# One item for each configuration option in this element
 		foreach list [$T item element configure $item $column $elem] {
-		    foreach {name x y default current} $list {}
+		    lassign $list name x y default current
 		    set item4 [$t item create]
 		    set masterDefault [$T element cget $elem $name]
 		    set sameAsMaster [string equal $masterDefault $current]
@@ -1360,16 +1367,15 @@ proc DisplayStylesInItem {item} {
 }
 
 # When one item is selected in the demo list, display the styles in that item.
-# See DemoClear for why the tag "DontDelete" is used
+# See DemoClear for why the tag "DontDelete" is used.
 .f2.f1.t notify bind DontDelete <Selection> {
     if {%c == 1} {
-	set selection [%T selection get]
-	DisplayStylesInItem [lindex $selection 0]
+	DisplayStylesInItem [%T selection get 0]
     }
 }
 
-# Move columns when ColumnDrag-receive is generated
-# See DemoClear for why the tag "DontDelete" is used
+# Move columns when ColumnDrag-receive is generated.
+# See DemoClear for why the tag "DontDelete" is used.
 .f2.f1.t notify bind DontDelete <ColumnDrag-receive> {
     %T column move %C %b
 }
