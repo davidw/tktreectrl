@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.16 2006/11/05 06:46:10 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.17 2006/11/19 00:55:14 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -168,7 +168,7 @@ proc DemoOutlookNewsgroup {} {
 			if {[info exists Message(afterId)]} {
 				after cancel $Message(afterId)
 			}
-			set Message(afterId,item) [lindex [%T selection get] 0]
+			set Message(afterId,item) [%T selection get 0]
 			set Message(afterId) [after 500 MessageReadDelayed]
 		}
 	}
@@ -358,7 +358,7 @@ proc DemoOutlookNewsgroup_2 {} {
 
 	$T notify bind $T <Selection> {
 		if {[%T selection count] == 1} {
-			set I [lindex [%T selection get] 0]
+			set I [%T selection get 0]
 			if {!$Message(read,$I)} {
 				if {[%T item isopen $I] || ![AnyUnreadDescendants %T $I]} {
 					# unread ->read
