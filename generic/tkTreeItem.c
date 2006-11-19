@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.91 2006/11/19 00:48:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.92 2006/11/19 23:40:36 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -37,8 +37,6 @@ struct TreeItem_ {
     int index;		/* "row" in flattened tree */
     int indexVis;	/* visible "row" in flattened tree, -1 if hidden */
     int state;		/* STATE_xxx flags */
-    int isVisible;	/* -visible option */
-    int hasButton;	/* -button option */
     TreeItem parent;
     TreeItem firstChild;
     TreeItem lastChild;
@@ -59,6 +57,8 @@ struct TreeItem_ {
 					* need to redo them. Also indicates
 					* we have an entry in
 					* TreeCtrl.itemSpansHash. */
+#define ITEM_FLAG_BUTTON	0x0008 /* -button */
+#define ITEM_FLAG_VISIBLE	0x0010 /* -visible */
     int flags;
     TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
@@ -73,6 +73,8 @@ static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
 #define IS_ALL(i) ((i) == ITEM_ALL)
 
 #define IS_DELETED(i) (((i)->flags & ITEM_FLAG_DELETED) != 0)
+#define HAS_BUTTON(i) (((i)->flags & ITEM_FLAG_BUTTON) != 0)
+#define IS_VISIBLE(i) (((i)->flags & ITEM_FLAG_VISIBLE) != 0)
 
 /*
  * Flags returned by Tk_SetOptions() (see itemOptionSpecs below).
@@ -85,8 +87,8 @@ static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
  * Information used for Item objv parsing.
  */
 static Tk_OptionSpec itemOptionSpecs[] = {
-    {TK_OPTION_BOOLEAN, "-button", (char *) NULL, (char *) NULL,
-     "0", -1, Tk_Offset(TreeItem_, hasButton),
+    {TK_OPTION_CUSTOM, "-button", (char *) NULL, (char *) NULL,
+     "0", -1, Tk_Offset(TreeItem_, flags),
      0, (ClientData) NULL, ITEM_CONF_BUTTON},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeItem_, fixedHeight),
@@ -94,8 +96,8 @@ static Tk_OptionSpec itemOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeItem_, tagInfo),
      TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, 0},
-    {TK_OPTION_BOOLEAN, "-visible", (char *) NULL, (char *) NULL,
-     "1", -1, Tk_Offset(TreeItem_, isVisible),
+    {TK_OPTION_CUSTOM, "-visible", (char *) NULL, (char *) NULL,
+     "1", -1, Tk_Offset(TreeItem_, flags),
      0, (ClientData) NULL, ITEM_CONF_VISIBLE},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, 0, 0}
@@ -501,9 +503,9 @@ Item_UpdateIndex(TreeCtrl *tree,
 	parentVis = item->parent->indexVis != -1;
 	if (IS_ROOT(item->parent) && !tree->showRoot) {
 	    parentOpen = TRUE;
-	    parentVis = item->parent->isVisible;
+	    parentVis = IS_VISIBLE(item->parent);
 	}
-	if (parentVis && parentOpen && item->isVisible)
+	if (parentVis && parentOpen && IS_VISIBLE(item))
 	    item->indexVis = (*indexVis)++;
     }
     child = item->firstChild;
@@ -554,7 +556,7 @@ Tree_UpdateItemIndex(
 
     item->index = 0;
     item->indexVis = -1;
-    if (tree->showRoot && item->isVisible)
+    if (tree->showRoot && IS_VISIBLE(item))
 	item->indexVis = indexVis++;
     item = item->firstChild;
     while (item != NULL) {
@@ -815,7 +817,7 @@ TreeItem_ChangeState(
     }
 
     /* This item has a button */
-    if (item->hasButton && tree->showButtons
+    if (HAS_BUTTON(item) && tree->showButtons
 	    && (!IS_ROOT(item) || tree->showRootButton)) {
 
 	Tk_Image image1, image2;
@@ -960,7 +962,7 @@ TreeItem_GetButton(
     TreeItem item		/* Item token. */
     )
 {
-    return item->hasButton;
+    return HAS_BUTTON(item);
 }
 
 /*
@@ -3291,14 +3293,15 @@ int TreeItem_Height(
     int buttonHeight = 0;
     int useHeight;
 
-    if (!item->isVisible || (IS_ROOT(item) && !tree->showRoot))
+    if (!IS_VISIBLE(item) || (IS_ROOT(item) && !tree->showRoot))
 	return 0;
 
     /* Get requested height of the style in each column */
     useHeight = Item_HeightOfStyles(tree, item);
 
     /* Can't have less height than our button */
-    if (tree->showButtons && item->hasButton && (!IS_ROOT(item) || tree->showRootButton)) {
+    if (tree->showButtons && HAS_BUTTON(item) &&
+	    (!IS_ROOT(item) || tree->showRootButton)) {
 	buttonHeight = ButtonHeight(tree, item->state);
     }
 
@@ -4046,7 +4049,8 @@ SpanWalkProc_Draw(
     }
 
     if (drawArgs->style != NULL) {
-	TreeStyle_Draw(drawArgs);
+	StyleDrawArgs drawArgsCopy = *drawArgs;
+	TreeStyle_Draw(&drawArgsCopy);
     }
 
     if (spanPtr->treeColumn == tree->columnTree) {
@@ -4155,7 +4159,7 @@ TreeItem_DrawLines(
 
     /* Check for ReallyVisible previous sibling */
     walk = item->prevSibling;
-    while ((walk != NULL) && !walk->isVisible)
+    while ((walk != NULL) && !IS_VISIBLE(walk))
 	walk = walk->prevSibling;
     hasPrev = (walk != NULL);
 
@@ -4165,7 +4169,7 @@ TreeItem_DrawLines(
 
     /* Check for ReallyVisible next sibling */
     walk = item->nextSibling;
-    while ((walk != NULL) && !walk->isVisible)
+    while ((walk != NULL) && !IS_VISIBLE(walk))
 	walk = walk->nextSibling;
     hasNext = (walk != NULL);
 
@@ -4227,7 +4231,7 @@ TreeItem_DrawLines(
 
 	/* Check for ReallyVisible next sibling */
 	item = parent->nextSibling;
-	while ((item != NULL) && !item->isVisible)
+	while ((item != NULL) && !IS_VISIBLE(item))
 	    item = item->nextSibling;
 
 	if (item != NULL) {
@@ -4278,7 +4282,7 @@ TreeItem_DrawButton(
     Tk_Image image;
     Pixmap bitmap;
 
-    if (!item->hasButton)
+    if (!HAS_BUTTON(item))
 	return;
     if (IS_ROOT(item) && !tree->showRootButton)
 	return;
@@ -4399,12 +4403,15 @@ SpanWalkProc_UpdateWindowPositions(
     ClientData clientData
     )
 {
+    StyleDrawArgs drawArgsCopy;
+
     if ((drawArgs->x >= drawArgs->bounds[2]) ||
 	    (drawArgs->x + drawArgs->width <= drawArgs->bounds[0]) ||
 	    (drawArgs->style == NULL))
 	return 0;
 
-    TreeStyle_UpdateWindowPositions(drawArgs);
+    drawArgsCopy = *drawArgs; 
+    TreeStyle_UpdateWindowPositions(&drawArgsCopy);
 
     /* Stop walking if we went past the right edge of the display area. */
     return drawArgs->x + drawArgs->width >= drawArgs->bounds[2];
@@ -4506,19 +4513,19 @@ int TreeItem_ReallyVisible(
     if (!tree->updateIndex)
 	return item->indexVis != -1;
 
-    if (!item->isVisible)
+    if (!IS_VISIBLE(item))
 	return 0;
     if (item->parent == NULL)
 	return IS_ROOT(item) ? tree->showRoot : 0;
     if (IS_ROOT(item->parent)) {
-	if (!item->parent->isVisible)
+	if (!IS_VISIBLE(item->parent))
 	    return 0;
 	if (!tree->showRoot)
 	    return 1;
 	if (!(item->parent->state & STATE_OPEN))
 	    return 0;
     }
-    if (!item->parent->isVisible || !(item->parent->state & STATE_OPEN))
+    if (!IS_VISIBLE(item->parent) || !(item->parent->state & STATE_OPEN))
 	return 0;
     return TreeItem_ReallyVisible(tree, item->parent);
 #endif
@@ -4640,7 +4647,7 @@ static int Item_Configure(
     int error;
     Tcl_Obj *errorResult = NULL;
     int mask;
-    int lastVisible = item->isVisible;
+    int lastVisible = IS_VISIBLE(item);
 
     for (error = 0; error <= 1; error++) {
 	if (error == 0) {
@@ -4676,7 +4683,7 @@ static int Item_Configure(
 	if (tree->columnTree != NULL)
 	    Tree_InvalidateItemDInfo(tree, tree->columnTree, item, NULL);
 
-    if ((mask & ITEM_CONF_VISIBLE) && (item->isVisible != lastVisible)) {
+    if ((mask & ITEM_CONF_VISIBLE) && (IS_VISIBLE(item) != lastVisible)) {
 	/* May change the width of any column */
 	Tree_InvalidateColumnWidth(tree, NULL);
 
@@ -4839,10 +4846,12 @@ ItemCreateCmd(
 
     for (i = 0; i < count; i++) {
 	item = Item_Alloc(tree);
-	item->hasButton = button;
-	item->isVisible = visible;
-	if (!open)
-	    item->state &= ~STATE_OPEN;
+	if (button) item->flags |= ITEM_FLAG_BUTTON;
+	else item->flags &= ~ITEM_FLAG_BUTTON;
+	if (visible) item->flags |= ITEM_FLAG_VISIBLE;
+	else item->flags &= ~ITEM_FLAG_VISIBLE;
+	if (open) item->state |= STATE_OPEN;
+	else item->state &= ~STATE_OPEN;
 	item->fixedHeight = height;
 
 	/* Apply each column's -itemstyle option. */
@@ -8313,7 +8322,7 @@ TreeItem_Identify(
 /*
  *----------------------------------------------------------------------
  *
- * SpanWalkProc_Identify --
+ * SpanWalkProc_Identify2 --
  *
  *	Callback routine to TreeItem_WalkSpans for TreeItem_Identify2.
  *
@@ -8350,7 +8359,9 @@ SpanWalkProc_Identify2(
     Tcl_ListObjAppendElement(tree->interp, subListObj,
 	    TreeColumn_ToObj(tree, spanPtr->treeColumn));
     if (drawArgs->style != NULL) {
-	TreeStyle_Identify2(drawArgs, data->x1, data->y1, data->x2, data->y2,
+	StyleDrawArgs drawArgsCopy = *drawArgs;
+	TreeStyle_Identify2(&drawArgsCopy, data->x1, data->y1,
+		data->x2, data->y2,
 		subListObj);
     }
     Tcl_ListObjAppendElement(tree->interp, data->listObj, subListObj);
@@ -8411,7 +8422,7 @@ TreeItem_Identify2(
 /*
  *----------------------------------------------------------------------
  *
- * SpanWalkProc_Identify --
+ * SpanWalkProc_GetRects --
  *
  *	Callback routine to TreeItem_WalkSpans for TreeItem_GetRects.
  *
@@ -8572,6 +8583,9 @@ TreeItem_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
+    BooleanFlagCO_Init(itemOptionSpecs, "-button", ITEM_FLAG_BUTTON);
+    BooleanFlagCO_Init(itemOptionSpecs, "-visible", ITEM_FLAG_VISIBLE);
+
     tree->itemOptionTable = Tk_CreateOptionTable(tree->interp, itemOptionSpecs);
 
     tree->root = Item_AllocRoot(tree);
