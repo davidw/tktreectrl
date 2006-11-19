@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.42 2006/11/18 04:40:10 treectrl Exp $}
+  $Id: treectrl.man,v 1.43 2006/11/19 00:56:19 treectrl Exp $}
 ][manpage_begin treectrl n 2.2]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1903,11 +1903,18 @@ selection.
 Returns an integer indicating the number
 of items in the treectrl that are currently selected.
 
-[call [arg pathName] [cmd {selection get}]]
-Returns a list containing the item ids of
-all of the items in the treectrl that are currently selected.
-If there are no items selected in the treectrl then an empty
-string is returned.
+[call [arg pathName] [cmd {selection get}] [opt [arg first]] [opt [arg last]]]
+When no additional arguments are given, the result is an unsorted list
+containing the item ids of all of the items in the treectrl that are currently selected.
+If there are no items selected in the treectrl, then an empty string is returned.
+The optional arguments [arg first] and [arg last] are treated as indices into
+the sorted list of selected items; these arguments allow in-place [cmd lindex]
+and [cmd lrange] operations on the selection. For example:
+[example_begin]
+.t selection get 0       ; # return the first selected item
+.t selection get end     ; # return the last selected item
+.t selection get 1 end-1 ; # return every selected item except the first and last
+[example_end]
 
 [call [arg pathName] [cmd {selection includes}] [arg itemDesc]]
 Returns 1 if the item described by [arg itemDesc] is currently
