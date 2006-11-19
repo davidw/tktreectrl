@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.87 2006/11/19 00:48:11 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.88 2006/11/19 23:36:39 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -264,7 +264,9 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-yscrollincrement", "yScrollIncrement", "ScrollIncrement",
      "0", -1, Tk_Offset(TreeCtrl, yScrollIncrement),
      0, (ClientData) NULL, TREE_CONF_REDISPLAY},
-    {TK_OPTION_END}
+
+    {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, -1, 0, (ClientData) NULL, 0}
 };
 
 static Tk_OptionSpec debugSpecs[] = {
@@ -290,7 +292,7 @@ static Tk_OptionSpec debugSpecs[] = {
      "1", -1, Tk_Offset(TreeCtrl, debug.textLayout),
      0, (ClientData) NULL, 0},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
-     (char *) NULL, 0, -1, 0, 0, 0}
+     (char *) NULL, -1, -1, 0, (ClientData) NULL, 0}
 };
 
 static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -415,6 +417,9 @@ TreeObjCmd(
     /* Must do this on Unix because Tk_GCForColor() uses
      * Tk_WindowId(tree->tkwin) */
     Tk_MakeWindowExist(tree->tkwin);
+
+    /* Window must exist on Win32. */
+    TreeTheme_Init(tree);
 
     if (Tk_InitOptions(interp, (char *) tree, optionTable, tkwin) != TCL_OK) {
 	Tk_DestroyWindow(tree->tkwin);
@@ -1710,6 +1715,7 @@ TreeDestroy(
     TreeDragImage_Free(tree->dragImage);
     TreeMarquee_Free(tree->marquee);
     TreeDInfo_Free(tree);
+    TreeTheme_Free(tree);
 
     if (tree->copyGC != None)
 	Tk_FreeGC(tree->display, tree->copyGC);
@@ -4118,6 +4124,7 @@ RecomputeWidgets(
     /* Clomp! Stomp! All over the internals */
     proc = Tk_GetClassProc(winPtr->classProcsPtr, worldChangedProc);
     if (proc == TreeWorldChanged) {
+	TreeTheme_ThemeChanged((TreeCtrl *) winPtr->instanceData);
 	TreeWorldChanged(winPtr->instanceData);
     }
 
@@ -4150,7 +4157,7 @@ Tree_TheWorldHasChanged(
     )
 {
     /* Could send a <<ThemeChanged>> event to every window like Tile does. */
-    /* Could keep a list of treectrl widgets */
+    /* Could keep a list of treectrl widgets. */
     TkWindow *winPtr = (TkWindow *) Tk_MainWindow(interp);
     RecomputeWidgets(winPtr);
 }
@@ -4207,8 +4214,9 @@ Treectrl_Init(
     if (TreeElement_Init(interp) != TCL_OK) {
 	return TCL_ERROR;
     }
+
     /* We don't care if this fails */
-    (void) TreeTheme_Init(interp);
+    (void) TreeTheme_InitInterp(interp);
 
     if (TreeColumn_InitInterp(interp) != TCL_OK)
 	return TCL_ERROR;
@@ -4218,8 +4226,10 @@ Treectrl_Init(
 
     /* Hack for colorizing a image (like Win98 explorer) */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
+
     /* Screen magnifier to check those dotted lines */
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
+
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_PATCHLEVEL) != TCL_OK) {
 	return TCL_ERROR;
