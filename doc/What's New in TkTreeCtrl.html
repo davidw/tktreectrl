@@ -2,7 +2,7 @@
 <html>
 <head>
 
-<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.20 2006/11/19 00:56:19 treectrl Exp $ -->
+<!-- $Id: What's\040New\040in\040TkTreeCtrl.html,v 1.21 2006/11/21 02:09:35 treectrl Exp $ -->
   <meta content="text/html; charset=ISO-8859-1" http-equiv="content-type">
   <title>What's New in TkTreeCtrl</title>
 
@@ -80,6 +80,39 @@ the selection. For example:<br>
       <pre>.t selection get 0&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ; # the first selected item<br>.t selection get end&nbsp;&nbsp;&nbsp;&nbsp; ; # the last selected item<br>.t selection get 1 end-1 ; # every selected item except the first and last</pre>
 
       </td>
+
+    </tr>
+
+    <tr>
+
+      <th style="background-color: rgb(255, 255, 204); width: 50%;">New</th>
+
+      <th style="background-color: rgb(204, 255, 255);">Comment</th>
+
+    </tr>
+
+    <tr>
+
+      <td>bbox</td>
+
+      <td>Returns the bounding box of different areas of the
+window. For example:<br>
+
+      <pre style="margin-left: 40px;">.t bbox</pre>
+
+will return the bounds of the window, and:<br>
+
+      <pre style="margin-left: 40px;">.t bbox header</pre>
+
+will return the bounds of the column headers, and:<br>
+
+      <pre style="margin-left: 40px;">.t bbox content</pre>
+
+will return the same result as the [contentbox] command, and:<br>
+
+      <pre style="margin-left: 40px;">.t bbox left<br>.t bbox right</pre>
+
+will return the bounds of the left-locked and right-locked columns.</td>
 
     </tr>
 

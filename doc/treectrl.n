@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.59 2006/11/19 00:56:19 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.60 2006/11/21 02:09:35 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2 treectrl "Tk Commands"
 .BS
@@ -18,6 +18,8 @@ package require \fBtreectrl  2.2\fR
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .sp
 \fIpathName\fR \fBactivate\fR \fIitemDesc\fR
+.sp
+\fIpathName\fR \fBbbox\fR ?\fIarea\fR?
 .sp
 \fIpathName\fR \fBcanvasx\fR \fIscreenx\fR
 .sp
@@ -1036,6 +1038,23 @@ Sets the active item to the one described by \fIitemDesc\fR,
 and switches on the state \fBactive\fR for this item.
 From now on the item can be retrieved with the item description \fBactive\fR.
 An \fB<ActiveItem>\fR event is generated.
+.TP
+\fIpathName\fR \fBbbox\fR ?\fIarea\fR?
+Returns a list with four elements giving the bounding box (left, top, right
+and bottom) of an area of the window. If \fIarea\fR is not specified, then
+the result is the bounding box of the entire window.
+If \fIarea\fR is \fBcontent\fR, then the result is the part of the window
+not including borders, headers, or locked columns.
+If \fIarea\fR is \fBheader\fR, then the result is the part of the window
+not including borders where column titles are displayed.
+If \fIarea\fR is \fBleft\fR, then the result is the part of the window
+not including borders or headers where left-locked columns are displayed.
+If \fIarea\fR is \fBright\fR, then the result is the part of the window
+not including borders or headers where right-locked columns are displayed.
+An empty string is returned if the display area has
+no height or width, which can be true for various reasons such as the window
+is too small, or the header is not displayed, or there aren't any locked
+columns.
 .TP
 \fIpathName\fR \fBcanvasx\fR \fIscreenx\fR
 Given a window x-coordinate in the treectrl \fIscreenx\fR,
@@ -2462,7 +2481,7 @@ containing the item ids of all of the items in the treectrl that are currently s
 If there are no items selected in the treectrl, then an empty string is returned.
 The optional arguments \fIfirst\fR and \fIlast\fR are treated as indices into
 the sorted list of selected items; these arguments allow in-place \fBlindex\fR
-and \fBlrange\fR operations on the selection.
+and \fBlrange\fR operations on the selection. For example:
 .nf
 
 .t selection get 0       ; # return the first selected item
