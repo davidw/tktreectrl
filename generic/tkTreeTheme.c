@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.15 2006/11/19 23:42:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.16 2006/11/21 02:01:29 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -102,7 +102,7 @@ typedef struct TreeThemeData_
 } TreeThemeData_;
 
 static XPThemeProcs *procs = NULL;
-static XPThemeData *themeData = NULL; 
+static XPThemeData *appThemeData = NULL; 
 TCL_DECLARE_MUTEX(themeMutex)
 
 /*
@@ -195,7 +195,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
 	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     hTheme = tree->themeData->hThemeHEADER;
@@ -303,7 +303,7 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
 	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     hTheme = tree->themeData->hThemeHEADER;
@@ -347,7 +347,7 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
     GC gc;
     int i;
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     color = Tk_GetColor(tree->interp, tree->tkwin, "#ACA899");
@@ -382,7 +382,7 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
     int iPartId = HP_HEADERSORTARROW;
     int iStateId = up ? HSAS_SORTEDUP : HSAS_SORTEDDOWN;
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     hTheme = tree->themeData->hThemeHEADER;
@@ -427,7 +427,7 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
     HRESULT hr;
     int iPartId, iStateId;
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     iPartId  = TVP_GLYPH;
@@ -479,11 +479,11 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     SIZE size;
     int iPartId, iStateId;
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     /* Use cached values */
-    size = open ? themeData->buttonOpen : themeData->buttonClosed;
+    size = open ? appThemeData->buttonOpen : appThemeData->buttonClosed;
     if (size.cx > 1) {
 	*widthPtr = size.cx;
 	*heightPtr = size.cy;
@@ -523,6 +523,8 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     TkWinReleaseDrawableDC(drawable, hDC, &dcState);
 
     /* With RandomN of 10000, I eventually get hr=E_HANDLE, invalid handle */
+    /* Not any longer since I don't call OpenThemeData/CloseThemeData for
+     * every call. */
     if (hr != S_OK)
 	return TCL_ERROR;
 
@@ -532,9 +534,9 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
 
     /* Cache the values */
     if (open)
-	themeData->buttonOpen = size;
+	appThemeData->buttonOpen = size;
     else
-	themeData->buttonClosed = size;
+	appThemeData->buttonClosed = size;
 
     *widthPtr = size.cx;
     *heightPtr = size.cy;
@@ -543,7 +545,7 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
 
 int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr)
 {
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     *widthPtr = 9;
@@ -563,8 +565,8 @@ WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch (msg) {
 	case WM_THEMECHANGED:
 	    Tcl_MutexLock(&themeMutex);
-	    themeData->themeEnabled = procs->IsThemeActive();
-	    themeData->buttonClosed.cx = themeData->buttonOpen.cx = -1;
+	    appThemeData->themeEnabled = procs->IsThemeActive();
+	    appThemeData->buttonClosed.cx = appThemeData->buttonOpen.cx = -1;
 	    Tcl_MutexUnlock(&themeMutex);
 	    Tree_TheWorldHasChanged(interp);
 	    break;
@@ -642,7 +644,7 @@ void TreeTheme_ThemeChanged(TreeCtrl *tree)
 	tree->themeData->hThemeTREEVIEW = NULL;
     }
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return;
 
     tree->themeData->hThemeHEADER = procs->OpenThemeData(hwnd, L"HEADER");
@@ -654,7 +656,7 @@ int TreeTheme_Init(TreeCtrl *tree)
     Window win = Tk_WindowId(tree->tkwin);
     HWND hwnd = Tk_GetHWND(win);
 
-    if (!themeData->themeEnabled || !procs)
+    if (!appThemeData->themeEnabled || !procs)
 	return TCL_ERROR;
 
     tree->themeData = (TreeThemeData) ckalloc(sizeof(TreeThemeData_));
@@ -687,28 +689,28 @@ int TreeTheme_InitInterp(Tcl_Interp *interp)
     Tcl_MutexLock(&themeMutex);
 
     /* This is done once per-application */
-    if (themeData == NULL)
+    if (appThemeData == NULL)
     {
-	themeData = (XPThemeData *) ckalloc(sizeof(XPThemeData));
-	themeData->procs = LoadXPThemeProcs(&themeData->hlibrary);
-	themeData->registered = FALSE;
-	themeData->themeEnabled = FALSE;
-	themeData->buttonClosed.cx = themeData->buttonOpen.cx = -1;
+	appThemeData = (XPThemeData *) ckalloc(sizeof(XPThemeData));
+	appThemeData->procs = LoadXPThemeProcs(&appThemeData->hlibrary);
+	appThemeData->registered = FALSE;
+	appThemeData->themeEnabled = FALSE;
+	appThemeData->buttonClosed.cx = appThemeData->buttonOpen.cx = -1;
 
-	procs = themeData->procs;
+	procs = appThemeData->procs;
 
-	if (themeData->procs) {
+	if (appThemeData->procs) {
 	    /* Check this again if WM_THEMECHANGED arrives */
-	    themeData->themeEnabled = procs->IsThemeActive();
+	    appThemeData->themeEnabled = procs->IsThemeActive();
 
-	    themeData->registered =
+	    appThemeData->registered =
 		RegisterThemeMonitorWindowClass(Tk_GetHINSTANCE());
 	}
     }
 
     Tcl_MutexUnlock(&themeMutex);
 
-    if (!procs || !themeData->registered)
+    if (!procs || !appThemeData->registered)
 	return TCL_ERROR;
 
     /* Per-interp */
