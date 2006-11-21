@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.88 2006/11/19 23:36:39 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.89 2006/11/21 01:56:24 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -472,7 +472,7 @@ static int TreeWidgetCmd(
     TreeCtrl *tree = (TreeCtrl *) clientData;
     int result = TCL_OK;
     static CONST char *commandName[] = {
-	"activate", "canvasx", "canvasy", "cget",
+	"activate", "bbox", "canvasx", "canvasy", "cget",
 #ifdef DEPRECATED
 	"collapse",
 #endif
@@ -480,14 +480,11 @@ static int TreeWidgetCmd(
 #ifdef DEPRECATED
 	"compare",
 #endif
-	"configure", "contentbox",
-	"debug", "depth", "dragimage",
-	"element",
+	"configure", "contentbox", "debug", "depth", "dragimage", "element",
 #ifdef DEPRECATED
 	"expand",
 #endif
-	"identify", "index", "item",
-	"marquee", "notify",
+	"identify", "index", "item", "marquee", "notify",
 #ifdef DEPRECATED
 	"numcolumns", "numitems",
 #endif
@@ -502,7 +499,8 @@ static int TreeWidgetCmd(
 	"xview", "yview", (char *) NULL
     };
     enum {
-	COMMAND_ACTIVATE, COMMAND_CANVASX, COMMAND_CANVASY, COMMAND_CGET,
+	COMMAND_ACTIVATE, COMMAND_BBOX, COMMAND_CANVASX, COMMAND_CANVASY,
+	COMMAND_CGET,
 #ifdef DEPRECATED
 	COMMAND_COLLAPSE,
 #endif
@@ -510,14 +508,13 @@ static int TreeWidgetCmd(
 #ifdef DEPRECATED
 	COMMAND_COMPARE,
 #endif
-	COMMAND_CONFIGURE,
-	COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
+	COMMAND_CONFIGURE, COMMAND_CONTENTBOX, COMMAND_DEBUG, COMMAND_DEPTH,
 	COMMAND_DRAGIMAGE, COMMAND_ELEMENT,
 #ifdef DEPRECATED
 	COMMAND_EXPAND,
 #endif
-	COMMAND_IDENTIFY,
-	COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE, COMMAND_NOTIFY,
+	COMMAND_IDENTIFY, COMMAND_INDEX, COMMAND_ITEM, COMMAND_MARQUEE,
+	COMMAND_NOTIFY,
 #ifdef DEPRECATED
 	COMMAND_NUMCOLUMNS, COMMAND_NUMITEMS,
 #endif
@@ -576,6 +573,36 @@ static int TreeWidgetCmd(
 		}
 		TreeNotify_ActiveItem(tree, active, item);
 	    }
+	    break;
+	}
+
+	/* .t bbox ?area? */
+	case COMMAND_BBOX:
+	{
+	    static CONST char *areaName[] = { "content", "header", "left",
+		    "right", (char *) NULL };
+	    int x1, y1, x2, y2;
+
+	    if (objc > 3) {
+		Tcl_WrongNumArgs(interp, 2, objv, "?area?");
+		goto error;
+	    }
+	    if (objc == 3) {
+		int area[4] = { TREE_AREA_CONTENT, TREE_AREA_HEADER,
+			TREE_AREA_LEFT, TREE_AREA_RIGHT };
+		if (Tcl_GetIndexFromObj(interp, objv[2], areaName, "area", 0,
+			&index) != TCL_OK) {
+		    goto error;
+		}
+		if (!Tree_AreaBbox(tree, area[index], &x1, &y1, &x2, &y2))
+		    break;
+	    } else {
+		x1 = 0;
+		y1 = 0;
+		x2 = Tk_Width(tree->tkwin);
+		y2 = Tk_Height(tree->tkwin);
+	    }
+	    FormatResult(interp, "%d %d %d %d", x1, y1, x2, y2);
 	    break;
 	}
 
@@ -918,7 +945,7 @@ static int TreeWidgetCmd(
 		Tcl_WrongNumArgs(interp, 2, objv, "item");
 		goto error;
 	    }
-	    if (TreeItem_FromObj(tree, objv[2], &item, IFO_NOT_NULL) != TCL_OK) {
+	    if (TreeItem_FromObj(tree, objv[2], &item, 0) != TCL_OK) {
 		goto error;
 	    }
 	    if (item != NULL)
