@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.73 2006/11/19 00:48:14 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.74 2006/11/21 01:55:13 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -48,6 +48,7 @@ typedef struct TreeMarquee_ *TreeMarquee;
 typedef struct TreeItemRInfo_ *TreeItemRInfo;
 typedef struct TreeStyle_ *TreeStyle;
 typedef struct TreeElement_ *TreeElement;
+typedef struct TreeThemeData_ *TreeThemeData;
 
 /*****/
 
@@ -95,7 +96,6 @@ struct PerStateType
 typedef struct TreePtrList TreePtrList;
 typedef TreePtrList TreeItemList;
 typedef TreePtrList TreeColumnList;
-typedef TreePtrList TreeRowLabelList;
 struct TreePtrList {
     TreeCtrl *tree;
     ClientData *pointers;	/* NULL-terminated list of pointers. */
@@ -358,6 +358,8 @@ struct TreeCtrl
 
     char *optionHax[64];	/* Used by OptionHax_xxx */
     int optionHaxCnt;		/* Used by OptionHax_xxx */
+
+    TreeThemeData themeData;
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -797,7 +799,10 @@ extern void Tree_DInfoChanged(TreeCtrl *tree, int flags);
 extern void Tree_TheWorldHasChanged(Tcl_Interp *interp);
 
 /* tkTreeTheme.c */
-extern int TreeTheme_Init(Tcl_Interp *interp);
+extern int TreeTheme_InitInterp(Tcl_Interp *interp);
+extern void TreeTheme_ThemeChanged(TreeCtrl *tree);
+extern int TreeTheme_Init(TreeCtrl *tree);
+extern int TreeTheme_Free(TreeCtrl *tree);
 extern int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int arrow, int x, int y, int width, int height);
 extern int TreeTheme_GetHeaderFixedHeight(TreeCtrl *tree, int *heightPtr);
 extern int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int bounds[4]);
@@ -1012,6 +1017,8 @@ extern int TagExpr_Scan(TagExpr *expr);
 extern int TagExpr_Eval(TagExpr *expr, TagInfo *tags);
 extern void TagExpr_Free(TagExpr *expr);
 
+extern Tk_OptionSpec *OptionSpec_Find(Tk_OptionSpec *optionTable, CONST char *optionName);
+    
 extern Tk_ObjCustomOption *PerStateCO_Alloc(CONST char *optionName,
     PerStateType *typePtr, StateFromObjProc proc);
 extern int PerStateCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
@@ -1041,6 +1048,9 @@ extern void DynamicOption_Free1(TreeCtrl *tree, DynamicOption **firstPtr,
 extern int DynamicCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
     int id, int size, int objOffset, int internalOffset,
     Tk_ObjCustomOption *custom, DynamicOptionInitProc *init);
+
+extern int BooleanFlagCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
+    int theFlag);
 
 extern Tk_ObjCustomOption pixelsCO;
 extern Tk_ObjCustomOption stringCO;
