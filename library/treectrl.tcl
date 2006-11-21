@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.36 2006/11/19 23:46:13 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.37 2006/11/21 02:00:54 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -265,22 +265,12 @@ proc ::TreeCtrl::ColumnDragFindBefore {w x y dragColumn indColumn_ indSide_} {
     upvar $indColumn_ indColumn
     upvar $indSide_ indSide
 
-    scan [$w contentbox] "%d %d %d %d" x1 y1 x2 y2
-    set lock [$w column cget $dragColumn -lock]
-    switch -- $lock {
-	left {
-	    set minX 0 ; # FIXME: plus borders
-	    set maxX $x1
-	}
-	none {
-	    set minX $x1
-	    set maxX $x2
-	}
-	right {
-	    set minX $x2
-	    set maxX [winfo width $w] ; # FIXME: minus borders
-	}
+    switch -- [$w column cget $dragColumn -lock] {
+	left {set area left}
+	none {set area content}
+	right {set area right}
     }
+    scan [$w bbox $area] "%d %d %d %d" minX y1 maxX y2
     if {$x < $minX} {
 	set x $minX
     }
@@ -644,7 +634,7 @@ proc ::TreeCtrl::Motion1 {w x y} {
 	    }
 	}
 	dragColumn {
-	    scan [$w column bbox $Priv(column)] "%d %d %d %d" x1 y1 x2 y2
+	    scan [$w bbox header] "%d %d %d %d" x1 y1 x2 y2
 	    if {$y < $y1 - 30 || $y >= $y2 + 30} {
 		set inside 0
 	    } else {
