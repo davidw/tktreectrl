@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.92 2006/11/19 23:40:36 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.93 2006/11/22 03:32:12 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -21,7 +21,7 @@ struct Column {
     int cstate;		/* STATE_xxx flags manipulated with the
 			 * [item state forcolumn] command */
     int span;		/* Number of tree-columns this column covers */
-    TreeStyle style;
+    TreeStyle style;	/* Instance style. */
     Column *next;	/* Column to the right of this one */
 };
 

@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.21 2006/11/12 05:48:22 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.22 2006/11/22 03:31:56 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -59,6 +59,7 @@ proc DemoExplorerAux {scriptDir scriptFile} {
 
 	set ::TreeCtrl::Priv(DirCnt,$T) [llength $globDirs]
 
+	# Double-clicking a directory displays its contents.
 	set Explorer(scriptDir) $scriptDir
 	set Explorer(scriptFile) $scriptFile
 	bind DemoExplorer <Double-ButtonPress-1> {
