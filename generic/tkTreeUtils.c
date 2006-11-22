@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.53 2006/11/19 23:43:58 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.54 2006/11/22 03:34:05 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -905,8 +905,60 @@ Tree_ScrollWindow(
     TkRegion damageRgn		/* Arg to TkScrollWindow(). */
     )
 {
+#ifdef WIN32xxx
+    /* It would be best to call ScrollWindowEx with SW_SCROLLCHILDREN so
+     * that windows in window elements scroll smoothly with a minimum of
+     * redrawing. */
+    HWND hwnd = TkWinGetHWND(Tk_WindowId(tree->tkwin));
+    HWND hwndChild;
+    RECT scrollRect, childRect;
+    struct {
+	int x;
+	int y;
+	TkWindow *winPtr;
+    } winInfo[128], *winInfoPtr;
+    TkWindow *winPtr = (TkWindow *) tree->tkwin;
+    int winCount = 0;
+    int result;
+
+    winInfoPtr = winInfo;
+    for (winPtr = winPtr->childList; winPtr != NULL; winPtr = winPtr->nextPtr) {
+	if (winPtr->window != None) {
+	    hwndChild = TkWinGetHWND(winPtr->window);
+	    GetWindowRect(hwndChild, &childRect);
+	    winInfoPtr->x = childRect.left;
+	    winInfoPtr->y = childRect.top;
+	    winInfoPtr->winPtr = winPtr;
+	    winInfoPtr++;
+	    winCount++;
+	}
+    }
+
+    scrollRect.left = x;
+    scrollRect.top = y;
+    scrollRect.right = x + width;
+    scrollRect.bottom = y + height;
+    result = (ScrollWindowEx(hwnd, dx, dy, &scrollRect, NULL, (HRGN) damageRgn,
+	    NULL, SW_SCROLLCHILDREN) == NULLREGION) ? 0 : 1;
+
+    winInfoPtr = winInfo;
+    while (winCount--) {
+	winPtr = winInfoPtr->winPtr;
+	hwndChild = TkWinGetHWND(winPtr->window);
+	GetWindowRect(hwndChild, &childRect);
+	if (childRect.left != winInfoPtr->x ||
+		childRect.top != winInfoPtr->y) {
+	    dbwin("moved window %s %d,%d\n", winPtr->pathName, childRect.left - winInfoPtr->x, childRect.top - winInfoPtr->y);
+	    winPtr->changes.x += childRect.left - winInfoPtr->x;
+	    winPtr->changes.y += childRect.top - winInfoPtr->y;
+	    /* TkDoConfigureNotify(winPtr); */
+	}
+	winInfoPtr++;
+    }
+#else /* WIN32 */
     int result = TkScrollWindow(tree->tkwin, gc, x, y, width, height, dx, dy,
 	damageRgn);
+#endif /* WIN32 */
 #if defined(MAC_TCL) || defined(MAC_OSX_TK)
     {
         MacDrawable *macWin = (MacDrawable *) Tk_WindowId(tree->tkwin);
