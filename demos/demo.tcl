@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.54 2006/11/19 00:51:03 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.55 2006/11/22 03:31:42 treectrl Exp $
 
 set VERSION 2.2
 
@@ -1721,3 +1721,14 @@ if {[llength [info commands loupe]]} {
     }
 }
 
+proc RandomPerfTest {} {
+    set ::RandomN 15000
+    DemoSet DemoRandom random.tcl
+    .f2.f1.t item expand all
+    .f2.f1.t style layout styFolder elemTxtName -squeeze x
+    .f2.f1.t style layout styFile elemTxtName -squeeze x
+    .f2.f1.t elem conf elemTxtName -lines 1
+    update
+    puts [time {.f2.f1.t colu conf 0 -width 160 ; update}]
+    return
+}
