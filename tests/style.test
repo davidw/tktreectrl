@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# CVS: @(#) $Id: style.test,v 1.6 2005/07/15 01:43:39 treectrl Exp $
+# CVS: @(#) $Id: style.test,v 1.7 2006/11/23 22:05:19 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -114,10 +114,41 @@ test style-5.4 {style elements: empty element list} -body {
     .t style elements testStyle {}
 } -result {}
 
-test style-5.5 {style elements: add some elements} -body {
+test style-5.5 {style elements: add some elements} -setup {
+    # Create some items using the style.
+    # FIXME: add test to ensure the item-column styles are updated.
+    .t column create
+    .t item create -count 100 -parent root
+    .t item style set all 0 testStyle
+} -body {
     .t style elements testStyle {eBorder eImage eText}
     .t style elements testStyle
 } -result {eBorder eImage eText}
+
+test style-5.6 {style elements: duplicate elements are ignored} -body {
+    .t style elements testStyle {eBorder eImage eImage eText}
+    .t style elements testStyle
+} -result {eBorder eImage eText}
+
+test style-5.7 {style elements: duplicate elements are ignored} -body {
+    .t style elements testStyle {eBorder eImage eText eImage}
+    .t style elements testStyle
+} -result {eBorder eImage eText}
+
+test style-5.8 {style elements: rearrange elements} -body {
+    .t style elements testStyle {eText eImage eBorder}
+    .t style elements testStyle
+} -result {eText eImage eBorder}
+
+test style-5.9 {style elements: remove elements} -body {
+    .t style elements testStyle {eImage}
+    .t style elements testStyle
+} -result {eImage}
+
+test style-5.10 {style elements: add elements} -body {
+    .t style elements testStyle {eBorder eText eImage}
+    .t style elements testStyle
+} -result {eBorder eText eImage}
 
 test style-6.1 {style layout: missing args} -body {
     .t style layout
