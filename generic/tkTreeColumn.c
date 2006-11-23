@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.67 2006/11/19 23:35:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.68 2006/11/23 00:41:46 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2976,6 +2976,9 @@ TreeColumn_NeededWidth(
     int margins[4];
     int arrow = column->arrow;
 #endif
+
+    if (!tree->showHeader)
+	return 0;
 
     if (column->neededWidth >= 0)
 	return column->neededWidth;
