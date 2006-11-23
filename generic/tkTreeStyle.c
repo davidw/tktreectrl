@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.63 2006/11/23 00:43:42 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.64 2006/11/23 22:04:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3524,6 +3524,7 @@ static void
 IStyle_ChangeElementsAux(
     TreeCtrl *tree,		/* Widget info. */
     IStyle *style,		/* Instance style to be updated. */
+    int oldCount,		/* The previous number of elements. */
     int count,			/* The number of elements in the style after
 				 * this routine finishes. */
     Element **elemList,		/* List of master elements the style uses. */
@@ -3531,11 +3532,10 @@ IStyle_ChangeElementsAux(
 				 * currently used by the style. */
     )
 {
-    MStyle *masterStyle = style->master;
     IElementLink *eLink, *eLinks = NULL;
     int i, staticKeep[STATIC_SIZE], *keep = staticKeep;
 
-    STATIC_ALLOC(keep, int, masterStyle->numElements);
+    STATIC_ALLOC(keep, int, oldCount);
 
     if (count > 0) {
 #ifdef ALLOC_HAX
@@ -3548,7 +3548,7 @@ IStyle_ChangeElementsAux(
     }
 
     /* Assume we are discarding all the old ElementLinks */
-    for (i = 0; i < masterStyle->numElements; i++)
+    for (i = 0; i < oldCount; i++)
 	keep[i] = 0;
 
     for (i = 0; i < count; i++)
@@ -3568,10 +3568,10 @@ IStyle_ChangeElementsAux(
 	}
     }
 
-    if (masterStyle->numElements > 0)
+    if (oldCount > 0)
     {
 	/* Free unused ElementLinks */
-	for (i = 0; i < masterStyle->numElements; i++)
+	for (i = 0; i < oldCount; i++)
 	{
 	    if (!keep[i]) {
 		IElementLink_FreeResources(tree, &style->elements[i]);
@@ -3580,13 +3580,13 @@ IStyle_ChangeElementsAux(
 #ifdef ALLOC_HAX
 	AllocHax_CFree(tree->allocData, IElementLinkUid,
 		(char *) style->elements, sizeof(IElementLink),
-		masterStyle->numElements, ELEMENT_LINK_ROUND);
+		oldCount, ELEMENT_LINK_ROUND);
 #else
-	WCFREE(style->elements, IElementLink, masterStyle->numElements);
+	WCFREE(style->elements, IElementLink, oldCount);
 #endif
     }
 
-    STATIC_FREE(keep, int, masterStyle->numElements);
+    STATIC_FREE(keep, int, oldCount);
 
     style->elements = eLinks;
 }
@@ -3629,7 +3629,7 @@ Style_ChangeElements(
     int columnIndex, layout;
     int updateDInfo = FALSE;
     IStyle *style;
-    int i, j, k;
+    int i, j, k, oldCount;
 
     /* Update -union lists */
     for (i = 0; i < masterStyle->numElements; i++)
@@ -3686,6 +3686,7 @@ Style_ChangeElements(
 	}
     }
 
+    oldCount = masterStyle->numElements;
     MStyle_ChangeElementsAux(tree, masterStyle, count, elemList, map);
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
@@ -3701,7 +3702,7 @@ Style_ChangeElements(
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	    if ((style != NULL) && (style->master == masterStyle))
 	    {
-		IStyle_ChangeElementsAux(tree, style, count, elemList, map);
+		IStyle_ChangeElementsAux(tree, style, oldCount, count, elemList, map);
 		style->neededWidth = style->neededHeight = -1;
 		Tree_InvalidateColumnWidth(tree, treeColumn);
 		TreeItemColumn_InvalidateSize(tree, column);
