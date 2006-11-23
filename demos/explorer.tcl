@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.22 2006/11/22 03:31:56 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.23 2006/11/23 22:24:56 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -16,7 +16,7 @@ proc DemoExplorerAux {scriptDir scriptFile} {
 	global Explorer
 	global Dir
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set clicks [clock clicks]
 	set globDirs [glob -nocomplain -types d -dir $Dir *]
@@ -74,7 +74,7 @@ proc DemoExplorerAux {scriptDir scriptFile} {
 #
 proc DemoExplorerDetails {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {
@@ -296,7 +296,7 @@ proc ExplorerHeaderInvoke {T C} {
 
 proc DemoExplorerLargeIcons {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	# Item height is 32 for icon, 4 padding, 3 lines of text
 	set itemHeight [expr {32 + 4 + [font metrics [$T cget -font] -linespace] * 3}]
@@ -441,7 +441,7 @@ proc DemoExplorerLargeIcons {} {
 # Tree is horizontal, wrapping occurs at right edge of window, each item
 # is as wide as the smallest needed multiple of 110 pixels
 proc DemoExplorerSmallIcons {} {
-	set T .f2.f1.t
+	set T [DemoList]
 	DemoExplorerList
 	$T configure -orient horizontal \
 		-itemwidthmultiple 110 -itemwidthequal no
@@ -452,7 +452,7 @@ proc DemoExplorerSmallIcons {} {
 # same width (as wide as the longest item), xscrollincrement is by range
 proc DemoExplorerList {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {

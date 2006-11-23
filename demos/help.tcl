@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: help.tcl,v 1.19 2006/11/19 00:53:40 treectrl Exp $
+# RCS: @(#) $Id: help.tcl,v 1.20 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Help contents
@@ -7,7 +7,7 @@ proc DemoHelpContents {} {
 
 	global HelpContents
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {
@@ -137,7 +137,7 @@ proc DemoHelpContents_2 {} {
 
 	global HelpContents
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {

@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: imovie.tcl,v 1.14 2006/11/19 00:53:51 treectrl Exp $
+# RCS: @(#) $Id: imovie.tcl,v 1.15 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: iMovie
 #
 proc DemoIMovie {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget

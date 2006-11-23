@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.10 2006/11/13 04:45:09 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.11 2006/11/23 22:24:56 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
 
 	global BigList
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget
@@ -129,9 +129,9 @@ if {$::clip} {
 	BigListGetWindowHeight $T
 	if {$::tile} {
 		bind DemoBigList <<ThemeChanged>> {
-			BigListGetWindowHeight .f2.f1.t
-			if {[.f2.f1.t item id {first visible tag info}] ne ""} {
-				.f2.f1.t item conf {tag info} -height $BigList(windowHeight)
+			BigListGetWindowHeight [DemoList]
+			if {[[DemoList] item id {first visible tag info}] ne ""} {
+				[DemoList] item conf {tag info} -height $BigList(windowHeight)
 			}
 		}
 	}
@@ -153,9 +153,9 @@ if {$::clip} {
 	}
 
 	bind DemoBigListChildWindow <Motion> {
-		set x [expr {%X - [winfo rootx .f2.f1.t]}]
-		set y [expr {%Y - [winfo rooty .f2.f1.t]}]
-		BigListMotion .f2.f1.t $x $y
+		set x [expr {%X - [winfo rootx [DemoList]]}]
+		set y [expr {%Y - [winfo rooty [DemoList]]}]
+		BigListMotion [DemoList] $x $y
 	}
 
 	bindtags $T [list $T DemoBigList TreeCtrl [winfo toplevel $T] all]

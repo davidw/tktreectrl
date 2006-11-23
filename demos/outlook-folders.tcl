@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-folders.tcl,v 1.11 2006/10/04 04:08:25 treectrl Exp $
+# RCS: @(#) $Id: outlook-folders.tcl,v 1.12 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Outlook Express folder list
@@ -7,7 +7,7 @@ proc DemoOutlookFolders {} {
 
 	InitPics outlook-*
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {

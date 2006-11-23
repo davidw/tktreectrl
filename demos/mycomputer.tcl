@@ -1,8 +1,8 @@
-# RCS: @(#) $Id: mycomputer.tcl,v 1.4 2006/11/15 23:50:28 treectrl Exp $
+# RCS: @(#) $Id: mycomputer.tcl,v 1.5 2006/11/23 22:24:56 treectrl Exp $
 
 proc DemoMyComputer {} {
 
-    set T .f2.f1.t
+    set T [DemoList]
 
     #
     # Configure the treectrl widget

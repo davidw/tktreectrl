@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.17 2006/11/19 00:55:14 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.18 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -9,7 +9,7 @@ proc DemoOutlookNewsgroup {} {
 
 	InitPics outlook-*
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {
@@ -180,7 +180,7 @@ proc MessageReadDelayed {} {
 
 	global Message
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	unset Message(afterId)
 	set I $Message(afterId,item)
@@ -211,7 +211,7 @@ proc DemoOutlookNewsgroup_2 {} {
 
 	InitPics outlook-*
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {

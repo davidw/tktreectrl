@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: span.tcl,v 1.2 2006/10/04 04:10:20 treectrl Exp $
+# RCS: @(#) $Id: span.tcl,v 1.3 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Column span
 #
 proc DemoSpan {} {
 
-    set T .f2.f1.t
+    set T [DemoList]
 
     #
     # Configure the treectrl widget

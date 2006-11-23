@@ -1,10 +1,10 @@
-# RCS: @(#) $Id: www-options.tcl,v 1.12 2006/11/23 00:39:53 treectrl Exp $
+# RCS: @(#) $Id: www-options.tcl,v 1.13 2006/11/23 22:24:56 treectrl Exp $
 
 proc DemoInternetOptions {} {
 
 	global Options
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {
@@ -158,7 +158,7 @@ proc DemoInternetOptions_2 {} {
 
 	global Options
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	set height [font metrics [$T cget -font] -linespace]
 	if {$height < 18} {

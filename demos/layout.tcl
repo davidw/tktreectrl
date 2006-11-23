@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: layout.tcl,v 1.11 2006/10/04 04:08:25 treectrl Exp $
+# RCS: @(#) $Id: layout.tcl,v 1.12 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Layout
 #
 proc DemoLayout {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget

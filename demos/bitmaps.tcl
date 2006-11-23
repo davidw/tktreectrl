@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: bitmaps.tcl,v 1.9 2006/11/05 06:44:53 treectrl Exp $
+# RCS: @(#) $Id: bitmaps.tcl,v 1.10 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: Bitmaps
 #
 proc DemoBitmaps {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget

@@ -1,11 +1,11 @@
-# RCS: @(#) $Id: mailwasher.tcl,v 1.15 2006/11/19 00:54:45 treectrl Exp $
+# RCS: @(#) $Id: mailwasher.tcl,v 1.16 2006/11/23 22:24:56 treectrl Exp $
 
 #
 # Demo: MailWasher
 #
 proc DemoMailWasher {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	InitPics *checked
 

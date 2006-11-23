@@ -1,8 +1,8 @@
-# RCS: @(#) $Id: textvariable.tcl,v 1.5 2006/11/23 00:39:34 treectrl Exp $
+# RCS: @(#) $Id: textvariable.tcl,v 1.6 2006/11/23 22:24:56 treectrl Exp $
 
 proc DemoTextvariable {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget

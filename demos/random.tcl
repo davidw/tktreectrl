@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: random.tcl,v 1.22 2006/11/19 00:55:37 treectrl Exp $
+# RCS: @(#) $Id: random.tcl,v 1.23 2006/11/23 22:24:56 treectrl Exp $
 
 set RandomN 500
 set RandomDepth 5
@@ -8,7 +8,7 @@ set RandomDepth 5
 #
 proc DemoRandom {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	InitPics folder-* small-*
 
@@ -398,7 +398,7 @@ proc RandomDrop {T target source pos} {
 #
 proc DemoRandom2 {} {
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	DemoRandom
 

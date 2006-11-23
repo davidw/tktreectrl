@@ -1,10 +1,10 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.16 2006/11/13 04:45:09 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.17 2006/11/23 22:24:56 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
 	global FirefoxPrivacy
 
-	set T .f2.f1.t
+	set T [DemoList]
 
 	#
 	# Configure the treectrl widget
