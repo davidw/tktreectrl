@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.62 2006/11/22 03:33:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.63 2006/11/23 00:43:42 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1720,8 +1720,8 @@ Style_DoLayout(
 	if (eLink1->fixedHeight >= 0)
 	    continue;
 
-	/* Not squeezed */
 #ifdef CACHE_ELEM_SIZE
+	/* Not squeezed */
 	if (layout->useWidth >= eLink2->neededWidth)
 	    continue;
 
@@ -1738,6 +1738,7 @@ Style_DoLayout(
 	    continue;
 #endif
 #else
+	/* Not squeezed */
 	if (layout->useWidth >= layout->neededWidth)
 	    continue;
 #endif
@@ -1776,12 +1777,12 @@ Style_DoLayout(
  *
  * Style_NeededSize --
  *
- *	Calculate the total width and height of a style based only on
+ *	Calculate the width and height of a style based only on
  *	the requested size of each element.
  *
  * Results:
- *	The width and height. Return TRUE if any elements can be
- *	squeezed.
+ *	The width and height. The minimum width and height is equal to
+ *	the requested width and height minus any squeezing.
  *
  * Side effects:
  *	None.
@@ -1789,15 +1790,15 @@ Style_DoLayout(
  *----------------------------------------------------------------------
  */
 
-static int
+static void
 Style_NeededSize(
     TreeCtrl *tree,		/* Widget info. */
     IStyle *style,		/* Style to calculate size of. */
     int state,			/* STATE_xxx flags. */
     int *widthPtr,		/* Returned width. */
     int *heightPtr,		/* Returned height. */
-    int squeeze			/* If TRUE, all elements with -squeeze
-				 * layout are given minimum width. */
+    int *minWidthPtr,		/* Returned minimum width. */
+    int *minHeightPtr		/* Returned minimum height. */
     )
 {
     MStyle *masterStyle = style->master;
@@ -1807,7 +1808,7 @@ Style_NeededSize(
     int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
     int i, j;
     int x = 0, y = 0;
-    int hasSqueeze = 0;
+    int squeezeX = 0, squeezeY = 0;
 
     STATIC_ALLOC(layouts, struct Layout, masterStyle->numElements);
 
@@ -1823,12 +1824,6 @@ Style_NeededSize(
 	layout->uPadX[PAD_BOTTOM_RIGHT] = 0;
 	layout->uPadY[PAD_TOP_LEFT]     = 0;
 	layout->uPadY[PAD_BOTTOM_RIGHT] = 0;
-
-	eLink1 = &eLinks1[i];
-	if ((eLink1->onion == NULL) &&
-	    (eLink1->flags & (ELF_SQUEEZE_X | ELF_SQUEEZE_Y)))
-	    hasSqueeze = 1;
-
     }
 
     /* Figure out the padding around elements surrounded by -union elements */
@@ -1916,23 +1911,22 @@ Style_NeededSize(
 		&layout->useWidth, &layout->useHeight);
 #endif
 
-	if (squeeze)
+	if (eLink1->flags & ELF_SQUEEZE_X)
 	{
-	    if (eLink1->flags & ELF_SQUEEZE_X)
-	    {
-		if ((eLink1->minWidth >= 0) &&
-		    (eLink1->minWidth <= layout->useWidth))
-		    layout->useWidth = eLink1->minWidth;
-		else
-		    layout->useWidth = 0;
+	    if ((eLink1->minWidth >= 0) &&
+		    (eLink1->minWidth <= layout->useWidth)) {
+		squeezeX += layout->useWidth - eLink1->minWidth;
+	    } else {
+		squeezeX += layout->useWidth;
 	    }
-	    if (eLink1->flags & ELF_SQUEEZE_Y)
-	    {
-		if ((eLink1->minHeight >= 0) &&
-		    (eLink1->minHeight <= layout->useHeight))
-		    layout->useHeight = eLink1->minHeight;
-		else
-		    layout->useHeight = 0;
+	}
+	if (eLink1->flags & ELF_SQUEEZE_Y)
+	{
+	    if ((eLink1->minHeight >= 0) &&
+		    (eLink1->minHeight <= layout->useHeight)) {
+		squeezeY += layout->useHeight - eLink1->minHeight;
+	    } else {
+		squeezeY += layout->useHeight;
 	    }
 	}
 
@@ -2001,9 +1995,10 @@ Style_NeededSize(
     Layout_Size(masterStyle->vertical, masterStyle->numElements, layouts,
 	widthPtr, heightPtr);
 
-    STATIC_FREE(layouts, struct Layout, masterStyle->numElements);
+    *minWidthPtr = *widthPtr - squeezeX;
+    *minHeightPtr = *heightPtr - squeezeY;
 
-    return hasSqueeze;
+    STATIC_FREE(layouts, struct Layout, masterStyle->numElements);
 }
 
 /*
@@ -2024,7 +2019,6 @@ Style_NeededSize(
  *----------------------------------------------------------------------
  */
 
-
 static void
 Style_CheckNeededSize(
     TreeCtrl *tree,		/* Widget info. */
@@ -2034,19 +2028,13 @@ Style_CheckNeededSize(
 {
     if (style->neededWidth == -1)
     {
-	int hasSqueeze = Style_NeededSize(tree, style, state,
-	    &style->neededWidth, &style->neededHeight, FALSE);
+	int minWidth, minHeight;
+
+	Style_NeededSize(tree, style, state,
+	    &style->neededWidth, &style->neededHeight, &minWidth, &minHeight);
 #ifdef CACHE_STYLE_SIZE
-	if (hasSqueeze)
-	{
-	    Style_NeededSize(tree, style, state, &style->minWidth,
-		&style->minHeight, TRUE);
-	}
-	else
-	{
-	    style->minWidth = style->neededWidth;
-	    style->minHeight = style->neededHeight;
-	}
+	style->minWidth = minWidth;
+	style->minHeight = minHeight;
 	style->layoutWidth = -1;
 #endif /* CACHE_STYLE_SIZE */
 #ifdef TREECTRL_DEBUG
@@ -2082,7 +2070,9 @@ Style_MinSize(
 	}
     }
     if (hasSqueeze) {
-	Style_NeededSize(tree, style, state, minWidthPtr, minHeightPtr, TRUE);
+	int width, height;
+	Style_NeededSize(tree, style, state, &width, &height,
+		minWidthPtr, minHeightPtr);
     } else {
 	*minWidthPtr = style->neededWidth;
 	*minHeightPtr = style->neededHeight;
