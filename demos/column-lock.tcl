@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.7 2006/11/19 00:51:46 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.8 2006/11/23 22:03:47 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -315,4 +315,10 @@ proc ColumnLockUpdateSelection {w} {
 	}
     }
     return
+}
+
+proc ColumnLockAddText {} {
+    set w .f2.f1.t
+    $w style elements cell {cell.bd label1.text cell.selN cell.selS cell.selW cell.selE}
+    $w item text visible all abc
 }
