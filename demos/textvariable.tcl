@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: textvariable.tcl,v 1.4 2006/10/04 04:09:52 treectrl Exp $
+# RCS: @(#) $Id: textvariable.tcl,v 1.5 2006/11/23 00:39:34 treectrl Exp $
 
 proc DemoTextvariable {} {
 
@@ -9,7 +9,8 @@ proc DemoTextvariable {} {
 	#
 
 	$T configure -showroot no -showbuttons no -showlines no \
-		-selectmode extended -xscrollincrement 20 -showheader no
+		-selectmode extended -xscrollincrement 20 \
+		-yscrollincrement 10 -showheader yes
 if {!$::clip} {
 	# Hide the borders because child windows appear on top of them
 	$T configure -borderwidth 0 -highlightthickness 0
@@ -18,7 +19,7 @@ if {!$::clip} {
 	# Create columns
 	#
 
-	$T column create -expand yes -tag C0
+	$T column create -text "Resize Me!" -justify center -tags C0
 	$T configure -treecolumn C0
 
 	#
@@ -28,7 +29,7 @@ if {!$::clip} {
 	$T element create eWindow window
 	$T element create eRect rect
 	$T element create eText1 text -width 300
-	$T element create eText2 text
+	$T element create eText2 text -wrap none
 
 	#
 	# Create styles using the elements
@@ -36,13 +37,13 @@ if {!$::clip} {
 
 	set S [$T style create s1 -orient horizontal]
 	$T style elements $S eText1
-	$T style layout $S eText1 -padx 10 -pady 6
+	$T style layout $S eText1 -padx 10 -pady 6 -squeeze x
 
 	set S [$T style create s2 -orient vertical]
 	$T style elements $S {eRect eText2 eWindow}
 	$T style layout $S eRect -union {eText2 eWindow} -ipadx 8 -ipady 8 -padx 4 -pady {0 4}
-	$T style layout $S eText2 -pady {0 6}
-	$T style layout $S eWindow
+	$T style layout $S eText2 -pady {0 6} -squeeze x
+	$T style layout $S eWindow -iexpand x -squeeze x
 
 	#
 	# Create items and assign styles
