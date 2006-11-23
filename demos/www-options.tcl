@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: www-options.tcl,v 1.11 2005/07/11 01:59:07 treectrl Exp $
+# RCS: @(#) $Id: www-options.tcl,v 1.12 2006/11/23 00:39:53 treectrl Exp $
 
 proc DemoInternetOptions {} {
 
@@ -24,7 +24,7 @@ proc DemoInternetOptions {} {
 	# Create columns
 	#
 
-	$T column create -text "Internet Options" -tag C0
+	$T column create -text "Internet Options" -tags C0
 
 	$T configure -treecolumn C0
 
