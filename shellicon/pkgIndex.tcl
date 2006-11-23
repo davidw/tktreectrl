@@ -1,2 +1,2 @@
 if {[catch {package require Tcl 8.4}]} return
-package ifneeded shellicon 2.1.1 [list load [file join $dir shellicon21.dll] shellicon]
+package ifneeded shellicon 2.2 [list load [file join $dir shellicon22.dll] shellicon]
