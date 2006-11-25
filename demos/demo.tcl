@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.56 2006/11/23 22:24:56 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.57 2006/11/25 20:21:26 treectrl Exp $
 
 set VERSION 2.2
 
@@ -1372,9 +1372,16 @@ proc DisplayStylesInItem {item} {
 
 # When one item is selected in the demo list, display the styles in that item.
 # See DemoClear for why the tag "DontDelete" is used.
+set DisplayStylesInItem(item) ""
+bind [DemoList] <ButtonRelease-1> {
+    if {$DisplayStylesInItem(item) ne ""} {
+	DisplayStylesInItem $DisplayStylesInItem(item)
+	set DisplayStylesInItem(item) ""
+    }
+}
 [DemoList] notify bind DontDelete <Selection> {
     if {%c == 1} {
-	DisplayStylesInItem [%T selection get 0]
+	set DisplayStylesInItem(item) [%T selection get 0]
     }
 }
 
@@ -1442,7 +1449,7 @@ proc DemoClear {} {
     $T column dragconfigure -enable yes
 
     # Restore default bindings to the demo list
-    bindtags $T [list $T TreeCtrl [winfo toplevel $T] all]
+    bindtags $T [list $T TreeCtrl [winfo toplevel $T] all DisplayStylesInItemBindTag]
 
     catch {destroy $T.entry}
     catch {destroy $T.text}
