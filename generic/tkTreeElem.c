@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.51 2006/11/23 00:42:26 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.52 2006/11/25 20:25:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3720,6 +3720,7 @@ static void DisplayProcWindow(ElementArgs *args)
     int width, height;
     int match, match2;
     int draw;
+    int requests;
 
     BOOLEAN_FOR_STATE(draw, draw, state);
     if (!draw)
@@ -3778,6 +3779,8 @@ hideIt:
 	return;
     }
 
+    TreeDisplay_GetReadyForTrouble(tree, &requests);
+
 #ifdef CLIP_WINDOW
     if (elemX->child != NULL) {
 	int cx = x, cy = y, cw = width, ch = height; /* clip win coords */
@@ -3805,11 +3808,15 @@ hideIt:
 		    || (cw != Tk_Width(elemX->tkwin))
 		    || (ch != Tk_Height(elemX->tkwin))) {
 		Tk_MoveResizeWindow(elemX->tkwin, cx, cy, cw, ch);
+		if (TreeDisplay_WasThereTrouble(tree, requests))
+		    return;
 	    }
 	    Tk_MapWindow(elemX->tkwin);
 	} else {
 	    Tk_MaintainGeometry(elemX->tkwin, tree->tkwin, cx, cy, cw, ch);
 	}
+	if (TreeDisplay_WasThereTrouble(tree, requests))
+	    return;
 
 	/*
 	 * Position the child window within the clip window.
@@ -3820,6 +3827,8 @@ hideIt:
 		|| (width != Tk_Width(elemX->child))
 		|| (height != Tk_Height(elemX->child))) {
 	    Tk_MoveResizeWindow(elemX->child, x, y, width, height);
+	    if (TreeDisplay_WasThereTrouble(tree, requests))
+		return;
 	}
 	Tk_MapWindow(elemX->child);
 	return;
@@ -3836,6 +3845,8 @@ hideIt:
 		|| (width != Tk_Width(elemX->tkwin))
 		|| (height != Tk_Height(elemX->tkwin))) {
 	    Tk_MoveResizeWindow(elemX->tkwin, x, y, width, height);
+	    if (TreeDisplay_WasThereTrouble(tree, requests))
+		return;
 	}
 	Tk_MapWindow(elemX->tkwin);
     } else {

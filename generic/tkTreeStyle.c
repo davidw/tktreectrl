@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.64 2006/11/23 22:04:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.65 2006/11/25 20:25:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2299,6 +2299,11 @@ void TreeStyle_Draw(
     {
 	struct Layout *layout = &layouts[i];
 
+	/* Don't "draw" window elements. TreeStyle_UpdateWindowPositions()
+	 * does that for us. */
+	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
+	    continue;
+
 #if DEBUG_DRAW
 	if (debugDraw && layout->master->onion != NULL)
 	    continue;
@@ -2435,14 +2440,15 @@ TreeStyle_UpdateWindowPositions(
     ElementArgs args;
     int i, x, y, minWidth, minHeight;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
+    int numElements = masterStyle->numElements;
 
     /* FIXME: Perhaps remember whether this style has any window
      * elements */
-    for (i = 0; i < masterStyle->numElements; i++) {
+    for (i = 0; i < numElements; i++) {
 	if (ELEMENT_TYPE_MATCHES(masterStyle->elements[i].elem->typePtr, &elemTypeWindow))
 	    break;
     }
-    if (i == masterStyle->numElements)
+    if (i == numElements)
 	return;
 
     Style_CheckNeededSize(tree, style, drawArgs->state);
@@ -2474,7 +2480,7 @@ TreeStyle_UpdateWindowPositions(
     if (drawArgs->height < minHeight)
 	drawArgs->height = minHeight;
 
-    STATIC_ALLOC(layouts, struct Layout, style->master->numElements);
+    STATIC_ALLOC(layouts, struct Layout, numElements);
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
@@ -2482,7 +2488,7 @@ TreeStyle_UpdateWindowPositions(
     args.state = drawArgs->state;
     args.display.drawable = drawArgs->drawable;
 
-    for (i = 0; i < style->master->numElements; i++)
+    for (i = 0; i < numElements; i++)
     {
 	struct Layout *layout = &layouts[i];
 
@@ -2491,6 +2497,10 @@ TreeStyle_UpdateWindowPositions(
 
 	if ((layout->useWidth > 0) && (layout->useHeight > 0))
 	{
+	    int requests;
+
+	    TreeDisplay_GetReadyForTrouble(tree, &requests);
+
 	    args.elem = layout->eLink->elem;
 	    args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 	    args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
@@ -2500,10 +2510,22 @@ TreeStyle_UpdateWindowPositions(
 	    args.display.height = layout->useHeight;
 	    args.display.sticky = layout->master->flags & ELF_STICKY;
 	    (*args.elem->typePtr->displayProc)(&args);
+
+	    /* Updating the position of a window may generate a <Configure>
+	     * or <Map> event on that window. Binding scripts on those
+	     * events could do anything, including deleting items and
+	     * thus the style we are drawing. In other cases (such as when
+	     * using Tile widgets I notice), the Tk_GeomMgr.requestProc
+	     * may get called which calls Tree_ElementChangedItself which
+	     * calls FreeDItemInfo which frees a DItem we are in the middle
+	     * of displaying. So if anything was done that caused a display
+	     * request, then abort abort abort. */
+	    if (TreeDisplay_WasThereTrouble(tree, requests))
+		break;
 	}
     }
 
-    STATIC_FREE(layouts, struct Layout, style->master->numElements);
+    STATIC_FREE(layouts, struct Layout, numElements);
 }
 
 /*

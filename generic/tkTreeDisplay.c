@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.64 2006/11/19 23:37:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.65 2006/11/25 20:25:28 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2461,8 +2461,10 @@ DItem_Free(
     if (strncmp(dItem->magic, "MAGC", 4) != 0)
 	panic("DItem_Free: dItem.magic != MAGC");
 #endif
-    if (dItem->item != NULL)
+    if (dItem->item != NULL) {
 	TreeItem_SetDInfo(tree, dItem->item, (TreeItemDInfo) NULL);
+	dItem->item = NULL;
+    }
     /* Push unused DItem on the stack */
     dItem->next = dInfo->dItemFree;
     dInfo->dItemFree = dItem;
@@ -5148,6 +5150,53 @@ DebugDrawBorder(
 /*
  *--------------------------------------------------------------
  *
+ * TreeDisplay_GetReadyForTrouble --
+ * TreeDisplay_WasThereTrouble --
+ *
+ *	These 2 procedures are used to detect when something happens
+ *	during a display update that requests another display update.
+ *	If that happens, then the current display is aborted and we
+ *	try again (unless the window was destroyed).
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+TreeDisplay_GetReadyForTrouble(
+    TreeCtrl *tree,
+    int *requestsPtr
+    )
+{
+    TreeDInfo dInfo = tree->dInfo;
+
+    *requestsPtr = dInfo->requests;
+}
+
+int
+TreeDisplay_WasThereTrouble(
+    TreeCtrl *tree,
+    int requests
+    )
+{
+    TreeDInfo dInfo = tree->dInfo;
+
+    if (tree->deleted || (requests != dInfo->requests)) {
+	if (tree->debug.enable)
+	    dbwin("TreeDisplay_WasThereTrouble: %p\n", tree);
+	return 1;
+    }
+    return 0;
+}
+
+/*
+ *--------------------------------------------------------------
+ *
  * Tree_Display --
  *
  *	This procedure is called at idle time when something has happened
@@ -5332,7 +5381,7 @@ displayRetry:
      * If binding scripts do something that causes a redraw to be requested,
      * then we abort the current draw and start again.
      */
-    requests = dInfo->requests;
+    TreeDisplay_GetReadyForTrouble(tree, &requests);
     if (dInfo->flags & DINFO_UPDATE_SCROLLBAR_X) {
 	/* Possible <Scroll-x> event. */
 	Tree_UpdateScrollbarX(tree);
@@ -5345,7 +5394,7 @@ displayRetry:
     }
     if (tree->deleted || !Tk_IsMapped(tkwin))
 	goto displayExit;
-    if (requests != dInfo->requests) {
+    if (TreeDisplay_WasThereTrouble(tree, requests)) {
 	goto displayRetry;
     }
     if (dInfo->flags & DINFO_OUT_OF_DATE) {
@@ -5421,8 +5470,6 @@ displayRetry:
 #endif /* DCOLUMN */
 	}
 
-	requests = dInfo->requests;
-
 	/*
 	 * Generate an <ItemVisibility> event here. This can be used to set
 	 * an item's styles when the item is about to be displayed, and to
@@ -5438,9 +5485,8 @@ displayRetry:
 	if (tree->deleted || !Tk_IsMapped(tkwin))
 	    goto displayExit;
 
-	if (requests != dInfo->requests) {
+	if (TreeDisplay_WasThereTrouble(tree, requests))
 	    goto displayRetry;
-	}
     }
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
@@ -5636,11 +5682,15 @@ displayRetry:
 
 	    int drawn = 0;
 	    if (!dInfo->empty && dInfo->rangeFirst != NULL) {
-		/* FIXME: may "draw" window elements twice. */
 		tree->drawableXOrigin = tree->xOrigin;
 		tree->drawableYOrigin = tree->yOrigin;
 		TreeItem_UpdateWindowPositions(tree, dItem->item, COLUMN_LOCK_NONE,
 		    dItem->area.x, dItem->y, dItem->area.width, dItem->height);
+		if (TreeDisplay_WasThereTrouble(tree, requests)) {
+		    if (tree->deleted || !Tk_IsMapped(tree->tkwin))
+			goto displayExit;
+		    goto displayRetry;
+		}
 		if (dItem->area.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->area,
 			    COLUMN_LOCK_NONE, dInfo->bounds, pixmap, drawable);
@@ -5652,6 +5702,11 @@ displayRetry:
 		TreeItem_UpdateWindowPositions(tree, dItem->item,
 		    COLUMN_LOCK_LEFT, dItem->left.x, dItem->y,
 		    dItem->left.width, dItem->height);
+		if (TreeDisplay_WasThereTrouble(tree, requests)) {
+		    if (tree->deleted || !Tk_IsMapped(tree->tkwin))
+			goto displayExit;
+		    goto displayRetry;
+		}
 		if (dItem->left.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->left, COLUMN_LOCK_LEFT,
 			    dInfo->boundsL, pixmap, drawable);
@@ -5663,6 +5718,11 @@ displayRetry:
 		TreeItem_UpdateWindowPositions(tree, dItem->item,
 		    COLUMN_LOCK_RIGHT, dItem->right.x, dItem->y,
 		    dItem->right.width, dItem->height);
+		if (TreeDisplay_WasThereTrouble(tree, requests)) {
+		    if (tree->deleted || !Tk_IsMapped(tree->tkwin))
+			goto displayExit;
+		    goto displayRetry;
+		}
 		if (dItem->right.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->right, COLUMN_LOCK_RIGHT,
 			    dInfo->boundsR, pixmap, drawable);
@@ -5670,7 +5730,7 @@ displayRetry:
 	    }
 	    numDraw += drawn ? 1 : 0;
 
-	    dItem->oldX = dItem->area.x;
+	    dItem->oldX = dItem->area.x; /* FIXME: could have dInfo->empty */
 	    dItem->oldY = dItem->y;
 	    dItem->oldIndex = dItem->index;
 	}
