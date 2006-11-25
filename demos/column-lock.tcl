@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.9 2006/11/23 22:24:56 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.10 2006/11/25 20:22:53 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -289,10 +289,14 @@ proc ColumnLockMotion {w x y} {
 
 proc ColumnLockUpdateSelection {w} {
     global ColumnLock
+
+    # Clear the old selection.
     foreach {item column} $ColumnLock(selection) {
 	$w item state forcolumn $item $column {!selN !selS !selE !selW}
     }
     set ColumnLock(selection) {}
+
+    # Order the 2 corners.
     foreach {item1 column1} $ColumnLock(corner1) {}
     foreach {item2 column2} $ColumnLock(corner2) {}
     if {[$w item compare $item1 > $item2]} {
@@ -305,12 +309,21 @@ proc ColumnLockUpdateSelection {w} {
 	set column1 $column2
 	set column2 $swap
     }
+
+    # Set the state of every item-column on the edges of the selection.
     $w item state forcolumn $item1 "range $column1 $column2" selN
     $w item state forcolumn $item2 "range $column1 $column2" selS
     $w item state forcolumn "range $item1 $item2" $column1 selW
     $w item state forcolumn "range $item1 $item2" $column2 selE
-    foreach item [$w item id "range $item1 $item2"] {
+
+    # Remember every item-column on the edges of the selection.
+    foreach item [list $item1 $item2] {
 	foreach column [$w column id "range $column1 $column2"] {
+	    lappend ColumnLock(selection) $item $column
+	}
+    }
+    foreach item [$w item id "range $item1 $item2"] {
+	foreach column [list $column1 $column2] {
 	    lappend ColumnLock(selection) $item $column
 	}
     }
