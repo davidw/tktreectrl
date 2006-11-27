@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.65 2006/11/25 20:25:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.66 2006/11/27 02:05:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2837,7 +2837,7 @@ TrackOnScreenColumnsForItem(
 	}
     }
 
-    if (n && tree->debug.enable && tree->debug.display)
+    if (FALSE && n && tree->debug.enable && tree->debug.display)
 	dbwin("%s\n", Tcl_DStringValue(&dString));
 
     /* Set the list of onscreen columns unless it is the same or the item
@@ -5259,7 +5259,8 @@ displayRetry:
 
     /* DINFO_REDO_COLUMN_WIDTH  - A column was created or deleted. */
     /* DINFO_CHECK_COLUMN_WIDTH - The width of one or more columns
-    *				  *might* have changed. */
+    *				  *might* have changed. Column visibility
+				  might have changed. */
     if (dInfo->flags & (DINFO_REDO_COLUMN_WIDTH | DINFO_CHECK_COLUMN_WIDTH)) {
 	TreeColumn treeColumn = tree->columns;
 	ColumnInfo *cinfo;
