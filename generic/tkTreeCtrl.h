@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.75 2006/11/25 20:25:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.76 2006/11/27 02:04:40 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -162,7 +162,7 @@ struct TreeCtrl
     Tcl_Obj *yScrollDelay;	/* -yscrolldelay: used by scripts */
     int xScrollIncrement;	/* -xscrollincrement */
     int yScrollIncrement;	/* -yscrollincrement */
-    Tcl_Obj *scrollMargin;		/* -scrollmargin: used by scripts */
+    Tcl_Obj *scrollMargin;	/* -scrollmargin: used by scripts */
     char *takeFocus;		/* -takfocus */
     Tcl_Obj *fontObj;		/* -font */
     Tk_Font tkfont;		/* -font */
