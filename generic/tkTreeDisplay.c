@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.66 2006/11/27 02:05:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.67 2006/11/27 19:16:10 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1248,7 +1248,7 @@ RangesToIncrementsX(
     int totalWidth = Tree_TotalWidth(tree);
     int size;
 
-    if (dInfo->rangeFirst == NULL)
+    if (totalWidth <= visWidth)
 	return;
 
     /* First increment is zero */
@@ -1256,10 +1256,12 @@ RangesToIncrementsX(
     dInfo->xScrollIncrements = (int *) ckalloc(size * sizeof(int));
     dInfo->xScrollIncrements[dInfo->xScrollIncrementCount++] = 0;
 
-    range = dInfo->rangeFirst->next;
-    while (range != NULL) {
-	size = Increment_AddX(tree, range->offset, size);
-	range = range->next;
+    if (dInfo->rangeFirst != NULL) {
+	range = dInfo->rangeFirst->next;
+	while (range != NULL) {
+	    size = Increment_AddX(tree, range->offset, size);
+	    range = range->next;
+	}
     }
     if ((visWidth > 1) && (totalWidth -
 		dInfo->xScrollIncrements[dInfo->xScrollIncrementCount - 1] > visWidth)) {
