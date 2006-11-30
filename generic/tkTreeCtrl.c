@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.89 2006/11/21 01:56:24 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.90 2006/11/30 03:29:44 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -914,10 +914,9 @@ static int TreeWidgetCmd(
 		    (x < tree->columnTreeLeft + depth * tree->useIndent)) {
 		int column = (x - tree->columnTreeLeft) / tree->useIndent + 1;
 		if (column == depth) {
-		    if (tree->showButtons && TreeItem_GetButton(tree, item))
+		    if (TreeItem_HasButton(tree, item))
 			sprintf(buf + strlen(buf), " button");
-		}
-		else if (tree->showLines) {
+		} else if (tree->showLines) {
 		    TreeItem sibling;
 		    do {
 			item = TreeItem_GetParent(tree, item);

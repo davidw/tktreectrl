@@ -6,13 +6,13 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.60 2006/11/21 02:09:35 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.61 2006/11/30 03:30:20 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2 treectrl "Tk Commands"
 .BS
-.SH "NAME"
+.SH NAME
 treectrl \- Create and manipulate hierarchical multicolumn widgets
-.SH "SYNOPSIS"
+.SH SYNOPSIS
 package require \fBtreectrl  2.2\fR
 .sp
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
@@ -354,7 +354,7 @@ package require \fBtreectrl  2.2\fR
 \fIpathName\fR \fByview scroll\fR \fInumber\fR \fIwhat\fR
 .sp
 .BE
-.SH "DESCRIPTION"
+.SH DESCRIPTION
 .TP
 \fBtreectrl\fR \fIpathName\fR ?\fIoptions\fR?
 .PP
@@ -1632,7 +1632,7 @@ The following options are supported by this command (see \fBitem create\fR for
 the meaning of each option):
 .RS
 .TP
-\fB\fB-button\fR\fR \fIboolean\fR
+\fB\fB-button\fR\fR \fIboolean|auto\fR
 .TP
 \fB\fB-height\fR\fR \fIheight\fR
 .TP
@@ -1659,14 +1659,22 @@ the state \fBfocus\fR is also set.
 The following options are supported by this command:
 .RS
 .TP
-\fB\fB-button\fR\fR \fIboolean\fR
-\fIBoolean\fR must have one of the forms accepted by \fBTcl_GetBoolean\fR. It
-indicates whether or not an expand/collapse button should be drawn next to this
-item, typically to indicate the item has children. The button will only be
-displayed if:
-a) the column specified by the treectrl option \fB-treecolumn\fR is visible;
-and b) the treectrl option \fB-showbuttons\fR is true;
-and c) for the root item, the treectrl option \fB-showrootbutton\fR is true.
+\fB\fB-button\fR\fR \fIboolean|auto\fR
+The value of this option must have one of the forms accepted by \fBTcl_GetBoolean\fR
+or be the word \fBauto\fR (or any abbreviation of it). It indicates whether or not an expand/collapse
+button should be drawn next to the item, typically to indicate that the item has
+children.
+If the value of this option is \fBauto\fR, then a button is displayed next to the
+item whenever the item has any children whose item option \fB-visible\fR is true.
+The button will only be displayed if:
+.RS
+.IP [1]
+the column specified by the treectrl option \fB-treecolumn\fR is visible, and
+.IP [2]
+the treectrl option \fB-showbuttons\fR is true, and
+.IP [3]
+for the root item, the treectrl option \fB-showrootbutton\fR is true.
+.RE
 .TP
 \fB\fB-count\fR\fR \fInumItems\fR
 Specifies the number of items to create. Must be >= 0. Defaults to 1.
@@ -2766,7 +2774,7 @@ visible;  if it is positive then lower information
 becomes visible.
 A \fB<Scroll-y>\fR event is generated.
 .RE
-.SH "COLUMNS"
+.SH COLUMNS
 A treectrl widget is capable of displaying multiple columns next to each
 other.
 An item can be considered as a row, which reaches over all columns.
@@ -3072,7 +3080,7 @@ TRUE are considered.
 \fB!visible\fR
 When this qualifier is given, only columns whose \fB-visible\fR option is
 FALSE are considered.
-.SH "STATES"
+.SH STATES
 For every item a set of boolean states is managed. These states play an
 integral role in the appearance of each item.
 The following states are predefined for every item:
@@ -3149,7 +3157,7 @@ In the example above, the \fBrect\fR element is filled with blue when the treect
 has the focus and the item is selected. If the treectrl does not have the focus, the
 example specifies that gray should be used for selected items. Also note that if the
 item is not selected, no color is specified for the -fill option.
-.SH "ELEMENTS"
+.SH ELEMENTS
 Elements are the smallest building blocks
 which are handled by a treectrl widget.
 One or more elements together can be combined to a style,
@@ -3889,7 +3897,7 @@ the Return key toggles the active item.
 The mousewheel scrolls the view of the widget four lines up or down
 depending on the direction, the wheel was turned.
 The active cursor or the selection is not affected.
-.SH "EXAMPLES"
+.SH EXAMPLES
 Get the unique identifier for the leftmost visible column:
 .nf
 
@@ -3939,5 +3947,5 @@ $T notify bind MyTag <ColumnDrag-receive> {
 .fi
 .SH "SEE ALSO"
 bind(n), bitmap(n), image(n), listbox(n), options(n)
-.SH "KEYWORDS"
+.SH KEYWORDS
 tree, widget

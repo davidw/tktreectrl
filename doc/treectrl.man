@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.44 2006/11/21 02:09:35 treectrl Exp $}
+  $Id: treectrl.man,v 1.45 2006/11/30 03:30:13 treectrl Exp $}
 ][manpage_begin treectrl n 2.2]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1032,7 +1032,7 @@ the meaning of each option):
 
 [list_begin opt]
 
-[opt_def [option -button] [arg boolean]]
+[opt_def [option -button] [arg boolean|auto]]
 [opt_def [option -height] [arg height]]
 [opt_def [option -tags] [arg tagList]]
 [opt_def [option -visible] [arg boolean]]
@@ -1058,14 +1058,22 @@ The following options are supported by this command:
 
 [list_begin opt]
 
-[opt_def [option -button] [arg boolean]]
-[arg Boolean] must have one of the forms accepted by [fun Tcl_GetBoolean]. It
-indicates whether or not an expand/collapse button should be drawn next to this
-item, typically to indicate the item has children. The button will only be
-displayed if:
-a) the column specified by the treectrl option [option -treecolumn] is visible;
-and b) the treectrl option [option -showbuttons] is true;
-and c) for the root item, the treectrl option [option -showrootbutton] is true.
+[opt_def [option -button] [arg boolean|auto]]
+The value of this option must have one of the forms accepted by [fun Tcl_GetBoolean]
+or be the word [const auto] (or any abbreviation of it). It indicates whether or not an expand/collapse
+button should be drawn next to the item, typically to indicate that the item has
+children.
+If the value of this option is [const auto], then a button is displayed next to the
+item whenever the item has any children whose item option [option -visible] is true.
+The button will only be displayed if:
+[list_begin enum]
+[enum]
+the column specified by the treectrl option [option -treecolumn] is visible, and
+[enum]
+the treectrl option [option -showbuttons] is true, and
+[enum]
+for the root item, the treectrl option [option -showrootbutton] is true.
+[list_end]
 
 [opt_def [option -count] [arg numItems]]
 Specifies the number of items to create. Must be >= 0. Defaults to 1.

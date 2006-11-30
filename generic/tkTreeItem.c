@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.94 2006/11/25 20:25:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.95 2006/11/30 03:29:44 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -57,8 +57,9 @@ struct TreeItem_ {
 					* need to redo them. Also indicates
 					* we have an entry in
 					* TreeCtrl.itemSpansHash. */
-#define ITEM_FLAG_BUTTON	0x0008 /* -button */
-#define ITEM_FLAG_VISIBLE	0x0010 /* -visible */
+#define ITEM_FLAG_BUTTON	0x0008 /* -button true */
+#define ITEM_FLAG_BUTTON_AUTO	0x0010 /* -button auto */
+#define ITEM_FLAG_VISIBLE	0x0020 /* -visible */
     int flags;
     TagInfo *tagInfo;	/* Tags. May be NULL. */
 };
@@ -73,7 +74,6 @@ static CONST char *ItemUid = "Item", *ItemColumnUid = "ItemColumn";
 #define IS_ALL(i) ((i) == ITEM_ALL)
 
 #define IS_DELETED(i) (((i)->flags & ITEM_FLAG_DELETED) != 0)
-#define HAS_BUTTON(i) (((i)->flags & ITEM_FLAG_BUTTON) != 0)
 #define IS_VISIBLE(i) (((i)->flags & ITEM_FLAG_VISIBLE) != 0)
 
 /*
@@ -817,8 +817,7 @@ TreeItem_ChangeState(
     }
 
     /* This item has a button */
-    if (HAS_BUTTON(item) && tree->showButtons
-	    && (!IS_ROOT(item) || tree->showRootButton)) {
+    if (TreeItem_HasButton(tree, item)) {
 
 	Tk_Image image1, image2;
 	Pixmap bitmap1, bitmap2;
@@ -941,14 +940,15 @@ TreeItem_UndefineState(
 /*
  *----------------------------------------------------------------------
  *
- * TreeItem_GetButton --
+ * TreeItem_HasButton --
  *
- *	Return the value of the -button configuration option for an
- *	Item.
+ *	Determine whether an item should have a button displayed next to
+ *	it. This considers the value of the -button configuration option
+ *	for an item as well as the treectrl options -showbuttons and
+ *	-showrootbutton.
  *
  * Results:
- *	Boolean indicating whether the Item could have a button
- *	displayed next to it (-showbuttons must also be set).
+ *	None.
  *
  * Side effects:
  *	None.
@@ -957,12 +957,24 @@ TreeItem_UndefineState(
  */
 
 int
-TreeItem_GetButton(
+TreeItem_HasButton(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item		/* Item token. */
     )
 {
-    return HAS_BUTTON(item);
+    if (!tree->showButtons || (IS_ROOT(item) && !tree->showRootButton))
+	return 0;
+    if (item->flags & ITEM_FLAG_BUTTON)
+	return 1;
+    if (item->flags & ITEM_FLAG_BUTTON_AUTO) {
+	TreeItem child = item->firstChild;
+	while (child != NULL) {
+	    if (IS_VISIBLE(child))
+		return 1;
+	    child = child->nextSibling;
+	}
+    }
+    return 0;
 }
 
 /*
@@ -3300,8 +3312,7 @@ int TreeItem_Height(
     useHeight = Item_HeightOfStyles(tree, item);
 
     /* Can't have less height than our button */
-    if (tree->showButtons && HAS_BUTTON(item) &&
-	    (!IS_ROOT(item) || tree->showRootButton)) {
+    if (TreeItem_HasButton(tree, item)) {
 	buttonHeight = ButtonHeight(tree, item->state);
     }
 
@@ -4282,9 +4293,7 @@ TreeItem_DrawButton(
     Tk_Image image;
     Pixmap bitmap;
 
-    if (!HAS_BUTTON(item))
-	return;
-    if (IS_ROOT(item) && !tree->showRootButton)
+    if (!TreeItem_HasButton(tree, item))
 	return;
 
 #if defined(MAC_TCL) || defined(MAC_OSX_TK)
@@ -4685,17 +4694,21 @@ static int Item_Configure(
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
     }
 
-    if (mask & ITEM_CONF_BUTTON)
+    if (mask & ITEM_CONF_BUTTON) {
 	if (tree->columnTree != NULL)
 	    Tree_InvalidateItemDInfo(tree, tree->columnTree, item, NULL);
+    }
 
     if ((mask & ITEM_CONF_VISIBLE) && (IS_VISIBLE(item) != lastVisible)) {
-	/* May change the width of any column */
+
+	/* Changing the visibility of an item can change the width of
+	 * any column. This is due to column expansion (this item may
+	 * be the widest item in the column) and spans > 1. */
 	Tree_InvalidateColumnWidth(tree, NULL);
 
 	/* If this is the last child, redraw the lines of the previous
 	 * sibling and all of its descendants because the line from
-	 * the previous sibling to us is appearing/disappearing */
+	 * the previous sibling to us is appearing/disappearing. */
 	if ((item->prevSibling != NULL) &&
 		(item->nextSibling == NULL) &&
 		tree->showLines && (tree->columnTree != NULL)) {
@@ -4705,6 +4718,14 @@ static int Item_Configure(
 	    Tree_InvalidateItemDInfo(tree, tree->columnTree,
 		    item->prevSibling,
 		    last);
+	}
+
+	/* Redraw the parent if the parent has "-button auto". */
+	if (item->parent != NULL &&
+		(item->parent->flags & ITEM_FLAG_BUTTON_AUTO) != 0 &&
+		tree->showButtons && tree->columnTree != NULL) {
+	    Tree_InvalidateItemDInfo(tree, tree->columnTree, item->parent,
+		    NULL);
 	}
 
 	tree->updateIndex = 1;
@@ -4768,11 +4789,22 @@ ItemCreateCmd(
 	}
 	switch (index) {
 	    case OPT_BUTTON:
-		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &button)
-			!= TCL_OK) {
-		    return TCL_ERROR;
+	    {
+		int length;
+		char *s = Tcl_GetStringFromObj(objv[i + 1], &length);
+		if (s[0] == 'a' && strncmp(s, "auto", length) == 0) {
+		    button = ITEM_FLAG_BUTTON_AUTO;
+		} else {
+		    if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &button) != TCL_OK) {
+			FormatResult(interp, "expected boolean or auto but got \"%s\"", s);
+			return TCL_ERROR;
+		    }
+		    if (button) {
+			button = ITEM_FLAG_BUTTON;
+		    }
 		}
 		break;
+	    }
 	    case OPT_COUNT:
 		if (Tcl_GetIntFromObj(interp, objv[i + 1], &count) != TCL_OK)
 		    return TCL_ERROR;
@@ -4852,8 +4884,8 @@ ItemCreateCmd(
 
     for (i = 0; i < count; i++) {
 	item = Item_Alloc(tree);
-	if (button) item->flags |= ITEM_FLAG_BUTTON;
-	else item->flags &= ~ITEM_FLAG_BUTTON;
+	item->flags &= ~(ITEM_FLAG_BUTTON | ITEM_FLAG_BUTTON_AUTO);
+	item->flags |= button;
 	if (visible) item->flags |= ITEM_FLAG_VISIBLE;
 	else item->flags &= ~ITEM_FLAG_VISIBLE;
 	if (open) item->state |= STATE_OPEN;
@@ -8589,7 +8621,8 @@ TreeItem_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    BooleanFlagCO_Init(itemOptionSpecs, "-button", ITEM_FLAG_BUTTON);
+    ItemButtonCO_Init(itemOptionSpecs, "-button", ITEM_FLAG_BUTTON,
+	    ITEM_FLAG_BUTTON_AUTO);
     BooleanFlagCO_Init(itemOptionSpecs, "-visible", ITEM_FLAG_VISIBLE);
 
     tree->itemOptionTable = Tk_CreateOptionTable(tree->interp, itemOptionSpecs);

@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.43 2006/11/21 02:09:35 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.44 2006/11/30 03:30:12 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.43 2006/11/21 02:09:35 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.44 2006/11/30 03:30:12 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -1526,7 +1526,7 @@ the meaning of each option):
 <br><br>
 <dl>
 
-<dt><strong><strong>-button</strong></strong> <i class='arg'>boolean</i><dd>
+<dt><strong><strong>-button</strong></strong> <i class='arg'>boolean|auto</i><dd>
 <dt><strong><strong>-height</strong></strong> <i class='arg'>height</i><dd>
 <dt><strong><strong>-tags</strong></strong> <i class='arg'>tagList</i><dd>
 <dt><strong><strong>-visible</strong></strong> <i class='arg'>boolean</i><dd>
@@ -1556,16 +1556,26 @@ The following options are supported by this command:
 <br><br>
 <dl>
 
-<dt><strong><strong>-button</strong></strong> <i class='arg'>boolean</i><dd>
-<i class='arg'>Boolean</i> must have one of the forms accepted by <strong>Tcl_GetBoolean</strong>. It
-indicates whether or not an expand/collapse button should be drawn next to this
-item, typically to indicate the item has children. The button will only be
-displayed if:
-a) the column specified by the treectrl option <strong>-treecolumn</strong> is visible;
-and b) the treectrl option <strong>-showbuttons</strong> is true;
-and c) for the root item, the treectrl option <strong>-showrootbutton</strong> is true.
-
+<dt><strong><strong>-button</strong></strong> <i class='arg'>boolean|auto</i><dd>
+The value of this option must have one of the forms accepted by <strong>Tcl_GetBoolean</strong>
+or be the word <strong>auto</strong> (or any abbreviation of it). It indicates whether or not an expand/collapse
+button should be drawn next to the item, typically to indicate that the item has
+children.
+If the value of this option is <strong>auto</strong>, then a button is displayed next to the
+item whenever the item has any children whose item option <strong>-visible</strong> is true.
+The button will only be displayed if:
 <br><br>
+<ol>
+<li>
+the column specified by the treectrl option <strong>-treecolumn</strong> is visible, and
+<br><br>
+<li>
+the treectrl option <strong>-showbuttons</strong> is true, and
+<br><br>
+<li>
+for the root item, the treectrl option <strong>-showrootbutton</strong> is true.
+</ol>
+
 <dt><strong><strong>-count</strong></strong> <i class='arg'>numItems</i><dd>
 Specifies the number of items to create. Must be &gt;= 0. Defaults to 1.
 
