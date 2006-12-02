@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.65 2006/11/25 20:25:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.66 2006/12/02 21:38:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -36,8 +36,8 @@ struct MStyle
 {
     MStyle *master;		/* Always NULL. Needed to distinguish between
 				 * an MStyle and IStyle. */
-    Tk_Uid name;
-    int numElements;
+    Tk_Uid name;		/* Unique identifier. */
+    int numElements;		/* Size of elements[]. */
     MElementLink *elements;	/* Array of master elements. */
     int vertical;		/* -orient */
 };
@@ -48,10 +48,10 @@ struct MStyle
  */
 struct IStyle
 {
-    MStyle *master;
+    MStyle *master;		/* Always non-NULL. */
     IElementLink *elements;	/* Array of master or instance elements. */
-    int neededWidth;
-    int neededHeight;
+    int neededWidth;		/* Requested size of this style based on */
+    int neededHeight;		/* layout of the elements. */
 #ifdef TREECTRL_DEBUG
     int neededState;
 #endif
@@ -95,6 +95,8 @@ struct IStyle
 #define ELF_EXPAND_E (ELF_eEXPAND_E | ELF_iEXPAND_E)
 #define ELF_EXPAND_S (ELF_eEXPAND_S | ELF_iEXPAND_S)
 #define ELF_STICKY (ELF_STICKY_W | ELF_STICKY_N | ELF_STICKY_E | ELF_STICKY_S)
+
+#define DETACH_OR_UNION(e) (((e)->onion != NULL) || ((e)->flags & ELF_DETACH))
 
 /*
  * An array of these is kept for each master style, one per element.
@@ -168,6 +170,14 @@ struct Layout
     int uPadY[2];	/* padding due to -union */
     int temp;
 };
+
+#ifdef CACHE_ELEM_SIZE
+#define IS_HIDDEN(L) (!DETACH_OR_UNION((L)->master) && \
+    ((L)->eLink->neededWidth * (L)->eLink->neededHeight <= 0))
+#else
+#define IS_HIDDEN(L) (!DETACH_OR_UNION((L)->master) && \
+    ((L)->neededWidth * (L)->neededHeight <= 0))
+#endif
 
 /*
  *----------------------------------------------------------------------
@@ -584,9 +594,9 @@ Style_DoLayoutH(
 	layout->master = eLink1;
 
 	/* Width before squeezing/expanding */
-	if (eLink1->onion != NULL)
+	if (eLink1->onion != NULL) {
 	    layout->useWidth = 0;
-	else {
+	} else {
 #ifdef CACHE_ELEM_SIZE
 	    layout->useWidth = eLink2->neededWidth;
 #else
@@ -595,6 +605,9 @@ Style_DoLayoutH(
 	    layout->useWidth = layout->neededWidth;
 #endif
 	}
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	for (j = 0; j < 2; j++)
 	{
@@ -610,7 +623,7 @@ Style_DoLayoutH(
 	}
 
 	/* Count all non-union, non-detach squeezeable elements */
-	if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	if (DETACH_OR_UNION(eLink1))
 	    continue;
 	if (eLink1->flags & ELF_SQUEEZE_X)
 	    numSqueezeX++;
@@ -632,6 +645,9 @@ Style_DoLayoutH(
 	for (j = 0; j < eLink1->onionCount; j++)
 	{
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout))
+		continue;
 
 	    uPadX = layout->uPadX;
 	    uPadY = layout->uPadY;
@@ -676,9 +692,12 @@ Style_DoLayoutH(
 		struct Layout *layout = &layouts[i];
 		int min = 0;
 
+		if (IS_HIDDEN(layout))
+		    continue;
+
 		eLink1 = &eLinks1[i];
 
-		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+		if (DETACH_OR_UNION(eLink1))
 		    continue;
 
 		if (!(eLink1->flags & ELF_SQUEEZE_X))
@@ -705,6 +724,9 @@ Style_DoLayoutH(
     {
 	struct Layout *layout = &layouts[i];
 	int width, subtract;
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 
@@ -747,15 +769,18 @@ Style_DoLayoutH(
 	struct Layout *layout = &layouts[i];
 	int right;
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
+
+	if (DETACH_OR_UNION(eLink1))
+	    continue;
 
 	ePadX = eLink1->ePadX;
 	iPadX = eLink1->iPadX;
 	uPadX = layout->uPadX;
-
-	if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
-	    continue;
 
 	layout->x = x + abs(ePadX[PAD_TOP_LEFT] - MAX(ePadX[PAD_TOP_LEFT], uPadX[PAD_TOP_LEFT]));
 	layout->iWidth = iPadX[PAD_TOP_LEFT] + layout->useWidth + iPadX[PAD_BOTTOM_RIGHT];
@@ -792,11 +817,14 @@ Style_DoLayoutH(
 	{
 	    struct Layout *layout = &layouts[i];
 
+	    if (IS_HIDDEN(layout))
+		continue;
+
 	    eLink1 = &eLinks1[i];
 
 	    layout->temp = 0;
 
-	    if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
 	    if (eLink1->flags & ELF_eEXPAND_W) layout->temp++;
@@ -823,6 +851,9 @@ Style_DoLayoutH(
 		struct Layout *layout = &layouts[i];
 		int spaceUsed;
 
+		if (IS_HIDDEN(layout))
+		    continue;
+
 		if (!layout->temp)
 		    continue;
 
@@ -837,8 +868,7 @@ Style_DoLayoutH(
 		{
 		    /* Shift following elements to the right */
 		    for (j = i + 1; j < eLinkCount; j++)
-			if (!(eLinks1[j].flags & ELF_DETACH) &&
-			    (eLinks1[j].onion == NULL))
+			if (!DETACH_OR_UNION(&eLinks1[j]))
 			    layouts[j].x += spaceUsed;
 
 		    rightEdge += spaceUsed;
@@ -863,9 +893,12 @@ Style_DoLayoutH(
 	    struct Layout *layout = &layouts[i];
 	    int right;
 
+	    if (IS_HIDDEN(layout))
+		continue;
+
 	    eLink1 = &eLinks1[i];
 
-	    if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
 	    layout->temp = 0;
@@ -888,9 +921,12 @@ Style_DoLayoutH(
 	{
 	    struct Layout *layout = &layouts[i];
 
+	    if (IS_HIDDEN(layout))
+		continue;
+
 	    eLink1 = &eLinks1[i];
 
-	    if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
 	    switch (drawArgs->justify)
@@ -911,6 +947,9 @@ Style_DoLayoutH(
     for (i = 0; i < eLinkCount; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
@@ -940,6 +979,9 @@ Style_DoLayoutH(
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	if (eLink1->onion == NULL)
 	    continue;
 
@@ -951,6 +993,9 @@ Style_DoLayoutH(
 	for (j = 0; j < eLink1->onionCount; j++)
 	{
 	    struct Layout *layout2 = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout2))
+		continue;
 
 	    w = MIN(w, layout2->x + layout2->ePadX[PAD_TOP_LEFT]);
 	    e = MAX(e, layout2->x + layout2->ePadX[PAD_TOP_LEFT] + layout2->iWidth);
@@ -968,6 +1013,9 @@ Style_DoLayoutH(
     {
 	struct Layout *layout = &layouts[i];
 	int extraWidth;
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 
@@ -1055,6 +1103,9 @@ Style_DoLayoutH(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 
 	if (eLink1->onion == NULL)
@@ -1088,10 +1139,9 @@ Style_DoLayoutH(
 static void
 Style_DoLayoutV(
     StyleDrawArgs *drawArgs,	/* Various args. */
-    struct Layout layouts[]	/* Array of layout records to be filled
-				 * in, one per element. Should be
-				 * initialized by a call to Style_DoLayoutH().
-				 */
+    struct Layout layouts[]	/* Array of layout records to be updated,
+				 * one per element. Should be initialized
+				 * by Style_DoLayoutH(). */
     )
 {
     IStyle *style = (IStyle *) drawArgs->style;
@@ -1112,10 +1162,13 @@ Style_DoLayoutV(
 
     for (i = 0; i < eLinkCount; i++)
     {
+	if (IS_HIDDEN(&layouts[i]))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 
 	/* Count all non-union, non-detach squeezeable elements */
-	if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	if (DETACH_OR_UNION(eLink1))
 	    continue;
 	if (eLink1->flags & ELF_SQUEEZE_Y)
 	    numSqueezeY++;
@@ -1140,9 +1193,12 @@ Style_DoLayoutV(
 		struct Layout *layout = &layouts[i];
 		int min = 0;
 
+		if (IS_HIDDEN(layout))
+		    continue;
+
 		eLink1 = &eLinks1[i];
 
-		if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+		if (DETACH_OR_UNION(eLink1))
 		    continue;
 
 		if (!(eLink1->flags & ELF_SQUEEZE_Y))
@@ -1171,6 +1227,9 @@ Style_DoLayoutV(
 	{
 	    struct Layout *layout = &layouts[i];
 	    int height, subtract;
+
+	    if (IS_HIDDEN(layout))
+		continue;
 
 	    eLink1 = &eLinks1[i];
 
@@ -1210,15 +1269,18 @@ Style_DoLayoutV(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
+
+	if (DETACH_OR_UNION(eLink1))
+	    continue;
 
 	ePadY = eLink1->ePadY;
 	iPadY = eLink1->iPadY;
 	uPadY = layout->uPadY;
-
-	if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
-	    continue;
 
 	layout->y = y + abs(ePadY[PAD_TOP_LEFT] - MAX(ePadY[PAD_TOP_LEFT], uPadY[PAD_TOP_LEFT]));
 	layout->iHeight = iPadY[PAD_TOP_LEFT] + layout->useHeight + iPadY[PAD_BOTTOM_RIGHT];
@@ -1252,11 +1314,14 @@ Style_DoLayoutV(
 	{
 	    struct Layout *layout = &layouts[i];
 
+	    if (IS_HIDDEN(layout))
+		continue;
+
 	    eLink1 = &eLinks1[i];
 
 	    layout->temp = 0;
 
-	    if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
 	    if (eLink1->flags & ELF_eEXPAND_N) layout->temp++;
@@ -1283,6 +1348,9 @@ Style_DoLayoutV(
 		struct Layout *layout = &layouts[i];
 		int spaceUsed;
 
+		if (IS_HIDDEN(layout))
+		    continue;
+
 		if (!layout->temp)
 		    continue;
 
@@ -1297,8 +1365,7 @@ Style_DoLayoutV(
 		{
 		    /* Shift following elements down */
 		    for (j = i + 1; j < eLinkCount; j++)
-			if (!(eLinks1[j].flags & ELF_DETACH) &&
-			    (eLinks1[j].onion == NULL))
+			if (!DETACH_OR_UNION(&eLinks1[j]))
 			    layouts[j].y += spaceUsed;
 
 		    spaceRemaining -= spaceUsed;
@@ -1320,9 +1387,12 @@ Style_DoLayoutV(
 	{
 	    struct Layout *layout = &layouts[i];
 
+	    if (IS_HIDDEN(layout))
+		continue;
+
 	    eLink1 = &eLinks1[i];
 
-	    if ((eLink1->flags & ELF_DETACH) || (eLink1->onion != NULL))
+	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
 	    layout->temp = 0;
@@ -1334,6 +1404,9 @@ Style_DoLayoutV(
     for (i = 0; i < eLinkCount; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
@@ -1358,6 +1431,9 @@ Style_DoLayoutV(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
 
@@ -1372,6 +1448,9 @@ Style_DoLayoutV(
 	for (j = 0; j < eLink1->onionCount; j++)
 	{
 	    struct Layout *layout2 = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout2))
+		continue;
 
 	    n = MIN(n, layout2->y + layout2->ePadY[PAD_TOP_LEFT]);
 	    s = MAX(s, layout2->y + layout2->ePadY[PAD_TOP_LEFT] + layout2->iHeight);
@@ -1388,6 +1467,9 @@ Style_DoLayoutV(
     {
 	struct Layout *layout = &layouts[i];
 	int extraHeight;
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 
@@ -1474,6 +1556,9 @@ Style_DoLayoutV(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 
 	if (eLink1->onion == NULL)
@@ -1523,6 +1608,9 @@ Layout_Size(
 	struct Layout *layout = &layouts[i];
 	int w, n, e, s;
 	int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	ePadX = layout->ePadX, iPadX = layout->iPadX, uPadX = layout->uPadX;
 	ePadY = layout->ePadY, iPadY = layout->iPadY, uPadY = layout->uPadY;
@@ -1577,9 +1665,9 @@ Layout_Size(
 static void
 Style_DoLayoutNeededV(
     StyleDrawArgs *drawArgs,	/* Various args. */
-    struct Layout layouts[]	/* Array of layout records to be filled
-				 * in, one per element. Should be
-				 * uninitialized. */
+    struct Layout layouts[]	/* Array of layout records to be updated,
+				 * one per element. Should be initialized
+				 * by Style_DoLayoutH(). */
     )
 {
     IStyle *style = (IStyle *) drawArgs->style;
@@ -1597,6 +1685,9 @@ Style_DoLayoutNeededV(
     for (i = 0; i < masterStyle->numElements; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
@@ -1631,6 +1722,9 @@ Style_DoLayoutNeededV(
     for (i = 0; i < masterStyle->numElements; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
@@ -1696,6 +1790,9 @@ Style_DoLayout(
 	MElementLink *eLink1 = layout->master;
 	IElementLink *eLink2 = layout->eLink;
 	ElementArgs args;
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	/* The size of a -union element is determined by the elements
 	 * it surrounds */
@@ -1819,6 +1916,31 @@ Style_NeededSize(
     {
 	struct Layout *layout = &layouts[i];
 
+	eLink1 = &eLinks1[i];
+	eLink2 = &eLinks2[i];
+
+	layout->master = eLink1;
+	layout->eLink = eLink2;
+
+	if (eLink1->onion == NULL) {
+#ifdef CACHE_ELEM_SIZE
+	    if ((eLink2->neededWidth == -1) || (eLink2->neededHeight == -1)) {
+		Element_NeededSize(tree, eLink1, eLink2->elem, state,
+			&eLink2->neededWidth, &eLink2->neededHeight);
+		eLink2->layoutWidth = -1;
+	    }
+	    layout->useWidth = eLink2->neededWidth;
+	    layout->useHeight = eLink2->neededHeight;
+#else
+	    Element_NeededSize(tree, eLink1, eLink2->elem, state,
+		    &layout->neededWidth, &layout->neededHeight);
+	    layout->useWidth = layout->neededWidth;
+#endif
+	}
+
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	/* No -union padding yet */
 	layout->uPadX[PAD_TOP_LEFT]     = 0;
 	layout->uPadX[PAD_BOTTOM_RIGHT] = 0;
@@ -1829,6 +1951,9 @@ Style_NeededSize(
     /* Figure out the padding around elements surrounded by -union elements */
     for (i = 0; i < masterStyle->numElements; i++)
     {
+	if (IS_HIDDEN(&layouts[i]))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 
 	if (eLink1->onion == NULL)
@@ -1842,6 +1967,9 @@ Style_NeededSize(
 	for (j = 0; j < eLink1->onionCount; j++)
 	{
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout))
+		continue;
 
 	    uPadX = layout->uPadX;
 	    uPadY = layout->uPadY;
@@ -1872,6 +2000,9 @@ Style_NeededSize(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
 
@@ -1897,19 +2028,6 @@ Style_NeededSize(
 	    layout->iPadY[PAD_BOTTOM_RIGHT] = 0;
 	    continue;
 	}
-
-#ifdef CACHE_ELEM_SIZE
-	if ((eLink2->neededWidth == -1) || (eLink2->neededHeight == -1)) {
-	    Element_NeededSize(tree, eLink1, eLink2->elem, state,
-		    &eLink2->neededWidth, &eLink2->neededHeight);
-	    eLink2->layoutWidth = -1;
-	}
-	layout->useWidth = eLink2->neededWidth;
-	layout->useHeight = eLink2->neededHeight;
-#else
-	Element_NeededSize(tree, eLink1, eLink2->elem, state,
-		&layout->useWidth, &layout->useHeight);
-#endif
 
 	if (eLink1->flags & ELF_SQUEEZE_X)
 	{
@@ -1960,6 +2078,9 @@ Style_NeededSize(
     for (i = 0; i < masterStyle->numElements; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
@@ -2165,6 +2286,7 @@ TreeStyle_UseHeight(
 {
     TreeCtrl *tree = drawArgs->tree;
     IStyle *style = (IStyle *) drawArgs->style;
+    MStyle *masterStyle = style->master;
     int state = drawArgs->state;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
     int width, height, minWidth;
@@ -2209,14 +2331,14 @@ TreeStyle_UseHeight(
 	return style->layoutHeight;
 #endif
 
-    STATIC_ALLOC(layouts, struct Layout, style->master->numElements);
+    STATIC_ALLOC(layouts, struct Layout, masterStyle->numElements);
 
     Style_DoLayout(drawArgs, layouts, TRUE, __FILE__, __LINE__);
 
-    Layout_Size(style->master->vertical, style->master->numElements, layouts,
+    Layout_Size(style->master->vertical, masterStyle->numElements, layouts,
 	&width, &height);
 
-    STATIC_FREE(layouts, struct Layout, style->master->numElements);
+    STATIC_FREE(layouts, struct Layout, masterStyle->numElements);
 
 #ifdef CACHE_STYLE_SIZE
     style->layoutWidth = drawArgs->width;
@@ -2253,8 +2375,8 @@ void TreeStyle_Draw(
     ElementArgs args;
     int i, x, y, minWidth, minHeight;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
-#define DEBUG_DRAW 0
-#if DEBUG_DRAW
+#undef DEBUG_DRAW
+#ifdef DEBUG_DRAW
     int debugDraw = FALSE;
 #endif
 
@@ -2299,12 +2421,15 @@ void TreeStyle_Draw(
     {
 	struct Layout *layout = &layouts[i];
 
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	/* Don't "draw" window elements. TreeStyle_UpdateWindowPositions()
 	 * does that for us. */
 	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
 	    continue;
 
-#if DEBUG_DRAW
+#ifdef DEBUG_DRAW
 	if (debugDraw && layout->master->onion != NULL)
 	    continue;
 #endif
@@ -2319,7 +2444,7 @@ void TreeStyle_Draw(
 	    args.display.width = layout->useWidth;
 	    args.display.height = layout->useHeight;
 	    args.display.sticky = layout->master->flags & ELF_STICKY;
-#if DEBUG_DRAW
+#ifdef DEBUG_DRAW
 	    if (debugDraw)
 	    {
 		XColor *color[3];
@@ -2367,11 +2492,14 @@ void TreeStyle_Draw(
 	}
     }
 
-#if DEBUG_DRAW
+#ifdef DEBUG_DRAW
     if (debugDraw)
 	for (i = 0; i < masterStyle->numElements; i++)
 	{
 	    struct Layout *layout = &layouts[i];
+
+	    if (IS_HIDDEN(layout))
+		continue;
 
 	    if (layout->master->onion == NULL)
 		continue;
@@ -2491,6 +2619,9 @@ TreeStyle_UpdateWindowPositions(
     for (i = 0; i < numElements; i++)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
 
 	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
 	    continue;
@@ -4873,7 +5004,7 @@ TreeElementCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     static CONST char *commandNames[] = {
 	"cget", "configure", "create", "delete", "names", "perstate", "type",
 	(char *) NULL
@@ -5374,7 +5505,7 @@ StyleLayoutCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     TreeStyle _style;
     MStyle *style;
     Element *elem;
@@ -5844,7 +5975,7 @@ TreeStyleCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     static CONST char *commandNames[] = {
 	"cget", "configure", "create", "delete", "elements", "layout",
 	"names", (char *) NULL };
@@ -6193,6 +6324,7 @@ TreeStyle_Identify(
 {
     TreeCtrl *tree = drawArgs->tree;
     IStyle *style = (IStyle *) drawArgs->style;
+    MStyle *masterStyle = style->master;
     int state = drawArgs->state;
     IElementLink *eLink = NULL;
     int i, minWidth, minHeight;
@@ -6213,13 +6345,17 @@ TreeStyle_Identify(
 
     x -= drawArgs->x;
 
-    STATIC_ALLOC(layouts, struct Layout, style->master->numElements);
+    STATIC_ALLOC(layouts, struct Layout, masterStyle->numElements);
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
     for (i = style->master->numElements - 1; i >= 0; i--)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink = layout->eLink;
 	if ((x >= layout->x + layout->ePadX[PAD_TOP_LEFT]) && (x < layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth) &&
 	    (y >= layout->y + layout->ePadY[PAD_TOP_LEFT]) && (y < layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight))
@@ -6229,7 +6365,7 @@ TreeStyle_Identify(
     }
     eLink = NULL;
 done:
-    STATIC_FREE(layouts, struct Layout, style->master->numElements);
+    STATIC_FREE(layouts, struct Layout, masterStyle->numElements);
     if (eLink != NULL)
 	return (char *) eLink->elem->name;
     return NULL;
@@ -6263,6 +6399,7 @@ TreeStyle_Identify2(
 {
     TreeCtrl *tree = drawArgs->tree;
     IStyle *style = (IStyle *) drawArgs->style;
+    MStyle *masterStyle = style->master;
     int state = drawArgs->state;
     IElementLink *eLink;
     int i, minWidth, minHeight;
@@ -6281,13 +6418,17 @@ TreeStyle_Identify2(
     if (drawArgs->height < minHeight)
 	drawArgs->height = minHeight;
 
-    STATIC_ALLOC(layouts, struct Layout, style->master->numElements);
+    STATIC_ALLOC(layouts, struct Layout, masterStyle->numElements);
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
     for (i = style->master->numElements - 1; i >= 0; i--)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink = layout->eLink;
 	if ((drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] < x2) &&
 	    (drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth > x1) &&
@@ -6299,7 +6440,7 @@ TreeStyle_Identify2(
 	}
     }
 
-    STATIC_FREE(layouts, struct Layout, style->master->numElements);
+    STATIC_FREE(layouts, struct Layout, masterStyle->numElements);
 }
 
 /*
@@ -6654,6 +6795,10 @@ TreeStyle_GetElemRects(
     for (i = master->numElements - 1; i >= 0; i--)
     {
 	struct Layout *layout = &layouts[i];
+
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	if (objc > 0)
 	{
 	    for (j = 0; j < objc; j++)
