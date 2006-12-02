@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.57 2006/11/25 20:21:26 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.58 2006/12/02 21:42:59 treectrl Exp $
 
 set VERSION 2.2
 
@@ -988,6 +988,17 @@ proc MakeHeaderPopup {T} {
     $m add checkbutton -label "Expand" -variable Popup(expand) \
 	-command {$Popup(T) column configure $Popup(column) -expand $Popup(expand)}
 
+    set m2 [menu $m.mItemJustify -tearoff no]
+    $m add cascade -label "Item Justify" -menu $m2
+    $m2 add radiobutton -label "Left" -variable Popup(itemjustify) -value left \
+	-command {$Popup(T) column configure $Popup(column) -itemjustify left}
+    $m2 add radiobutton -label "Center" -variable Popup(itemjustify) -value center \
+	-command {$Popup(T) column configure $Popup(column) -itemjustify center}
+    $m2 add radiobutton -label "Right" -variable Popup(itemjustify) -value right \
+	-command {$Popup(T) column configure $Popup(column) -itemjustify right}
+    $m2 add radiobutton -label "Unspecified" -variable Popup(itemjustify) -value none \
+	-command {$Popup(T) column configure $Popup(column) -itemjustify {}}
+
     set m2 [menu $m.mJustify -tearoff no]
     $m add cascade -label Justify -menu $m2
     $m2 add radiobutton -label "Left" -variable Popup(justify) -value left \
@@ -1044,6 +1055,8 @@ proc ShowPopup {T x y X Y} {
 	    set Popup(expand) [$T column cget $Popup(column) -expand]
 	    set Popup(resize) [$T column cget $Popup(column) -resize]
 	    set Popup(squeeze) [$T column cget $Popup(column) -squeeze]
+	    set Popup(itemjustify) [$T column cget $Popup(column) -itemjustify]
+	    if {$Popup(itemjustify) eq ""} { set Popup(itemjustify) none }
 	    set Popup(justify) [$T column cget $Popup(column) -justify]
 	    set Popup(lock) [$T column cget $Popup(column) -lock]
 	    set Popup(treecolumn) [expr {[$T column id tree] eq $Popup(column)}]
