@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: span.tcl,v 1.3 2006/11/23 22:24:56 treectrl Exp $
+# RCS: @(#) $Id: span.tcl,v 1.4 2006/12/02 21:43:30 treectrl Exp $
 
 #
 # Demo: Column span
@@ -22,7 +22,8 @@ proc DemoSpan {} {
     #
 
     for {set i 0} {$i < 100} {incr i} {
-	$T column create -text "$i" -tags C$i -width 40
+	$T column create -itemjustify left -justify center -text "$i" \
+	    -width 40 -tags C$i
     }
 
     #
