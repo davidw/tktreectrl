@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.16 2006/11/21 02:01:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.17 2006/12/02 21:39:32 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -553,6 +553,11 @@ int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *width
     return TCL_OK;
 }
 
+int TreeTheme_ComputeGeometry(TreeCtrl *tree)
+{
+    return TCL_ERROR;
+}
+
 #if !defined(WM_THEMECHANGED)
 #define WM_THEMECHANGED 0x031A
 #endif
@@ -922,6 +927,12 @@ int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *width
     return TCL_ERROR;
 }
 
+
+int TreeTheme_ComputeGeometry(TreeCtrl *tree)
+{
+    return TCL_ERROR;
+}
+
 void TreeTheme_ThemeChanged(TreeCtrl *tree)
 {
 }
@@ -969,6 +980,12 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *wi
 }
 
 int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr)
+{
+    return TCL_ERROR;
+}
+
+
+int TreeTheme_ComputeGeometry(TreeCtrl *tree)
 {
     return TCL_ERROR;
 }
