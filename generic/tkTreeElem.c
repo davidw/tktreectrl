@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.52 2006/11/25 20:25:28 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.53 2006/12/02 21:23:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -261,7 +261,7 @@ static int IntegerSet(
     char *saveInternalPtr,
     int flags)
 {
-    IntegerClientData *info = (IntegerClientData *) clientData;
+    IntegerClientData *cd = clientData;
     int objEmpty;
     int new, *internalPtr;
 
@@ -277,22 +277,22 @@ static int IntegerSet(
     else {
 	if (Tcl_GetIntFromObj(interp, (*value), &new) != TCL_OK)
 	    return TCL_ERROR;
-	if ((info->flags & 0x01) && (new < info->min)) {
+	if ((cd->flags & 0x01) && (new < cd->min)) {
 	    FormatResult(interp,
 		    "bad integer value \"%d\": must be >= %d",
-		    new, info->min);
+		    new, cd->min);
 	    return TCL_ERROR;
 	}
-	if ((info->flags & 0x02) && (new > info->max)) {
+	if ((cd->flags & 0x02) && (new > cd->max)) {
 	    FormatResult(interp,
 		    "bad integer value \"%d\": must be <= %d",
-		    new, info->max);
+		    new, cd->max);
 	    return TCL_ERROR;
 	}
     }
     if (internalPtr != NULL) {
 	if ((*value) == NULL)
-	    new = info->empty;
+	    new = cd->empty;
 	*((int *) saveInternalPtr) = *internalPtr;
 	*internalPtr = new;
     }
@@ -306,9 +306,9 @@ static Tcl_Obj *IntegerGet(
     char *recordPtr,
     int internalOffset)
 {
-    IntegerClientData *info = (IntegerClientData *) clientData;
+    IntegerClientData *cd = clientData;
     int value = *(int *) (recordPtr + internalOffset);
-    if (value == info->empty)
+    if (value == cd->empty)
 	return NULL;
     return Tcl_NewIntObj(value);
 }
@@ -347,7 +347,7 @@ static int StringTableSet(
     char *saveInternalPtr,
     int flags)
 {
-    StringTableClientData *info = (StringTableClientData *) clientData;
+    StringTableClientData *cd = clientData;
     int objEmpty;
     int new, *internalPtr;
 
@@ -361,8 +361,8 @@ static int StringTableSet(
     if ((flags & TK_OPTION_NULL_OK) && objEmpty)
 	(*value) = NULL;
     else {
-	if (Tcl_GetIndexFromObj(interp, (*value), info->tablePtr,
-		    info->msg, 0, &new) != TCL_OK)
+	if (Tcl_GetIndexFromObj(interp, (*value), cd->tablePtr,
+		    cd->msg, 0, &new) != TCL_OK)
 	    return TCL_ERROR;
     }
     if (internalPtr != NULL) {
@@ -381,12 +381,12 @@ static Tcl_Obj *StringTableGet(
     char *recordPtr,
     int internalOffset)
 {
-    StringTableClientData *info = (StringTableClientData *) clientData;
+    StringTableClientData *cd = clientData;
     int index = *(int *) (recordPtr + internalOffset);
 
     if (index == -1)
 	return NULL;
-    return Tcl_NewStringObj(info->tablePtr[index], -1);
+    return Tcl_NewStringObj(cd->tablePtr[index], -1);
 }
 
 static void StringTableRestore(
@@ -3437,7 +3437,7 @@ WinItemStructureProc(clientData, eventPtr)
     ClientData clientData;	/* Pointer to record describing window elem. */
     XEvent *eventPtr;		/* Describes what just happened. */
 {
-    ElementWindow *elemX = (ElementWindow *) clientData;
+    ElementWindow *elemX = clientData;
 
     if (eventPtr->type == DestroyNotify) {
 	elemX->tkwin = elemX->child = NULL;
@@ -3452,7 +3452,7 @@ WinItemRequestProc(clientData, tkwin)
     Tk_Window tkwin;			/* Window that changed its desired
 					 * size. */
 {
-    ElementWindow *elemX = (ElementWindow *) clientData;
+    ElementWindow *elemX = clientData;
 
 #ifdef CLIP_WINDOW
     /* We don't care about size changes for the clip window. */
@@ -3469,7 +3469,7 @@ WinItemLostSlaveProc(clientData, tkwin)
 				 * was stolen away. */
     Tk_Window tkwin;		/* Tk's handle for the slave window. */
 {
-    ElementWindow *elemX = (ElementWindow *) clientData;
+    ElementWindow *elemX = clientData;
     TreeCtrl *tree = elemX->tree;
 
 #ifdef CLIP_WINDOW
@@ -4096,7 +4096,7 @@ TreeCtrlStubs stubs = {
 
 static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
 {
-    ElementAssocData *assocData = (ElementAssocData *) clientData;
+    ElementAssocData *assocData = clientData;
     ElementType *typeList = assocData->typeList;
     ElementType *next;
 
