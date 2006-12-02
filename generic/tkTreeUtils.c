@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.55 2006/11/30 03:29:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.56 2006/12/02 21:41:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1329,6 +1329,8 @@ XImage2Photo(
  * to the end of text that is too long to fit (when max lines specified).
  */
 
+#define TEXTLAYOUT_ELLIPSIS
+
 typedef struct LayoutChunk
 {
     CONST char *start;		/* Pointer to simple string to be displayed.
@@ -1352,7 +1354,9 @@ typedef struct LayoutChunk
 				 * * characters in this chunk.  Can be less than
 				 * * width if extra space characters were
 				 * * absorbed by the end of the chunk. */
+#ifdef TEXTLAYOUT_ELLIPSIS
     int ellipsis;		/* TRUE if adding "..." */
+#endif
 } LayoutChunk;
 
 typedef struct LayoutInfo
@@ -1650,7 +1654,7 @@ wrapLine:
 	}
     }
 
-#if 1
+#ifdef TEXTLAYOUT_ELLIPSIS
     /* Fiddle with chunks on the last line to add ellipsis if there is some
      * text remaining */
     if ((start < end) && (layoutPtr->numChunks > 0))
@@ -1860,7 +1864,7 @@ void TextLayout_Draw(
 	    if (lastChar < numDisplayChars)
 		numDisplayChars = lastChar;
 	    lastByte = Tcl_UtfAtIndex(chunkPtr->start, numDisplayChars);
-#if 1
+#ifdef TEXTLAYOUT_ELLIPSIS
 	    if (chunkPtr->ellipsis)
 	    {
 		char staticStr[256], *buf = staticStr;
@@ -3155,6 +3159,7 @@ AllocHax_Stats(
 {
     AllocData *data = (AllocData *) _data;
     AllocStats *stats = data->stats;
+    int numElems = 0;
     Tcl_DString dString;
 
     Tcl_DStringInit(&dString);
@@ -3162,8 +3167,11 @@ AllocHax_Stats(
 	DStringAppendf(&dString, "%-20s: %8d : %8d B %5d KB\n",
 		stats->id, stats->count,
 		stats->size, (stats->size + 1023) / 1024);
+	numElems += stats->count;
 	stats = stats->next;
     }
+    DStringAppendf(&dString, "%-31s: %8d B %5d KB\n", "AllocElem overhead",
+	    numElems * BODY_OFFSET, (numElems * BODY_OFFSET) / 1024);
     Tcl_DStringResult(interp, &dString);
 }
 
@@ -5097,7 +5105,7 @@ DynamicOption_AllocIfNeeded(
 				 * created. */
     int id,			/* Unique id. */
     int size,			/* Size of option-specific data. */
-    DynamicOptionInitProc *init	/* Proc to intialized the option-specific
+    DynamicOptionInitProc *init	/* Proc to intialize the option-specific
 				 * data. May be NULL. */
     )
 {
@@ -5189,7 +5197,7 @@ DynamicCO_Set(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
-    DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
+    DynamicCOClientData *cd = clientData;
     DynamicOption **firstPtr, *opt;
     DynamicCOSave *save;
     Tcl_Obj **objPtrPtr = NULL;
@@ -5250,7 +5258,7 @@ DynamicCO_Get(
     int internalOffset
     )
 {
-    DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
+    DynamicCOClientData *cd = clientData;
     DynamicOption *first = *(DynamicOption **) (recordPtr + internalOffset);
     DynamicOption *opt = DynamicOption_Find(first, cd->id);
 
@@ -5282,7 +5290,7 @@ DynamicCO_Restore(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
-    DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
+    DynamicCOClientData *cd = clientData;
     DynamicOption *first = *(DynamicOption **) internalPtr;
     DynamicOption *opt = DynamicOption_Find(first, cd->id);
     DynamicCOSave *save = *(DynamicCOSave **)saveInternalPtr;
@@ -5326,7 +5334,7 @@ DynamicCO_Free(
     )
 {
     TreeCtrl *tree = (TreeCtrl *) ((TkWindow *) tkwin)->instanceData;
-    DynamicCOClientData *cd = (DynamicCOClientData *) clientData;
+    DynamicCOClientData *cd = clientData;
     Tcl_Obj **objPtrPtr;
 
     if (OptionHax_Forget(tree, internalPtr)) {
@@ -6090,7 +6098,7 @@ ItemButtonCO_Init(
     if (specPtr->clientData != NULL)
 	return TCL_OK;
 
-    /* ClientData for the Tk custom option record */
+    /* ClientData for the Tk custom option record. */
     cd = (struct ItemButtonCOClientData *)ckalloc(
 	    sizeof(struct ItemButtonCOClientData));
     cd->flag1 = flag1;
@@ -6110,3 +6118,46 @@ ItemButtonCO_Init(
     return TCL_OK;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_GetIntForIndex --
+ *
+ *	This is basically a direct copy of TclGetIntForIndex with one
+ *	important difference: the caller gets to know whether the index
+ *	was of the form "end?-offset?".
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+int
+Tree_GetIntForIndex(
+    TreeCtrl *tree,		/* Widget info. */
+    Tcl_Obj *objPtr,		/* Points to an object containing either "end"
+				 * or an integer. */
+    int *indexPtr,		/* Location filled in with an integer
+				 * representing an index. */
+    int *endRelativePtr		/* Set to 1 if the returned index is relative
+				 * to "end". */
+    )
+{
+    int endValue = 0;
+    char *bytes;
+
+    if (TclGetIntForIndex(tree->interp, objPtr, endValue, indexPtr) != TCL_OK)
+	return TCL_ERROR;
+
+    bytes = Tcl_GetString(objPtr);
+    if (*bytes == 'e') {
+	*endRelativePtr = 1;
+    } else {
+	*endRelativePtr = 0;
+    }
+    return TCL_OK;
+}
