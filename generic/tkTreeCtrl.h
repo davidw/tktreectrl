@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.77 2006/11/30 03:29:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.78 2006/12/02 21:42:19 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -676,7 +676,7 @@ extern int TreeColumn_MaxWidth(TreeColumn column_);
 extern int TreeColumn_NeededWidth(TreeColumn column_);
 extern int TreeColumn_UseWidth(TreeColumn column_);
 extern int TreeColumn_Offset(TreeColumn column_);
-extern Tk_Justify TreeColumn_Justify(TreeColumn column_);
+extern Tk_Justify TreeColumn_ItemJustify(TreeColumn column_);
 #ifdef DEPRECATED
 extern int TreeColumn_WidthHack(TreeColumn column_);
 extern int TreeColumn_StepWidth(TreeColumn column_);
@@ -812,6 +812,7 @@ extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, 
 extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
 extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
 extern int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr);
+extern int TreeTheme_ComputeGeometry(TreeCtrl *tree);
 
 /* tkTreeUtils.c */
 #ifdef TREECTRL_DEBUG
@@ -1055,6 +1056,9 @@ extern int BooleanFlagCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName
     int theFlag);
 extern int ItemButtonCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
     int flag1, int flag2);
+
+extern int Tree_GetIntForIndex(TreeCtrl *tree, Tcl_Obj *objPtr, int *indexPtr,
+    int *endRelativePtr);
 
 extern Tk_ObjCustomOption pixelsCO;
 extern Tk_ObjCustomOption stringCO;
