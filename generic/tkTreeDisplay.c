@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.67 2006/11/27 19:16:10 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.68 2006/12/02 21:22:51 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2845,8 +2845,10 @@ TrackOnScreenColumnsForItem(
     /* Set the list of onscreen columns unless it is the same or the item
     * is hidden. */
     if (n > 0 && dItem != NULL) {
-	value = (TreeColumn *) ckrealloc((char *) value, sizeof(TreeColumn) * (count + 1));
-	memcpy(value, (TreeColumn *) columns.pointers, sizeof(TreeColumn) * count);
+	value = (TreeColumn *) ckrealloc((char *) value,
+		sizeof(TreeColumn) * (count + 1));
+	memcpy(value, (TreeColumn *) columns.pointers,
+		sizeof(TreeColumn) * count);
 	value[count] = NULL;
 	Tcl_SetHashValue(hPtr, (ClientData) value);
     }
@@ -5219,7 +5221,7 @@ Tree_Display(
     ClientData clientData	/* Widget info. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     Tk_Window tkwin = tree->tkwin;
@@ -6620,71 +6622,81 @@ Tree_InvalidateItemDInfo(
 
     while (item != NULL) {
 	dItem = (DItem *) TreeItem_GetDInfo(tree, item);
-	if (dItem != NULL) {
-	    if (column == NULL) {
-		dItem->area.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
-		dItem->left.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
-		dItem->right.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
+	if ((dItem == NULL) || DItemAllDirty(tree, dItem))
+	    goto next;
+
+	if (column == NULL) {
+	    dItem->area.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
+	    dItem->left.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
+	    dItem->right.flags |= (DITEM_DIRTY | DITEM_ALL_DIRTY);
+	    changed = 1;
+	} else {
+	    int columnIndex, left, width, i;
+	    DItemArea *area = NULL;
+
+	    switch (TreeColumn_Lock(column)) {
+		case COLUMN_LOCK_NONE:
+		    area = &dItem->area;
+		    break;
+		case COLUMN_LOCK_LEFT:
+		    area = &dItem->left;
+		    break;
+		case COLUMN_LOCK_RIGHT:
+		    area = &dItem->right;
+		    break;
+	    }
+
+	    if (area->flags & DITEM_ALL_DIRTY)
+		goto next;
+
+	    /* If a hidden column was moved we can't rely on
+	    * dInfo->columns[] being in the right order. */
+	    if (dInfo->flags & DINFO_CHECK_COLUMN_WIDTH) {
+		for (columnIndex = 0; columnIndex < tree->columnCount;
+			columnIndex++) {
+		    if (dInfo->columns[columnIndex].column == column)
+			break;
+		}
+		if (columnIndex == tree->columnCount) {
+		    panic("Tree_InvalidateItemDInfo: can't find a column");
+		}
 	    } else {
-		/* Do NOT call TreeColumn_UseWidth() or another routine
-		 * that calls Tree_WidthOfColumns() because that may end
-		 * up recalculating the size of items whose display info
-		 * is currently being invalidated. */
-		int columnIndex = TreeColumn_Index(column);
-		int i, left = dInfo->columns[columnIndex].offset;
-		/* This may not be the actual display width if this is the
-		 * only visible non-locked column. */
-		int width = dInfo->columns[columnIndex].width;
+		columnIndex = TreeColumn_Index(column);
+	    }
 
-		/* If a hidden column was moved we can't rely on
-		 * dInfo->columns[] being in the right order. */
-		if (dInfo->flags & DINFO_CHECK_COLUMN_WIDTH) {
-		    for (i = 0; i < tree->columnCount; i++) {
-			if (dInfo->columns[i].column == column)
-			    break;
-		    }
-		    if (i == tree->columnCount) {
-			panic("Tree_InvalidateItemDInfo: can't find a column");
-		    }
-		    left = dInfo->columns[i].offset;
-		    width = dInfo->columns[i].width;
-		}
+	    left = dInfo->columns[columnIndex].offset;
 
-		/* Calculate the width of the entire span. */
-		if (dItem->spans == NULL) {
-		    width = dInfo->columns[columnIndex].width;
-		} else {
-		    width = 0;
-		    i = dItem->spans[columnIndex];
-		    while (dItem->spans[i] == dItem->spans[columnIndex]) {
-			width += dInfo->columns[i].width;
-			if (++i == tree->columnCount)
-			    break;
-		    }
-		}
-
-		switch (TreeColumn_Lock(column)) {
-		    case COLUMN_LOCK_NONE:
-			if (tree->columnCountVis == 1)
-			    width = dItem->area.width;
-			InvalidateDItemX(dItem, &dItem->area, 0, left, width);
-			InvalidateDItemY(dItem, &dItem->area, dItem->y, dItem->y, dItem->height);
-			dItem->area.flags |= DITEM_DIRTY;
-			break;
-		    case COLUMN_LOCK_LEFT:
-			InvalidateDItemX(dItem, &dItem->left, 0, left, width);
-			InvalidateDItemY(dItem, &dItem->left, 0, 0, dItem->height);
-			dItem->left.flags |= DITEM_DIRTY;
-			break;
-		    case COLUMN_LOCK_RIGHT:
-			InvalidateDItemX(dItem, &dItem->right, 0, left, width);
-			InvalidateDItemY(dItem, &dItem->right, 0, 0, dItem->height);
-			dItem->right.flags |= DITEM_DIRTY;
+	    /* Calculate the width of the entire span. */
+	    /* Do NOT call TreeColumn_UseWidth() or another routine
+	    * that calls Tree_WidthOfColumns() because that may end
+	    * up recalculating the size of items whose display info
+	    * is currently being invalidated. */
+	    if (dItem->spans == NULL) {
+		width = dInfo->columns[columnIndex].width;
+	    } else {
+		width = 0;
+		i = dItem->spans[columnIndex];
+		while (dItem->spans[i] == dItem->spans[columnIndex]) {
+		    width += dInfo->columns[i].width;
+		    if (++i == tree->columnCount)
 			break;
 		}
 	    }
-	    changed = 1;
+
+	    /* If only one column is visible, the width may be
+	    * different than the column width. */
+	    if (TreeColumn_Lock(column) == COLUMN_LOCK_NONE)
+		if (tree->columnCountVis == 1)
+		    width = area->width;
+
+	    if (width > 0) {
+		InvalidateDItemX(dItem, area, 0, left, width);
+		InvalidateDItemY(dItem, area, 0, 0, dItem->height);
+		area->flags |= DITEM_DIRTY;
+		changed = 1;
+	    }
 	}
+next:
 	if (item == item2 || item2 == NULL)
 	    break;
 	item = TreeItem_Next(tree, item);
