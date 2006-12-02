@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.90 2006/11/30 03:29:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.91 2006/12/02 21:21:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -469,7 +469,7 @@ static int TreeWidgetCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     int result = TCL_OK;
     static CONST char *commandName[] = {
 	"activate", "bbox", "canvasx", "canvasy", "cget",
@@ -1602,7 +1602,7 @@ TreeEventProc(
     XEvent *eventPtr		/* Event info. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
 
     switch (eventPtr->type) {
 	case Expose:
@@ -1683,7 +1683,7 @@ TreeCmdDeletedProc(
     ClientData clientData	/* Widget info. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
 
     if (!tree->deleted) {
 	Tk_DestroyWindow(tree->tkwin);
@@ -1923,9 +1923,11 @@ TreeComputeGeometry(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    Tk_SetInternalBorder(tree->tkwin, tree->inset);
-    Tk_GeometryRequest(tree->tkwin, tree->width + tree->inset * 2,
-	    tree->height + tree->inset * 2);
+    if (TreeTheme_ComputeGeometry(tree) != TCL_OK) {
+	Tk_SetInternalBorder(tree->tkwin, tree->inset);
+	Tk_GeometryRequest(tree->tkwin, tree->width + tree->inset * 2,
+		tree->height + tree->inset * 2);
+    }
 }
 
 /*
@@ -2031,7 +2033,7 @@ ImageChangedProc(
     )
 {
     /* I would like to know the image was deleted... */
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
 
     /* FIXME: any image elements need to have their size invalidated
      * and items relayout'd accordingly. */
@@ -3341,7 +3343,7 @@ TreeDebugCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     static CONST char *commandNames[] = {
 	"alloc", "cget", "configure", "dinfo", "expose", "scroll", (char *) NULL
     };
@@ -4223,13 +4225,15 @@ Treectrl_Init(
     Tcl_Interp *interp		/* Interpreter the package is loading into. */
     )
 {
+    static /*CONST*/ char *tcl_version = "8.4";
+
 #ifdef USE_TCL_STUBS
-    if (Tcl_InitStubs(interp, "8.4", 0) == NULL) {
+    if (Tcl_InitStubs(interp, tcl_version, 0) == NULL) {
 	return TCL_ERROR;
     }
 #endif
 #ifdef USE_TK_STUBS
-    if (Tk_InitStubs(interp, "8.4", 0) == NULL) {
+    if (Tk_InitStubs(interp, tcl_version, 0) == NULL) {
 	return TCL_ERROR;
     }
 #endif
@@ -4241,22 +4245,23 @@ Treectrl_Init(
 	return TCL_ERROR;
     }
 
-    /* We don't care if this fails */
+    /* We don't care if this fails. */
     (void) TreeTheme_InitInterp(interp);
 
     if (TreeColumn_InitInterp(interp) != TCL_OK)
 	return TCL_ERROR;
 
-    /* Hack for editing a text Element */
+    /* Hack for editing a text Element. */
     Tcl_CreateObjCommand(interp, "textlayout", TextLayoutCmd, NULL, NULL);
 
-    /* Hack for colorizing a image (like Win98 explorer) */
+    /* Hack for colorizing an image (like Win98 explorer). */
     Tcl_CreateObjCommand(interp, "imagetint", ImageTintCmd, NULL, NULL);
 
-    /* Screen magnifier to check those dotted lines */
+    /* Screen magnifier to check those dotted lines. */
     Tcl_CreateObjCommand(interp, "loupe", LoupeCmd, NULL, NULL);
 
     Tcl_CreateObjCommand(interp, "treectrl", TreeObjCmd, NULL, NULL);
+
     if (Tcl_PkgProvide(interp, PACKAGE_NAME, PACKAGE_PATCHLEVEL) != TCL_OK) {
 	return TCL_ERROR;
     }
