@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.69 2006/11/27 02:04:09 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.70 2006/12/02 21:18:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -43,6 +43,7 @@ struct TreeColumn_
 #endif /* DEPRECATED */
     Tk_Font tkfont;		/* -font */
     Tk_Justify justify;		/* -justify */
+    int itemJustify;		/* -itemjustify */
     PerStateInfo border;	/* -background */
     Tcl_Obj *borderWidthObj;	/* -borderwidth */
     int borderWidth;		/* -borderwidth */
@@ -258,10 +259,13 @@ Tk_ObjCustomOption uniformGroupCO =
 };
 #endif /* UNIFORM_GROUP */
 
-static char *arrowST[] = { "none", "up", "down", (char *) NULL };
-static char *arrowSideST[] = { "left", "right", (char *) NULL };
-static char *stateST[] = { "normal", "active", "pressed", (char *) NULL };
+static CONST char *arrowST[] = { "none", "up", "down", (char *) NULL };
+static CONST char *arrowSideST[] = { "left", "right", (char *) NULL };
+static CONST char *stateST[] = { "normal", "active", "pressed", (char *) NULL };
 static CONST char *lockST[] = { "left", "none", "right", (char *) NULL };
+static CONST char *justifyStrings[] = {
+    "left", "right", "center", (char *) NULL
+};
 
 #define COLU_CONF_IMAGE		0x0001
 #define COLU_CONF_NWIDTH	0x0002	/* neededWidth */
@@ -339,6 +343,9 @@ static Tk_OptionSpec columnSpecs[] = {
     {TK_OPTION_STRING, "-itembackground", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(TreeColumn_, itemBgObj), -1,
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_ITEMBG},
+    {TK_OPTION_CUSTOM, "-itemjustify", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(TreeColumn_, itemJustify),
+     TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_JUSTIFY},
     {TK_OPTION_CUSTOM, "-itemstyle", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeColumn_, itemStyle),
      TK_OPTION_NULL_OK, (ClientData) &styleCO, 0},
@@ -2296,6 +2303,7 @@ Column_Alloc(
     memset(column, '\0', sizeof(TreeColumn_));
     column->tree = tree;
     column->optionTable = Tk_CreateOptionTable(tree->interp, columnSpecs);
+    column->itemJustify = -1;
     if (Tk_InitOptions(tree->interp, (char *) column, column->optionTable,
 		tree->tkwin) != TCL_OK) {
 	WFREE(column, TreeColumn_);
@@ -3214,9 +3222,11 @@ TreeColumn_Offset(
 /*
  *----------------------------------------------------------------------
  *
- * TreeColumn_Justify --
+ * TreeColumn_ItemJustify --
  *
- *	Return the value of the -justify config option for a column.
+ *	Return the value of the -itemjustify config option for a column.
+ *	If -itemjustify is unspecified, then return the value of the
+ *	-justify option.
  *
  * Results:
  *	TK_JUSTIFY_xxx constant.
@@ -3228,11 +3238,11 @@ TreeColumn_Offset(
  */
 
 Tk_Justify
-TreeColumn_Justify(
+TreeColumn_ItemJustify(
     TreeColumn column		/* Column token. */
     )
 {
-    return column->justify;
+    return (column->itemJustify != -1) ? column->itemJustify : column->justify;
 }
 
 #ifdef DEPRECATED
@@ -3517,7 +3527,7 @@ ColumnTagCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     static CONST char *commandNames[] = {
 	"add", "expr", "names", "remove", (char *) NULL
     };
@@ -3694,7 +3704,7 @@ TreeColumnCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     static CONST char *commandNames[] = {
 	"bbox", "cget", "compare", "configure", "count", "create", "delete",
 	"dragcget", "dragconfigure", "id",
@@ -5671,5 +5681,7 @@ TreeColumn_InitInterp(
     PerStateCO_Init(columnSpecs, "-arrowbitmap", &pstBitmap, ColumnStateFromObj);
     PerStateCO_Init(columnSpecs, "-arrowimage", &pstImage, ColumnStateFromObj);
     PerStateCO_Init(columnSpecs, "-background", &pstBorder, ColumnStateFromObj);
+    StringTableCO_Init(columnSpecs, "-itemjustify", justifyStrings);
+
     return TCL_OK;
 }
