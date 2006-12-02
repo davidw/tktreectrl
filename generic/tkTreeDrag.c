@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.22 2006/11/08 07:07:19 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.23 2006/12/02 21:23:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -382,7 +382,7 @@ DragImageCmd(
     Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    TreeCtrl *tree = (TreeCtrl *) clientData;
+    TreeCtrl *tree = clientData;
     TreeDragImage dragImage = tree->dragImage;
     static CONST char *commandNames[] = { "add", "cget", "clear", "configure",
 	"offset", (char *) NULL };
@@ -407,7 +407,6 @@ DragImageCmd(
 	/* T dragimage add I ?C? ?E ...? */
 	case COMMAND_ADD:
 	{
-#if 1
 	    TreeItem item;
 	    TreeItemColumn itemColumn;
 	    TreeColumn treeColumn;
@@ -503,169 +502,6 @@ doneADD:
 	    }
 	    TreeDragImage_Display(tree->dragImage);
 	    return result;
-#else
-	    XRectangle staticRects[STATIC_SIZE], *rects = staticRects;
-	    TreeItem item;
-	    TreeItemColumn itemColumn = NULL;
-	    TreeColumn treeColumn;
-	    int i, count, columnIndex = -1;
-	    int indent, width, totalWidth;
-	    int x, y, w, h;
-	    DragElem *elem;
-	    StyleDrawArgs drawArgs;
-	    int result = TCL_OK;
-
-	    if (objc < 4)
-	    {
-		Tcl_WrongNumArgs(interp, 3, objv, "item ?column? ?element ...?");
-		return TCL_ERROR;
-	    }
-
-	    if (TreeItem_FromObj(tree, objv[3], &item, IFO_NOT_NULL) != TCL_OK)
-		return TCL_ERROR;
-
-	    /* Validate all of the arguments, even if the command would exit
-	     * early without needing to check those arguments. */
-	    if (objc > 4)
-	    {
-		if (TreeItem_ColumnFromObj(tree, item, objv[4], &itemColumn,
-			&columnIndex) != TCL_OK)
-		    return TCL_ERROR;
-		if (objc > 5)
-		{
-		    if ((itemColumn == NULL) ||
-			(TreeItemColumn_GetStyle(tree, itemColumn) == NULL)) {
-			FormatResult(interp,
-			    "item %s%d column %s%d has no style",
-			    tree->itemPrefix, TreeItem_GetID(tree, item),
-			    tree->columnPrefix,
-			    TreeColumn_GetID(Tree_FindColumn(tree, columnIndex)));
-			return TCL_ERROR;
-		    }
-		    if (TreeStyle_ValidateElements(tree,
-			    TreeItemColumn_GetStyle(tree, itemColumn),
-			    objc - 5, objv + 5) != TCL_OK)
-			return TCL_ERROR;
-		}
-	    }
-
-	    if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
-		return TCL_OK;
-	    if (w < 1 || h < 1)
-		return TCL_OK;
-
-	    drawArgs.tree = tree;
-	    drawArgs.drawable = None;
-	    /* FIXME: column state too */
-	    drawArgs.state = TreeItem_GetState(tree, item);
-	    drawArgs.y = y;
-	    drawArgs.height = h;
-
-	    TreeDragImage_Undisplay(tree->dragImage);
-
-	    if (objc > 4)
-	    {
-		treeColumn = Tree_FindColumn(tree, columnIndex);
-		if (!TreeColumn_Visible(treeColumn))
-		    goto doneAdd;
-		drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-		totalWidth = TreeColumn_Offset(treeColumn);
-		if (treeColumn == tree->columnTree)
-		    indent = TreeItem_Indent(tree, item);
-		else
-		    indent = 0;
-		drawArgs.indent = indent;
-		drawArgs.x = x + totalWidth;
-		drawArgs.width = TreeColumn_UseWidth(treeColumn);
-		drawArgs.justify = TreeColumn_Justify(treeColumn);
-		STATIC_ALLOC(rects, XRectangle, objc - 5);
-		count = TreeStyle_GetElemRects(&drawArgs, objc - 5, objv + 5, rects);
-		if (count == -1)
-		{
-		    result = TCL_ERROR;
-		    goto doneAdd;
-		}
-		for (i = 0; i < count; i++)
-		{
-		    elem = DragElem_Alloc(dragImage);
-		    elem->x = rects[i].x;
-		    elem->y = rects[i].y;
-		    elem->width = rects[i].width;
-		    elem->height = rects[i].height;
-		}
-	    }
-	    else
-	    {
-		totalWidth = 0;
-		treeColumn = tree->columns;
-		itemColumn = TreeItem_GetFirstColumn(tree, item);
-		while (itemColumn != NULL)
-		{
-		    if (!TreeColumn_Visible(treeColumn))
-			goto nextColumn;
-		    width = TreeColumn_UseWidth(treeColumn);
-		    if (treeColumn == tree->columnTree)
-			indent = TreeItem_Indent(tree, item);
-		    else
-			indent = 0;
-		    drawArgs.style = TreeItemColumn_GetStyle(tree, itemColumn);
-		    if (drawArgs.style != NULL)
-		    {
-			drawArgs.indent = indent;
-			drawArgs.x = x + totalWidth;
-			drawArgs.width = width;
-			drawArgs.justify = TreeColumn_Justify(treeColumn);
-			count = TreeStyle_NumElements(tree, drawArgs.style);
-			STATIC_ALLOC(rects, XRectangle, count);
-			count = TreeStyle_GetElemRects(&drawArgs, 0, NULL, rects);
-			if (count == -1)
-			{
-			    result = TCL_ERROR;
-			    goto doneAdd;
-			}
-			for (i = 0; i < count; i++)
-			{
-			    elem = DragElem_Alloc(dragImage);
-			    elem->x = rects[i].x;
-			    elem->y = rects[i].y;
-			    elem->width = rects[i].width;
-			    elem->height = rects[i].height;
-			}
-			if (rects != staticRects)
-			{
-			    ckfree((char *) rects);
-			    rects = staticRects;
-			}
-		    }
-		    totalWidth += width;
-nextColumn:
-		    treeColumn = TreeColumn_Next(treeColumn);
-		    itemColumn = TreeItemColumn_GetNext(tree, itemColumn);
-		}
-	    }
-	    dragImage->bounds[0] = 100000;
-	    dragImage->bounds[1] = 100000;
-	    dragImage->bounds[2] = -100000;
-	    dragImage->bounds[3] = -100000;
-	    for (elem = dragImage->elem;
-		elem != NULL;
-		elem = elem->next)
-	    {
-		if (elem->x < dragImage->bounds[0])
-		    dragImage->bounds[0] = elem->x;
-		if (elem->y < dragImage->bounds[1])
-		    dragImage->bounds[1] = elem->y;
-		if (elem->x + elem->width > dragImage->bounds[2])
-		    dragImage->bounds[2] = elem->x + elem->width;
-		if (elem->y + elem->height > dragImage->bounds[3])
-		    dragImage->bounds[3] = elem->y + elem->height;
-	    }
-doneAdd:
-	    if (rects != staticRects)
-		ckfree((char *) rects);
-	    TreeDragImage_Display(tree->dragImage);
-	    return result;
-#endif
 	}
 
 	/* T dragimage cget option */
