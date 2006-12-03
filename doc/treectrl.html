@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.44 2006/11/30 03:30:12 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.45 2006/12/03 00:24:00 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.44 2006/11/30 03:30:12 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.45 2006/12/03 00:24:00 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -1754,8 +1754,8 @@ and an <strong>&lt;Expand-after&gt;</strong> event after the item state was chan
 
 If <i class='arg'>child</i> is not specified, returns the item id of the first
 child of the item described by <i class='arg'>parent</i>.
-If <i class='arg'>child</i> is specified, it must described an item
-that is not an ancestor of <i class='arg'>parent</i>.
+If <i class='arg'>child</i> is specified, it must describe an item
+that is neither the root item nor an ancestor of <i class='arg'>parent</i>.
 Then it will become the new first child of <i class='arg'>parent</i>.
 
 <br><br>
@@ -3039,13 +3039,23 @@ alternating background colors for items in this column.
 See also the <strong>-backgroundmode</strong> widget option for more on this.
 
 <br><br>
+<dt><strong><strong>-itemjustify</strong></strong> <i class='arg'>justification</i><dd>
+This option determines how the item styles in this column line up with each other.
+Must be one of <strong>left</strong>, <strong>center</strong>, or <strong>right</strong>. The default
+value is the empty string (for compatibility with older versions), in which
+case the column option <strong>-justify</strong> is used to align item styles in this
+column.
+
+<br><br>
 <dt><strong><strong>-itemstyle</strong></strong> <i class='arg'>style</i><dd>
 <i class='arg'>Style</i> is the name of a style that should be set in this column
 for newly-created items.
 
 <br><br>
 <dt><strong><strong>-justify</strong></strong> <i class='arg'>justification</i><dd>
-This option determines how the items (and the title) line up with each other.
+This option determines how the image and text in the column header are
+positioned. It also affects the position of item styles in this column unless
+the column option <strong>-itemjustify</strong> is specified.
 Must be one of <strong>left</strong> (the default), <strong>center</strong>, or <strong>right</strong>.
 
 <br><br>

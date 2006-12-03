@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.45 2006/11/30 03:30:13 treectrl Exp $}
+  $Id: treectrl.man,v 1.46 2006/12/03 00:24:00 treectrl Exp $}
 ][manpage_begin treectrl n 2.2]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -1231,8 +1231,8 @@ and an [const <Expand-after>] event after the item state was changed.
 [call [arg pathName] [cmd {item firstchild}] [arg parent] [opt [arg child]]]
 If [arg child] is not specified, returns the item id of the first
 child of the item described by [arg parent].
-If [arg child] is specified, it must described an item
-that is not an ancestor of [arg parent].
+If [arg child] is specified, it must describe an item
+that is neither the root item nor an ancestor of [arg parent].
 Then it will become the new first child of [arg parent].
 
 [call [arg pathName] [cmd {item id}] [arg itemDesc]]
@@ -2337,12 +2337,21 @@ Specifies a list of zero or more colors, which are used as
 alternating background colors for items in this column.
 See also the [option -backgroundmode] widget option for more on this.
 
+[opt_def [option -itemjustify] [arg justification]]
+This option determines how the item styles in this column line up with each other.
+Must be one of [const left], [const center], or [const right]. The default
+value is an empty string (for compatibility with older versions), in which
+case the column option [option -justify] is used to align item styles in this
+column.
+
 [opt_def [option -itemstyle] [arg style]]
 [arg Style] is the name of a style that should be set in this column
 for newly-created items.
 
 [opt_def [option -justify] [arg justification]]
-This option determines how the items (and the title) line up with each other.
+This option determines how the image and text in the column header are
+positioned. It also affects the position of item styles in this column unless
+the column option [option -itemjustify] is specified.
 Must be one of [const left] (the default), [const center], or [const right].
 
 [opt_def [option -lock] [arg lock]]
