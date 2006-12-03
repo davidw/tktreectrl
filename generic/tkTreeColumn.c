@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.70 2006/12/02 21:18:40 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.71 2006/12/03 00:22:52 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -121,6 +121,7 @@ struct TreeColumn_
     UniformGroup *uniform;	/* -uniform */
     int weight;			/* -weight */
 #endif
+    TreeColumnDInfo dInfo;	/* Display info. */
 };
 
 #ifdef UNIFORM_GROUP
@@ -1971,10 +1972,7 @@ renumber:
 	/* Also update columnTreeLeft. */
 	tree->widthOfColumns = -1;
 	tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-	Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH |
-		DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
-	/* BUG 784245 */
-	Tree_DInfoChanged(tree, DINFO_DRAW_HEADER);
+	Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH);
     }
 }
 
@@ -2205,7 +2203,7 @@ Column_Config(
 		walk = walk->next;
 	    }
 	}
-	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
+	Tree_DInfoChanged(tree, DINFO_INVALIDATE);
     }
 
     if (!createFlag && (column->lock != lock)) {
@@ -2249,17 +2247,11 @@ Column_Config(
 
     /* FIXME: only this column needs to be redisplayed. */
     if (mask & COLU_CONF_JUSTIFY)
-	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
+	Tree_DInfoChanged(tree, DINFO_INVALIDATE);
 
     /* -stepwidth and -widthhack */
     if (mask & COLU_CONF_RANGES)
 	Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
-
-    /* If one column becomes visible and another of equal width becomes
-     * hidden, and the two columns swap places with each other, then 
-     * display ranges are unaffected but items must be redrawn. */
-    if (visible != column->visible)
-	Tree_DInfoChanged(tree, DINFO_INVALIDATE | DINFO_OUT_OF_DATE);
 
     /* Redraw everything */
     if (mask & (COLU_CONF_TWIDTH | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT)) {
@@ -2364,6 +2356,57 @@ Column_Free(
     if (tree->columnCount == 0)
 	tree->nextColumnId = 0;
     return next;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_SetDInfo --
+ *
+ *	Store a display-info token in a column. Called by the display
+ *	code.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+TreeColumn_SetDInfo(
+    TreeColumn column,		/* Column record. */
+    TreeColumnDInfo dInfo	/* Display info token. */
+    )
+{
+    column->dInfo = dInfo;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * TreeColumn_GetDInfo --
+ *
+ *	Return the display-info token of a column. Called by the display
+ *	code.
+ *
+ * Results:
+ *	The display-info token or NULL.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TreeColumnDInfo
+TreeColumn_GetDInfo(
+    TreeColumn column		/* Column record. */
+    )
+{
+    return column->dInfo;
 }
 
 /*
@@ -4963,7 +5006,7 @@ Tree_InvalidateColumnWidth(
     }
     tree->widthOfColumns = -1;
     tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
-    Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH | DINFO_DRAW_HEADER);
+    Tree_DInfoChanged(tree, DINFO_CHECK_COLUMN_WIDTH);
 }
 
 /*
@@ -5445,10 +5488,8 @@ doOffsets:
     totalWidth = 0;
     column = first;
     while (column != NULL && column->lock == first->lock) {
-	if (column->visible) {
-	    column->offset = totalWidth;
-	    totalWidth += column->useWidth;
-	}
+	column->offset = totalWidth;
+	totalWidth += column->useWidth;
 	column = column->next;
     }
     return totalWidth;
