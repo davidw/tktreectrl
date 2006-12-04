@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.19 2006/11/30 02:41:39 treectrl Exp $
+# RCS: @(#) $Id: outlook-newgroup.tcl,v 1.20 2006/12/04 00:16:02 treectrl Exp $
 
 #
 # Demo: Outlook Express newsgroup messages
@@ -59,7 +59,7 @@ proc DemoOutlookNewsgroup {} {
 	outlook-unread {}
     }
     $T element create elemTxt text -fill [list $::SystemHighlightText {selected focus}] \
-	-font [list "[$T cget -font] bold" {read unread !open} "[$T cget -font] bold" {!read}] -lines 1
+	-font [list DemoFontBold {read unread !open} DemoFontBold {!read}] -lines 1
     $T element create sel.e rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open e -showfocus yes
     $T element create sel.w rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open w -showfocus yes
     $T element create sel.we rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open we -showfocus yes
@@ -249,7 +249,7 @@ proc DemoOutlookNewsgroup_2 {} {
     $T element create text.read text -fill [list $::SystemHighlightText {selected focus}] \
 	-lines 1
     $T element create text.unread text -fill [list $::SystemHighlightText {selected focus}] \
-	-font [list "[$T cget -font] bold"] -lines 1
+	-font [list DemoFontBold] -lines 1
     $T element create sel.e rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open e -showfocus yes
     $T element create sel.w rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open w -showfocus yes
     $T element create sel.we rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] -open we -showfocus yes

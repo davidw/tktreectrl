@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.13 2006/11/19 00:55:51 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.14 2006/12/04 00:16:02 treectrl Exp $
 
 namespace eval StyleEditor {
 	variable Info
@@ -255,7 +255,7 @@ proc StyleEditor::SetPropertyList {} {
 
 	$T element create e1 text \
 	    -fill [list $::SystemHighlightText selected white header] \
-	    -font [list "[$T cget -font] bold" header]
+	    -font [list DemoFontBold header]
 	$T element create e2 rect \
 	    -fill [list #ACA899 header $::SystemHighlight selected] \
 	    -outline black -outlinewidth 1 -open nw -showfocus no

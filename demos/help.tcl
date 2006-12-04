@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: help.tcl,v 1.21 2006/11/30 02:41:38 treectrl Exp $
+# RCS: @(#) $Id: help.tcl,v 1.22 2006/12/04 00:16:02 treectrl Exp $
 
 #
 # Demo: Help contents
@@ -41,7 +41,7 @@ proc DemoHelpContents {} {
     $T element create elemImgPage image -image help-page
     $T element create elemImgBook image -image {help-book-open {open} help-book-closed {}}
     $T element create elemTxt text -fill [list $::SystemHighlightText {selected focus} blue {mouseover}] \
-	-font [list "[$T cget -font] underline" {mouseover}]
+	-font [list DemoFontUnderline {mouseover}]
     $T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus}] -showfocus yes
 
     #

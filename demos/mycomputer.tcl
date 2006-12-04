@@ -1,8 +1,15 @@
-# RCS: @(#) $Id: mycomputer.tcl,v 1.5 2006/11/23 22:24:56 treectrl Exp $
+# RCS: @(#) $Id: mycomputer.tcl,v 1.6 2006/12/04 00:16:02 treectrl Exp $
 
 proc DemoMyComputer {} {
 
     set T [DemoList]
+
+    set font [.menubar cget -font]
+    if {[lsearch -exact [font names] DemoMyComputerHeaderFont] == -1} {
+	array set fontInfo [font actual $font]
+	set fontInfo(-weight) bold
+	eval font create DemoMyComputerHeaderFont [array get fontInfo]
+    }
 
     #
     # Configure the treectrl widget
@@ -10,7 +17,7 @@ proc DemoMyComputer {} {
 
     $T configure -showroot no -showbuttons no -showlines no \
 	-selectmode browse -xscrollincrement 20 \
-	-font [.menubar cget -font]
+	-font $font
 
     #
     # Create columns
@@ -27,7 +34,7 @@ proc DemoMyComputer {} {
     # Create elements
     #
 
-    $T element create txtHeader text -font [list "[$T cget -font] bold"]
+    $T element create txtHeader text -font [list DemoMyComputerHeaderFont]
     $T element create txtName text -fill [list $::SystemHighlightText {selected focus}] \
 	-lines 1
     $T element create txtOther text -lines 1

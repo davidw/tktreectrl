@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: outlook-folders.tcl,v 1.13 2006/11/30 02:41:38 treectrl Exp $
+# RCS: @(#) $Id: outlook-folders.tcl,v 1.14 2006/12/04 00:16:02 treectrl Exp $
 
 #
 # Demo: Outlook Express folder list
@@ -36,7 +36,7 @@ proc DemoOutlookFolders {} {
     $T element create elemTxtRead text -fill [list $::SystemHighlightText {selected focus}] \
 	-lines 1
     $T element create elemTxtUnread text -fill [list $::SystemHighlightText {selected focus}] \
-	-font [list "[$T cget -font] bold"] -lines 1
+	-font [list DemoFontBold] -lines 1
     $T element create elemTxtCount text -fill blue
     $T element create elemImgFolder image -image outlook-folder
     $T element create elemRectSel rect -fill [list $::SystemHighlight {selected focus} gray {selected !focus}] \

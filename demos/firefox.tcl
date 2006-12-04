@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: firefox.tcl,v 1.18 2006/11/30 02:41:38 treectrl Exp $
+# RCS: @(#) $Id: firefox.tcl,v 1.19 2006/12/04 00:16:02 treectrl Exp $
 
 proc DemoFirefoxPrivacy {} {
 
@@ -65,7 +65,7 @@ if {$::clip} {
 
     $T element create eWindow window
 if {$::clip} { $T element configure eWindow -clip yes }
-    $T element create eText1 text -font [list "[$T cget -font] bold"]
+    $T element create eText1 text -font [list DemoFontBold]
     $T element create eRectTop rect -outline black -fill #FFFFCC \
 	-draw {yes open no {}} -outlinewidth 1 -open s
     $T element create eRectBottom rect -outline black -fill #FFFFCC \

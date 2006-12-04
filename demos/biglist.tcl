@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.12 2006/11/30 02:41:38 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.13 2006/12/04 00:16:02 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
@@ -52,7 +52,7 @@ if {$::clip} {
     $T element create elemBorderTitle border -relief {sunken open raised {}} -thickness 1 \
 	-filled yes -background $::SystemButtonFace
     $T element create elemTxtTitle text \
-	-font [list "[$T cget -font] bold"]
+	-font [list DemoFontBold]
 
     # Citizen
     $T element create elemRectSel rect -showfocus no \
