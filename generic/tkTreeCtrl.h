@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.79 2006/12/03 00:22:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.80 2006/12/04 00:22:18 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -241,7 +241,12 @@ struct TreeCtrl
     int deleted;		/* flag */
     int updateIndex;		/* flag */
     int isActive;		/* flag: mac & win "active" toplevel */
-    int inset;			/* borderWidth + highlightWidth */
+    struct {
+	int left;
+	int top;
+	int right;
+	int bottom;
+    } inset;			/* borderWidth + highlightWidth */
     int xOrigin;		/* offset from content x=0 to window x=0 */
     int yOrigin;		/* offset from content y=0 to window y=0 */
     GC copyGC;
@@ -369,7 +374,8 @@ struct TreeCtrl
 #define TREE_CONF_WRAP 0x0008
 #define TREE_CONF_BUTIMG 0x0010
 #define TREE_CONF_BUTBMP 0x0020
-/* ... */
+#define TREE_CONF_BORDERS 0x0040
+/* xxx */
 #define TREE_CONF_RELAYOUT 0x0100
 #define TREE_CONF_REDISPLAY 0x0200
 #define TREE_CONF_FG 0x0400
@@ -401,13 +407,13 @@ extern int Tree_StateFromObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int *i
 extern int Tree_StateFromListObj(TreeCtrl *tree, Tcl_Obj *obj, int states[3], int flags);
 
 #define Tree_BorderLeft(tree) \
-    tree->inset
+    tree->inset.left
 #define Tree_BorderTop(tree) \
-    tree->inset
+    tree->inset.top
 #define Tree_BorderRight(tree) \
-    (Tk_Width(tree->tkwin) - tree->inset)
+    (Tk_Width(tree->tkwin) - tree->inset.right)
 #define Tree_BorderBottom(tree) \
-    (Tk_Height(tree->tkwin) - tree->inset)
+    (Tk_Height(tree->tkwin) - tree->inset.bottom)
 
 #define Tree_HeaderLeft(tree) \
     Tree_BorderLeft(tree)
@@ -767,6 +773,7 @@ extern void Tree_FreeItemDInfo(TreeCtrl *tree, TreeItem item1, TreeItem item2);
 extern void Tree_InvalidateItemDInfo(TreeCtrl *tree, TreeColumn column, TreeItem item1, TreeItem item2);
 extern void TreeDisplay_ItemDeleted(TreeCtrl *tree, TreeItem item);
 extern void TreeDisplay_ColumnDeleted(TreeCtrl *tree, TreeColumn column);
+extern void TreeDisplay_FreeColumnDInfo(TreeCtrl *tree, TreeColumn column);
 extern void TreeDisplay_GetReadyForTrouble(TreeCtrl *tree, int *requestsPtr);
 extern int TreeDisplay_WasThereTrouble(TreeCtrl *tree, int requests);
 extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
@@ -815,7 +822,9 @@ extern int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up, 
 extern int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open, int x, int y, int width, int height);
 extern int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open, int *widthPtr, int *heightPtr);
 extern int TreeTheme_GetArrowSize(TreeCtrl *tree, Drawable drawable, int up, int *widthPtr, int *heightPtr);
-extern int TreeTheme_ComputeGeometry(TreeCtrl *tree);
+extern int TreeTheme_SetBorders(TreeCtrl *tree);
+extern int TreeTheme_DrawBorders(TreeCtrl *tree, Drawable drawable);
+extern void TreeTheme_Relayout(TreeCtrl *tree);
 
 /* tkTreeUtils.c */
 #ifdef TREECTRL_DEBUG
