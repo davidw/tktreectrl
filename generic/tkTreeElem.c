@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.53 2006/12/02 21:23:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.54 2006/12/04 05:51:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -44,12 +44,11 @@ DO_BooleanForState(
     PerStateInfo *psi;
     int match = MATCH_NONE;
 
-    psi = (PerStateInfo *) DynamicOption_FindData(elem->options, id);
+    psi = DynamicOption_FindData(elem->options, id);
     if (psi != NULL)
 	result = PerStateBoolean_ForState(tree, psi, state, &match);
     if ((match != MATCH_EXACT) && (elem->master != NULL)) {
-	PerStateInfo *psi = (PerStateInfo *) DynamicOption_FindData(
-		elem->master->options, id);
+	PerStateInfo *psi = DynamicOption_FindData(elem->master->options, id);
 	if (psi != NULL) {
 	    int matchM;
 	    int resultM = PerStateBoolean_ForState(tree, psi, state, &matchM);
@@ -72,12 +71,11 @@ DO_ColorForState(
     PerStateInfo *psi;
     int match = MATCH_NONE;
 
-    psi = (PerStateInfo *) DynamicOption_FindData(elem->options, id);
+    psi = DynamicOption_FindData(elem->options, id);
     if (psi != NULL)
 	result = PerStateColor_ForState(tree, psi, state, &match);
     if ((match != MATCH_EXACT) && (elem->master != NULL)) {
-	PerStateInfo *psi = (PerStateInfo *) DynamicOption_FindData(
-		elem->master->options, id);
+	PerStateInfo *psi = DynamicOption_FindData(elem->master->options, id);
 	if (psi != NULL) {
 	    int matchM;
 	    XColor *resultM = PerStateColor_ForState(tree, psi, state, &matchM);
@@ -100,12 +98,11 @@ DO_FontForState(
     PerStateInfo *psi;
     int match = MATCH_NONE;
 
-    psi = (PerStateInfo *) DynamicOption_FindData(elem->options, id);
+    psi = DynamicOption_FindData(elem->options, id);
     if (psi != NULL)
 	result = PerStateFont_ForState(tree, psi, state, &match);
     if ((match != MATCH_EXACT) && (elem->master != NULL)) {
-	PerStateInfo *psi = (PerStateInfo *) DynamicOption_FindData(
-		elem->master->options, id);
+	PerStateInfo *psi = DynamicOption_FindData(elem->master->options, id);
 	if (psi != NULL) {
 	    int matchM;
 	    Tk_Font resultM = PerStateFont_ForState(tree, psi, state, &matchM);
@@ -149,12 +146,11 @@ DO_ObjectForState(
     PerStateInfo *psi;
     int match = MATCH_NONE;
 
-    psi = (PerStateInfo *) DynamicOption_FindData(elem->options, id);
+    psi = DynamicOption_FindData(elem->options, id);
     if (psi != NULL)
 	result = PerStateInfo_ObjForState(tree, typePtr, psi, state, &match);
     if ((match != MATCH_EXACT) && (elem->master != NULL)) {
-	PerStateInfo *psi = (PerStateInfo *) DynamicOption_FindData(
-		elem->master->options, id);
+	PerStateInfo *psi = DynamicOption_FindData(elem->master->options, id);
 	if (psi != NULL) {
 	    int matchM;
 	    Tcl_Obj *resultM = PerStateInfo_ObjForState(tree, typePtr, psi, state, &matchM);
@@ -236,6 +232,14 @@ static Tk_ObjCustomOption booleanCO =
     NULL,
     (ClientData) NULL
 };
+
+void
+DynamicOptionInitBoolean(
+    void *data
+    )
+{
+    *((int *) data) = -1;
+}
 
 /* END custom "boolean" option */
 
@@ -1512,14 +1516,16 @@ typedef struct ElementImage ElementImage;
 struct ElementImage
 {
     Element header;
-    PerStateInfo draw;
     PerStateInfo image;
+};
+
+typedef struct ElementImageSize
+{
     int width;
     Tcl_Obj *widthObj;
     int height;
     Tcl_Obj *heightObj;
-    int tiled;
-};
+} ElementImageSize;
 
 #define IMAGE_CONF_IMAGE 0x0001
 #define IMAGE_CONF_SIZE 0x0002
@@ -1528,23 +1534,20 @@ struct ElementImage
 
 static Tk_OptionSpec imageOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL,
-     Tk_Offset(ElementImage, draw.obj), Tk_Offset(ElementImage, draw),
+     (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DRAW},
-    {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementImage, heightObj),
-     Tk_Offset(ElementImage, height),
+    {TK_OPTION_CUSTOM, "-height", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_SIZE},
     {TK_OPTION_CUSTOM, "-image", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementImage, image.obj), Tk_Offset(ElementImage, image),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_IMAGE},
     {TK_OPTION_CUSTOM, "-tiled", (char *) NULL, (char *) NULL,
-     (char *) NULL, -1, Tk_Offset(ElementImage, tiled),
-     TK_OPTION_NULL_OK, (ClientData) &booleanCO, IMAGE_CONF_DISPLAY},
-    {TK_OPTION_PIXELS, "-width", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementImage, widthObj),
-     Tk_Offset(ElementImage, width),
+     (char *) NULL, -1, Tk_Offset(Element, options),
+     TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DISPLAY},
+    {TK_OPTION_CUSTOM, "-width", (char *) NULL, (char *) NULL,
+     (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_SIZE},
     {TK_OPTION_END, (char *) NULL, (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
@@ -1608,9 +1611,8 @@ static int ConfigProcImage(ElementArgs *args)
 
 static int CreateProcImage(ElementArgs *args)
 {
-    ElementImage *elemX = (ElementImage *) args->elem;
+/*    ElementImage *elemX = (ElementImage *) args->elem;*/
 
-    elemX->tiled = -1;
     return TCL_OK;
 }
 
@@ -1627,9 +1629,9 @@ static void DisplayProcImage(ElementArgs *args)
     int draw;
     Tk_Image image;
     int imgW, imgH;
-    int tiled = 0;
+    int tiled = 0, *eit, *eitM = NULL;
 
-    BOOLEAN_FOR_STATE(draw, draw, state)
+    draw = DO_BooleanForState(tree, elem, 1002, state);
     if (!draw)
 	return;
 
@@ -1637,10 +1639,14 @@ static void DisplayProcImage(ElementArgs *args)
     if (image == NULL)
 	return;
 
-    if (elemX->tiled != -1)
-	tiled = elemX->tiled;
-    else if ((masterX != NULL) && (masterX->tiled != -1))
-	tiled = masterX->tiled;
+    eit = DynamicOption_FindData(elem->options, 1003);
+    if (masterX != NULL)
+	eitM = DynamicOption_FindData(elem->master->options, 1003);
+
+    if (eit != NULL && *eit != -1)
+	tiled = *eit;
+    else if ((eitM != NULL) && (*eitM != -1))
+	tiled = *eitM;
     if (tiled) {
 	Tree_DrawTiledImage(tree, args->display.drawable, image, x, y,
 	    x + args->display.width, y + args->display.height, -x, -y);
@@ -1670,21 +1676,26 @@ static void NeededProcImage(ElementArgs *args)
     int width = 0, height = 0;
     int match, match2;
     Tk_Image image;
+    ElementImageSize *eis, *eisM = NULL;
 
     IMAGE_FOR_STATE(image, image, state)
 
     if (image != NULL)
 	Tk_SizeOfImage(image, &width, &height);
 
-    if (elemX->widthObj != NULL)
-	width = elemX->width;
-    else if ((masterX != NULL) && (masterX->widthObj != NULL))
-	width = masterX->width;
+    eis = DynamicOption_FindData(elem->options, 1001);
+    if (masterX != NULL)
+	eisM = DynamicOption_FindData(elem->master->options, 1001);
 
-    if (elemX->heightObj != NULL)
-	height = elemX->height;
-    else if ((masterX != NULL) && (masterX->heightObj != NULL))
-	height = masterX->height;
+    if (eis != NULL && eis->widthObj != NULL)
+	width = eis->width;
+    else if ((eisM != NULL) && (eisM->widthObj != NULL))
+	width = eisM->width;
+
+    if (eis != NULL && eis->heightObj != NULL)
+	height = eis->height;
+    else if ((eisM != NULL) && (eisM->heightObj != NULL))
+	height = eisM->height;
 
     args->needed.width = width;
     args->needed.height = height;
@@ -1701,12 +1712,12 @@ static int StateProcImage(ElementArgs *args)
     Tk_Image image1, image2;
     int mask = 0;
 
-    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    draw1 = DO_BooleanForState(tree, elem, 1002, args->states.state1);
     if (draw1 == -1)
 	draw1 = 1;
     IMAGE_FOR_STATE(image1, image, args->states.state1)
 
-    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    draw2 = DO_BooleanForState(tree, elem, 1002, args->states.state2);
     if (draw2 == -1)
 	draw2 = 1;
     IMAGE_FOR_STATE(image2, image, args->states.state2)
@@ -1730,10 +1741,13 @@ static int StateProcImage(ElementArgs *args)
 static int UndefProcImage(ElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
-    ElementImage *elemX = (ElementImage *) args->elem;
+    Element *elem = args->elem;
+    ElementImage *elemX = (ElementImage *) elem;
     int modified = 0;
+    PerStateInfo *psi;
 
-    modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+    if ((psi = DynamicOption_FindData(elem->options, 1002)) != NULL)
+	modified |= PerStateInfo_Undefine(tree, &pstBoolean, psi, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstImage, &elemX->image, args->state);
     return modified;
 }
@@ -1756,7 +1770,7 @@ static int ActualProcImage(ElementArgs *args)
     switch (index) {
 	case 0:
 	{
-	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
+	    obj = DO_ObjectForState(tree, &pstBoolean, args->elem, 1002, args->state);
 	    break;
 	}
 	case 1:
@@ -2242,10 +2256,10 @@ typedef struct ElementTextStyle {
 /* Called by the dynamic-option code when an ElementTextData is allocated. */
 static void
 ElementTextStyleInit(
-    char *data
+    void *data
     )
 {
-    ElementTextStyle *ets = (ElementTextStyle *) data;
+    ElementTextStyle *ets = data;
 
 #define TEXT_UNDERLINE_EMPTYVAL -100000
     ets->underline = TEXT_UNDERLINE_EMPTYVAL;
@@ -2264,10 +2278,10 @@ typedef struct ElementTextVar {
 /* Called by the dynamic-option code when an ElementTextData is allocated. */
 static void
 ElementTextDataInit(
-    char *data
+    void *data
     )
 {
-    ElementTextData *etd = (ElementTextData *) data;
+    ElementTextData *etd = data;
 
     etd->dataType = TDT_NULL;
 }
@@ -2275,10 +2289,10 @@ ElementTextDataInit(
 /* Called by the dynamic-option code when an ElementTextLayout is allocated. */
 static void
 ElementTextLayoutInit(
-    char *data
+    void *data
     )
 {
-    ElementTextLayout *etl = (ElementTextLayout *) data;
+    ElementTextLayout *etl = data;
 
     etl->justify = TK_JUSTIFY_NULL;
     etl->lines = -1;
@@ -2398,7 +2412,7 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 
 #ifdef TEXTVAR
-    etv = (ElementTextVar *) DynamicOption_FindData(elem->options, 1001);
+    etv = DynamicOption_FindData(elem->options, 1001);
     varNameObj = etv ? etv->varNameObj : NULL;
 
     if (varNameObj != NULL) {
@@ -2415,9 +2429,9 @@ static void TextUpdateStringRep(ElementArgs *args)
     }
 #endif
 
-    etd = (ElementTextData *) DynamicOption_FindData(elem->options, 1006);
+    etd = DynamicOption_FindData(elem->options, 1006);
     if (masterX != NULL)
-	etdM = (ElementTextData *) DynamicOption_FindData(elem->master->options, 1006);
+	etdM = DynamicOption_FindData(elem->master->options, 1006);
 
     dataObj = etd ? etd->dataObj : NULL;
     if ((dataObj == NULL) && (etdM != NULL))
@@ -2576,7 +2590,7 @@ TextUpdateLayout(
 	dbwin("TextUpdateLayout: %s %p (%s) %s\n",
 	    Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master", func);
 
-    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
+    etl2 = DynamicOption_FindData(elem->options, 1007);
     if (etl2 != NULL && etl2->layout != NULL) {
 	if (tree->debug.enable && tree->debug.textLayout)
 	    dbwin("    FREE\n");
@@ -2594,9 +2608,9 @@ TextUpdateLayout(
     if ((text == NULL) || (textLen == 0))
 	return etl2;
 
-    etl = (ElementTextLayout *) DynamicOption_FindData(elem->options, 1005);
+    etl = DynamicOption_FindData(elem->options, 1005);
     if (masterX != NULL)
-	etlM = (ElementTextLayout *) DynamicOption_FindData(elem->master->options, 1005);
+	etlM = DynamicOption_FindData(elem->master->options, 1005);
 
     if (etl != NULL && etl->lines != -1)
 	lines = etl->lines;
@@ -2671,7 +2685,7 @@ static Tcl_VarTraceProc VarTraceProc_Text;
 
 static void TextTraceSet(Tcl_Interp *interp, ElementText *elemX)
 {
-    ElementTextVar *etv = (ElementTextVar *) DynamicOption_FindData(elemX->header.options, 1001);
+    ElementTextVar *etv = DynamicOption_FindData(elemX->header.options, 1001);
     Tcl_Obj *varNameObj = etv ? etv->varNameObj : NULL;
 
     if (varNameObj != NULL) {
@@ -2684,7 +2698,7 @@ static void TextTraceSet(Tcl_Interp *interp, ElementText *elemX)
 
 static void TextTraceUnset(Tcl_Interp *interp, ElementText *elemX)
 {
-    ElementTextVar *etv = (ElementTextVar *) DynamicOption_FindData(elemX->header.options, 1001);
+    ElementTextVar *etv = DynamicOption_FindData(elemX->header.options, 1001);
     Tcl_Obj *varNameObj = etv ? etv->varNameObj : NULL;
 
     if (varNameObj != NULL) {
@@ -2700,7 +2714,7 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
 {
     ElementText *elemX = (ElementText *) clientData;
     ElementText *masterX = (ElementText *) elemX->header.master;
-    ElementTextVar *etv = (ElementTextVar *) DynamicOption_FindData(elemX->header.options, 1001);
+    ElementTextVar *etv = DynamicOption_FindData(elemX->header.options, 1001);
     Tcl_Obj *varNameObj = etv ? etv->varNameObj : NULL;
     Tcl_Obj *valueObj;
 
@@ -2751,7 +2765,7 @@ static void DeleteProcText(ElementArgs *args)
 	ckfree(elemX->text);
 	elemX->text = NULL;
     }
-    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
+    etl2 = DynamicOption_FindData(elem->options, 1007);
     if (etl2 != NULL && etl2->layout != NULL)
 	TextLayout_Free(etl2->layout);
     DynamicOption_Free1(tree, &elem->options, 1007, sizeof(ElementTextLayout2));
@@ -2789,7 +2803,7 @@ static int ConfigProcText(ElementArgs *args)
 	    }
 
 #ifdef TEXTVAR
-	    etv = (ElementTextVar *) DynamicOption_FindData(elem->options, 1001);
+	    etv = DynamicOption_FindData(elem->options, 1001);
 	    if (etv != NULL) {
 		etv->tree = tree;
 		etv->item = args->config.item;
@@ -2873,11 +2887,11 @@ TextRedoLayoutIfNeeded(
     ElementTextLayout *etl, *etlM = NULL;
     ElementTextLayout2 *etl2;
 
-    etl = (ElementTextLayout *) DynamicOption_FindData(elem->options, 1005);
+    etl = DynamicOption_FindData(elem->options, 1005);
     if (masterX != NULL)
-	etlM = (ElementTextLayout *) DynamicOption_FindData(elem->master->options, 1005);
+	etlM = DynamicOption_FindData(elem->master->options, 1005);
 
-    etl2 = (ElementTextLayout2 *) DynamicOption_FindData(elem->options, 1007);
+    etl2 = DynamicOption_FindData(elem->options, 1007);
 
     /* If text wrapping is disabled, the layout doesn't change */
     if (etl != NULL && etl->wrap != TEXT_WRAP_NULL)
@@ -2983,11 +2997,11 @@ static void DisplayProcText(ElementArgs *args)
     }
 
 #ifdef TEXT_STYLE
-    ets = (ElementTextStyle *) DynamicOption_FindData(elem->options, 1008);
+    ets = DynamicOption_FindData(elem->options, 1008);
     if (ets != NULL && ets->underline != TEXT_UNDERLINE_EMPTYVAL)
 	underline = ets->underline;
     else if (masterX != NULL) {
-	etsM = (ElementTextStyle *) DynamicOption_FindData(elem->master->options, 1008);
+	etsM = DynamicOption_FindData(elem->master->options, 1008);
 	if (etsM != NULL && etsM->underline != TEXT_UNDERLINE_EMPTYVAL)
 	    underline = etsM->underline;
     }
@@ -3112,9 +3126,9 @@ static void NeededProcText(ElementArgs *args)
     ElementTextLayout *etl, *etlM = NULL;
     ElementTextLayout2 *etl2;
 
-    etl = (ElementTextLayout *) DynamicOption_FindData(args->elem->options, 1005);
+    etl = DynamicOption_FindData(args->elem->options, 1005);
     if (masterX != NULL)
-	etlM = (ElementTextLayout *) DynamicOption_FindData(args->elem->master->options, 1005);
+	etlM = DynamicOption_FindData(args->elem->master->options, 1005);
 
     if ((masterX != NULL) && masterX->stringRepInvalid) {
 	args->elem = (Element *) masterX;
@@ -3225,13 +3239,13 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
     int dataType = TDT_NULL;
     Tcl_Obj *obj;
 
-    etd = (ElementTextData *) DynamicOption_FindData(elem->options, 1006);
+    etd = DynamicOption_FindData(elem->options, 1006);
     if (etd != NULL) {
 	dataObj = etd->dataObj;
 	dataType = etd->dataType;
     }
     if (dataType == TDT_NULL && masterX != NULL) {
-	etdM = (ElementTextData *) DynamicOption_FindData(elem->master->options, 1006);
+	etdM = DynamicOption_FindData(elem->master->options, 1006);
 	/* FIXME: get dataObj from master? */
 	if (etdM != NULL)
 	    dataType = etdM->dataType;
@@ -3317,11 +3331,11 @@ static int UndefProcText(ElementArgs *args)
     int modified = 0;
     PerStateInfo *psi;
 
-    if ((psi = (PerStateInfo *) DynamicOption_FindData(args->elem->options, 1002)) != NULL)
+    if ((psi = DynamicOption_FindData(args->elem->options, 1002)) != NULL)
 	modified |= PerStateInfo_Undefine(tree, &pstBoolean, psi, args->state);
-    if ((psi = (PerStateInfo *) DynamicOption_FindData(args->elem->options, 1003)) != NULL)
+    if ((psi = DynamicOption_FindData(args->elem->options, 1003)) != NULL)
 	modified |= PerStateInfo_Undefine(tree, &pstColor, psi, args->state);
-    if ((psi = (PerStateInfo *) DynamicOption_FindData(args->elem->options, 1004)) != NULL)
+    if ((psi = DynamicOption_FindData(args->elem->options, 1004)) != NULL)
 	modified |= PerStateInfo_Undefine(tree, &pstFont, psi, args->state);
 
     return modified;
@@ -4116,6 +4130,9 @@ int TreeElement_Init(Tcl_Interp *interp)
 
     /* FIXME: memory leak with dynamically-allocated ClientData. */
 
+    /*
+     * bitmap
+     */
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-background",
 	&pstColor, TreeStateFromObj);
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-bitmap",
@@ -4125,6 +4142,9 @@ int TreeElement_Init(Tcl_Interp *interp)
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-foreground",
 	&pstColor, TreeStateFromObj);
 
+    /*
+     * border
+     */
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-background",
@@ -4132,11 +4152,38 @@ int TreeElement_Init(Tcl_Interp *interp)
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-relief",
 	&pstRelief, TreeStateFromObj);
 
-    PerStateCO_Init(elemTypeImage.optionSpecs, "-draw",
-	&pstBoolean, TreeStateFromObj);
+    /*
+     * image
+     */
+    DynamicCO_Init(elemTypeImage.optionSpecs, "-draw",
+	1002, sizeof(PerStateInfo),
+	Tk_Offset(PerStateInfo, obj),
+	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
+	(DynamicOptionInitProc *) NULL);
     PerStateCO_Init(elemTypeImage.optionSpecs, "-image",
 	&pstImage, TreeStateFromObj);
 
+    /* 2 options in the same structure. */
+    DynamicCO_Init(elemTypeImage.optionSpecs, "-height",
+	1001, sizeof(ElementImageSize),
+	Tk_Offset(ElementImageSize, heightObj),
+	Tk_Offset(ElementImageSize, height), &pixelsCO,
+	(DynamicOptionInitProc *) NULL);
+    DynamicCO_Init(elemTypeImage.optionSpecs, "-width",
+	1001, sizeof(ElementImageSize),
+	Tk_Offset(ElementImageSize, widthObj),
+	Tk_Offset(ElementImageSize, width), &pixelsCO,
+	(DynamicOptionInitProc *) NULL);
+
+    DynamicCO_Init(elemTypeImage.optionSpecs, "-tiled",
+	1003, sizeof(int),
+	-1,
+	0, &booleanCO,
+	DynamicOptionInitBoolean);
+
+    /*
+     * rect
+     */
     PerStateCO_Init(elemTypeRect.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
     PerStateCO_Init(elemTypeRect.optionSpecs, "-fill",
@@ -4144,6 +4191,9 @@ int TreeElement_Init(Tcl_Interp *interp)
     PerStateCO_Init(elemTypeRect.optionSpecs, "-outline",
 	&pstColor, TreeStateFromObj);
 
+    /* 
+     * text
+     */
     /* 3 options in the same structure. */
     DynamicCO_Init(elemTypeText.optionSpecs, "-data",
 	1006, sizeof(ElementTextData),
@@ -4193,17 +4243,17 @@ int TreeElement_Init(Tcl_Interp *interp)
 
     DynamicCO_Init(elemTypeText.optionSpecs, "-draw",
 	1002, sizeof(PerStateInfo),
-	Tk_Offset(struct PerStateInfo, obj),
+	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
     DynamicCO_Init(elemTypeText.optionSpecs, "-fill",
 	1003, sizeof(PerStateInfo),
-	Tk_Offset(struct PerStateInfo, obj),
+	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-fill", &pstColor, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
     DynamicCO_Init(elemTypeText.optionSpecs, "-font",
 	1004, sizeof(PerStateInfo),
-	Tk_Offset(struct PerStateInfo, obj),
+	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-font", &pstFont, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
     DynamicCO_Init(elemTypeText.optionSpecs, "-textvariable",
@@ -4225,6 +4275,9 @@ int TreeElement_Init(Tcl_Interp *interp)
 	ElementTextStyleInit);
 #endif
 
+    /*
+     * window
+     */
     PerStateCO_Init(elemTypeWindow.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
 
