@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.66 2006/12/02 21:38:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.67 2006/12/04 20:54:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -113,6 +113,7 @@ struct MElementLink
     int *onion, onionCount; /* -union option info */
     int minWidth, fixedWidth, maxWidth;
     int minHeight, fixedHeight, maxHeight;
+    PerStateInfo visible; /* -visible */
 };
 
 /*
@@ -169,15 +170,10 @@ struct Layout
     int uPadX[2];	/* padding due to -union */
     int uPadY[2];	/* padding due to -union */
     int temp;
+    int visible;	/* TRUE if the element should be displayed. */
 };
 
-#ifdef CACHE_ELEM_SIZE
-#define IS_HIDDEN(L) (!DETACH_OR_UNION((L)->master) && \
-    ((L)->eLink->neededWidth * (L)->eLink->neededHeight <= 0))
-#else
-#define IS_HIDDEN(L) (!DETACH_OR_UNION((L)->master) && \
-    ((L)->neededWidth * (L)->neededHeight <= 0))
-#endif
+#define IS_HIDDEN(L) ((L)->visible == 0)
 
 /*
  *----------------------------------------------------------------------
@@ -606,6 +602,22 @@ Style_DoLayoutH(
 #endif
 	}
 
+	/* Remember whether this element is visible or not. First check the
+	 * -visible style layout option. If it is not false, then check for
+	 * zero size. */
+	layout->visible = PerStateBoolean_ForState(drawArgs->tree,
+		&eLink1->visible, drawArgs->state, NULL) != 0;
+	if (layout->visible) {
+#ifdef CACHE_ELEM_SIZE
+	    if (!DETACH_OR_UNION(eLink1) && (eLink2->neededWidth *
+		    eLink2->neededHeight <= 0))
+#else
+	    if (!DETACH_OR_UNION(eLink1) && (layout->neededWidth *
+		    layout->neededHeight <= 0))
+#endif
+		layout->visible = 0;
+	}
+
 	if (IS_HIDDEN(layout))
 	    continue;
 
@@ -632,10 +644,37 @@ Style_DoLayoutH(
     /* Calculate the padding around elements surrounded by -union elements */
     for (i = 0; i < eLinkCount; i++)
     {
+	struct Layout *layout = &layouts[i];
+	int first = -1, last = -1;
+
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	eLink1 = &eLinks1[i];
 
 	if (eLink1->onion == NULL)
 	    continue;
+
+	for (j = 0; j < eLink1->onionCount; j++)
+	{
+	    struct Layout *layout = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout))
+		continue;
+
+	    /* Remember the first and last visible elements surrounded by
+	     * this -union element. */
+	    if (first == -1)
+		first = j;
+	    last = j;
+	}
+
+	/* If there are no visible elements surrounded by this -union
+	 * element, then hide it. */
+	if (first == -1) {
+	    layout->visible = 0;
+	    continue;
+	}
 
 	ePadX = eLink1->ePadX;
 	ePadY = eLink1->ePadY;
@@ -656,16 +695,16 @@ Style_DoLayoutH(
 	    {
 		uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
-		if (j == 0) /* topmost */
+		if (j == first) /* topmost */
 		    uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
-		if (j == eLink1->onionCount - 1) /* bottommost */
+		if (j == last) /* bottommost */
 		    uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 	    }
 	    else
 	    {
-		if (j == 0) /* leftmost */
+		if (j == first) /* leftmost */
 		    uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
-		if (j == eLink1->onionCount - 1) /* rightmost */
+		if (j == last) /* rightmost */
 		    uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
 		uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 		uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
@@ -1938,6 +1977,19 @@ Style_NeededSize(
 #endif
 	}
 
+	layout->visible = PerStateBoolean_ForState(tree, &eLink1->visible,
+		state, NULL) != 0;
+	if (layout->visible) {
+#ifdef CACHE_ELEM_SIZE
+	    if (!DETACH_OR_UNION(eLink1) && (eLink2->neededWidth *
+		    eLink2->neededHeight <= 0))
+#else
+	    if (!DETACH_OR_UNION(eLink1) && (layout->neededWidth *
+		    layout->neededHeight <= 0))
+#endif
+		layout->visible = 0;
+	}
+
 	if (IS_HIDDEN(layout))
 	    continue;
 
@@ -1951,13 +2003,37 @@ Style_NeededSize(
     /* Figure out the padding around elements surrounded by -union elements */
     for (i = 0; i < masterStyle->numElements; i++)
     {
-	if (IS_HIDDEN(&layouts[i]))
+	struct Layout *layout = &layouts[i];
+	int first = -1, last = -1;
+
+	if (IS_HIDDEN(layout))
 	    continue;
 
 	eLink1 = &eLinks1[i];
 
 	if (eLink1->onion == NULL)
 	    continue;
+
+	for (j = 0; j < eLink1->onionCount; j++)
+	{
+	    struct Layout *layout = &layouts[eLink1->onion[j]];
+
+	    if (IS_HIDDEN(layout))
+		continue;
+
+	    /* Remember the first and last visible elements surrounded by
+	     * this -union element. */
+	    if (first == -1)
+		first = j;
+	    last = j;
+	}
+
+	/* If there are no visible elements surrounded by this -union
+	 * element, then hide it. */
+	if (first == -1) {
+	    layout->visible = 0;
+	    continue;
+	}
 
 	ePadX = eLink1->ePadX;
 	ePadY = eLink1->ePadY;
@@ -1978,16 +2054,16 @@ Style_NeededSize(
 	    {
 		uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
-		if (j == 0) /* topmost */
+		if (j == first) /* topmost */
 		    uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
-		if (j == eLink1->onionCount - 1) /* bottommost */
+		if (j == last) /* bottommost */
 		    uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
 	    }
 	    else
 	    {
-		if (j == 0) /* leftmost */
+		if (j == first) /* leftmost */
 		    uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
-		if (j == eLink1->onionCount - 1) /* rightmost */
+		if (j == last) /* rightmost */
 		    uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
 		uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 		uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
@@ -2803,6 +2879,9 @@ MElementLink_FreeResources(
 {
     if (eLink->onion != NULL)
 	WCFREE(eLink->onion, int, eLink->onionCount);
+    PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
+    if (eLink->visible.obj != NULL)
+	Tcl_DecrRefCount(eLink->visible.obj);
 }
 
 /*
@@ -5330,7 +5409,7 @@ enum {
     OPTION_INDENT, OPTION_iPADX, OPTION_iPADY, OPTION_MAXHEIGHT,
     OPTION_MAXWIDTH, OPTION_MINHEIGHT, OPTION_MINWIDTH, OPTION_PADX,
     OPTION_PADY, OPTION_SQUEEZE, OPTION_STICKY, OPTION_UNION,
-    OPTION_WIDTH
+    OPTION_WIDTH, OPTION_VISIBLE
 };
 
 /*
@@ -5475,6 +5554,10 @@ LayoutOptionToObj(
 		return Tcl_NewStringObj(flags, n);
 	    break;
 	}
+	case OPTION_VISIBLE:
+	{
+	    return eLink->visible.obj;
+	}
     }
     return NULL;
 }
@@ -5515,7 +5598,7 @@ StyleLayoutCmd(
 	"-detach", "-expand", "-height", "-iexpand",
 	"-indent", "-ipadx", "-ipady", "-maxheight", "-maxwidth", "-minheight",
 	"-minwidth", "-padx", "-pady", "-squeeze", "-sticky", "-union",
-	"-width",
+	"-width", "-visible",
 	(char *) NULL
     };
     if (objc < 5)
@@ -5935,16 +6018,47 @@ StyleLayoutCmd(
 		}
 		break;
 	    }
+	    case OPTION_VISIBLE:
+	    {
+		/* Already configured this once. */
+		if (eLink->visible.obj != NULL &&
+			eLink->visible.obj != saved.visible.obj) {
+		    PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
+		    Tcl_DecrRefCount(eLink->visible.obj);
+
+		/* First configure. Don't free the saved data. */
+		} else {
+		    eLink->visible.data = NULL;
+		    eLink->visible.count = 0;
+		}
+		eLink->visible.obj = objv[i + 1];
+		Tcl_IncrRefCount(eLink->visible.obj);
+		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean,
+			&eLink->visible) != TCL_OK) {
+		    goto badConfig;
+		}
+		break;
+	    }
 	}
     }
     if (saved.onion && (eLink->onion != saved.onion))
 	WCFREE(saved.onion, int, saved.onionCount);
+    if (saved.visible.obj != NULL &&
+	    saved.visible.obj != eLink->visible.obj) {
+	PerStateInfo_Free(tree, &pstBoolean, &saved.visible);
+	Tcl_DecrRefCount(saved.visible.obj);
+    }
     Style_Changed(tree, style);
     return TCL_OK;
 
 badConfig:
     if (eLink->onion && (eLink->onion != saved.onion))
 	WCFREE(eLink->onion, int, eLink->onionCount);
+    if (eLink->visible.obj != NULL &&
+	    eLink->visible.obj != saved.visible.obj) {
+	PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
+	Tcl_DecrRefCount(eLink->visible.obj);
+    }
     *eLink = saved;
     return TCL_ERROR;
 }
@@ -6857,9 +6971,12 @@ TreeStyle_ChangeState(
     )
 {
     IStyle *style = (IStyle *) style_;
-    IElementLink *eLink;
+    MStyle *masterStyle = style->master;
+    MElementLink *eLink1;
+    IElementLink *eLink2;
     ElementArgs args;
     int i, eMask, mask = 0;
+    int visible1, visible2;
 
     if (state1 == state2)
 	return 0;
@@ -6868,16 +6985,27 @@ TreeStyle_ChangeState(
     args.states.state1 = state1;
     args.states.state2 = state2;
 
-    for (i = 0; i < style->master->numElements; i++)
+    for (i = 0; i < masterStyle->numElements; i++)
     {
-	eLink = &style->elements[i];
-	args.elem = eLink->elem;
-	eMask = (*eLink->elem->typePtr->stateProc)(&args);
+	eLink2 = &style->elements[i];
+	args.elem = eLink2->elem;
+	eMask = (*eLink2->elem->typePtr->stateProc)(&args);
+
+	eLink1 = &masterStyle->elements[i];
+	if (eLink1->visible.count > 0) {
+	    visible1 = PerStateBoolean_ForState(tree,
+		    &eLink1->visible, state1, NULL);
+	    visible2 = PerStateBoolean_ForState(tree,
+		    &eLink1->visible, state2, NULL);
+	    if ((visible1 == 0) != (visible2 == 0))
+		eMask |= CS_DISPLAY | CS_LAYOUT;
+	}
+
 	if (eMask)
 	{
 #ifdef CACHE_ELEM_SIZE
 	    if (eMask & CS_LAYOUT)
-		eLink->neededWidth = eLink->neededHeight = -1;
+		eLink2->neededWidth = eLink2->neededHeight = -1;
 #endif
 	    mask |= eMask;
 	}
@@ -6926,6 +7054,18 @@ Tree_UndefineState(
     IElementLink *eLink;
     int i, columnIndex;
     ElementArgs args;
+
+    hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
+    while (hPtr != NULL)
+    {
+	MStyle *masterStyle = (MStyle *) Tcl_GetHashValue(hPtr);
+	for (i = 0; i < masterStyle->numElements; i++)
+	{
+	    MElementLink *eLink1 = &masterStyle->elements[i];
+	    PerStateInfo_Undefine(tree, &pstBoolean, &eLink1->visible, state);
+	}
+	hPtr = Tcl_NextHashEntry(&search);
+    }
 
     args.tree = tree;
     args.state = state;
