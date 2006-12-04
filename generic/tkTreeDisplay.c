@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.71 2006/12/04 01:40:20 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.72 2006/12/04 05:49:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5783,7 +5783,9 @@ displayRetry:
 	dInfo->flags |= DINFO_DRAW_HIGHLIGHT | DINFO_DRAW_BORDER;
 
     if (dInfo->flags & (DINFO_DRAW_BORDER | DINFO_DRAW_HIGHLIGHT)) {
-	if (TreeTheme_DrawBorders(tree, drawable) != TCL_OK) {
+	if (tree->useTheme && TreeTheme_DrawBorders(tree, drawable) == TCL_OK) {
+	    /* nothing */
+	} else {
 
 	    /* Draw focus rectangle (outside of 3D-border) */
 	    if ((dInfo->flags & DINFO_DRAW_HIGHLIGHT) &&
@@ -6461,8 +6463,10 @@ Tree_RelayoutWindow(
 	dInfo->pixmap = None;
     }
 
-    TreeTheme_Relayout(tree);
-    TreeTheme_SetBorders(tree);
+    if (tree->useTheme) {
+	TreeTheme_Relayout(tree);
+	TreeTheme_SetBorders(tree);
+    }
 
     Tree_EventuallyRedraw(tree);
 }
