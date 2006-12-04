@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.70 2006/12/04 00:20:27 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.71 2006/12/04 01:40:20 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2698,7 +2698,7 @@ GetOnScreenColumnsForItemAux(
 	    if (dItem->spans[columnIndex] != columnIndex)
 		goto next;
 	    /* Calculate the width of the span. */
-	    for (i = columnIndex + 1; columnIndex < tree->columnCount &&
+	    for (i = columnIndex + 1; i < tree->columnCount &&
 		    dItem->spans[i] == columnIndex; i++) {
 		width += TreeColumn_GetDInfo(column2)->width;
 		column2 = TreeColumn_Next(column2);
