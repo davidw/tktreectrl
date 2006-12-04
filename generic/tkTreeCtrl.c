@@ -7,10 +7,12 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.91 2006/12/02 21:21:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.92 2006/12/04 00:21:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
+#include "tclInt.h" /* TclGetIntForIndex */
+
 #ifdef WIN32
 #include <windows.h>
 #endif
@@ -85,7 +87,7 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_PIXELS, "-borderwidth", "borderWidth", "BorderWidth",
      DEF_LISTBOX_BORDER_WIDTH, Tk_Offset(TreeCtrl, borderWidthObj),
      Tk_Offset(TreeCtrl, borderWidth),
-     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+     0, (ClientData) NULL, TREE_CONF_BORDERS | TREE_CONF_RELAYOUT},
     {TK_OPTION_COLOR, "-buttoncolor", "buttonColor", "ButtonColor",
      "#808080", -1, Tk_Offset(TreeCtrl, buttonColor),
      0, (ClientData) NULL, TREE_CONF_BUTTON | TREE_CONF_REDISPLAY},
@@ -149,7 +151,7 @@ static Tk_OptionSpec optionSpecs[] = {
      "HighlightThickness", DEF_LISTBOX_HIGHLIGHT_WIDTH,
      Tk_Offset(TreeCtrl, highlightWidthObj),
      Tk_Offset(TreeCtrl, highlightWidth),
-     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+     0, (ClientData) NULL, TREE_CONF_BORDERS | TREE_CONF_RELAYOUT},
     {TK_OPTION_PIXELS, "-indent", "indent", "Indent",
      "19", Tk_Offset(TreeCtrl, indentObj),
      Tk_Offset(TreeCtrl, indent),
@@ -411,7 +413,11 @@ TreeObjCmd(
     TreeDInfo_Init(tree);
 
     Tk_CreateEventHandler(tree->tkwin,
+#ifdef USE_TTK
+	    ExposureMask|StructureNotifyMask|FocusChangeMask|ActivateMask|VirtualEventMask,
+#else
 	    ExposureMask|StructureNotifyMask|FocusChangeMask|ActivateMask,
+#endif
 	    TreeEventProc, (ClientData) tree);
 
     /* Must do this on Unix because Tk_GCForColor() uses
@@ -1511,9 +1517,18 @@ badWrap:
 
     tree->useIndent = MAX(tree->indent, ButtonMaxWidth(tree));
 
-    if (tree->highlightWidth < 0)
-	tree->highlightWidth = 0;
-    tree->inset = tree->highlightWidth + tree->borderWidth;
+    if (createFlag)
+	mask |= TREE_CONF_BORDERS;
+
+    if (mask & TREE_CONF_BORDERS) {
+	if (tree->highlightWidth < 0)
+	    tree->highlightWidth = 0;
+	if (TreeTheme_SetBorders(tree) != TCL_OK) {
+	    tree->inset.left = tree->inset.top =
+	    tree->inset.right = tree->inset.bottom =
+		    tree->highlightWidth + tree->borderWidth;
+	}
+    }
 
     if (oldShowRoot != tree->showRoot) {
 	TreeItem_InvalidateHeight(tree, tree->root);
@@ -1657,6 +1672,16 @@ TreeEventProc(
 		Tcl_EventuallyFree((ClientData) tree, TreeDestroy);
 	    }
 	    break;
+#ifdef USE_TTK
+	case VirtualEvent:
+	    if (!strcmp("ThemeChanged", ((XVirtualEvent *)(eventPtr))->name)) {
+		TreeTheme_ThemeChanged(tree);
+		tree->widthOfColumns = -1;
+		tree->widthOfColumnsLeft = tree->widthOfColumnsRight = -1;
+		Tree_RelayoutWindow(tree);
+	    }
+	    break;
+#endif
     }
 }
 
@@ -1923,11 +1948,12 @@ TreeComputeGeometry(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    if (TreeTheme_ComputeGeometry(tree) != TCL_OK) {
-	Tk_SetInternalBorder(tree->tkwin, tree->inset);
-	Tk_GeometryRequest(tree->tkwin, tree->width + tree->inset * 2,
-		tree->height + tree->inset * 2);
-    }
+    Tk_SetInternalBorderEx(tree->tkwin,
+	    tree->inset.left, tree->inset.right,
+	    tree->inset.top, tree->inset.bottom);
+    Tk_GeometryRequest(tree->tkwin,
+	    tree->width + tree->inset.left + tree->inset.right,
+	    tree->height + tree->inset.top + tree->inset.bottom);
 }
 
 /*
@@ -4122,6 +4148,8 @@ LoupeCmd(
     return TCL_OK;
 }
 
+#ifndef USE_TTK
+
 /*
  *--------------------------------------------------------------
  *
@@ -4190,6 +4218,8 @@ Tree_TheWorldHasChanged(
     RecomputeWidgets(winPtr);
 }
 
+#endif /* !USE_TTK */
+
 /*
  * In order to find treectrl.tcl during initialization, the following script
  * is invoked.
@@ -4225,7 +4255,11 @@ Treectrl_Init(
     Tcl_Interp *interp		/* Interpreter the package is loading into. */
     )
 {
-    static /*CONST*/ char *tcl_version = "8.4";
+#ifdef USE_TTK
+    static CONST char *tcl_version = "8.5";
+#else
+    static CONST char *tcl_version = "8.4";
+#endif
 
 #ifdef USE_TCL_STUBS
     if (Tcl_InitStubs(interp, tcl_version, 0) == NULL) {

@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.37 2006/11/21 02:00:54 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.38 2006/12/04 00:22:29 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -1493,4 +1493,17 @@ proc ::TreeCtrl::PercentsCmd {T char object event detail charMap} {
 	}
     }
     return
+}
+
+namespace eval TreeCtrl {
+catch {
+    foreach theme [ttk::style theme names] {
+	ttk::style theme settings $theme {
+	    ttk::style configure TreeCtrlHeading -relief raised -font TkHeadingFont
+	    ttk::style map TreeCtrlHeading -relief {
+		pressed sunken
+	    }
+	}
+    }
+}
 }
