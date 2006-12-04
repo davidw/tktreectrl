@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.56 2006/12/02 21:41:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.57 2006/12/04 05:50:38 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5068,7 +5068,7 @@ DynamicOption_Find(
  *----------------------------------------------------------------------
  */
 
-char *
+void *
 DynamicOption_FindData(
     DynamicOption *first,	/* Head of linked list. */
     int id			/* Unique id. */
