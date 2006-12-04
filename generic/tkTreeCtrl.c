@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.92 2006/12/04 00:21:29 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.93 2006/12/04 05:49:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1523,7 +1523,9 @@ badWrap:
     if (mask & TREE_CONF_BORDERS) {
 	if (tree->highlightWidth < 0)
 	    tree->highlightWidth = 0;
-	if (TreeTheme_SetBorders(tree) != TCL_OK) {
+	if (tree->useTheme && TreeTheme_SetBorders(tree) == TCL_OK) {
+	    /* nothing */
+	} else {
 	    tree->inset.left = tree->inset.top =
 	    tree->inset.right = tree->inset.bottom =
 		    tree->highlightWidth + tree->borderWidth;
