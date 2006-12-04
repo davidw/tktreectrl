@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.69 2006/12/03 00:22:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.70 2006/12/04 00:20:27 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2689,6 +2689,7 @@ GetOnScreenColumnsForItemAux(
 	    columnIndex < tree->columnCount; columnIndex++) {
 	if (TreeColumn_Lock(column) != lock)
 	    break;
+	column2 = TreeColumn_Next(column);
 	width = TreeColumn_GetDInfo(column)->width;
 	if (width == 0) /* also handles hidden columns */
 	    goto next;
@@ -2697,7 +2698,6 @@ GetOnScreenColumnsForItemAux(
 	    if (dItem->spans[columnIndex] != columnIndex)
 		goto next;
 	    /* Calculate the width of the span. */
-	    column2 = TreeColumn_Next(column);
 	    for (i = columnIndex + 1; columnIndex < tree->columnCount &&
 		    dItem->spans[i] == columnIndex; i++) {
 		width += TreeColumn_GetDInfo(column2)->width;
@@ -2712,7 +2712,7 @@ next:
 	x += width;
 	if (x >= maxX)
 	    break;
-	column = TreeColumn_Next(column);
+	column = column2;
     }
 }
 
@@ -5782,33 +5782,43 @@ displayRetry:
     if (tree->doubleBuffer == DOUBLEBUFFER_NONE)
 	dInfo->flags |= DINFO_DRAW_HIGHLIGHT | DINFO_DRAW_BORDER;
 
-    /* Draw focus rectangle (outside of 3D-border) */
-    if ((dInfo->flags & DINFO_DRAW_HIGHLIGHT) && (tree->highlightWidth > 0)) {
-	GC fgGC, bgGC;
+    if (dInfo->flags & (DINFO_DRAW_BORDER | DINFO_DRAW_HIGHLIGHT)) {
+	if (TreeTheme_DrawBorders(tree, drawable) != TCL_OK) {
 
-	DebugDrawBorder(tree, 0, tree->highlightWidth, tree->highlightWidth,
-		tree->highlightWidth, tree->highlightWidth);
+	    /* Draw focus rectangle (outside of 3D-border) */
+	    if ((dInfo->flags & DINFO_DRAW_HIGHLIGHT) &&
+		    (tree->highlightWidth > 0)) {
+		GC fgGC, bgGC;
 
-	bgGC = Tk_GCForColor(tree->highlightBgColorPtr, drawable);
-	if (tree->gotFocus)
-	    fgGC = Tk_GCForColor(tree->highlightColorPtr, drawable);
-	else
-	    fgGC = bgGC;
-	TkpDrawHighlightBorder(tkwin, fgGC, bgGC, tree->highlightWidth, drawable);
-	dInfo->flags &= ~DINFO_DRAW_HIGHLIGHT;
-    }
+		DebugDrawBorder(tree, 0, tree->highlightWidth,
+			tree->highlightWidth, tree->highlightWidth,
+			tree->highlightWidth);
 
-    /* Draw 3D-border (inside of focus rectangle) */
-    if ((dInfo->flags & DINFO_DRAW_BORDER) && (tree->borderWidth > 0)) {
-	DebugDrawBorder(tree, tree->highlightWidth,
-		tree->borderWidth, tree->borderWidth,
-		tree->borderWidth, tree->borderWidth);
+		bgGC = Tk_GCForColor(tree->highlightBgColorPtr, drawable);
+		if (tree->gotFocus)
+		    fgGC = Tk_GCForColor(tree->highlightColorPtr, drawable);
+		else
+		    fgGC = bgGC;
+		TkpDrawHighlightBorder(tkwin, fgGC, bgGC, tree->highlightWidth,
+			drawable);
+		dInfo->flags &= ~DINFO_DRAW_HIGHLIGHT;
+	    }
 
-	Tk_Draw3DRectangle(tkwin, drawable, tree->border, tree->highlightWidth,
-		tree->highlightWidth, Tk_Width(tkwin) - tree->highlightWidth * 2,
-		Tk_Height(tkwin) - tree->highlightWidth * 2, tree->borderWidth,
-		tree->relief);
-	dInfo->flags &= ~DINFO_DRAW_BORDER;
+	    /* Draw 3D-border (inside of focus rectangle) */
+	    if ((dInfo->flags & DINFO_DRAW_BORDER) && (tree->borderWidth > 0)) {
+		DebugDrawBorder(tree, tree->highlightWidth,
+			tree->borderWidth, tree->borderWidth,
+			tree->borderWidth, tree->borderWidth);
+
+		Tk_Draw3DRectangle(tkwin, drawable, tree->border,
+			tree->highlightWidth, tree->highlightWidth,
+			Tk_Width(tkwin) - tree->highlightWidth * 2,
+			Tk_Height(tkwin) - tree->highlightWidth * 2,
+			tree->borderWidth, tree->relief);
+		dInfo->flags &= ~DINFO_DRAW_BORDER;
+	    }
+	}
+	dInfo->flags &= ~(DINFO_DRAW_BORDER | DINFO_DRAW_HIGHLIGHT);
     }
 
 displayExit:
@@ -6416,14 +6426,12 @@ Tree_RelayoutWindow(
 	DINFO_OUT_OF_DATE |
 	DINFO_CHECK_COLUMN_WIDTH |
 	DINFO_DRAW_HEADER |
+	DINFO_DRAW_HIGHLIGHT |
+	DINFO_DRAW_BORDER |
 	DINFO_SET_ORIGIN_X |
 	DINFO_SET_ORIGIN_Y |
 	DINFO_UPDATE_SCROLLBAR_X |
 	DINFO_UPDATE_SCROLLBAR_Y;
-    if (tree->highlightWidth > 0)
-	dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
-    if (tree->borderWidth > 0)
-	dInfo->flags |= DINFO_DRAW_BORDER;
     dInfo->xOrigin = tree->xOrigin;
     dInfo->yOrigin = tree->yOrigin;
 
@@ -6452,6 +6460,9 @@ Tree_RelayoutWindow(
 	Tk_FreePixmap(tree->display, dInfo->pixmap);
 	dInfo->pixmap = None;
     }
+
+    TreeTheme_Relayout(tree);
+    TreeTheme_SetBorders(tree);
 
     Tree_EventuallyRedraw(tree);
 }
@@ -6504,10 +6515,15 @@ Tree_FocusChanged(
 	hPtr = Tcl_NextHashEntry(&search);
     }
 
+#ifdef USE_TTK
+    dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
+    Tree_EventuallyRedraw(tree);
+#else
     if (tree->highlightWidth > 0) {
 	dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
 	Tree_EventuallyRedraw(tree);
     }
+#endif
 }
 
 /*
@@ -6767,7 +6783,6 @@ TreeDisplay_ColumnDeleted(
     TreeColumn column		/* Column to remove. */
     )
 {
-    TreeColumnDInfo dColumn = TreeColumn_GetDInfo(column);
 #ifdef DCOLUMN
     TreeDInfo dInfo = tree->dInfo;
     Tcl_HashSearch search;
@@ -6794,9 +6809,35 @@ if (tree->debug.enable && tree->debug.display)
 	hPtr = Tcl_NextHashEntry(&search);
     }
 #endif
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * TreeDisplay_FreeColumnDInfo --
+ *
+ *	Free any display info associated with a column when it is
+ *	deleted.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+TreeDisplay_FreeColumnDInfo(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeColumn column		/* Column info. */
+    )
+{
+    TreeColumnDInfo dColumn = TreeColumn_GetDInfo(column);
 
     if (dColumn != NULL)
-	ckfree((char *) dColumn);
+	ckfree((char *) dColumn);    
 }
 
 /*
@@ -6890,17 +6931,12 @@ Tree_InvalidateArea(
 	dItem = dItem->next;
     }
 
-    /* Could check border and highlight separately */
-    if (tree->inset > 0) {
-	if ((x1 < Tree_BorderLeft(tree)) ||
-		(y1 < Tree_BorderTop(tree)) ||
-		(x2 > Tree_BorderRight(tree)) ||
-		(y2 > Tree_BorderBottom(tree))) {
-	    if (tree->highlightWidth > 0)
-		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
-	    if (tree->borderWidth > 0)
-		dInfo->flags |= DINFO_DRAW_BORDER;
-	}
+    if ((x1 < Tree_BorderLeft(tree)) ||
+	    (y1 < Tree_BorderTop(tree)) ||
+	    (x2 > Tree_BorderRight(tree)) ||
+	    (y2 > Tree_BorderBottom(tree))) {
+	dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
+	dInfo->flags |= DINFO_DRAW_BORDER;
     }
 
     /* Invalidate part of the whitespace */
@@ -7018,20 +7054,15 @@ Tree_InvalidateRegion(
 	dItem = dItem->next;
     }
 
-    /* Could check border and highlight separately */
-    if (tree->inset > 0) {
-	TkClipBox(region, &rect);
-	x1 = rect.x, x2 = rect.x + rect.width;
-	y1 = rect.y, y2 = rect.y + rect.height;
-	if ((x1 < Tree_BorderLeft(tree)) ||
-		(y1 < Tree_BorderTop(tree)) ||
-		(x2 > Tree_BorderRight(tree)) ||
-		(y2 > Tree_BorderBottom(tree))) {
-	    if (tree->highlightWidth > 0)
-		dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
-	    if (tree->borderWidth > 0)
-		dInfo->flags |= DINFO_DRAW_BORDER;
-	}
+    TkClipBox(region, &rect);
+    x1 = rect.x, x2 = rect.x + rect.width;
+    y1 = rect.y, y2 = rect.y + rect.height;
+    if ((x1 < Tree_BorderLeft(tree)) ||
+	    (y1 < Tree_BorderTop(tree)) ||
+	    (x2 > Tree_BorderRight(tree)) ||
+	    (y2 > Tree_BorderBottom(tree))) {
+	dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
+	dInfo->flags |= DINFO_DRAW_BORDER;
     }
 
     /* Invalidate part of the whitespace */
