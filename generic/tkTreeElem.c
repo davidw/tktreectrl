@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.54 2006/12/04 05:51:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.55 2006/12/04 20:11:18 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2398,6 +2398,7 @@ static void TextUpdateStringRep(ElementArgs *args)
     if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
 	ckfree(elemX->text);
 	elemX->text = NULL;
+	elemX->textLen = 0;
     }
 
     /* If -text is specified, -data, -datatype and -format are ignored */
@@ -2416,14 +2417,17 @@ static void TextUpdateStringRep(ElementArgs *args)
     varNameObj = etv ? etv->varNameObj : NULL;
 
     if (varNameObj != NULL) {
-	Tcl_Obj *valueObj = Tcl_ObjGetVar2(tree->interp, varNameObj, NULL, TCL_GLOBAL_ONLY);
+	Tcl_Obj *valueObj = Tcl_ObjGetVar2(tree->interp, varNameObj, NULL,
+		TCL_GLOBAL_ONLY);
 	
 	if (valueObj == NULL) {
 	    /* not possible I think */
 	} else {
 	    char *string = Tcl_GetStringFromObj(valueObj, &elemX->textLen);
-	    elemX->text = ckalloc(elemX->textLen);
-	    memcpy(elemX->text, string, elemX->textLen);
+	    if (elemX->textLen > 0) {
+		elemX->text = ckalloc(elemX->textLen);
+		memcpy(elemX->text, string, elemX->textLen);
+	    }
 	}
 	return;
     }
@@ -2553,8 +2557,10 @@ static void TextUpdateStringRep(ElementArgs *args)
 
 	if (resultObj != NULL) {
 	    char *string = Tcl_GetStringFromObj(resultObj, &elemX->textLen);
-	    elemX->text = ckalloc(elemX->textLen);
-	    memcpy(elemX->text, string, elemX->textLen);
+	    if (elemX->textLen > 0) {
+		elemX->text = ckalloc(elemX->textLen);
+		memcpy(elemX->text, string, elemX->textLen);
+	    }
 	}
     }
 }
@@ -3171,7 +3177,7 @@ static void NeededProcText(ElementArgs *args)
 	    text = masterX->text;
 	    textLen = masterX->textLen;
 	}
-	if (text != NULL) {
+	if (textLen > 0) {
 	    int maxWidth = -1;
 
 	    tkfont = DO_FontForState(tree, elem, 1004, state);
@@ -3204,6 +3210,7 @@ static void HeightProcText(ElementArgs *args)
     int state = args->state;
     int height = 0;
     char *text = NULL;
+    int textLen = 0;
     Tk_Font tkfont;
     Tk_FontMetrics fm;
     ElementTextLayout2 *etl2;
@@ -3215,10 +3222,12 @@ static void HeightProcText(ElementArgs *args)
     } else {
 	if (elemX->text != NULL) {
 	    text = elemX->text;
+	    textLen = elemX->textLen;
 	} else if ((masterX != NULL) && (masterX->text != NULL)) {
 	    text = masterX->text;
+	    textLen = masterX->textLen;
 	}
-	if (text != NULL) {
+	if (textLen > 0) {
 	    tkfont = DO_FontForState(tree, elem, 1004, state);
 	    if (tkfont == NULL)
 		tkfont = tree->tkfont;
