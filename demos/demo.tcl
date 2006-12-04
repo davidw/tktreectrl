@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.58 2006/12/02 21:42:59 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.59 2006/12/04 00:15:40 treectrl Exp $
 
 set VERSION 2.2
 
@@ -61,37 +61,6 @@ if {[catch {
     package require dbwin 1.0
 }]} {
     proc dbwin s {puts -nonewline $s}
-}
-
-set tile 0
-set tileFull 0 ; # 1 if using tile-aware treectrl
-catch {
-    package require tile 0.7.8
-    namespace export style
-    namespace eval ::tile {
-	namespace export setTheme
-    }
-    namespace eval ::ttk {
-	namespace import ::style
-	namespace import ::tile::setTheme
-    }
-    set tile 1
-}
-if {$tile} {
-    # Don't import ttk::entry, it messes up the edit bindings, and I'm not
-    # sure how to get/set the equivalent -borderwidth, -selectborderwidth
-    # etc options of a TEntry.
-    set entryCmd ::ttk::entry
-    set buttonCmd ::ttk::button
-    set checkbuttonCmd ::ttk::checkbutton
-    set radiobuttonCmd ttk::radiobutton
-    set scrollbarCmd ::ttk::scrollbar
-} else {
-    set entryCmd ::entry
-    set buttonCmd ::button
-    set checkbuttonCmd ::checkbutton
-    set radiobuttonCmd ::radiobutton
-    set scrollbarCmd ::scrollbar
 }
 
 # This gets called if 'package require' won't work during development.
@@ -168,6 +137,45 @@ if {[info exists env(TREECTRL_LIBRARY)]} {
 }
 puts "demo.tcl: treectrl_library=$treectrl_library"
 
+set tile 0
+set tileFull 0 ; # 1 if using tile-aware treectrl
+catch {
+    if {[ttk::style layout TreeCtrl] ne ""} {
+	set tile 1
+	set tileFull 1
+    }
+}
+if {$tile == 0} {
+    catch {
+	package require tile 0.7.8
+	namespace export style
+	namespace eval ::tile {
+	    namespace export setTheme
+	}
+	namespace eval ::ttk {
+	    namespace import ::style
+	    namespace import ::tile::setTheme
+	}
+	set tile 1
+    }
+}
+if {$tile} {
+    # Don't import ttk::entry, it messes up the edit bindings, and I'm not
+    # sure how to get/set the equivalent -borderwidth, -selectborderwidth
+    # etc options of a TEntry.
+    set entryCmd ::ttk::entry
+    set buttonCmd ::ttk::button
+    set checkbuttonCmd ::ttk::checkbutton
+    set radiobuttonCmd ttk::radiobutton
+    set scrollbarCmd ::ttk::scrollbar
+} else {
+    set entryCmd ::entry
+    set buttonCmd ::button
+    set checkbuttonCmd ::checkbutton
+    set radiobuttonCmd ::radiobutton
+    set scrollbarCmd ::scrollbar
+}
+
 option add *TreeCtrl.useTheme 1
 #option add *TreeCtrl.itemPrefix item
 #option add *TreeCtrl.ColumnPrefix col
@@ -185,6 +193,35 @@ switch -- $::thisPlatform {
     }
 }
 
+if {$tile} {
+    set font TkDefaultFont
+} else {
+    switch -- $::thisPlatform {
+	macintosh {
+	    set font {Geneva 9}
+	}
+	macosx {
+	    set font {{Lucida Grande} 11}
+	}
+	unix {
+	    set font {Helvetica -12}
+	}
+	default {
+	    # There is a bug on my Win98 box with Tk_MeasureChars() and
+	    # MS Sans Serif 8.
+	    set font {{MS Sans} 8}
+	}
+    }
+}
+option add *TreeCtrl.font $font
+
+array set fontInfo [font actual $font]
+set fontInfo(-weight) bold
+eval font create DemoFontBold [array get fontInfo]
+
+array set fontInfo [font actual $font]
+set fontInfo(-underline) 1
+eval font create DemoFontUnderline [array get fontInfo]
 
 # Demo sources
 foreach file {
@@ -441,7 +478,7 @@ proc MakeIdentifyWindow {} {
     wm title $w "TkTreeCtrl Identify"
     set wText $w.text
     text $wText -state disabled -width 50 -height 2 -font [[DemoList] cget -font]
-    $wText tag configure tagBold -font "[[DemoList] cget -font] bold"
+    $wText tag configure tagBold -font DemoFontBold
     pack $wText -expand yes -fill both
     wm protocol $w WM_DELETE_WINDOW "ToggleIdentifyWindow"
     return
@@ -670,23 +707,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
     } else {
 	frame $f -borderwidth 1 -relief sunken
     }
-    switch -- $::thisPlatform {
-	macintosh {
-	    set font {Geneva 9}
-	}
-	macosx {
-	    set font {{Lucida Grande} 11}
-	}
-	unix {
-	    set font {Helvetica -12}
-	}
-	default {
-	    # There is a bug on my Win98 box with Tk_MeasureChars() and
-	    # MS Sans Serif 8.
-	    set font {{MS Sans} 8}
-	}
-    }
-    treectrl $f.t -highlightthickness 0 -borderwidth 0 -font $font
+    treectrl $f.t -highlightthickness 0 -borderwidth 0
     $f.t configure -xscrollincrement 20
 #    $f.t configure -itemprefix item# -columnprefix column#
     $f.t debug configure -enable no -display yes -erasecolor pink \
