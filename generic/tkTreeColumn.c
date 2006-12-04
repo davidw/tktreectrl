@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.71 2006/12/03 00:22:52 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.72 2006/12/04 00:20:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2350,6 +2350,7 @@ Column_Free(
 	Tk_FreeImage(column->image);
     if (column->textLayout != NULL)
 	TextLayout_Free(column->textLayout);
+    TreeDisplay_FreeColumnDInfo(tree, column);
     Tk_FreeConfigOptions((char *) column, column->optionTable, tree->tkwin);
     WFREE(column, TreeColumn_);
     tree->columnCount--;
