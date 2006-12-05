@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.55 2006/12/04 20:11:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.56 2006/12/05 01:42:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2197,10 +2197,14 @@ typedef struct ElementText ElementText;
 struct ElementText
 {
     Element header;
-    Tcl_Obj *textObj;			/* -text */
-    char *text;
-    int textLen;
-    int stringRepInvalid;
+    char *textCfg;		/* -text */
+    char *text;			/* This will be the same as textCfg, or it
+				 * will be a dynamically allocated string
+				 * from any -data or -textvariable. */
+#define STRINGREP_INVALID -1
+    int textLen;		/* Number of bytes (not characters) in the
+				 * UTF-8 string. If -1, it means the string
+				 * representation is invalid. */
     struct PerStateGC *gc;
 };
 #define TEXTVAR
@@ -2330,8 +2334,7 @@ static Tk_OptionSpec textOptionSpecs[] = {
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_LAYOUT},
     {TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementText, textObj),
-     Tk_Offset(ElementText, text),
+     (char *) NULL, -1, Tk_Offset(ElementText, textCfg),
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
 #ifdef TEXTVAR
     {TK_OPTION_CUSTOM, "-textvariable", (char *) NULL, (char *) NULL,
@@ -2365,12 +2368,12 @@ static int WorldChangedProcText(ElementArgs *args)
     int mask = 0;
 
     if ((flagS | flagM) & TEXT_CONF_STRINGREP) {
-	elemX->stringRepInvalid = TRUE;
+	elemX->textLen = STRINGREP_INVALID;
     }
 
-    if (elemX->stringRepInvalid ||
+    if ((elemX->textLen == STRINGREP_INVALID) ||
 	    ((flagS | flagM) & TEXT_CONF_LAYOUT) ||
-	    /* Not always needed */
+	    /* Not needed if this element has its own font. */
 	    (flagT & TREE_CONF_FONT)) {
 	mask |= CS_DISPLAY | CS_LAYOUT;
     }
@@ -2387,7 +2390,8 @@ static void TextUpdateStringRep(ElementArgs *args)
     Element *elem = args->elem;
     ElementText *elemX = (ElementText *) elem;
     ElementText *masterX = (ElementText *) elem->master;
-    Tcl_Obj *dataObj, *formatObj, *textObj;
+    Tcl_Obj *dataObj, *formatObj;
+    char *text;
     ElementTextData *etd, *etdM = NULL;
 #ifdef TEXTVAR
     ElementTextVar *etv;
@@ -2395,20 +2399,19 @@ static void TextUpdateStringRep(ElementArgs *args)
 #endif
     int dataType;
 
-    if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
+    /* Free any string allocated as a result of -data or -textvariable. */
+    if ((elemX->text != NULL) && (elemX->text != elemX->textCfg)) {
 	ckfree(elemX->text);
-	elemX->text = NULL;
-	elemX->textLen = 0;
     }
 
-    /* If -text is specified, -data, -datatype and -format are ignored */
-    textObj = elemX->textObj;
-    if ((textObj == NULL) && (masterX != NULL))
-	textObj = masterX->textObj; 
+    /* Forget any string, and mark the string rep as no-longer invalid. */
+    elemX->text = NULL;
+    elemX->textLen = 0;
 
-    if (textObj != NULL) {
-	if (elemX->textObj != NULL)
-	    (void) Tcl_GetStringFromObj(elemX->textObj, &elemX->textLen);
+    /* If -text is specified, then -data and -textvariable are ignored. */
+    if (elemX->textCfg != NULL) {
+	elemX->text = elemX->textCfg;
+	elemX->textLen = strlen(elemX->textCfg);
 	return;
     }
 
@@ -2423,10 +2426,12 @@ static void TextUpdateStringRep(ElementArgs *args)
 	if (valueObj == NULL) {
 	    /* not possible I think */
 	} else {
-	    char *string = Tcl_GetStringFromObj(valueObj, &elemX->textLen);
+	    /* FIXME: do I need to allocate a copy, or can I just point
+	     * to the internal rep of the string object? */
+	    text = Tcl_GetStringFromObj(valueObj, &elemX->textLen);
 	    if (elemX->textLen > 0) {
 		elemX->text = ckalloc(elemX->textLen);
-		memcpy(elemX->text, string, elemX->textLen);
+		memcpy(elemX->text, text, elemX->textLen);
 	    }
 	}
 	return;
@@ -2556,10 +2561,10 @@ static void TextUpdateStringRep(ElementArgs *args)
 	}
 
 	if (resultObj != NULL) {
-	    char *string = Tcl_GetStringFromObj(resultObj, &elemX->textLen);
+	    text = Tcl_GetStringFromObj(resultObj, &elemX->textLen);
 	    if (elemX->textLen > 0) {
 		elemX->text = ckalloc(elemX->textLen);
-		memcpy(elemX->text, string, elemX->textLen);
+		memcpy(elemX->text, text, elemX->textLen);
 	    }
 	}
     }
@@ -2719,7 +2724,6 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
     CONST char *name1, CONST char *name2, int flags)
 {
     ElementText *elemX = (ElementText *) clientData;
-    ElementText *masterX = (ElementText *) elemX->header.master;
     ElementTextVar *etv = DynamicOption_FindData(elemX->header.options, 1001);
     Tcl_Obj *varNameObj = etv ? etv->varNameObj : NULL;
     Tcl_Obj *valueObj;
@@ -2731,14 +2735,9 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
 
     if (flags & TCL_TRACE_UNSETS) {
 	if ((flags & TCL_TRACE_DESTROYED) && !(flags & TCL_INTERP_DESTROYED)) {
-	    char *text = elemX->text;
-	    int textLen = elemX->textLen;
-	    if ((text == NULL) && (masterX != NULL)) {
-		text = masterX->text;
-		textLen = masterX->textLen;
-	    }
-	    if (text != NULL) {
-		valueObj = Tcl_NewStringObj(text, textLen);
+	    /* Use the current string if it is valid. */
+	    if (elemX->textLen > 0) {
+		valueObj = Tcl_NewStringObj(elemX->text, elemX->textLen);
 	    } else {
 		valueObj = Tcl_NewStringObj("", 0);
 	    }
@@ -2751,7 +2750,7 @@ static char *VarTraceProc_Text(ClientData clientData, Tcl_Interp *interp,
 	return (char *) NULL;
     }
 
-    elemX->stringRepInvalid = TRUE;
+    elemX->textLen = STRINGREP_INVALID;
     Tree_ElementChangedItself(etv->tree, etv->item, etv->column,
 	(Element *) elemX, TEXT_CONF_TEXTVAR, CS_LAYOUT | CS_DISPLAY);
     return (char *) NULL;
@@ -2767,7 +2766,7 @@ static void DeleteProcText(ElementArgs *args)
 
     if (elemX->gc != NULL)
 	PerStateGC_Free(tree, &elemX->gc);
-    if ((elemX->textObj == NULL) && (elemX->text != NULL)) {
+    if ((elemX->textCfg == NULL) && (elemX->text != NULL)) {
 	ckfree(elemX->text);
 	elemX->text = NULL;
     }
@@ -2789,6 +2788,7 @@ static int ConfigProcText(ElementArgs *args)
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
+    char *textCfg = elemX->textCfg;
 #ifdef TEXTVAR
     ElementTextVar *etv;
     Tcl_Obj *varNameObj;
@@ -2822,19 +2822,7 @@ static int ConfigProcText(ElementArgs *args)
 		valueObj = Tcl_ObjGetVar2(interp, varNameObj,
 			NULL, TCL_GLOBAL_ONLY);
 		if (valueObj == NULL) {
-		    ElementText *masterX = (ElementText *) elem->master;
-		    char *text = elemX->text;
-		    int textLen = elemX->textLen;
-		    if ((text == NULL) && (masterX != NULL)) {
-			text = masterX->text;
-			textLen = masterX->textLen;
-		    }
-		    /* This may not be the current string rep */
-		    if (text != NULL) {
-			valueObj = Tcl_NewStringObj(text, textLen);
-		    } else {
-			valueObj = Tcl_NewStringObj("", 0);
-		    }
+		    valueObj = Tcl_NewStringObj("", 0);
 		    Tcl_IncrRefCount(valueObj);
 		    /* This validates the variable name. We get an error
 		     * if it is the name of an array */
@@ -2857,6 +2845,11 @@ static int ConfigProcText(ElementArgs *args)
 	    Tk_RestoreSavedOptions(&savedOptions);
 	}
     }
+
+    /* If -text was specified, then do not try to free the old value in
+     * TextUpdateStringRep. */
+    if (textCfg != elemX->textCfg && elemX->text == textCfg)
+	elemX->text = NULL;
 
 #ifdef TEXTVAR
     TextTraceSet(interp, elemX);
@@ -3136,18 +3129,17 @@ static void NeededProcText(ElementArgs *args)
     if (masterX != NULL)
 	etlM = DynamicOption_FindData(args->elem->master->options, 1005);
 
-    if ((masterX != NULL) && masterX->stringRepInvalid) {
+    if ((masterX != NULL) && (masterX->textLen == STRINGREP_INVALID)) {
 	args->elem = (Element *) masterX;
 	TextUpdateStringRep(args);
 	args->elem = elem;
-	masterX->stringRepInvalid = FALSE;
     }
-    if (elemX->stringRepInvalid) {
+    if (elemX->textLen == STRINGREP_INVALID) {
 	TextUpdateStringRep(args);
-	elemX->stringRepInvalid = FALSE;
     }
 
-    etl2 = TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth, args->needed.maxWidth);
+    etl2 = TextUpdateLayout("NeededProcText", args, args->needed.fixedWidth,
+	    args->needed.maxWidth);
     if (etl2 != NULL) {
 	etl2->layoutWidth = -1;
 	etl2->neededWidth = -1;
@@ -3246,7 +3238,6 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
     ElementTextData *etd, *etdM = NULL;
     Tcl_Obj *dataObj = NULL;
     int dataType = TDT_NULL;
-    Tcl_Obj *obj;
 
     etd = DynamicOption_FindData(elem->options, 1006);
     if (etd != NULL) {
@@ -3269,14 +3260,15 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
 		(*sv) = elemX->text;
 	    break;
 	case SORT_DOUBLE:
-	    if (dataObj != NULL && dataType == TDT_DOUBLE)
-		obj = dataObj;
-	    else
-		obj = elemX->textObj;
-	    if (obj == NULL)
+	    if (dataObj != NULL && dataType == TDT_DOUBLE) {
+		if (Tcl_GetDoubleFromObj(tree->interp, dataObj, dv) != TCL_OK)
+		    return TCL_ERROR;
+	    } else if (elemX->textCfg != NULL) {
+		if (Tcl_GetDouble(tree->interp, elemX->textCfg, dv) != TCL_OK)
+		    return TCL_ERROR;
+	    } else {
 		return TCL_ERROR;
-	    if (Tcl_GetDoubleFromObj(tree->interp, obj, dv) != TCL_OK)
-		return TCL_ERROR;
+	    }
 	    break;
 	case SORT_LONG:
 	    if (dataObj != NULL && dataType != TDT_NULL) {
@@ -3293,8 +3285,8 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
 		    break;
 		}
 	    }
-	    if (elemX->textObj != NULL)
-		if (Tcl_GetLongFromObj(tree->interp, elemX->textObj, lv) != TCL_OK)
+	    if (elemX->textCfg != NULL)
+		if (TclGetLong(tree->interp, elemX->textCfg, lv) != TCL_OK)
 		    return TCL_ERROR;
 	    break;
     }
