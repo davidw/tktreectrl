@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.59 2006/12/06 00:52:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.60 2006/12/06 01:24:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -485,6 +485,7 @@ struct DotStatePriv
 #elif defined(MAC_OSX_TK)
     CGrafPtr saveWorld;
     GDHandle saveDevice;
+    RgnHandle rgn;
 #else
     GC gc;
     TkRegion rgn;
@@ -520,7 +521,10 @@ DotRect_Setup(
     struct DotStatePriv *dotState = (struct DotStatePriv *) p;
 #ifdef WIN32
 #elif defined(MAC_OSX_TK)
+    MacDrawable *macWin = (MacDrawable *) drawable;
     GWorldPtr destPort;
+    Rect bounds;
+    RgnHandle clipRgn;
 #else
     XGCValues gcValues;
     unsigned long mask;
@@ -538,7 +542,7 @@ DotRect_Setup(
     /* XOR drawing */
     SetROP2(dotState->dc, R2_NOT);
 
-    /* Keep drawing inside the contentbox */
+    /* Keep drawing inside the contentbox. */
     dotState->rgn = CreateRectRgn(
 	Tree_ContentLeft(tree),
 	Tree_ContentTop(tree),
@@ -551,10 +555,27 @@ DotRect_Setup(
     GetGWorld(&dotState->saveWorld, &dotState->saveDevice);
     SetGWorld(destPort, NULL);
     TkMacOSXSetUpClippingRgn(drawable);
+
+    /* Save the old clip region. */
+    dotState->rgn = (RgnHandle) Tree_GetRegion(tree);
+    GetClip(dotState->rgn);
+
+    /* Keep drawing inside the contentbox. */
+    clipRgn = (RgnHandle) Tree_GetRegion(tree);
+    bounds.left = macWin->xOff + Tree_ContentLeft(tree);
+    bounds.top = macWin->yOff + Tree_ContentTop(tree);
+    bounds.right = bounds.left + Tree_ContentWidth(tree);
+    bounds.bottom = bounds.top + Tree_ContentHeight(tree);
+    RectRgn(clipRgn, &bounds);
+
+    /* Set the clipping region to the intersection of the two regions. */
+    SectRgn(dotState->rgn, clipRgn, clipRgn);
+    SetClip(clipRgn);
+    Tree_FreeRegion(tree, (TkRegion) clipRgn);
+
     PenNormal();
     PenMode(patXor);
     ShowPen();
-    /* FIXME: clipping region */
 #else
     gcValues.line_style = LineOnOffDash;
     gcValues.line_width = 1;
@@ -568,7 +589,7 @@ DotRect_Setup(
     mask = GCLineWidth | GCLineStyle | GCDashList | GCDashOffset | GCFunction;
     dotState->gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
 
-    /* Keep drawing inside the contentbox */
+    /* Keep drawing inside the contentbox. */
     dotState->rgn = Tree_GetRegion(tree);
     xrect.x = Tree_ContentLeft(tree);
     xrect.y = Tree_ContentTop(tree);
@@ -717,7 +738,8 @@ DotRect_Restore(
     TkWinReleaseDrawableDC(dotState->drawable, dotState->dc, &dotState->dcState);
 #elif defined(MAC_OSX_TK)
     HidePen();
-    /* FIXME: clipping region */
+    SetClip(dotState->rgn);
+    Tree_FreeRegion(dotState->tree, (TkRegion) dotState->rgn);
     SetGWorld(dotState->saveWorld, dotState->saveDevice);
 #else
     XSetClipMask(dotState->tree->display, dotState->gc, None);
