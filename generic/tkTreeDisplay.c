@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.73 2006/12/06 00:03:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.74 2006/12/06 00:52:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3792,13 +3792,13 @@ ScrollVerticalComplex(
 	}
 
 	/* Copy */
-	damageRgn = TkCreateRegion();
+	damageRgn = Tree_GetRegion(tree);
 	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    oldX, oldY, width, height, 0, offset, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
 	}
-	TkDestroyRegion(damageRgn);
+	Tree_FreeRegion(tree, damageRgn);
     }
     return numCopy;
 }
@@ -3888,7 +3888,7 @@ ScrollHorizontalSimple(
     dirtyMin = minX + width;
     dirtyMax = maxX - width;
 
-    damageRgn = TkCreateRegion();
+    damageRgn = Tree_GetRegion(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
@@ -3900,7 +3900,7 @@ ScrollHorizontalSimple(
 	else
 	    dirtyMin = minX;
 	Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
-	TkDestroyRegion(damageRgn);
+	Tree_FreeRegion(tree, damageRgn);
 	return;
     }
 
@@ -3909,7 +3909,7 @@ ScrollHorizontalSimple(
 	DisplayDelay(tree);
 	Tree_InvalidateRegion(tree, damageRgn);
     }
-    TkDestroyRegion(damageRgn);
+    Tree_FreeRegion(tree, damageRgn);
 #ifndef WIN32
     if (offset < 0)
 	dirtyMax = maxX;
@@ -3996,7 +3996,7 @@ ScrollVerticalSimple(
     dirtyMin = minY + height;
     dirtyMax = maxY - height;
 
-    damageRgn = TkCreateRegion();
+    damageRgn = Tree_GetRegion(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	XCopyArea(tree->display, dInfo->pixmap, dInfo->pixmap,
@@ -4008,7 +4008,7 @@ ScrollVerticalSimple(
 	else
 	    dirtyMin = minY;
 	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
-	TkDestroyRegion(damageRgn);
+	Tree_FreeRegion(tree, damageRgn);
 	return;
     }
 
@@ -4017,7 +4017,7 @@ ScrollVerticalSimple(
 	DisplayDelay(tree);
 	Tree_InvalidateRegion(tree, damageRgn);
     }
-    TkDestroyRegion(damageRgn);
+    Tree_FreeRegion(tree, damageRgn);
 #ifndef WIN32
     if (offset < 0)
 	dirtyMax = maxY;
@@ -4177,13 +4177,13 @@ ScrollHorizontalComplex(
 	}
 
 	/* Copy */
-	damageRgn = TkCreateRegion();
+	damageRgn = Tree_GetRegion(tree);
 	if (Tree_ScrollWindow(tree, dInfo->scrollGC,
 		    oldX, oldY, width, height, offset, 0, damageRgn)) {
 	    DisplayDelay(tree);
 	    Tree_InvalidateRegion(tree, damageRgn);
 	}
-	TkDestroyRegion(damageRgn);
+	Tree_FreeRegion(tree, damageRgn);
     }
     return numCopy;
 }
@@ -4395,7 +4395,7 @@ CalcWhiteSpaceRegion(
     x = 0 - tree->xOrigin;
     y = 0 - tree->yOrigin;
 
-    wsRgn = TkCreateRegion();
+    wsRgn = Tree_GetRegion(tree);
 
     /* Erase area below left columns */
     if (!dInfo->emptyL) {
@@ -4853,7 +4853,7 @@ DrawWhitespace(
     else
 	height = tree->minItemHeight;
 
-    columnRgn = TkCreateRegion();
+    columnRgn = Tree_GetRegion(tree);
 
     range = dInfo->rangeFirst;
     if (range == NULL)
@@ -4934,7 +4934,7 @@ DrawWhitespace(
 	}
     }
 
-    TkDestroyRegion(columnRgn);
+    Tree_FreeRegion(tree, columnRgn);
 }
 
 #endif /* COMPLEX_WHITESPACE */
@@ -5572,7 +5572,7 @@ displayRetry:
 		dInfo->yOrigin != tree->yOrigin) {
 	    wsRgnDif = wsRgnNew;
 	} else {
-	    wsRgnDif = TkCreateRegion();
+	    wsRgnDif = Tree_GetRegion(tree);
 	    TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
 	}
 	TkClipBox(wsRgnDif, &wsBox);
@@ -5618,8 +5618,8 @@ displayRetry:
 	    }
 	}
 	if (wsRgnDif != wsRgnNew)
-	    TkDestroyRegion(wsRgnDif);
-	TkDestroyRegion(dInfo->wsRgn);
+	    Tree_FreeRegion(tree, wsRgnDif);
+	Tree_FreeRegion(tree, dInfo->wsRgn);
 	dInfo->wsRgn = wsRgnNew;
     }
 
@@ -5633,7 +5633,7 @@ displayRetry:
 	/* Calculate the current whitespace region, subtract the old whitespace
 	 * region, and fill the difference with the background color. */
 	wsRgnNew = CalcWhiteSpaceRegion(tree);
-	wsRgnDif = TkCreateRegion();
+	wsRgnDif = Tree_GetRegion(tree);
 	TkSubtractRegion(wsRgnNew, dInfo->wsRgn, wsRgnDif);
 	TkClipBox(wsRgnDif, &wsBox);
 	if ((wsBox.width > 0) && (wsBox.height > 0)) {
@@ -5657,8 +5657,8 @@ displayRetry:
 		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], wsBox.y + wsBox.height);
 	    }
 	}
-	TkDestroyRegion(wsRgnDif);
-	TkDestroyRegion(dInfo->wsRgn);
+	Tree_FreeRegion(tree, wsRgnDif);
+	Tree_FreeRegion(tree, dInfo->wsRgn);
 	dInfo->wsRgn = wsRgnNew;
     }
 
@@ -6946,7 +6946,7 @@ Tree_InvalidateArea(
     if ((x1 < x2 && y1 < y2) && TkRectInRegion(dInfo->wsRgn, x1, y1,
 	    x2 - x1, y2 - y1)) {
 	XRectangle rect;
-	TkRegion rgn = TkCreateRegion();
+	TkRegion rgn = Tree_GetRegion(tree);
 
 	rect.x = x1;
 	rect.y = y1;
@@ -6954,7 +6954,7 @@ Tree_InvalidateArea(
 	rect.height = y2 - y1;
 	TkUnionRectWithRegion(&rect, rgn, rgn);
 	TkSubtractRegion(dInfo->wsRgn, rgn, dInfo->wsRgn);
-	TkDestroyRegion(rgn);
+	Tree_FreeRegion(tree, rgn);
     }
 
     if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
@@ -7005,7 +7005,7 @@ Tree_InvalidateRegion(
 		!= RectangleOut)
 	dInfo->flags |= DINFO_DRAW_HEADER;
 
-    rgn = TkCreateRegion();
+    rgn = Tree_GetRegion(tree);
 
     dItem = dInfo->dItem;
     while (dItem != NULL) {
@@ -7071,7 +7071,7 @@ Tree_InvalidateRegion(
     /* Invalidate part of the whitespace */
     TkSubtractRegion(dInfo->wsRgn, region, dInfo->wsRgn);
 
-    TkDestroyRegion(rgn);
+    Tree_FreeRegion(tree, rgn);
 
     if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
 	Tk_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
@@ -7180,7 +7180,7 @@ TreeDInfo_Init(
     gcValues.graphics_exposures = True;
     dInfo->scrollGC = Tk_GetGC(tree->tkwin, GCGraphicsExposures, &gcValues);
     dInfo->flags = DINFO_OUT_OF_DATE;
-    dInfo->wsRgn = TkCreateRegion();
+    dInfo->wsRgn = Tree_GetRegion(tree);
     Tcl_InitHashTable(&dInfo->itemVisHash, TCL_ONE_WORD_KEYS);
     tree->dInfo = dInfo;
 }
@@ -7236,7 +7236,7 @@ TreeDInfo_Free(
 	ckfree((char *) dInfo->xScrollIncrements);
     if (dInfo->yScrollIncrements != NULL)
 	ckfree((char *) dInfo->yScrollIncrements);
-    TkDestroyRegion(dInfo->wsRgn);
+    Tree_FreeRegion(tree, dInfo->wsRgn);
 #ifdef DCOLUMN
     hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
     while (hPtr != NULL) {

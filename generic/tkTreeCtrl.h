@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.82 2006/12/06 00:03:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.83 2006/12/06 00:52:04 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -376,6 +376,9 @@ struct TreeCtrl
 
     TreeThemeData themeData;
     GCCache *gcCache;		/* Graphics contexts for elements. */
+
+    TkRegion regionStack[8];	/* Temp region stack. */
+    int regionStackLen;		/* Number of unused regions in regionStack. */
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -877,6 +880,8 @@ extern void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawab
 extern void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
 	XColor *fg, XColor *bg,
 	int src_x, int src_y, int width, int height, int dest_x, int dest_y);
+extern TkRegion Tree_GetRegion(TreeCtrl *tree);
+extern void Tree_FreeRegion(TreeCtrl *tree, TkRegion region);
 extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
 extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,

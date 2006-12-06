@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.58 2006/12/06 00:03:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.59 2006/12/06 00:52:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -569,7 +569,7 @@ DotRect_Setup(
     dotState->gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
 
     /* Keep drawing inside the contentbox */
-    dotState->rgn = TkCreateRegion();
+    dotState->rgn = Tree_GetRegion(tree);
     xrect.x = Tree_ContentLeft(tree);
     xrect.y = Tree_ContentTop(tree);
     xrect.width = Tree_ContentRight(tree) - xrect.x;
@@ -721,6 +721,7 @@ DotRect_Restore(
     SetGWorld(dotState->saveWorld, dotState->saveDevice);
 #else
     XSetClipMask(dotState->tree->display, dotState->gc, None);
+    Tree_FreeRegion(dotState->tree, dotState->rgn);
     Tk_FreeGC(dotState->tree->display, dotState->gc);
 #endif
 }
@@ -776,6 +777,64 @@ DrawXORLine(
 }
 
 #endif /* MAC_OSX_TK */
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_GetRegion --
+ *
+ *	Return a pre-allocated TkRegion or create a new one.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+TkRegion
+Tree_GetRegion(
+    TreeCtrl *tree		/* Widget info. */
+    )
+{
+    TkRegion region;
+
+    if (tree->regionStackLen == 0) {
+	return TkCreateRegion();
+    }
+    region = tree->regionStack[--tree->regionStackLen];
+    TkSubtractRegion(region, region, region);
+    return region;
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_FreeRegion --
+ *
+ *	Push a region onto the free stack.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+void
+Tree_FreeRegion(
+    TreeCtrl *tree,		/* Widget info. */
+    TkRegion region		/* Region being released. */
+    )
+{
+    if (tree->regionStackLen == sizeof(tree->regionStack) / sizeof(TkRegion))
+	panic("Tree_FreeRegion: the stack is full");
+    tree->regionStack[tree->regionStackLen++] = region;
+}
 
 /*
  *----------------------------------------------------------------------

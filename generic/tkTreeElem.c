@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.57 2006/12/06 00:03:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.58 2006/12/06 00:52:04 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3020,7 +3020,7 @@ static void DisplayProcText(ElementArgs *args)
 	/* Use clipping if text is taller than display height */
 	if (height > args->display.height) {
 	    XRectangle rect;
-	    clipRgn = TkCreateRegion();
+	    clipRgn = Tree_GetRegion(tree);
 	    rect.x = x;
 	    rect.y = y;
 	    rect.width = args->display.width;
@@ -3032,7 +3032,7 @@ static void DisplayProcText(ElementArgs *args)
 		layout, x, y, 0, -1, underline);
 	if (clipRgn != NULL) {
 	    UnsetClipMask(tree, args->display.drawable, gc);
-	    TkDestroyRegion(clipRgn);
+	    Tree_FreeRegion(tree, clipRgn);
 	}
 	return;
     }
@@ -3054,7 +3054,7 @@ static void DisplayProcText(ElementArgs *args)
     /* Use clipping if text is taller than display height */
     if (height > args->display.height) {
 	XRectangle rect;
-	clipRgn = TkCreateRegion();
+	clipRgn = Tree_GetRegion(tree);
 	rect.x = x;
 	rect.y = y;
 	rect.width = args->display.width;
@@ -3102,7 +3102,7 @@ static void DisplayProcText(ElementArgs *args)
     }
     if (clipRgn != NULL) {
 	UnsetClipMask(tree, args->display.drawable, gc);
-	TkDestroyRegion(clipRgn);
+	Tree_FreeRegion(tree, clipRgn);
     }
 }
 

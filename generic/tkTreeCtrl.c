@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.94 2006/12/06 00:03:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.95 2006/12/06 00:52:03 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1781,6 +1781,10 @@ TreeDestroy(
     Tree_FreeAllGC(tree);
 
     Tree_FreeColumns(tree);
+
+dbwin("tree->regionStackLen = %d", tree->regionStackLen);
+    while (tree->regionStackLen > 0)
+	TkDestroyRegion(tree->regionStack[--tree->regionStackLen]);
 
     QE_DeleteBindingTable(tree->bindingTable);
 
