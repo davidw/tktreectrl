@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.74 2006/12/06 00:52:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.75 2006/12/06 23:56:14 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6687,30 +6687,37 @@ Tree_InvalidateItemDInfo(
 	    columnIndex = TreeColumn_Index(column);
 	    left = dColumn->offset;
 
+	    /* If only one column is visible, the width may be
+	    * different than the column width. */
+	    if ((TreeColumn_Lock(column) == COLUMN_LOCK_NONE) &&
+		    (tree->columnCountVis == 1)) {
+		width = area->width;
+
+	    /* All spans are 1. */
+	    } else if (dItem->spans == NULL) {
+		width = dColumn->width;
+
+	    /* If the column being redrawn is not the first in the span,
+	     * then do nothing. */
+	    } else if (columnIndex != dItem->spans[columnIndex]) {
+		goto next;
+
 	    /* Calculate the width of the entire span. */
 	    /* Do NOT call TreeColumn_UseWidth() or another routine
 	    * that calls Tree_WidthOfColumns() because that may end
 	    * up recalculating the size of items whose display info
 	    * is currently being invalidated. */
-	    if (dItem->spans == NULL) {
-		width = dColumn->width;
 	    } else {
 		width = 0;
 		column2 = column;
-		i = dItem->spans[columnIndex];
-		while (dItem->spans[i] == dItem->spans[columnIndex]) {
+		i = columnIndex;
+		while (dItem->spans[i] == columnIndex) {
 		    width += TreeColumn_GetDInfo(column2)->width;
 		    if (++i == tree->columnCount)
 			break;
 		    column2 = TreeColumn_Next(column2);
 		}
 	    }
-
-	    /* If only one column is visible, the width may be
-	    * different than the column width. */
-	    if (TreeColumn_Lock(column) == COLUMN_LOCK_NONE)
-		if (tree->columnCountVis == 1)
-		    width = area->width;
 
 	    if (width > 0) {
 		InvalidateDItemX(dItem, area, 0, left, width);
