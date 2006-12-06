@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.58 2006/12/06 00:52:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.59 2006/12/06 03:57:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3253,19 +3253,21 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
 	    if (dataObj != NULL && dataType != TDT_NULL)
 		(*sv) = Tcl_GetString(dataObj);
 	    else
-		(*sv) = elemX->text;
+		(*sv) = elemX->textCfg;
 	    break;
 	case SORT_DOUBLE:
 	    if (dataObj != NULL && dataType == TDT_DOUBLE) {
 		if (Tcl_GetDoubleFromObj(tree->interp, dataObj, dv) != TCL_OK)
 		    return TCL_ERROR;
-	    } else if (elemX->textCfg != NULL) {
+		break;
+	    }
+	    if (elemX->textCfg != NULL) {
 		if (Tcl_GetDouble(tree->interp, elemX->textCfg, dv) != TCL_OK)
 		    return TCL_ERROR;
-	    } else {
-		return TCL_ERROR;
+		break;
 	    }
-	    break;
+	    FormatResult(tree->interp, "can't get a double from an empty -text value");
+	    return TCL_ERROR;
 	case SORT_LONG:
 	    if (dataObj != NULL && dataType != TDT_NULL) {
 		if (dataType == TDT_LONG || dataType == TDT_TIME) {
@@ -3281,10 +3283,13 @@ int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, doubl
 		    break;
 		}
 	    }
-	    if (elemX->textCfg != NULL)
+	    if (elemX->textCfg != NULL) {
 		if (TclGetLong(tree->interp, elemX->textCfg, lv) != TCL_OK)
 		    return TCL_ERROR;
-	    break;
+		break;
+	    }
+	    FormatResult(tree->interp, "can't get a long from an empty -text value");
+	    return TCL_ERROR;
     }
     return TCL_OK;
 }
