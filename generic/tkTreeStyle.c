@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.67 2006/12/04 20:54:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.68 2006/12/06 04:00:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -586,6 +586,11 @@ Style_DoLayoutH(
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
 
+	layout->visible = PerStateBoolean_ForState(drawArgs->tree,
+		&eLink1->visible, drawArgs->state, NULL) != 0;
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	layout->eLink = eLink2;
 	layout->master = eLink1;
 
@@ -601,25 +606,6 @@ Style_DoLayoutH(
 	    layout->useWidth = layout->neededWidth;
 #endif
 	}
-
-	/* Remember whether this element is visible or not. First check the
-	 * -visible style layout option. If it is not false, then check for
-	 * zero size. */
-	layout->visible = PerStateBoolean_ForState(drawArgs->tree,
-		&eLink1->visible, drawArgs->state, NULL) != 0;
-	if (layout->visible) {
-#ifdef CACHE_ELEM_SIZE
-	    if (!DETACH_OR_UNION(eLink1) && (eLink2->neededWidth *
-		    eLink2->neededHeight <= 0))
-#else
-	    if (!DETACH_OR_UNION(eLink1) && (layout->neededWidth *
-		    layout->neededHeight <= 0))
-#endif
-		layout->visible = 0;
-	}
-
-	if (IS_HIDDEN(layout))
-	    continue;
 
 	for (j = 0; j < 2; j++)
 	{
@@ -1958,6 +1944,11 @@ Style_NeededSize(
 	eLink1 = &eLinks1[i];
 	eLink2 = &eLinks2[i];
 
+	layout->visible = PerStateBoolean_ForState(tree,
+		&eLink1->visible, state, NULL) != 0;
+	if (IS_HIDDEN(layout))
+	    continue;
+
 	layout->master = eLink1;
 	layout->eLink = eLink2;
 
@@ -1976,22 +1967,6 @@ Style_NeededSize(
 	    layout->useWidth = layout->neededWidth;
 #endif
 	}
-
-	layout->visible = PerStateBoolean_ForState(tree, &eLink1->visible,
-		state, NULL) != 0;
-	if (layout->visible) {
-#ifdef CACHE_ELEM_SIZE
-	    if (!DETACH_OR_UNION(eLink1) && (eLink2->neededWidth *
-		    eLink2->neededHeight <= 0))
-#else
-	    if (!DETACH_OR_UNION(eLink1) && (layout->neededWidth *
-		    layout->neededHeight <= 0))
-#endif
-		layout->visible = 0;
-	}
-
-	if (IS_HIDDEN(layout))
-	    continue;
 
 	/* No -union padding yet */
 	layout->uPadX[PAD_TOP_LEFT]     = 0;
