@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.96 2006/12/02 21:35:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.97 2006/12/06 03:58:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6450,6 +6450,12 @@ ItemSortCmd(
 			&sortItem1->longValue,
 			&sortItem1->doubleValue,
 			&sortItem1->string) != TCL_OK) {
+		char msg[128];
+		sprintf(msg, "\n    (preparing to sort item %s%d column %s%d)",
+			tree->itemPrefix, walk->id,
+			tree->columnPrefix, TreeColumn_GetID(
+			Tree_FindColumn(tree, sortData.columns[i].column)));
+		Tcl_AddErrorInfo(interp, msg);
 		result = TCL_ERROR;
 		goto done;
 	    }
