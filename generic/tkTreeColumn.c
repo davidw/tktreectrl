@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.72 2006/12/04 00:20:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.73 2006/12/06 00:03:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4558,13 +4558,12 @@ Column_Draw(
 	gcValues.foreground = column->textColor->pixel;
 	gcValues.graphics_exposures = False;
 	mask = GCFont | GCForeground | GCGraphicsExposures;
-	gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
+	gc = Tree_GetGC(tree, mask, &gcValues);
 	TextLayout_Draw(tree->display, drawable, gc,
 		column->textLayout,
 		x + layout.textLeft + sunken,
 		y + (height - h) / 2 + column->textPadY[PAD_TOP_LEFT] + sunken,
 		0, -1, -1);
-	Tk_FreeGC(tree->display, gc);
     } else if ((column->text != NULL) && (layout.bytesThatFit != 0)) {
 	XGCValues gcValues;
 	GC gc;
@@ -4590,7 +4589,7 @@ Column_Draw(
 	gcValues.foreground = column->textColor->pixel;
 	gcValues.graphics_exposures = False;
 	mask = GCFont | GCForeground | GCGraphicsExposures;
-	gc = Tk_GetGC(tree->tkwin, mask, &gcValues);
+	gc = Tree_GetGC(tree, mask, &gcValues);
 	tx = x + layout.textLeft + sunken;
 	h = column->textPadY[PAD_TOP_LEFT] + layout.fm.linespace
 	    + column->textPadY[PAD_BOTTOM_RIGHT];
@@ -4598,7 +4597,6 @@ Column_Draw(
 	ty += column->textPadY[PAD_TOP_LEFT];
 	Tk_DrawChars(tree->display, drawable, gc,
 		layout.tkfont, text, textLen, tx, ty);
-	Tk_FreeGC(tree->display, gc);
 	if (text != staticStr)
 	    ckfree(text);
     }

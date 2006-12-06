@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.72 2006/12/04 05:49:54 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.73 2006/12/06 00:03:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4229,7 +4229,7 @@ Proxy_Draw(
 #endif
     gcValues.graphics_exposures = False;
     gcMask = GCFunction | GCGraphicsExposures;
-    gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
+    gc = Tree_GetGC(tree, gcMask, &gcValues);
 
     /* GXinvert doesn't work with XFillRectangle() on Win32 or Mac */
 #if defined(WIN32) || defined(MAC_TCL)
@@ -4239,8 +4239,7 @@ Proxy_Draw(
 	    x1, y1, MAX(x2 - x1, 1), MAX(y2 - y1, 1));
 #endif
 
-    Tk_FreeGC(tree->display, gc);
-#endif
+#endif /* !MAC_OSX_TK */
 }
 
 /*

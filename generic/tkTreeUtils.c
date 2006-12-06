@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.57 2006/12/04 05:50:38 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.58 2006/12/06 00:03:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -437,7 +437,7 @@ DrawActiveOutline(
     gcValues.function = GXinvert;
 #endif
     gcMask = GCFunction;
-    gc = Tk_GetGC(tree->tkwin, gcMask, &gcValues);
+    gc = Tree_GetGC(tree, gcMask, &gcValues);
 
     if (w) /* left */
     {
@@ -467,8 +467,6 @@ DrawActiveOutline(
 	    XDrawPoint(tree->display, drawable, gc, x + i, y + height - 1);
 	}
     }
-
-    Tk_FreeGC(tree->display, gc);
 #endif
 }
 
@@ -2561,28 +2559,16 @@ int PerStateInfo_Undefine(
 
 /*****/
 
-void PerStateGC_Free(TreeCtrl *tree, struct PerStateGC **pGCPtr)
+GC Tree_GetGC(TreeCtrl *tree, unsigned long mask, XGCValues *gcValues)
 {
-    struct PerStateGC *pGC = (*pGCPtr), *next;
+    GCCache *pGC;
+    unsigned long valid = GCFont | GCForeground | GCFunction | GCBackground
+	    | GCGraphicsExposures;
 
-    while (pGC != NULL) {
-	next = pGC->next;
-	Tk_FreeGC(tree->display, pGC->gc);
-	WFREE(pGC, struct PerStateGC);
-	pGC = next;
-    }
-    (*pGCPtr) = NULL;
-}
+    if ((mask | valid) != valid)
+	panic("GCCache_Get: unsupported mask");
 
-GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask, XGCValues *gcValues)
-{
-    struct PerStateGC *pGC;
-
-    if ((mask | (GCFont | GCForeground | GCBackground | GCGraphicsExposures)) != 
-	    (GCFont | GCForeground | GCBackground | GCGraphicsExposures))
-	panic("PerStateGC_Get: unsupported mask");
-
-    for (pGC = (*pGCPtr); pGC != NULL; pGC = pGC->next) {
+    for (pGC = tree->gcCache; pGC != NULL; pGC = pGC->next) {
 	if (mask != pGC->mask)
 	    continue;
 	if ((mask & GCFont) &&
@@ -2590,6 +2576,9 @@ GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask
 	    continue;
 	if ((mask & GCForeground) &&
 		(pGC->gcValues.foreground != gcValues->foreground))
+	    continue;
+	if ((mask & GCFunction) &&
+		(pGC->gcValues.function != gcValues->function))
 	    continue;
 	if ((mask & GCBackground) &&
 		(pGC->gcValues.background != gcValues->background))
@@ -2600,14 +2589,27 @@ GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask
 	return pGC->gc;
     }
 
-    pGC = (struct PerStateGC *) ckalloc(sizeof(*pGC));
+    pGC = (GCCache *) ckalloc(sizeof(*pGC));
     pGC->gcValues = (*gcValues);
     pGC->mask = mask;
     pGC->gc = Tk_GetGC(tree->tkwin, mask, gcValues);
-    pGC->next = (*pGCPtr);
-    (*pGCPtr) = pGC;
+    pGC->next = tree->gcCache;
+    tree->gcCache = pGC;
 
     return pGC->gc;
+}
+
+void Tree_FreeAllGC(TreeCtrl *tree)
+{
+    GCCache *pGC = tree->gcCache, *next;
+
+    while (pGC != NULL) {
+	next = pGC->next;
+	Tk_FreeGC(tree->display, pGC->gc);
+	WFREE(pGC, GCCache);
+	pGC = next;
+    }
+    tree->gcCache = NULL;
 }
 
 /*****/

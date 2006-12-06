@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.81 2006/12/04 05:51:56 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.82 2006/12/06 00:03:21 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -87,6 +87,15 @@ struct PerStateType
 };
 
 /*****/
+
+typedef struct GCCache GCCache;
+struct GCCache
+{
+    unsigned long mask;
+    XGCValues gcValues;
+    GC gc;
+    GCCache *next;
+};
 
 /*
  * A TreePtrList is used for dynamically-growing lists of ClientData pointers.
@@ -366,6 +375,7 @@ struct TreeCtrl
     int optionHaxCnt;		/* Used by OptionHax_xxx */
 
     TreeThemeData themeData;
+    GCCache *gcCache;		/* Graphics contexts for elements. */
 };
 
 #define TREE_CONF_FONT 0x0001
@@ -912,15 +922,8 @@ extern Tcl_Obj *PerStateInfo_ObjForState(TreeCtrl *tree, PerStateType *typePtr,
 extern int PerStateInfo_Undefine(TreeCtrl *tree, PerStateType *typePtr,
     PerStateInfo *pInfo, int state);
 
-struct PerStateGC
-{
-    unsigned long mask;
-    XGCValues gcValues;
-    GC gc;
-    struct PerStateGC *next;
-};
-extern void PerStateGC_Free(TreeCtrl *tree, struct PerStateGC **pGCPtr);
-extern GC PerStateGC_Get(TreeCtrl *tree, struct PerStateGC **pGCPtr, unsigned long mask, XGCValues *gcValues);
+extern GC Tree_GetGC(TreeCtrl *tree, unsigned long mask, XGCValues *gcValues);
+extern void Tree_FreeAllGC(TreeCtrl *tree);
 
 extern Pixmap PerStateBitmap_ForState(TreeCtrl *tree, PerStateInfo *pInfo,
     int state, int *match);

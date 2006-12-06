@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.93 2006/12/04 05:49:26 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.94 2006/12/06 00:03:21 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1778,6 +1778,7 @@ TreeDestroy(
 	Tk_FreeGC(tree->display, tree->buttonGC);
     if (tree->lineGC != None)
 	Tk_FreeGC(tree->display, tree->lineGC);
+    Tree_FreeAllGC(tree);
 
     Tree_FreeColumns(tree);
 
