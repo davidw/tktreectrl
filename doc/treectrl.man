@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.47 2006/12/04 20:55:19 treectrl Exp $}
+  $Id: treectrl.man,v 1.48 2006/12/07 03:56:42 treectrl Exp $}
 ][manpage_begin treectrl n 2.2]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -2051,6 +2051,12 @@ The following options are supported:
 Specifies whether the element should be positioned by itself,
 i.e. independent from the other elements.
 
+[opt_def [option -draw] [arg boolean]]
+This is a [sectref {PER-STATE OPTIONS} per-state] option that determines whether
+an element should be drawn. If the value of the option evaluates to false for a given
+item state, then the element is not drawn, although it still consumes space in
+the layout.
+
 [opt_def [option -expand] [arg flags]]
 This option allows the external padding around the element
 to increase when a style has more screen space than it needs.
@@ -2677,6 +2683,7 @@ Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 the bitmap to display in the element.
 
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -2700,6 +2707,7 @@ If the value for a certain state is an empty string (the default), the
 element will not be drawn.
 
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -2739,6 +2747,7 @@ The following options are supported for image elements:
 [list_begin opt]
 
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -2766,6 +2775,7 @@ The following options are supported for rectangle elements:
 [list_begin opt]
 
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -2822,6 +2832,7 @@ The following options are supported for text elements:
 
 [list_begin opt]
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -2932,6 +2943,7 @@ is unspecified (the default), it is treated as false and the Tk window
 will not be destroyed.
 
 [opt_def [option -draw] [arg boolean]]
+Deprecated; use the style layout option [option -draw] instead.
 Specifies as a [sectref {PER-STATE OPTIONS} per-state] option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.

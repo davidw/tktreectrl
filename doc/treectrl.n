@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.63 2006/12/04 20:55:19 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.64 2006/12/07 03:56:42 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2 treectrl "Tk Commands"
 .BS
@@ -2600,6 +2600,12 @@ The following options are supported:
 Specifies whether the element should be positioned by itself,
 i.e. independent from the other elements.
 .TP
+\fB\fB-draw\fR\fR \fIboolean\fR
+This is a \fBper-state\fR option that determines whether
+an element should be drawn. If the value of the option evaluates to false for a given
+item state, then the element is not drawn, although it still consumes space in
+the layout.
+.TP
 \fB\fB-expand\fR\fR \fIflags\fR
 This option allows the external padding around the element
 to increase when a style has more screen space than it needs.
@@ -3207,6 +3213,7 @@ Specifies as a \fBper-state\fR option
 the bitmap to display in the element.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -3227,6 +3234,7 @@ If the value for a certain state is an empty string (the default), the
 element will not be drawn.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -3261,6 +3269,7 @@ An element of type \fBimage\fR can be used to display an image in an item.
 The following options are supported for image elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -3283,6 +3292,7 @@ An element of type \fBrect\fR can be used to display a rectangle in an item.
 The following options are supported for rectangle elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -3335,6 +3345,7 @@ An element of type \fBtext\fR can be used to display a text in an item.
 The following options are supported for text elements:
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
@@ -3441,6 +3452,7 @@ is unspecified (the default), it is treated as false and the Tk window
 will not be destroyed.
 .TP
 \fB\fB-draw\fR\fR \fIboolean\fR
+Deprecated; use the style layout option \fB-draw\fR instead.
 Specifies as a \fBper-state\fR option
 whether to draw the element. If the value for a certain state is an empty
 string (the default), it is treated as true and the element will be drawn.
