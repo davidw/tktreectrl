@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.59 2006/12/04 00:15:40 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.60 2006/12/07 03:52:02 treectrl Exp $
 
 set VERSION 2.2
 
@@ -1138,8 +1138,9 @@ proc ShowPopup {T x y X Y} {
     if {[llength $id] >= 4 && [lindex $id 2] eq "column"} {
 	set item [lindex $id 1]
 	set column [lindex $id 3]
-	for {set i 1} {$i <= [$T column count] - [$T column order $column]} {incr i} {
-	    set break [expr {!($i % 20)}]
+	set lock [$T column cget $column -lock]
+	for {set i 1} {$i <= [$T column order "last lock $lock"] - [$T column order $column] + 1} {incr i} {
+	    set break [expr {!(($i - 1) % 20)}]
 	    $m add radiobutton -label $i -command "$T item span $item $column $i" \
 		-variable Popup(span) -value $i -columnbreak $break
 	}
@@ -1407,7 +1408,12 @@ proc DisplayStylesInItem {item} {
 # When one item is selected in the demo list, display the styles in that item.
 # See DemoClear for why the tag "DontDelete" is used.
 set DisplayStylesInItem(item) ""
+set MouseIsDown 0
+bind [DemoList] <ButtonPress-1> {
+    set MouseIsDown 1
+}
 bind [DemoList] <ButtonRelease-1> {
+    set MouseIsDown 0
     if {$DisplayStylesInItem(item) ne ""} {
 	DisplayStylesInItem $DisplayStylesInItem(item)
 	set DisplayStylesInItem(item) ""
@@ -1415,7 +1421,11 @@ bind [DemoList] <ButtonRelease-1> {
 }
 [DemoList] notify bind DontDelete <Selection> {
     if {%c == 1} {
-	set DisplayStylesInItem(item) [%T selection get 0]
+	if {$MouseIsDown} {
+	    set DisplayStylesInItem(item) [%T selection get 0]
+	} else {
+	    DisplayStylesInItem [%T selection get 0]
+	}
     }
 }
 
@@ -1468,7 +1478,7 @@ proc DemoClear {} {
 	-yscrollincrement 0 -itemheight 0 -showheader yes \
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
-	-indent 19 -defaultstyle {} -backgroundimage "" \
+	-indent 19 -backgroundimage "" \
 	-showrootlines yes -minitemheight 0 -borderwidth [expr {$::tileFull ? 0 : 6}] \
 	-highlightthickness [expr {$::tileFull ? 0 : 3}] -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
