@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: span.tcl,v 1.4 2006/12/02 21:43:30 treectrl Exp $
+# RCS: @(#) $Id: span.tcl,v 1.5 2006/12/07 03:56:00 treectrl Exp $
 
 #
 # Demo: Column span
@@ -30,10 +30,13 @@ proc DemoSpan {} {
     # Create elements
     #
 
+    $T state define mouseover
+
     for {set i 1} {$i <= 20} {incr i} {
 	set color gray[expr {50 + $i * 2}]
 	$T element create e$i rect -width [expr {$i * 40}] -height 20 \
-	    -fill $color -outlinewidth 1 -outline gray70
+	    -fill [list white mouseover $color {}] -outlinewidth 1 \
+	    -outline gray70
 	$T element create t$i text -text "Span $i"
     }
 
@@ -64,6 +67,37 @@ proc DemoSpan {} {
 	}
     }
 
+    bind DemoSpan <Motion> {
+	SpanMotion %W %x %y
+    }
+    set ::Span(prev) ""
+    bindtags $T [list $T DemoSpan TreeCtrl [winfo toplevel $T] all]
+
+    return
+}
+
+proc SpanMotion {w x y} {
+    global Span
+    set id [$w identify $x $y]
+    if {$id eq ""} {
+    } elseif {[lindex $id 0] eq "header"} {
+    } elseif {[lindex $id 0] eq "item"} {
+	set item [lindex $id 1]
+	set column [lindex $id 3]
+	set curr [list $item $column]
+	if {$curr ne $Span(prev)} {
+	    if {$Span(prev) ne ""} {
+		eval $w item state forcolumn $Span(prev) !mouseover
+	    }
+	    $w item state forcolumn $item $column mouseover
+	    set Span(prev) $curr
+	}
+	return
+    }
+    if {$Span(prev) ne ""} {
+	eval $w item state forcolumn $Span(prev) !mouseover
+	set Span(prev) ""
+    }
     return
 }
 
