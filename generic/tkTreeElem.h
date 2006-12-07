@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.23 2006/10/30 00:52:15 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.24 2006/12/07 03:45:22 treectrl Exp $
  */
 
 typedef struct ElementType ElementType;
@@ -64,6 +64,10 @@ struct ElementArgs
     struct {
 	int state1;
 	int state2;
+	int draw1;
+	int draw2;
+	int visible1;
+	int visible2;
     } states;
     struct {
 	Tcl_Obj *obj;
