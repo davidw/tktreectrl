@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: biglist.tcl,v 1.13 2006/12/04 00:16:02 treectrl Exp $
+# RCS: @(#) $Id: biglist.tcl,v 1.14 2006/12/07 03:47:42 treectrl Exp $
 
 set ::clip 1
 proc DemoBigList {} {
@@ -40,11 +40,11 @@ if {$::clip} {
     set outline gray70
 
     $T element create eRectTop.e rect -outline $outline -fill $BigList(bg) \
-	-draw {yes open no {}} -outlinewidth 1 -open es
+	-outlinewidth 1 -open es
     $T element create eRectTop.we rect -outline $outline -fill $BigList(bg) \
-	-draw {yes open no {}} -outlinewidth 1 -open wes
+	-outlinewidth 1 -open wes
     $T element create eRectTop.w rect -outline $outline -fill $BigList(bg) \
-	-draw {yes open no {}} -outlinewidth 1 -open ws
+	-outlinewidth 1 -open ws
     $T element create eRectBottom rect -outline $outline -fill $BigList(bg) \
 	-outlinewidth 1 -open n
 
@@ -78,20 +78,20 @@ if {$::clip} {
 
     set S [$T style create styItem]
     $T style elements $S {eRectTop.e elemRectSel elemTxtItem elemTxtName}
-    $T style layout $S eRectTop.e -detach yes -indent no -iexpand xy
+    $T style layout $S eRectTop.e -detach yes -indent no -iexpand xy -draw {yes open no {}}
     $T style layout $S elemTxtItem -expand ns
     $T style layout $S elemTxtName -expand ns -padx {20}
     $T style layout $S elemRectSel -detach yes -indent no -iexpand xy
 
     set S [$T style create styID]
     $T style elements $S {eRectTop.we elemRectSel elemTxtItem}
-    $T style layout $S eRectTop.we -detach yes -indent yes -iexpand xy
+    $T style layout $S eRectTop.we -detach yes -indent yes -iexpand xy -draw {yes open no {}}
     $T style layout $S elemTxtItem -padx 6 -expand ns
     $T style layout $S elemRectSel -detach yes -indent no -iexpand xy
 
     set S [$T style create styParent]
     $T style elements $S {eRectTop.w elemRectSel elemTxtItem}
-    $T style layout $S eRectTop.w -detach yes -indent yes -iexpand xy
+    $T style layout $S eRectTop.w -detach yes -indent yes -iexpand xy -draw {yes open no {}}
     $T style layout $S elemTxtItem -padx 6 -expand ns
     $T style layout $S elemRectSel -detach yes -indent no -iexpand xy
 

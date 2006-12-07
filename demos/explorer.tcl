@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: explorer.tcl,v 1.24 2006/11/30 02:41:38 treectrl Exp $
+# RCS: @(#) $Id: explorer.tcl,v 1.25 2006/12/07 03:52:40 treectrl Exp $
 
 set Dir [file dirname [file dirname [info script]]]
 
@@ -166,14 +166,17 @@ proc DemoExplorerDetails {} {
     }
 
     # During editing, hide the text and selection-rectangle elements.
+    $T state define edit
+    $T style layout styName txtName -draw {no edit}
+    $T style layout styName elemRectSel -draw {no edit}
     $T notify bind $T <Edit-begin> {
-	%T item element configure %I %C txtName -draw no + elemRectSel -draw no
+	%T item state set %I ~edit
     }
     $T notify bind $T <Edit-accept> {
 	%T item element configure %I %C %E -text %t
     }
     $T notify bind $T <Edit-end> {
-	%T item element configure %I %C txtName -draw yes + elemRectSel -draw yes
+	%T item state set %I ~edit
     }
 
     #
@@ -362,8 +365,8 @@ proc DemoExplorerLargeIcons {} {
 
     # During editing, hide the text and selection-rectangle elements.
     $T state define edit
-    $T element configure elemTxt -draw {no edit}
-    $T element configure elemSel -draw {no edit}
+    $T style layout STYLE elemTxt -draw {no edit}
+    $T style layout STYLE elemSel -draw {no edit}
     $T notify bind $T <Edit-begin> {
 	%T item state set %I ~edit
     }
@@ -519,14 +522,17 @@ proc DemoExplorerList {} {
     }
 
     # During editing, hide the text and selection-rectangle elements.
+    $T state define edit
+    $T style layout STYLE elemTxt -draw {no edit}
+    $T style layout STYLE elemSel -draw {no edit}
     $T notify bind $T <Edit-begin> {
-	%T item element configure %I %C elemSel -draw no + elemTxt -draw no
+	%T item state set %I ~edit
     }
     $T notify bind $T <Edit-accept> {
 	%T item element configure %I %C %E -text %t
     }
     $T notify bind $T <Edit-end> {
-	%T item element configure %I %C elemSel -draw yes + elemTxt -draw yes
+	%T item state set %I ~edit
     }
 
     #
