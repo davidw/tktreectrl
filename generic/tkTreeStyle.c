@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.69 2006/12/07 00:47:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.70 2006/12/07 03:46:32 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -113,6 +113,7 @@ struct MElementLink
     int *onion, onionCount; /* -union option info */
     int minWidth, fixedWidth, maxWidth;
     int minHeight, fixedHeight, maxHeight;
+    PerStateInfo draw; /* -draw */
     PerStateInfo visible; /* -visible */
 };
 
@@ -2480,6 +2481,10 @@ void TreeStyle_Draw(
 	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
 	    continue;
 
+	if (PerStateBoolean_ForState(tree, &layout->master->draw,
+		drawArgs->state, NULL) == 0)
+	    continue;
+
 #ifdef DEBUG_DRAW
 	if (debugDraw && layout->master->onion != NULL)
 	    continue;
@@ -2677,6 +2682,10 @@ TreeStyle_UpdateWindowPositions(
 	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
 	    continue;
 
+	if (PerStateBoolean_ForState(tree, &layout->master->draw,
+		drawArgs->state, NULL) == 0)
+	    continue;
+
 	if ((layout->useWidth > 0) && (layout->useHeight > 0))
 	{
 	    int requests;
@@ -2854,6 +2863,9 @@ MElementLink_FreeResources(
 {
     if (eLink->onion != NULL)
 	WCFREE(eLink->onion, int, eLink->onionCount);
+    PerStateInfo_Free(tree, &pstBoolean, &eLink->draw);
+    if (eLink->draw.obj != NULL)
+	Tcl_DecrRefCount(eLink->draw.obj);
     PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
     if (eLink->visible.obj != NULL)
 	Tcl_DecrRefCount(eLink->visible.obj);
@@ -5380,7 +5392,7 @@ TreeStyle_ListElements(
 }
 
 enum {
-    OPTION_DETACH, OPTION_EXPAND, OPTION_HEIGHT, OPTION_iEXPAND,
+    OPTION_DETACH, OPTION_DRAW, OPTION_EXPAND, OPTION_HEIGHT, OPTION_iEXPAND,
     OPTION_INDENT, OPTION_iPADX, OPTION_iPADY, OPTION_MAXHEIGHT,
     OPTION_MAXWIDTH, OPTION_MINHEIGHT, OPTION_MINWIDTH, OPTION_PADX,
     OPTION_PADY, OPTION_SQUEEZE, OPTION_STICKY, OPTION_UNION,
@@ -5529,6 +5541,10 @@ LayoutOptionToObj(
 		return Tcl_NewStringObj(flags, n);
 	    break;
 	}
+	case OPTION_DRAW:
+	{
+	    return eLink->draw.obj;
+	}
 	case OPTION_VISIBLE:
 	{
 	    return eLink->visible.obj;
@@ -5570,7 +5586,7 @@ StyleLayoutCmd(
     MElementLink saved, *eLink;
     int i, index;
     static CONST char *optionNames[] = {
-	"-detach", "-expand", "-height", "-iexpand",
+	"-detach", "-draw", "-expand", "-height", "-iexpand",
 	"-indent", "-ipadx", "-ipady", "-maxheight", "-maxwidth", "-minheight",
 	"-minwidth", "-padx", "-pady", "-squeeze", "-sticky", "-union",
 	"-width", "-visible",
@@ -5993,23 +6009,33 @@ StyleLayoutCmd(
 		}
 		break;
 	    }
+	    case OPTION_DRAW:
 	    case OPTION_VISIBLE:
 	    {
+		PerStateInfo *psi, *psiSaved;
+
+		if (index == OPTION_DRAW) {
+		    psi = &eLink->draw;
+		    psiSaved = &saved.draw;
+		} else {
+		    psi = &eLink->visible;
+		    psiSaved = &saved.visible;
+		}
+
 		/* Already configured this once. */
-		if (eLink->visible.obj != NULL &&
-			eLink->visible.obj != saved.visible.obj) {
-		    PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
-		    Tcl_DecrRefCount(eLink->visible.obj);
+		if (psi->obj != NULL && psi->obj != psiSaved->obj) {
+		    PerStateInfo_Free(tree, &pstBoolean, psi);
+		    Tcl_DecrRefCount(psi->obj);
 
 		/* First configure. Don't free the saved data. */
 		} else {
-		    eLink->visible.data = NULL;
-		    eLink->visible.count = 0;
+		    psi->data = NULL;
+		    psi->count = 0;
 		}
-		eLink->visible.obj = objv[i + 1];
-		Tcl_IncrRefCount(eLink->visible.obj);
+		psi->obj = objv[i + 1];
+		Tcl_IncrRefCount(psi->obj);
 		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean,
-			&eLink->visible) != TCL_OK) {
+			psi) != TCL_OK) {
 		    goto badConfig;
 		}
 		break;
@@ -6018,6 +6044,11 @@ StyleLayoutCmd(
     }
     if (saved.onion && (eLink->onion != saved.onion))
 	WCFREE(saved.onion, int, saved.onionCount);
+    if (saved.draw.obj != NULL &&
+	    saved.draw.obj != eLink->draw.obj) {
+	PerStateInfo_Free(tree, &pstBoolean, &saved.draw);
+	Tcl_DecrRefCount(saved.draw.obj);
+    }
     if (saved.visible.obj != NULL &&
 	    saved.visible.obj != eLink->visible.obj) {
 	PerStateInfo_Free(tree, &pstBoolean, &saved.visible);
@@ -6029,6 +6060,11 @@ StyleLayoutCmd(
 badConfig:
     if (eLink->onion && (eLink->onion != saved.onion))
 	WCFREE(eLink->onion, int, eLink->onionCount);
+    if (eLink->draw.obj != NULL &&
+	    eLink->draw.obj != saved.draw.obj) {
+	PerStateInfo_Free(tree, &pstBoolean, &eLink->draw);
+	Tcl_DecrRefCount(eLink->draw.obj);
+    }
     if (eLink->visible.obj != NULL &&
 	    eLink->visible.obj != saved.visible.obj) {
 	PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
@@ -6951,7 +6987,7 @@ TreeStyle_ChangeState(
     IElementLink *eLink2;
     ElementArgs args;
     int i, eMask, mask = 0;
-    int visible1, visible2;
+    int undisplay;
 
     if (state1 == state2)
 	return 0;
@@ -6964,27 +7000,45 @@ TreeStyle_ChangeState(
 	args.elem = eLink2->elem;
 	args.states.state1 = state1;
 	args.states.state2 = state2;
-	eMask = (*eLink2->elem->typePtr->stateProc)(&args);
+	args.states.draw1 = args.states.draw2 = TRUE;
+	args.states.visible1 = args.states.visible2 = TRUE;
 
 	eLink1 = &masterStyle->elements[i];
-	if (eLink1->visible.count > 0) {
-	    visible1 = PerStateBoolean_ForState(tree,
-		    &eLink1->visible, state1, NULL);
-	    visible2 = PerStateBoolean_ForState(tree,
-		    &eLink1->visible, state2, NULL);
-	    /* FIXME: Changing visibility might not change the layout. */
-	    if ((visible1 == 0) != (visible2 == 0)) {
-		eMask |= CS_DISPLAY | CS_LAYOUT;
-
-		/* Hack: If a window element becomes hidden, then tell it it is
-		 * not onscreen, otherwise it will never be "drawn" in the
-		 * hidden state. */
-		if (!visible2 && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
-			&elemTypeWindow)) {
-		    args.screen.visible = FALSE;
-		    (*args.elem->typePtr->onScreenProc)(&args);
-		}
+	undisplay = FALSE;
+	eMask = 0;
+	if (eLink1->draw.count > 0) {
+	    args.states.draw1 = PerStateBoolean_ForState(tree,
+		    &eLink1->draw, state1, NULL) != 0;
+	    args.states.draw2 = PerStateBoolean_ForState(tree,
+		    &eLink1->draw, state2, NULL) != 0;
+	    if (args.states.draw1 != args.states.draw2) {
+		eMask |= CS_DISPLAY;
+		if (!args.states.draw2)
+		    undisplay = TRUE;
 	    }
+	}
+	if (eLink1->visible.count > 0) {
+	    args.states.visible1 = PerStateBoolean_ForState(tree,
+		    &eLink1->visible, state1, NULL) != 0;
+	    args.states.visible2 = PerStateBoolean_ForState(tree,
+		    &eLink1->visible, state2, NULL) != 0;
+	    /* FIXME: Changing visibility might not change the layout. */
+	    if (args.states.visible1 != args.states.visible2) {
+		eMask |= CS_DISPLAY | CS_LAYOUT;
+		if (!args.states.visible2)
+		    undisplay = TRUE;
+	    }
+	}
+
+	eMask |= (*args.elem->typePtr->stateProc)(&args);
+
+	/* Hack: If a window element becomes hidden, then tell it it is
+	* not onscreen, otherwise it will never be "drawn" in the
+	* hidden state. */
+	if (undisplay && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
+		&elemTypeWindow)) {
+	    args.screen.visible = FALSE;
+	    (*args.elem->typePtr->onScreenProc)(&args);
 	}
 
 	if (eMask)
@@ -7048,6 +7102,7 @@ Tree_UndefineState(
 	for (i = 0; i < masterStyle->numElements; i++)
 	{
 	    MElementLink *eLink1 = &masterStyle->elements[i];
+	    PerStateInfo_Undefine(tree, &pstBoolean, &eLink1->draw, state);
 	    PerStateInfo_Undefine(tree, &pstBoolean, &eLink1->visible, state);
 	}
 	hPtr = Tcl_NextHashEntry(&search);
