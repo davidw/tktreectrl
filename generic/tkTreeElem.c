@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.59 2006/12/06 03:57:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.60 2006/12/07 03:44:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -599,7 +599,9 @@ typedef struct ElementBitmap ElementBitmap;
 struct ElementBitmap
 {
     Element header;
+#ifdef DEPRECATED
     PerStateInfo draw;
+#endif
     PerStateInfo bitmap;
     PerStateInfo fg;
     PerStateInfo bg;
@@ -608,7 +610,9 @@ struct ElementBitmap
 #define BITMAP_CONF_BITMAP 0x0001
 #define BITMAP_CONF_FG 0x0002
 #define BITMAP_CONF_BG 0x0004
+#ifdef DEPRECATED
 #define BITMAP_CONF_DRAW 0x0008
+#endif
 
 static Tk_OptionSpec bitmapOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
@@ -619,10 +623,12 @@ static Tk_OptionSpec bitmapOptionSpecs[] = {
      (char *) NULL,
      Tk_Offset(ElementBitmap, bitmap.obj), Tk_Offset(ElementBitmap, bitmap),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_BITMAP},
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementBitmap, draw.obj), Tk_Offset(ElementBitmap, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, BITMAP_CONF_DRAW},
+#endif
     {TK_OPTION_CUSTOM, "-foreground", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementBitmap, fg.obj), Tk_Offset(ElementBitmap, fg),
@@ -647,7 +653,11 @@ static int WorldChangedProcBitmap(ElementArgs *args)
     if ((flagS | flagM) & BITMAP_CONF_BITMAP)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (BITMAP_CONF_DRAW | BITMAP_CONF_FG | BITMAP_CONF_BG))
+    if ((flagS | flagM) & (
+#ifdef DEPRECATED
+	    BITMAP_CONF_DRAW | 
+#endif
+	    BITMAP_CONF_FG | BITMAP_CONF_BG))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -703,14 +713,18 @@ static void DisplayProcBitmap(ElementArgs *args)
     int x = args->display.x, y = args->display.y;
     int width, height;
     int match, match2;
+#ifdef DEPRECATED
     int draw;
+#endif
     Pixmap bitmap;
     XColor *fg, *bg;
     int imgW, imgH;
 
+#ifdef DEPRECATED
     BOOLEAN_FOR_STATE(draw, draw, state)
     if (!draw)
 	return;
+#endif
 
     BITMAP_FOR_STATE(bitmap, bitmap, state)
     if (bitmap == None)
@@ -761,41 +775,53 @@ static int StateProcBitmap(ElementArgs *args)
     ElementBitmap *elemX = (ElementBitmap *) elem;
     ElementBitmap *masterX = (ElementBitmap *) elem->master;
     int match, match2;
+#ifdef DEPRECATED
     int draw1, draw2;
+#endif
     Pixmap bitmap1, bitmap2;
     XColor *fg1, *fg2;
     XColor *bg1, *bg2;
-    int mask = 0;
 
-    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
-    if (draw1 == -1)
-	draw1 = 1;
+    if (!args->states.visible2)
+	return 0;
+
     BITMAP_FOR_STATE(bitmap1, bitmap, args->states.state1)
-    COLOR_FOR_STATE(fg1, fg, args->states.state1)
-    COLOR_FOR_STATE(bg1, bg, args->states.state1)
-
-    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
-    if (draw2 == -1)
-	draw2 = 1;
     BITMAP_FOR_STATE(bitmap2, bitmap, args->states.state2)
-    COLOR_FOR_STATE(fg2, fg, args->states.state2)
-    COLOR_FOR_STATE(bg2, bg, args->states.state2)
-
-    if ((draw1 != draw2) || (fg1 != fg2) || (bg1 != bg2) || (bitmap1 != bitmap2))
-	mask |= CS_DISPLAY;
-
     if (bitmap1 != bitmap2) {
 	if ((bitmap1 != None) && (bitmap2 != None)) {
 	    int w1, h1, w2, h2;
 	    Tk_SizeOfBitmap(tree->display, bitmap1, &w1, &h1);
 	    Tk_SizeOfBitmap(tree->display, bitmap2, &w2, &h2);
 	    if ((w1 != w2) || (h1 != h2))
-		mask |= CS_LAYOUT;
-	} else
-	    mask |= CS_LAYOUT;
+		return CS_DISPLAY | CS_LAYOUT;
+	    return CS_DISPLAY;
+	}
+	return CS_DISPLAY | CS_LAYOUT;
     }
 
-    return mask;
+    /* Layout hasn't changed, and -draw layout option is false. */
+    if (!args->states.draw2)
+	return 0;
+#ifdef DEPRECATED
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+    if (draw2 == 0)
+	return 0;
+#endif
+
+    COLOR_FOR_STATE(fg1, fg, args->states.state1)
+    COLOR_FOR_STATE(fg2, fg, args->states.state2)
+    if (fg1 != fg2)
+	return CS_DISPLAY;
+
+    COLOR_FOR_STATE(bg1, bg, args->states.state1)
+    COLOR_FOR_STATE(bg2, bg, args->states.state2)
+    if (bg1 != bg2)
+	return CS_DISPLAY;
+
+    return 0;
 }
 
 static int UndefProcBitmap(ElementArgs *args)
@@ -804,7 +830,9 @@ static int UndefProcBitmap(ElementArgs *args)
     ElementBitmap *elemX = (ElementBitmap *) args->elem;
     int modified = 0;
 
+#ifdef DEPRECATED
     modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+#endif
     modified |= PerStateInfo_Undefine(tree, &pstColor, &elemX->fg, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstColor, &elemX->bg, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstBitmap, &elemX->bitmap, args->state);
@@ -817,7 +845,11 @@ static int ActualProcBitmap(ElementArgs *args)
     ElementBitmap *elemX = (ElementBitmap *) args->elem;
     ElementBitmap *masterX = (ElementBitmap *) args->elem->master;
     static CONST char *optionName[] = {
-	"-background", "-bitmap", "-draw", "-foreground",
+	"-background", "-bitmap",
+#ifdef DEPRECATED
+	"-draw",
+#endif
+	"-foreground",
 	(char *) NULL };
     int index, match, matchM;
     Tcl_Obj *obj = NULL;
@@ -837,6 +869,7 @@ static int ActualProcBitmap(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstBitmap, bitmap, args->state)
 	    break;
 	}
+#ifdef DEPRECATED
 	case 2:
 	{
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
@@ -847,6 +880,13 @@ static int ActualProcBitmap(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstColor, fg, args->state)
 	    break;
 	}
+#else
+	case 2:
+	{
+	    OBJECT_FOR_STATE(obj, pstColor, fg, args->state)
+	    break;
+	}
+#endif
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
@@ -878,7 +918,9 @@ typedef struct ElementBorder ElementBorder;
 struct ElementBorder
 {
     Element header; /* Must be first */
+#ifdef DEPRECATED
     PerStateInfo draw;
+#endif
     PerStateInfo border;
     PerStateInfo relief;
     int thickness;
@@ -895,17 +937,21 @@ struct ElementBorder
 #define BORDER_CONF_SIZE 0x0004
 #define BORDER_CONF_THICKNESS 0x0008
 #define BORDER_CONF_FILLED 0x0010
+#ifdef DEPRECATED
 #define BORDER_CONF_DRAW 0x0020
+#endif
 
 static Tk_OptionSpec borderOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-background", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementBorder, border.obj), Tk_Offset(ElementBorder, border),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_BG},
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementBorder, draw.obj), Tk_Offset(ElementBorder, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, BORDER_CONF_DRAW},
+#endif
     {TK_OPTION_CUSTOM, "-filled", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementBorder, filled),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, BORDER_CONF_FILLED},
@@ -945,9 +991,12 @@ static int WorldChangedProcBorder(ElementArgs *args)
     if ((flagS | flagM) & BORDER_CONF_SIZE)
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (BORDER_CONF_DRAW | BORDER_CONF_BG |
-		BORDER_CONF_RELIEF | BORDER_CONF_THICKNESS |
-		BORDER_CONF_FILLED))
+    if ((flagS | flagM) & (
+#ifdef DEPRECATED
+	    BORDER_CONF_DRAW |
+#endif
+	    BORDER_CONF_BG | BORDER_CONF_RELIEF | BORDER_CONF_THICKNESS |
+	    BORDER_CONF_FILLED))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -1007,14 +1056,18 @@ static void DisplayProcBorder(ElementArgs *args)
     int x = args->display.x, y = args->display.y;
     int width = args->display.width, height = args->display.height;
     int match, match2;
+#ifdef DEPRECATED
     int draw;
+#endif
     Tk_3DBorder border;
     int relief, filled = FALSE;
     int thickness = 0;
 
+#ifdef DEPRECATED
     BOOLEAN_FOR_STATE(draw, draw, state)
     if (!draw)
 	return;
+#endif
 
     BORDER_FOR_STATE(border, border, state)
     if (border == NULL)
@@ -1086,27 +1139,35 @@ static int StateProcBorder(ElementArgs *args)
     ElementBorder *elemX = (ElementBorder *) elem;
     ElementBorder *masterX = (ElementBorder *) elem->master;
     int match, match2;
+#ifdef DEPRECATED
     int draw1, draw2;
+#endif
     Tk_3DBorder border1, border2;
     int relief1, relief2;
-    int mask = 0;
 
+    if (!args->states.visible2 || !args->states.draw2)
+	return 0;
+
+#ifdef DEPRECATED
     BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
-    if (draw1 == -1)
-	draw1 = 1;
-    BORDER_FOR_STATE(border1, border, args->states.state1)
-    RELIEF_FOR_STATE(relief1, relief, args->states.state1)
-
     BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
-    if (draw2 == -1)
-	draw2 = 1;
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+    if (draw2 == 0)
+	return 0;
+#endif
+
+    BORDER_FOR_STATE(border1, border, args->states.state1)
     BORDER_FOR_STATE(border2, border, args->states.state2)
+    if (border1 != border2)
+	return CS_DISPLAY;
+
+    RELIEF_FOR_STATE(relief1, relief, args->states.state1)
     RELIEF_FOR_STATE(relief2, relief, args->states.state2)
+    if (relief1 != relief2)
+	return CS_DISPLAY;
 
-    if ((draw1 != draw2) || (border1 != border2) || (relief1 != relief2))
-	mask |= CS_DISPLAY;
-
-    return mask;
+    return 0;
 }
 
 static int UndefProcBorder(ElementArgs *args)
@@ -1115,7 +1176,9 @@ static int UndefProcBorder(ElementArgs *args)
     ElementBorder *elemX = (ElementBorder *) args->elem;
     int modified = 0;
 
+#ifdef DEPRECATED
     modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+#endif
     modified |= PerStateInfo_Undefine(tree, &pstBorder, &elemX->border, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstRelief, &elemX->relief, args->state);
     return modified;
@@ -1127,7 +1190,11 @@ static int ActualProcBorder(ElementArgs *args)
     ElementBorder *elemX = (ElementBorder *) args->elem;
     ElementBorder *masterX = (ElementBorder *) args->elem->master;
     static CONST char *optionName[] = {
-	"-background", "-draw", "-relief",
+	"-background",
+#ifdef DEPRECATED
+	"-draw",
+#endif
+	"-relief",
 	(char *) NULL };
     int index, match, matchM;
     Tcl_Obj *obj = NULL;
@@ -1142,6 +1209,7 @@ static int ActualProcBorder(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstBorder, border, args->state)
 	    break;
 	}
+#ifdef DEPRECATED
 	case 1:
 	{
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
@@ -1152,6 +1220,13 @@ static int ActualProcBorder(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstRelief, relief, args->state)
 	    break;
 	}
+#else
+	case 1:
+	{
+	    OBJECT_FOR_STATE(obj, pstRelief, relief, args->state)
+	    break;
+	}
+#endif
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
@@ -1529,13 +1604,17 @@ typedef struct ElementImageSize
 
 #define IMAGE_CONF_IMAGE 0x0001
 #define IMAGE_CONF_SIZE 0x0002
-#define IMAGE_CONF_DRAW 0x0004
-#define IMAGE_CONF_DISPLAY 0x0008
+#define IMAGE_CONF_DISPLAY 0x0004
+#ifdef DEPRECATED
+#define IMAGE_CONF_DRAW 0x0008
+#endif
 
 static Tk_OptionSpec imageOptionSpecs[] = {
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_DRAW},
+#endif
     {TK_OPTION_CUSTOM, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, IMAGE_CONF_SIZE},
@@ -1566,7 +1645,11 @@ static int WorldChangedProcImage(ElementArgs *args)
     int flagS = args->change.flagSelf;
     int mask = 0;
 
-    if ((flagS | flagM) & (IMAGE_CONF_DRAW | IMAGE_CONF_IMAGE | IMAGE_CONF_SIZE))
+    if ((flagS | flagM) & (
+#ifdef DEPRECATED
+	    IMAGE_CONF_DRAW |
+#endif
+	    IMAGE_CONF_IMAGE | IMAGE_CONF_SIZE))
 	mask |= CS_DISPLAY | CS_LAYOUT;
     if ((flagS | flagM) & IMAGE_CONF_DISPLAY)
 	mask |= CS_DISPLAY;
@@ -1626,14 +1709,18 @@ static void DisplayProcImage(ElementArgs *args)
     int x = args->display.x, y = args->display.y;
     int width, height;
     int match, match2;
+#ifdef DEPRECATED
     int draw;
+#endif
     Tk_Image image;
     int imgW, imgH;
     int tiled = 0, *eit, *eitM = NULL;
 
+#ifdef DEPRECATED
     draw = DO_BooleanForState(tree, elem, 1002, state);
     if (!draw)
 	return;
+#endif
 
     IMAGE_FOR_STATE(image, image, state)
     if (image == NULL)
@@ -1708,34 +1795,39 @@ static int StateProcImage(ElementArgs *args)
     ElementImage *elemX = (ElementImage *) elem;
     ElementImage *masterX = (ElementImage *) elem->master;
     int match, match2;
+#ifdef DEPRECATED
     int draw1, draw2;
+#endif
     Tk_Image image1, image2;
-    int mask = 0;
 
-    draw1 = DO_BooleanForState(tree, elem, 1002, args->states.state1);
-    if (draw1 == -1)
-	draw1 = 1;
+    if (!args->states.visible2)
+	return 0;
+
     IMAGE_FOR_STATE(image1, image, args->states.state1)
-
-    draw2 = DO_BooleanForState(tree, elem, 1002, args->states.state2);
-    if (draw2 == -1)
-	draw2 = 1;
     IMAGE_FOR_STATE(image2, image, args->states.state2)
 
     if (image1 != image2) {
-	mask |= CS_DISPLAY;
 	if ((image1 != NULL) && (image2 != NULL)) {
 	    int w1, h1, w2, h2;
 	    Tk_SizeOfImage(image1, &w1, &h1);
 	    Tk_SizeOfImage(image2, &w2, &h2);
 	    if ((w1 != w2) || (h1 != h2))
-		mask |= CS_LAYOUT;
-	} else
-	    mask |= CS_LAYOUT;
-    } else if (draw1 != draw2)
-	mask |= CS_DISPLAY;
+		return CS_DISPLAY | CS_LAYOUT;
+	    return CS_DISPLAY;
+	}
+	return CS_DISPLAY | CS_LAYOUT;
+    }
 
-    return mask;
+    if (!args->states.draw2)
+	return 0;
+#ifdef DEPRECATED
+    draw1 = DO_BooleanForState(tree, elem, 1002, args->states.state1);
+    draw2 = DO_BooleanForState(tree, elem, 1002, args->states.state2);
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+#endif
+
+    return 0;
 }
 
 static int UndefProcImage(ElementArgs *args)
@@ -1744,10 +1836,14 @@ static int UndefProcImage(ElementArgs *args)
     Element *elem = args->elem;
     ElementImage *elemX = (ElementImage *) elem;
     int modified = 0;
+#ifdef DEPRECATED
     PerStateInfo *psi;
+#endif
 
+#ifdef DEPRECATED
     if ((psi = DynamicOption_FindData(elem->options, 1002)) != NULL)
 	modified |= PerStateInfo_Undefine(tree, &pstBoolean, psi, args->state);
+#endif
     modified |= PerStateInfo_Undefine(tree, &pstImage, &elemX->image, args->state);
     return modified;
 }
@@ -1758,7 +1854,10 @@ static int ActualProcImage(ElementArgs *args)
     ElementImage *elemX = (ElementImage *) args->elem;
     ElementImage *masterX = (ElementImage *) args->elem->master;
     static CONST char *optionName[] = {
-	"-draw", "-image",
+#ifdef DEPRECATED
+	"-draw",
+#endif
+	"-image",
 	(char *) NULL };
     int index, match, matchM;
     Tcl_Obj *obj = NULL;
@@ -1768,6 +1867,7 @@ static int ActualProcImage(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
+#ifdef DEPRECATED
 	case 0:
 	{
 	    obj = DO_ObjectForState(tree, &pstBoolean, args->elem, 1002, args->state);
@@ -1778,6 +1878,13 @@ static int ActualProcImage(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstImage, image, args->state)
 	    break;
 	}
+#else
+	case 0:
+	{
+	    OBJECT_FOR_STATE(obj, pstImage, image, args->state)
+	    break;
+	}
+#endif
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
@@ -1809,7 +1916,9 @@ typedef struct ElementRect ElementRect;
 struct ElementRect
 {
     Element header;
+#ifdef DEPRECATED
     PerStateInfo draw;
+#endif
     int width;
     Tcl_Obj *widthObj;
     int height;
@@ -1829,13 +1938,17 @@ struct ElementRect
 #define RECT_CONF_OPEN 0x0008
 #define RECT_CONF_SIZE 0x0010
 #define RECT_CONF_FOCUS 0x0020
+#ifdef DEPRECATED
 #define RECT_CONF_DRAW 0x0040
+#endif
 
 static Tk_OptionSpec rectOptionSpecs[] = {
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementRect, draw.obj), Tk_Offset(ElementRect, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, RECT_CONF_DRAW},
+#endif
     {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementRect, fill.obj), Tk_Offset(ElementRect, fill),
@@ -1881,8 +1994,12 @@ static int WorldChangedProcRect(ElementArgs *args)
     if ((flagS | flagM) & (RECT_CONF_SIZE | RECT_CONF_OUTWIDTH))
 	mask |= CS_DISPLAY | CS_LAYOUT;
 
-    if ((flagS | flagM) & (RECT_CONF_DRAW | RECT_CONF_FILL | RECT_CONF_OUTLINE |
-		RECT_CONF_OPEN | RECT_CONF_FOCUS))
+    if ((flagS | flagM) & (
+#ifdef DEPRECATED
+	    RECT_CONF_DRAW |
+#endif
+	    RECT_CONF_FILL | RECT_CONF_OUTLINE | RECT_CONF_OPEN |
+	    RECT_CONF_FOCUS))
 	mask |= CS_DISPLAY;
 
     return mask;
@@ -1979,15 +2096,19 @@ static void DisplayProcRect(ElementArgs *args)
     int x = args->display.x, y = args->display.y;
     int width = args->display.width, height = args->display.height;
     int match, match2;
+#ifdef DEPRECATED
     int draw;
+#endif
     XColor *color;
     int open = 0;
     int outlineWidth = 0;
     int showFocus = 0;
 
+#ifdef DEPRECATED
     BOOLEAN_FOR_STATE(draw, draw, state)
     if (!draw)
 	return;
+#endif
 
     if (elemX->outlineWidthObj != NULL)
 	outlineWidth = elemX->outlineWidth;
@@ -2085,42 +2206,55 @@ static int StateProcRect(ElementArgs *args)
     ElementRect *elemX = (ElementRect *) elem;
     ElementRect *masterX = (ElementRect *) elem->master;
     int match, match2;
+#ifdef DEPRECATED
     int draw1, draw2;
+#endif
     XColor *f1, *f2;
     XColor *o1, *o2;
     int s1, s2;
     int showFocus = 0;
-    int mask = 0;
+
+    /* If either the -draw or -visible layout option is false for the
+     * current state, then changes to colors etc don't warrant a redisplay. */
+    if (!args->states.visible2 || !args->states.draw2)
+	return 0;
+
+#ifdef DEPRECATED
+    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
+    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+    /* If the element isn't drawn, then changes to colors etc don't
+     * warrant a redisplay. */
+    if (draw2 == 0)
+	return 0;
+#endif
 
     if (elemX->showFocus != -1)
 	showFocus = elemX->showFocus;
     else if ((masterX != NULL) && (masterX->showFocus != -1))
 	showFocus = masterX->showFocus;
 
-    BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
-    if (draw1 == -1)
-	draw1 = 1;
-    COLOR_FOR_STATE(f1, fill, args->states.state1)
-    COLOR_FOR_STATE(o1, outline, args->states.state1)
-
     s1 = showFocus &&
 	(args->states.state1 & STATE_FOCUS) &&
 	(args->states.state1 & STATE_ACTIVE);
-
-    BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
-    if (draw2 == -1)
-	draw2 = 1;
-    COLOR_FOR_STATE(f2, fill, args->states.state2)
-    COLOR_FOR_STATE(o2, outline, args->states.state2)
-
     s2 = showFocus &&
 	(args->states.state2 & STATE_FOCUS) &&
 	(args->states.state2 & STATE_ACTIVE);
+    if (s1 != s2)
+	return CS_DISPLAY;
 
-    if ((draw1 != draw2) || (f1 != f2) || (o1 != o2) || (s1 != s2))
-	mask |= CS_DISPLAY;
+    COLOR_FOR_STATE(f1, fill, args->states.state1)
+    COLOR_FOR_STATE(f2, fill, args->states.state2)
+    if (f1 != f2)
+	return CS_DISPLAY;
 
-    return mask;
+    COLOR_FOR_STATE(o1, outline, args->states.state1)
+    COLOR_FOR_STATE(o2, outline, args->states.state2)
+    if (o1 != o2)
+	return CS_DISPLAY;
+
+    return 0;
 }
 
 static int UndefProcRect(ElementArgs *args)
@@ -2129,7 +2263,9 @@ static int UndefProcRect(ElementArgs *args)
     ElementRect *elemX = (ElementRect *) args->elem;
     int modified = 0;
 
+#ifdef DEPRECATED
     modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+#endif
     modified |= PerStateInfo_Undefine(tree, &pstColor, &elemX->fill, args->state);
     modified |= PerStateInfo_Undefine(tree, &pstColor, &elemX->outline, args->state);
     return modified;
@@ -2141,7 +2277,10 @@ static int ActualProcRect(ElementArgs *args)
     ElementRect *elemX = (ElementRect *) args->elem;
     ElementRect *masterX = (ElementRect *) args->elem->master;
     static CONST char *optionName[] = {
-	"-draw", "-fill", "-outline",
+#ifdef DEPRECATED
+	"-draw",
+#endif
+	"-fill", "-outline",
 	(char *) NULL };
     int index, match, matchM;
     Tcl_Obj *obj = NULL;
@@ -2151,6 +2290,7 @@ static int ActualProcRect(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
+#ifdef DEPRECATED
 	case 0:
 	{
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
@@ -2166,6 +2306,18 @@ static int ActualProcRect(ElementArgs *args)
 	    OBJECT_FOR_STATE(obj, pstColor, outline, args->state)
 	    break;
 	}
+#else
+	case 0:
+	{
+	    OBJECT_FOR_STATE(obj, pstColor, fill, args->state)
+	    break;
+	}
+	case 1:
+	{
+	    OBJECT_FOR_STATE(obj, pstColor, outline, args->state)
+	    break;
+	}
+#endif
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
@@ -2314,9 +2466,11 @@ static Tk_OptionSpec textOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-datatype", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_STRINGREP},
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL, TEXT_CONF_DISPLAY},
+#endif
     {TK_OPTION_CUSTOM, "-fill", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(Element, options),
      TK_OPTION_NULL_OK, (ClientData) NULL,  TEXT_CONF_DISPLAY},
@@ -2939,7 +3093,9 @@ static void DisplayProcText(ElementArgs *args)
     int state = args->state;
     int x = args->display.x, y = args->display.y;
     int width, height;
+#ifdef DEPRECATED
     int draw;
+#endif
     XColor *color;
     char *text = elemX->text;
     int textLen = elemX->textLen;
@@ -2956,9 +3112,11 @@ static void DisplayProcText(ElementArgs *args)
     int underline = TEXT_UNDERLINE_EMPTYVAL;
 #endif
 
+#ifdef DEPRECATED
     draw = DO_BooleanForState(tree, elem, 1002, state);
     if (!draw)
 	return;
+#endif
 
     if ((text == NULL) && (masterX != NULL)) {
 	text = masterX->text;
@@ -3300,30 +3458,37 @@ static int StateProcText(ElementArgs *args)
     Element *elem = args->elem;
 /*    ElementText *elemX = (ElementText *) elem;
     ElementText *masterX = (ElementText *) elem->master;*/
+#ifdef DEPRECATED
     int draw1, draw2;
+#endif
     XColor *f1, *f2;
     Tk_Font tkfont1, tkfont2;
-    int mask = 0;
 
-    draw1 = DO_BooleanForState(tree, elem, 1002, args->states.state1);
-    if (draw1 == -1)
-	draw1 = 1;
-    f1 = DO_ColorForState(tree, elem, 1003, args->states.state1);
+    if (!args->states.visible2)
+	return 0;
+
     tkfont1 = DO_FontForState(tree, elem, 1004, args->states.state1);
-
-    draw2 = DO_BooleanForState(tree, elem, 1002, args->states.state2);
-    if (draw2 == -1)
-	draw2 = 1;
-    f2 = DO_ColorForState(tree, elem, 1003, args->states.state2);
     tkfont2 = DO_FontForState(tree, elem, 1004, args->states.state2);
-
     if (tkfont1 != tkfont2)
-	mask |= CS_DISPLAY | CS_LAYOUT;
+	return CS_DISPLAY | CS_LAYOUT;
 
-    if ((draw1 != draw2) || (f1 != f2))
-	mask |= CS_DISPLAY;
+    if (!args->states.draw2)
+	return 0;
+#ifdef DEPRECATED
+    draw1 = DO_BooleanForState(tree, elem, 1002, args->states.state1);
+    draw2 = DO_BooleanForState(tree, elem, 1002, args->states.state2);
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+    if (draw2 == 0)
+	return 0;
+#endif
 
-    return mask;
+    f1 = DO_ColorForState(tree, elem, 1003, args->states.state1);
+    f2 = DO_ColorForState(tree, elem, 1003, args->states.state2);
+    if (f1 != f2)
+	return CS_DISPLAY;
+
+    return 0;
 }
 
 static int UndefProcText(ElementArgs *args)
@@ -3349,7 +3514,10 @@ static int ActualProcText(ElementArgs *args)
 /*    ElementText *elemX = (ElementText *) args->elem;
     ElementText *masterX = (ElementText *) args->elem->master;*/
     static CONST char *optionName[] = {
-	"-draw", "-fill", "-font",
+#ifdef DEPRECATED
+	"-draw",
+#endif
+	"-fill", "-font",
 	(char *) NULL };
     int index;
     Tcl_Obj *obj = NULL;
@@ -3359,6 +3527,7 @@ static int ActualProcText(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
+#ifdef DEPRECATED
 	case 0:
 	{
 	    obj = DO_ObjectForState(tree, &pstBoolean, args->elem, 1002, args->state);
@@ -3374,6 +3543,18 @@ static int ActualProcText(ElementArgs *args)
 	    obj = DO_ObjectForState(tree, &pstFont, args->elem, 1004, args->state);
 	    break;
 	}
+#else
+	case 0:
+	{
+	    obj = DO_ObjectForState(tree, &pstColor, args->elem, 1003, args->state);
+	    break;
+	}
+	case 1:
+	{
+	    obj = DO_ObjectForState(tree, &pstFont, args->elem, 1004, args->state);
+	    break;
+	}
+#endif
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
@@ -3405,7 +3586,9 @@ typedef struct ElementWindow ElementWindow;
 struct ElementWindow
 {
     Element header;
+#ifdef DEPRECATED
     PerStateInfo draw;		/* -draw */
+#endif
     TreeCtrl *tree;
     TreeItem item; 		/* Needed if window changes size */
     TreeItemColumn column; 	/* Needed if window changes size */
@@ -3426,7 +3609,9 @@ struct ElementWindow
 };
 
 #define EWIN_CONF_WINDOW 0x0001
+#ifdef DEPRECATED
 #define EWIN_CONF_DRAW 0x0002
+#endif
 
 static Tk_OptionSpec windowOptionSpecs[] = {
 #ifdef CLIP_WINDOW
@@ -3437,10 +3622,12 @@ static Tk_OptionSpec windowOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-destroy", (char *) NULL, (char *) NULL,
      (char) NULL, -1, Tk_Offset(ElementWindow, destroy),
      TK_OPTION_NULL_OK, (ClientData) &booleanCO, 0},
+#ifdef DEPRECATED
     {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
      (char *) NULL,
      Tk_Offset(ElementWindow, draw.obj), Tk_Offset(ElementWindow, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, EWIN_CONF_DRAW},
+#endif
     {TK_OPTION_WINDOW, "-window", (char *) NULL, (char *) NULL,
      (char) NULL, -1, Tk_Offset(ElementWindow, tkwin),
      TK_OPTION_NULL_OK, (ClientData) NULL, EWIN_CONF_WINDOW},
@@ -3575,8 +3762,10 @@ static int WorldChangedProcWindow(ElementArgs *args)
     int flagS = args->change.flagSelf;
     int mask = 0;
 
+#ifdef DEPRECATED
     if ((flagS | flagM) & (EWIN_CONF_DRAW))
 	mask |= CS_DISPLAY;
+#endif
 
     if ((flagS | flagM) & (EWIN_CONF_WINDOW))
 	mask |= CS_DISPLAY | CS_LAYOUT;
@@ -3735,12 +3924,16 @@ static void DisplayProcWindow(ElementArgs *args)
     int minX, maxX, minY, maxY;
     int width, height;
     int match, match2;
+#ifdef DEPRECATED
     int draw;
+#endif
     int requests;
 
+#ifdef DEPRECATED
     BOOLEAN_FOR_STATE(draw, draw, state);
     if (!draw)
 	goto hideIt;
+#endif
 
     if (elemX->tkwin == NULL)
 	return;
@@ -3908,26 +4101,24 @@ static void NeededProcWindow(ElementArgs *args)
 
 static int StateProcWindow(ElementArgs *args)
 {
+#ifdef DEPRECATED
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementBitmap *elemX = (ElementBitmap *) elem;
     ElementBitmap *masterX = (ElementBitmap *) elem->master;
     int match, match2;
     int draw1, draw2;
-    int mask = 0;
+
+    if (!args->states.visible2 || !args->states.draw2)
+	return 0;
 
     BOOLEAN_FOR_STATE(draw1, draw, args->states.state1)
-    if (draw1 == -1)
-	draw1 = 1;
-
     BOOLEAN_FOR_STATE(draw2, draw, args->states.state2)
-    if (draw2 == -1)
-	draw2 = 1;
+    if ((draw1 != 0) != (draw2 != 0))
+	return CS_DISPLAY;
+#endif
 
-    if (draw1 != draw2)
-	mask |= CS_DISPLAY;
-
-    return mask;
+    return 0;
 }
 
 static int UndefProcWindow(ElementArgs *args)
@@ -3935,12 +4126,17 @@ static int UndefProcWindow(ElementArgs *args)
     TreeCtrl *tree = args->tree;
     Element *elem = args->elem;
     ElementWindow *elemX = (ElementWindow *) elem;
+    int modified = 0;
 
-    return PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+#ifdef DEPRECATED
+    modified |= PerStateInfo_Undefine(tree, &pstBoolean, &elemX->draw, args->state);
+#endif
+    return modified;
 }
 
 static int ActualProcWindow(ElementArgs *args)
 {
+#ifdef DEPRECATED
     TreeCtrl *tree = args->tree;
     ElementWindow *elemX = (ElementWindow *) args->elem;
     ElementWindow *masterX = (ElementWindow *) args->elem->master;
@@ -3963,6 +4159,7 @@ static int ActualProcWindow(ElementArgs *args)
     }
     if (obj != NULL)
 	Tcl_SetObjResult(tree->interp, obj);
+#endif
     return TCL_OK;
 }
 
@@ -4139,16 +4336,20 @@ int TreeElement_Init(Tcl_Interp *interp)
 	&pstColor, TreeStateFromObj);
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-bitmap",
 	&pstBitmap, TreeStateFromObj);
+#ifdef DEPRECATED
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
+#endif
     PerStateCO_Init(elemTypeBitmap.optionSpecs, "-foreground",
 	&pstColor, TreeStateFromObj);
 
     /*
      * border
      */
+#ifdef DEPRECATED
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
+#endif
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-background",
 	&pstBorder, TreeStateFromObj);
     PerStateCO_Init(elemTypeBorder.optionSpecs, "-relief",
@@ -4157,11 +4358,13 @@ int TreeElement_Init(Tcl_Interp *interp)
     /*
      * image
      */
+#ifdef DEPRECATED
     DynamicCO_Init(elemTypeImage.optionSpecs, "-draw",
 	1002, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
+#endif
     PerStateCO_Init(elemTypeImage.optionSpecs, "-image",
 	&pstImage, TreeStateFromObj);
 
@@ -4186,8 +4389,10 @@ int TreeElement_Init(Tcl_Interp *interp)
     /*
      * rect
      */
+#ifdef DEPRECATED
     PerStateCO_Init(elemTypeRect.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
+#endif
     PerStateCO_Init(elemTypeRect.optionSpecs, "-fill",
 	&pstColor, TreeStateFromObj);
     PerStateCO_Init(elemTypeRect.optionSpecs, "-outline",
@@ -4243,11 +4448,13 @@ int TreeElement_Init(Tcl_Interp *interp)
 	StringTableCO_Alloc("-wrap", textWrapST),
 	ElementTextLayoutInit);
 
+#ifdef DEPRECATED
     DynamicCO_Init(elemTypeText.optionSpecs, "-draw",
 	1002, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
+#endif
     DynamicCO_Init(elemTypeText.optionSpecs, "-fill",
 	1003, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
@@ -4280,8 +4487,10 @@ int TreeElement_Init(Tcl_Interp *interp)
     /*
      * window
      */
+#ifdef DEPRECATED
     PerStateCO_Init(elemTypeWindow.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
+#endif
 
     assocData = (ElementAssocData *) ckalloc(sizeof(ElementAssocData));
     assocData->typeList = NULL;
