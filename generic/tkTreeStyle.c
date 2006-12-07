@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.68 2006/12/06 04:00:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.69 2006/12/07 00:47:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6957,13 +6957,13 @@ TreeStyle_ChangeState(
 	return 0;
 
     args.tree = tree;
-    args.states.state1 = state1;
-    args.states.state2 = state2;
 
     for (i = 0; i < masterStyle->numElements; i++)
     {
 	eLink2 = &style->elements[i];
 	args.elem = eLink2->elem;
+	args.states.state1 = state1;
+	args.states.state2 = state2;
 	eMask = (*eLink2->elem->typePtr->stateProc)(&args);
 
 	eLink1 = &masterStyle->elements[i];
@@ -6972,8 +6972,19 @@ TreeStyle_ChangeState(
 		    &eLink1->visible, state1, NULL);
 	    visible2 = PerStateBoolean_ForState(tree,
 		    &eLink1->visible, state2, NULL);
-	    if ((visible1 == 0) != (visible2 == 0))
+	    /* FIXME: Changing visibility might not change the layout. */
+	    if ((visible1 == 0) != (visible2 == 0)) {
 		eMask |= CS_DISPLAY | CS_LAYOUT;
+
+		/* Hack: If a window element becomes hidden, then tell it it is
+		 * not onscreen, otherwise it will never be "drawn" in the
+		 * hidden state. */
+		if (!visible2 && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
+			&elemTypeWindow)) {
+		    args.screen.visible = FALSE;
+		    (*args.elem->typePtr->onScreenProc)(&args);
+		}
+	    }
 	}
 
 	if (eMask)
