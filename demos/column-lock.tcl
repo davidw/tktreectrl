@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: column-lock.tcl,v 1.10 2006/11/25 20:22:53 treectrl Exp $
+# RCS: @(#) $Id: column-lock.tcl,v 1.11 2006/12/07 03:48:06 treectrl Exp $
 
 proc DemoColumnLock {} {
 
@@ -144,17 +144,18 @@ proc DemoColumnLock {} {
 
     $T element create cell.bd rect -outline gray -outlinewidth 1 -open wn \
 	-fill {gray80 mouseover #F7F7F7 CHECK}
-    $T element create cell.selN rect -height 2 -fill black -draw {no !selN}
-    $T element create cell.selS rect -height 2 -fill black -draw {no !selS}
-    $T element create cell.selW rect -width 2 -fill black -draw {no !selW}
-    $T element create cell.selE rect -width 2 -fill black -draw {no !selE}
+    set fill [list gray !focus $::SystemHighlight {}]
+    $T element create cell.selN rect -height 2 -fill $fill
+    $T element create cell.selS rect -height 2 -fill $fill
+    $T element create cell.selW rect -width 2 -fill $fill
+    $T element create cell.selE rect -width 2 -fill $fill
     $T style create cell -orient horizontal
     $T style elements cell {cell.bd cell.selN cell.selS cell.selW cell.selE}
     $T style layout cell cell.bd -detach yes -iexpand xy
-    $T style layout cell cell.selN -detach yes -expand s -iexpand x
-    $T style layout cell cell.selS -detach yes -expand n -iexpand x
-    $T style layout cell cell.selW -detach yes -expand e -iexpand y
-    $T style layout cell cell.selE -detach yes -expand w -iexpand y
+    $T style layout cell cell.selN -detach yes -expand s -iexpand x -draw {no !selN}
+    $T style layout cell cell.selS -detach yes -expand n -iexpand x -draw {no !selS}
+    $T style layout cell cell.selW -detach yes -expand e -iexpand y -draw {no !selW}
+    $T style layout cell cell.selE -detach yes -expand w -iexpand y -draw {no !selE}
 
     # NOTE 1: the following column descriptions are equivalent in this demo:
     #   "range {first next} {last prev}"
