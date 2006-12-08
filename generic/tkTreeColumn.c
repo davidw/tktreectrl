@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.73 2006/12/06 00:03:21 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.74 2006/12/08 20:45:57 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1836,7 +1836,10 @@ Column_Move(
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
     TreeItem item;
-    int index, numStyles;
+    int index;
+#ifdef DEPRECATED
+    int numStyles;
+#endif
 
     if (move == before)
 	goto renumber;
