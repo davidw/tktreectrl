@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.83 2006/12/06 00:52:04 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.84 2006/12/08 20:46:44 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -123,6 +123,7 @@ struct TreeCtrlDebug
     int enable;			/* Turn all debugging on/off */
     int data;			/* Debug data structures */
     int display;		/* Debug display routines */
+    int span;			/* Debug column spanning */
     int textLayout;		/* Debug text layout */
     int displayDelay;		/* Delay between copy/draw operations */
     XColor *eraseColor;		/* Erase "invalidated" areas */

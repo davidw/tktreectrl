@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.95 2006/12/06 00:52:03 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.96 2006/12/08 20:46:26 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -290,6 +290,9 @@ static Tk_OptionSpec debugSpecs[] = {
     {TK_OPTION_COLOR, "-erasecolor", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeCtrl, debug.eraseColor),
      TK_OPTION_NULL_OK, (ClientData) NULL, 0},
+    {TK_OPTION_BOOLEAN, "-span", (char *) NULL, (char *) NULL,
+     "1", -1, Tk_Offset(TreeCtrl, debug.span),
+     0, (ClientData) NULL, 0},
     {TK_OPTION_BOOLEAN, "-textlayout", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(TreeCtrl, debug.textLayout),
      0, (ClientData) NULL, 0},
@@ -1782,7 +1785,6 @@ TreeDestroy(
 
     Tree_FreeColumns(tree);
 
-dbwin("tree->regionStackLen = %d", tree->regionStackLen);
     while (tree->regionStackLen > 0)
 	TkDestroyRegion(tree->regionStack[--tree->regionStackLen]);
 

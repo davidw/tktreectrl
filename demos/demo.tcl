@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.60 2006/12/07 03:52:02 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.61 2006/12/08 20:50:26 treectrl Exp $
 
 set VERSION 2.2
 
@@ -711,7 +711,7 @@ proc TreePlusScrollbarsInAFrame {f h v} {
     $f.t configure -xscrollincrement 20
 #    $f.t configure -itemprefix item# -columnprefix column#
     $f.t debug configure -enable no -display yes -erasecolor pink \
-	-drawcolor orange -displaydelay 30 -textlayout 0 -data 0
+	-drawcolor orange -displaydelay 30 -textlayout 0 -data 0 -span 0
     if {$h} {
 	$::scrollbarCmd $f.sh -orient horizontal -command "$f.t xview"
 	#		$f.t configure -xscrollcommand "$f.sh set"
@@ -914,6 +914,8 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) debug configure -data $Popup(debug,data)}
     $m2 add checkbutton -label Display -variable Popup(debug,display) \
 	-command {$Popup(T) debug configure -display $Popup(debug,display)}
+    $m2 add checkbutton -label Span -variable Popup(debug,span) \
+	-command {$Popup(T) debug configure -span $Popup(debug,span)}
     $m2 add checkbutton -label "Text Layout" -variable Popup(debug,textlayout) \
 	-command {$Popup(T) debug configure -textlayout $Popup(debug,textlayout)}
     $m2 add separator
@@ -1106,7 +1108,7 @@ proc ShowPopup {T x y X Y} {
 	    $m add command -label "Item $item (recurse)" -command "$T item expand $item -recurse"
 	}
     }
-    foreach option {data display displaydelay enable textlayout} {
+    foreach option {data display displaydelay enable span textlayout} {
 	set Popup(debug,$option) [$T debug cget -$option]
     }
     set Popup(bgimg) [$T cget -backgroundimage]

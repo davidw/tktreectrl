@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.97 2006/12/06 03:58:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.98 2006/12/08 20:48:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3695,7 +3695,7 @@ TreeItem_SpansInvalidate(
 	count++;
     }
 
-    if (count && tree->debug.enable && tree->debug.display)
+    if (count && tree->debug.enable && tree->debug.span)
 	dbwin("TreeItem_SpansInvalidate forgot %d items\n", count);
 }
 
@@ -3730,7 +3730,7 @@ TreeItem_SpansRedo(
     int columnIndex = 0, spanner = 0, span = 1, simple = TRUE;
     int lock = TreeColumn_Lock(treeColumn);
 
-    if (tree->debug.enable && tree->debug.display)
+    if (tree->debug.enable && tree->debug.span)
 	dbwin("TreeItem_SpansRedo item %d\n", item->id);
 
     if (item->spans == NULL) {
