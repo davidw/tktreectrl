@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.76 2006/12/08 20:48:18 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.77 2006/12/08 23:14:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -118,7 +118,7 @@ struct TreeDInfo_
     int itemWidth;		/* Observed max TreeItem width */
     struct DPixmap pixmapW;	/* Pixmap as big as the window */
     struct DPixmap pixmapI;	/* Pixmap as big as the largest item */
-    int dirty[4];		/* DOUBLEBUFFER_WINDOW */
+    TkRegion dirtyRgn;		/* DOUBLEBUFFER_WINDOW */
     int flags;			/* DINFO_XXX */
     int xScrollIncrement;	/* Last seen TreeCtr.xScrollIncrement */
     int yScrollIncrement;	/* Last seen TreeCtr.yScrollIncrement */
@@ -3587,6 +3587,58 @@ Range_RedoIfNeeded(
     }
 }
 
+/*
+ *--------------------------------------------------------------
+ *
+ * DblBufWinDirty --
+ *
+ *	Add a rectangle to the dirty region of the "-doublebuffer window"
+ *	pixmap.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
+static void
+DblBufWinDirty(
+    TreeCtrl *tree,
+    int x1,
+    int y1,
+    int x2,
+    int y2
+    )
+{
+    TreeDInfo dInfo = tree->dInfo;
+    XRectangle rect;
+
+    rect.x = x1;
+    rect.y = y1;
+    rect.width = x2 - x1;
+    rect.height = y2 - y1;
+    TkUnionRectWithRegion(&rect, dInfo->dirtyRgn, dInfo->dirtyRgn);
+}
+
+/*
+ *--------------------------------------------------------------
+ *
+ * DItemAllDirty --
+ *
+ *	Determine if a DItem will be entirely redrawn in all columns.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	None.
+ *
+ *--------------------------------------------------------------
+ */
+
 static int
 DItemAllDirty(
     TreeCtrl *tree,
@@ -3793,10 +3845,8 @@ ScrollVerticalComplex(
 		dirtyMax = oldY + offset;
 	    }
 	    Tree_InvalidateArea(tree, oldX, dirtyMin, oldX + width, dirtyMax);
-	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX);
-	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY + offset);
-	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + width);
-	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], oldY + offset + height);
+	    DblBufWinDirty(tree, oldX, oldY + offset,
+		    oldX + width, oldY + offset + height);
 	    continue;
 	}
 
@@ -4178,10 +4228,8 @@ ScrollHorizontalComplex(
 		dirtyMax = oldX + offset;
 	    }
 	    Tree_InvalidateArea(tree, dirtyMin, oldY, dirtyMax, oldY + height);
-	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], oldX + offset);
-	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], oldY);
-	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], oldX + offset + width);
-	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], oldY + height);
+	    DblBufWinDirty(tree, oldX + offset, oldY, oldX + offset + width,
+		    oldY + height);
 	    continue;
 	}
 
@@ -5040,7 +5088,6 @@ DisplayDItem(
     Drawable drawable		/* Where to copy to. */
     )
 {
-    TreeDInfo dInfo = tree->dInfo;
     Tk_Window tkwin = tree->tkwin;
     int left, top, right, bottom;
 
@@ -5079,10 +5126,7 @@ DisplayDItem(
     if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], left);
-	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], top);
-	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], right);
-	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], bottom);
+	    DblBufWinDirty(tree, left, top, right, bottom);
 	}
 
 	/* The top-left corner of the drawable is at this
@@ -5558,8 +5602,6 @@ displayRetry:
     }
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	dInfo->dirty[LEFT] = dInfo->dirty[TOP] = 100000;
-	dInfo->dirty[RIGHT] = dInfo->dirty[BOTTOM] = -100000;
 	DisplayGetPixmap(tree, &dInfo->pixmapW,
 		Tk_Width(tkwin), Tk_Height(tkwin));
 	drawable = dInfo->pixmapW.pixmap;
@@ -5580,10 +5622,7 @@ displayRetry:
 	    }
 	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, Tree_HeaderTop(tree));
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = minX;
-		dInfo->dirty[TOP] = minY;
-		dInfo->dirty[RIGHT] = maxX;
-		dInfo->dirty[BOTTOM] = maxY;
+		DblBufWinDirty(tree, minX, minY, maxX, maxY);
 	    }
 	}
 	dInfo->flags &= ~DINFO_DRAW_HEADER;
@@ -5603,11 +5642,8 @@ displayRetry:
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	if ((dInfo->xOrigin != tree->xOrigin) ||
 		(dInfo->yOrigin != tree->yOrigin)) {
-	    dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], Tree_BorderLeft(tree));
-	    /* might include header */
-	    dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], Tree_ContentTop(tree));
-	    dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], Tree_BorderRight(tree));
-	    dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], Tree_ContentBottom(tree));
+	    DblBufWinDirty(tree, Tree_BorderLeft(tree), Tree_ContentTop(tree),
+		Tree_BorderRight(tree), Tree_ContentBottom(tree));
 	}
     }
 
@@ -5663,10 +5699,8 @@ displayRetry:
 	    Tk_FreePixmap(tree->display, pixmap);
 
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
-		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], wsBox.y);
-		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], wsBox.x + wsBox.width);
-		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], wsBox.y + wsBox.height);
+		DblBufWinDirty(tree, wsBox.x, wsBox.y, wsBox.x + wsBox.width,
+			wsBox.y + wsBox.height);
 	    }
 	}
 	if (wsRgnDif != wsRgnNew)
@@ -5703,10 +5737,8 @@ displayRetry:
 	    Tk_FillRegion(tree->display, drawable, gc, wsRgnDif);
 #endif
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-		dInfo->dirty[LEFT] = MIN(dInfo->dirty[LEFT], wsBox.x);
-		dInfo->dirty[TOP] = MIN(dInfo->dirty[TOP], wsBox.y);
-		dInfo->dirty[RIGHT] = MAX(dInfo->dirty[RIGHT], wsBox.x + wsBox.width);
-		dInfo->dirty[BOTTOM] = MAX(dInfo->dirty[BOTTOM], wsBox.y + wsBox.height);
+		DblBufWinDirty(tree, wsBox.x, wsBox.y, wsBox.x + wsBox.width,
+			wsBox.y + wsBox.height);
 	    }
 	}
 	Tree_FreeRegion(tree, wsRgnDif);
@@ -5810,16 +5842,21 @@ displayRetry:
 	dbwin("copy %d draw %d %s\n", numCopy, numDraw, Tk_PathName(tkwin));
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+	XRectangle box;
+
 	drawable = Tk_WindowId(tkwin);
 
-	if (dInfo->dirty[LEFT] < dInfo->dirty[RIGHT]) {
+	TkClipBox(dInfo->dirtyRgn, &box);
+	if (box.width > 0 && box.height > 0) {
+	    TkSetRegion(tree->display, tree->copyGC, dInfo->dirtyRgn);
 	    XCopyArea(tree->display, dInfo->pixmapW.pixmap, drawable,
 		    tree->copyGC,
-		    dInfo->dirty[LEFT], dInfo->dirty[TOP],
-		    dInfo->dirty[RIGHT] - dInfo->dirty[LEFT],
-		    dInfo->dirty[BOTTOM] - dInfo->dirty[TOP],
-		    dInfo->dirty[LEFT], dInfo-> dirty[TOP]);
+		    box.x, box.y,
+		    box.width, box.height,
+		    box.x, box.y);
+	    XSetClipMask(tree->display, tree->copyGC, None);
 	}
+	TkSubtractRegion(dInfo->dirtyRgn, dInfo->dirtyRgn, dInfo->dirtyRgn);
     }
 
     /* XOR on */
@@ -7201,6 +7238,53 @@ Tree_RedrawArea(
 /*
  *--------------------------------------------------------------
  *
+ * Tree_ExposeArea --
+ *
+ *	Called in response to <Expose> events. Causes part of the window
+ *	to be redisplayed. With "-doublebuffer window", part of the
+ *	offscreen pixmap is marked as needing to be copied but no redrawing
+ *	of items is done. Without "-doublebuffer window", items will be
+ *	redrawn.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	The widget will be redisplayed at idle time.
+ *
+ *--------------------------------------------------------------
+ */
+
+void
+Tree_ExposeArea(
+    TreeCtrl *tree,		/* Widget info. */
+    int x1, int y1,		/* Left & top of dirty area in window
+				 * coordinates. */
+    int x2, int y2		/* Right & bottom of dirty area in window
+				 * coordinates. */
+    )
+{
+    TreeDInfo dInfo = tree->dInfo;
+
+    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
+	DblBufWinDirty(tree, x1, y1, x2, y2);
+
+	if ((x1 < Tree_BorderLeft(tree)) ||
+		(y1 < Tree_BorderTop(tree)) ||
+		(x2 > Tree_BorderRight(tree)) ||
+		(y2 > Tree_BorderBottom(tree))) {
+	    dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
+	    dInfo->flags |= DINFO_DRAW_BORDER;
+	}
+    } else {
+	Tree_InvalidateArea(tree, x1, y1, x2, y2);
+    }
+    Tree_EventuallyRedraw(tree);
+}
+
+/*
+ *--------------------------------------------------------------
+ *
  * TreeDInfo_Init --
  *
  *	Perform display-related initialization when a new TreeCtrl is
@@ -7229,6 +7313,7 @@ TreeDInfo_Init(
     dInfo->scrollGC = Tk_GetGC(tree->tkwin, GCGraphicsExposures, &gcValues);
     dInfo->flags = DINFO_OUT_OF_DATE;
     dInfo->wsRgn = Tree_GetRegion(tree);
+    dInfo->dirtyRgn = TkCreateRegion();
     Tcl_InitHashTable(&dInfo->itemVisHash, TCL_ONE_WORD_KEYS);
     tree->dInfo = dInfo;
 }
@@ -7287,6 +7372,7 @@ TreeDInfo_Free(
     if (dInfo->yScrollIncrements != NULL)
 	ckfree((char *) dInfo->yScrollIncrements);
     Tree_FreeRegion(tree, dInfo->wsRgn);
+    TkDestroyRegion(dInfo->dirtyRgn);
 #ifdef DCOLUMN
     hPtr = Tcl_FirstHashEntry(&dInfo->itemVisHash, &search);
     while (hPtr != NULL) {

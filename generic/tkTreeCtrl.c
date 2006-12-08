@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.96 2006/12/08 20:46:26 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.97 2006/12/08 23:14:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1629,7 +1629,7 @@ TreeEventProc(
 	{
 	    int x = eventPtr->xexpose.x;
 	    int y = eventPtr->xexpose.y;
-	    Tree_RedrawArea(tree, x, y,
+	    Tree_ExposeArea(tree, x, y,
 		    x + eventPtr->xexpose.width,
 		    y + eventPtr->xexpose.height);
 	    break;

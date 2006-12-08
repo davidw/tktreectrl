@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.84 2006/12/08 20:46:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.85 2006/12/08 23:14:17 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -794,6 +794,7 @@ extern void Tree_InvalidateArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateItemArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_InvalidateRegion(TreeCtrl *tree, TkRegion region);
 extern void Tree_RedrawArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
+extern void Tree_ExposeArea(TreeCtrl *tree, int x1, int y1, int x2, int y2);
 extern void Tree_FocusChanged(TreeCtrl *tree, int gotFocus);
 extern void Tree_Activate(TreeCtrl *tree, int isActive);
 extern void Tree_ItemsInArea(TreeCtrl *tree, TreeItemList *items, int minX, int minY, int maxX, int maxY);
