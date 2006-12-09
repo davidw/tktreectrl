@@ -1,8 +1,8 @@
-# RCS: @(#) $Id: style-editor.tcl,v 1.14 2006/12/04 00:16:02 treectrl Exp $
+# RCS: @(#) $Id: style-editor.tcl,v 1.15 2006/12/09 01:17:49 treectrl Exp $
 
 namespace eval StyleEditor {
-	variable Info
-	array unset Info
+    variable Info
+    array unset Info
 }
 
 proc StyleEditor::Info {info args} {
