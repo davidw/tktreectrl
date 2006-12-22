@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.18 2006/12/04 00:20:38 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.19 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -146,8 +146,7 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 	 */
 	HINSTANCE handle;
 	*phlib = handle = LoadLibrary("uxtheme.dll");
-	if (handle != 0)
-	{
+	if (handle != 0) {
 	    /*
 	     * We have successfully loaded the library. Proceed in storing the
 	     * addresses of the functions we want to use.
@@ -171,8 +170,7 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 		&& LOADPROC(IsThemeActive)
 		&& LOADPROC(IsThemePartDefined)
 		&& LOADPROC(IsThemeBackgroundPartiallyTransparent)
-	    )
-	    {
+	    ) {
 		return procs;
 	    }
 #undef LOADPROC
@@ -194,8 +192,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     int iPartId = HP_HEADERITEM;
     int iStateId = HIS_NORMAL;
 
-    switch (state)
-    {
+    switch (state) {
 	case COLUMN_STATE_ACTIVE:  iStateId = HIS_HOT; break;
 	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
@@ -211,8 +208,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     if (!procs->IsThemePartDefined(
 	hTheme,
 	iPartId,
-	iStateId))
-    {
+	iStateId)) {
 	return TCL_ERROR;
     }
 #endif
@@ -226,8 +222,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state,
     if (procs->IsThemeBackgroundPartiallyTransparent(
 	hTheme,
 	iPartId,
-	iStateId))
-    {
+	iStateId)) {
 #if 1
 	/* What color should I use? */
 	Tk_Fill3DRectangle(tree->tkwin, drawable, tree->border, x, y, width, height, 0, TK_RELIEF_FLAT);
@@ -302,8 +297,7 @@ int TreeTheme_GetHeaderContentMargins(TreeCtrl *tree, int state, int arrow, int 
     int iPartId = HP_HEADERITEM;
     int iStateId = HIS_NORMAL;
 
-    switch (state)
-    {
+    switch (state) {
 	case COLUMN_STATE_ACTIVE:  iStateId = HIS_HOT; break;
 	case COLUMN_STATE_PRESSED: iStateId = HIS_PRESSED; break;
     }
@@ -397,8 +391,7 @@ int TreeTheme_DrawHeaderArrow(TreeCtrl *tree, Drawable drawable, int up,
     if (!procs->IsThemePartDefined(
 	hTheme,
 	iPartId,
-	iStateId))
-    {
+	iStateId)) {
 	return TCL_ERROR;
     }
 
@@ -446,8 +439,7 @@ int TreeTheme_DrawButton(TreeCtrl *tree, Drawable drawable, int open,
     if (!procs->IsThemePartDefined(
 	hTheme,
 	iPartId,
-	iStateId))
-    {
+	iStateId)) {
 	return TCL_ERROR;
     }
 #endif
@@ -506,8 +498,7 @@ int TreeTheme_GetButtonSize(TreeCtrl *tree, Drawable drawable, int open,
     if (!procs->IsThemePartDefined(
 	hTheme,
 	iPartId,
-	iStateId))
-    {
+	iStateId)) {
 	return TCL_ERROR;
     }
 #endif
@@ -715,8 +706,7 @@ int TreeTheme_InitInterp(Tcl_Interp *interp)
     Tcl_MutexLock(&themeMutex);
 
     /* This is done once per-application */
-    if (appThemeData == NULL)
-    {
+    if (appThemeData == NULL) {
 	appThemeData = (XPThemeData *) ckalloc(sizeof(XPThemeData));
 	appThemeData->procs = LoadXPThemeProcs(&appThemeData->hlibrary);
 	appThemeData->registered = FALSE;
@@ -1092,8 +1082,7 @@ int TreeTheme_DrawHeaderItem(TreeCtrl *tree, Drawable drawable, int state, int a
 
     box = Ttk_MakeBox(x, y, width, height);
 
-    switch (state)
-    {
+    switch (state) {
 	case COLUMN_STATE_ACTIVE:  ttk_state = TTK_STATE_ACTIVE; break;
 	case COLUMN_STATE_PRESSED: ttk_state = TTK_STATE_PRESSED; break;
     }

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.60 2006/12/07 03:44:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.61 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -859,30 +859,25 @@ static int ActualProcBitmap(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstColor, bg, args->state)
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstBitmap, bitmap, args->state)
 	    break;
 	}
 #ifdef DEPRECATED
-	case 2:
-	{
+	case 2: {
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
-	case 3:
-	{
+	case 3: {
 	    OBJECT_FOR_STATE(obj, pstColor, fg, args->state)
 	    break;
 	}
 #else
-	case 2:
-	{
+	case 2: {
 	    OBJECT_FOR_STATE(obj, pstColor, fg, args->state)
 	    break;
 	}
@@ -1204,25 +1199,21 @@ static int ActualProcBorder(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstBorder, border, args->state)
 	    break;
 	}
 #ifdef DEPRECATED
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
-	case 2:
-	{
+	case 2: {
 	    OBJECT_FOR_STATE(obj, pstRelief, relief, args->state)
 	    break;
 	}
 #else
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstRelief, relief, args->state)
 	    break;
 	}
@@ -1546,8 +1537,7 @@ static int ActualProcCheckButton(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
-	case 0:
-	{
+	case 0: {
 	    obj = PerStateInfo_ObjForState(tree, &pstImage,
 		    &elemX->image, args->state, &match);
 	    if ((match != MATCH_EXACT) && (masterX != NULL)) {
@@ -1868,19 +1858,16 @@ static int ActualProcImage(ElementArgs *args)
 
     switch (index) {
 #ifdef DEPRECATED
-	case 0:
-	{
+	case 0: {
 	    obj = DO_ObjectForState(tree, &pstBoolean, args->elem, 1002, args->state);
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstImage, image, args->state)
 	    break;
 	}
 #else
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstImage, image, args->state)
 	    break;
 	}
@@ -2040,8 +2027,7 @@ static int ConfigProcRect(ElementArgs *args)
 			    case 'n': case 'N': elemX->open |= 0x02; break;
 			    case 'e': case 'E': elemX->open |= 0x04; break;
 			    case 's': case 'S': elemX->open |= 0x08; break;
-			    default:
-			    {
+			    default: {
 				Tcl_ResetResult(tree->interp);
 				Tcl_AppendResult(tree->interp, "bad open value \"",
 					elemX->openString, "\": must be a string ",
@@ -2291,29 +2277,24 @@ static int ActualProcRect(ElementArgs *args)
 
     switch (index) {
 #ifdef DEPRECATED
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstColor, fill, args->state)
 	    break;
 	}
-	case 2:
-	{
+	case 2: {
 	    OBJECT_FOR_STATE(obj, pstColor, outline, args->state)
 	    break;
 	}
 #else
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstColor, fill, args->state)
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    OBJECT_FOR_STATE(obj, pstColor, outline, args->state)
 	    break;
 	}
@@ -3528,29 +3509,24 @@ static int ActualProcText(ElementArgs *args)
 
     switch (index) {
 #ifdef DEPRECATED
-	case 0:
-	{
+	case 0: {
 	    obj = DO_ObjectForState(tree, &pstBoolean, args->elem, 1002, args->state);
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    obj = DO_ObjectForState(tree, &pstColor, args->elem, 1003, args->state);
 	    break;
 	}
-	case 2:
-	{
+	case 2: {
 	    obj = DO_ObjectForState(tree, &pstFont, args->elem, 1004, args->state);
 	    break;
 	}
 #else
-	case 0:
-	{
+	case 0: {
 	    obj = DO_ObjectForState(tree, &pstColor, args->elem, 1003, args->state);
 	    break;
 	}
-	case 1:
-	{
+	case 1: {
 	    obj = DO_ObjectForState(tree, &pstFont, args->elem, 1004, args->state);
 	    break;
 	}
@@ -4151,8 +4127,7 @@ static int ActualProcWindow(ElementArgs *args)
 	return TCL_ERROR;
 
     switch (index) {
-	case 0:
-	{
+	case 0: {
 	    OBJECT_FOR_STATE(obj, pstBoolean, draw, args->state)
 	    break;
 	}
@@ -4218,20 +4193,16 @@ int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, ElementType **typeP
     typeList = assocData->typeList;
 
     typeStr = Tcl_GetStringFromObj(objPtr, &length);
-    if (!length)
-    {
+    if (!length) {
 	FormatResult(interp, "invalid element type \"\"");
 	return TCL_ERROR;
     }
     for (typePtr = typeList;
 	typePtr != NULL;
-	typePtr = typePtr->next)
-    {
+	typePtr = typePtr->next) {
 	if ((typeStr[0] == typePtr->name[0]) &&
-		!strncmp(typeStr, typePtr->name, length))
-	{
-	    if (matchPtr != NULL)
-	    {
+		!strncmp(typeStr, typePtr->name, length)) {
+	    if (matchPtr != NULL) {
 		FormatResult(interp,
 			"ambiguous element type \"%s\"",
 			typeStr);
@@ -4240,8 +4211,7 @@ int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, ElementType **typeP
 	    matchPtr = typePtr;
 	}
     }
-    if (matchPtr == NULL)
-    {
+    if (matchPtr == NULL) {
 	FormatResult(interp, "unknown element type \"%s\"", typeStr);
 	return TCL_ERROR;
     }
@@ -4313,8 +4283,7 @@ static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
     ElementType *typeList = assocData->typeList;
     ElementType *next;
 
-    while (typeList != NULL)
-    {
+    while (typeList != NULL) {
 	next = typeList->next;
 	/* The ElementType.optionTables are freed when the interp is deleted */
 	ckfree((char *) typeList);

@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.97 2006/12/08 23:14:16 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.98 2006/12/22 22:32:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -555,8 +555,7 @@ static int TreeWidgetCmd(
     Tree_PreserveItems(tree);
 
     switch (index) {
-	case COMMAND_ACTIVATE:
-	{
+	case COMMAND_ACTIVATE: {
 	    TreeItem active, item;
 
 	    if (objc != 3) {
@@ -586,8 +585,7 @@ static int TreeWidgetCmd(
 	}
 
 	/* .t bbox ?area? */
-	case COMMAND_BBOX:
-	{
+	case COMMAND_BBOX: {
 	    static CONST char *areaName[] = { "content", "header", "left",
 		    "right", (char *) NULL };
 	    int x1, y1, x2, y2;
@@ -615,8 +613,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_CANVASX:
-	{
+	case COMMAND_CANVASX: {
 	    int x;
 
 	    if (objc != 3) {
@@ -629,8 +626,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_CANVASY:
-	{
+	case COMMAND_CANVASY: {
 	    int y;
 
 	    if (objc != 3) {
@@ -643,8 +639,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 2, objv, "option");
 		goto error;
@@ -659,8 +654,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    resultObjPtr = NULL;
 	    if (objc <= 3) {
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) tree,
@@ -678,8 +672,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_CONTENTBOX:
-	{
+	case COMMAND_CONTENTBOX: {
 	    int x1, y1, x2, y2;
 
 	    if (objc != 2) {
@@ -696,8 +689,7 @@ static int TreeWidgetCmd(
 	/* T expand ?-recurse? I ... */
 	case COMMAND_COLLAPSE:
 	case COMMAND_EXPAND:
-	case COMMAND_TOGGLE:
-	{
+	case COMMAND_TOGGLE: {
 	    char *s;
 	    int recurse = 0;
 	    int mode = 0; /* lint */
@@ -757,15 +749,13 @@ static int TreeWidgetCmd(
 	}
 #endif /* DEPRECATED */
 
-	case COMMAND_COLUMN:
-	{
+	case COMMAND_COLUMN: {
 	    result = TreeColumnCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
 #ifdef DEPRECATED
-	case COMMAND_COMPARE:
-	{
+	case COMMAND_COMPARE: {
 	    TreeItem item1, item2;
 	    static CONST char *opName[] = { "<", "<=", "==", ">=", ">", "!=", NULL };
 	    int op, compare = 0, index1, index2;
@@ -804,14 +794,12 @@ static int TreeWidgetCmd(
 	}
 #endif /* DEPRECATED */
 
-	case COMMAND_DEBUG:
-	{
+	case COMMAND_DEBUG: {
 	    result = TreeDebugCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_DEPTH:
-	{
+	case COMMAND_DEPTH: {
 	    TreeItem item;
 	    int depth;
 
@@ -833,20 +821,17 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_DRAGIMAGE:
-	{
+	case COMMAND_DRAGIMAGE: {
 	    result = DragImageCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_ELEMENT:
-	{
+	case COMMAND_ELEMENT: {
 	    result = TreeElementCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_IDENTIFY:
-	{
+	case COMMAND_IDENTIFY: {
 	    int x, y, width, height, depth;
 	    TreeColumn treeColumn;
 	    TreeItem item;
@@ -945,8 +930,7 @@ static int TreeWidgetCmd(
 	}
 
 #ifdef DEPRECATED
-	case COMMAND_INDEX:
-	{
+	case COMMAND_INDEX: {
 	    TreeItem item;
 
 	    if (objc != 3) {
@@ -962,27 +946,23 @@ static int TreeWidgetCmd(
 	}
 #endif /* DEPRECATED */
 
-	case COMMAND_ITEM:
-	{
+	case COMMAND_ITEM: {
 	    result = TreeItemCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_MARQUEE:
-	{
+	case COMMAND_MARQUEE: {
 	    result = TreeMarqueeCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_NOTIFY:
-	{
+	case COMMAND_NOTIFY: {
 	    result = TreeNotifyCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
 #ifdef DEPRECATED
-	case COMMAND_NUMCOLUMNS:
-	{
+	case COMMAND_NUMCOLUMNS: {
 	    if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
 		goto error;
@@ -991,8 +971,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_NUMITEMS:
-	{
+	case COMMAND_NUMITEMS: {
 	    if (objc != 2) {
 		Tcl_WrongNumArgs(interp, 2, objv, (char *) NULL);
 		goto error;
@@ -1002,8 +981,7 @@ static int TreeWidgetCmd(
 	}
 #endif /* DEPRECATED */
 
-	case COMMAND_ORPHANS:
-	{
+	case COMMAND_ORPHANS: {
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 	    Tcl_Obj *listObj;
@@ -1031,8 +1009,7 @@ static int TreeWidgetCmd(
 	}
 
 #ifdef DEPRECATED
-	case COMMAND_RANGE:
-	{
+	case COMMAND_RANGE: {
 	    TreeItem item, itemFirst, itemLast;
 	    Tcl_Obj *listObj;
 
@@ -1060,8 +1037,7 @@ static int TreeWidgetCmd(
 	}
 #endif /* DEPRECATED */
 
-	case COMMAND_SCAN:
-	{
+	case COMMAND_SCAN: {
 	    static CONST char *optionName[] = { "dragto", "mark",
 						(char *) NULL };
 	    int x, y, gain = 10, xOrigin, yOrigin;
@@ -1111,8 +1087,7 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_SEE:
-	{
+	case COMMAND_SEE: {
 	    TreeItem item;
 	    int x, y, w, h;
 	    int visWidth = Tree_ContentWidth(tree);
@@ -1175,32 +1150,27 @@ static int TreeWidgetCmd(
 	    break;
 	}
 
-	case COMMAND_SELECTION:
-	{
+	case COMMAND_SELECTION: {
 	    result = TreeSelectionCmd(interp, tree, objc, objv);
 	    break;
 	}
 
-	case COMMAND_STATE:
-	{
+	case COMMAND_STATE: {
 	    result = TreeStateCmd(tree, objc, objv);
 	    break;
 	}
 
-	case COMMAND_STYLE:
-	{
+	case COMMAND_STYLE: {
 	    result = TreeStyleCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
-	case COMMAND_XVIEW:
-	{
+	case COMMAND_XVIEW: {
 	    result = TreeXviewCmd(interp, tree, objc, objv);
 	    break;
 	}
 
-	case COMMAND_YVIEW:
-	{
+	case COMMAND_YVIEW: {
 	    result = TreeYviewCmd(interp, tree, objc, objv);
 	    break;
 	}
@@ -1625,8 +1595,7 @@ TreeEventProc(
     TreeCtrl *tree = clientData;
 
     switch (eventPtr->type) {
-	case Expose:
-	{
+	case Expose: {
 	    int x = eventPtr->xexpose.x;
 	    int y = eventPtr->xexpose.y;
 	    Tree_ExposeArea(tree, x, y,
@@ -1634,8 +1603,7 @@ TreeEventProc(
 		    y + eventPtr->xexpose.height);
 	    break;
 	}
-	case ConfigureNotify:
-	{
+	case ConfigureNotify: {
 	    if ((tree->prevWidth != Tk_Width(tree->tkwin)) ||
 		    (tree->prevHeight != Tk_Height(tree->tkwin))) {
 		tree->widthOfColumns = -1;
@@ -1650,8 +1618,7 @@ TreeEventProc(
 	    /* Handle focus as Tile does */
 	    if (   eventPtr->xfocus.detail == NotifyInferior
 		|| eventPtr->xfocus.detail == NotifyAncestor
-		|| eventPtr->xfocus.detail == NotifyNonlinear)
-	    {
+		|| eventPtr->xfocus.detail == NotifyNonlinear) {
 		Tree_FocusChanged(tree, 1);
 	    }
 	    break;
@@ -1659,8 +1626,7 @@ TreeEventProc(
 	    /* Handle focus as Tile does */
 	    if (   eventPtr->xfocus.detail == NotifyInferior
 		|| eventPtr->xfocus.detail == NotifyAncestor
-		|| eventPtr->xfocus.detail == NotifyNonlinear)
-	    {
+		|| eventPtr->xfocus.detail == NotifyNonlinear) {
 		Tree_FocusChanged(tree, 0);
 	    }
 	    break;
@@ -2362,8 +2328,7 @@ TreeStateCmd(
     }
 
     switch (index) {
-	case COMMAND_DEFINE:
-	{
+	case COMMAND_DEFINE: {
 	    char *string;
 	    int i, length, slot = -1;
 
@@ -2396,8 +2361,7 @@ TreeStateCmd(
 	    break;
 	}
 
-	case COMMAND_LINKAGE:
-	{
+	case COMMAND_LINKAGE: {
 	    int index;
 
 	    if (objc != 4) {
@@ -2412,8 +2376,7 @@ TreeStateCmd(
 	    break;
 	}
 
-	case COMMAND_NAMES:
-	{
+	case COMMAND_NAMES: {
 	    Tcl_Obj *listObj;
 	    int i;
 
@@ -2431,8 +2394,7 @@ TreeStateCmd(
 	    break;
 	}
 
-	case COMMAND_UNDEFINE:
-	{
+	case COMMAND_UNDEFINE: {
 	    int i, index;
 
 	    for (i = 3; i < objc; i++) {
@@ -2584,8 +2546,7 @@ TreeSelectionCmd(
     }
 
     switch (index) {
-	case COMMAND_ADD:
-	{
+	case COMMAND_ADD: {
 	    int i, count;
 	    TreeItemList items;
 	    Tcl_HashEntry *hPtr;
@@ -2680,8 +2641,7 @@ doneADD:
 	    break;
 	}
 
-	case COMMAND_ANCHOR:
-	{
+	case COMMAND_ANCHOR: {
 	    if (objc != 3 && objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?item?");
 		return TCL_ERROR;
@@ -2696,8 +2656,7 @@ doneADD:
 	    break;
 	}
 
-	case COMMAND_CLEAR:
-	{
+	case COMMAND_CLEAR: {
 	    int i, count;
 	    TreeItemList items;
 	    Tcl_HashEntry *hPtr;
@@ -2776,8 +2735,7 @@ doneCLEAR:
 	    break;
 	}
 
-	case COMMAND_COUNT:
-	{
+	case COMMAND_COUNT: {
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
@@ -2786,8 +2744,7 @@ doneCLEAR:
 	    break;
 	}
 
-	case COMMAND_GET:
-	{
+	case COMMAND_GET: {
 	    TreeItem item;
 	    Tcl_Obj *listObj;
 	    Tcl_HashEntry *hPtr;
@@ -2871,8 +2828,7 @@ doneCLEAR:
 	    break;
 	}
 
-	case COMMAND_INCLUDES:
-	{
+	case COMMAND_INCLUDES: {
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "item");
 		return TCL_ERROR;
@@ -2884,8 +2840,7 @@ doneCLEAR:
 	    break;
 	}
 
-	case COMMAND_MODIFY:
-	{
+	case COMMAND_MODIFY: {
 	    int i, j, k, objcS, objcD;
 	    Tcl_Obj **objvS, **objvD;
 	    Tcl_HashEntry *hPtr;
@@ -3398,8 +3353,7 @@ TreeDebugCmd(
 
     switch (index) {
 	/* T debug alloc */
-	case COMMAND_ALLOC:
-	{
+	case COMMAND_ALLOC: {
 #ifdef ALLOC_HAX
 #ifdef TREECTRL_DEBUG
 	    AllocHax_Stats(interp, tree->allocData);
@@ -3413,8 +3367,7 @@ TreeDebugCmd(
 	}
 
 	/* T debug cget option */
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr;
 
 	    if (objc != 4) {
@@ -3430,8 +3383,7 @@ TreeDebugCmd(
 	}
 
 	/* T debug configure ?option? ?value? ?option value ...? */
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr;
 	    Tk_SavedOptions savedOptions;
 	    int mask, result;
@@ -3469,8 +3421,7 @@ TreeDebugCmd(
 	    break;
 	}
 
-	case COMMAND_DINFO:
-	{
+	case COMMAND_DINFO: {
 	    extern void DumpDInfo(TreeCtrl *tree, int index);
 	    static CONST char *optionNames[] = {
 		"ditem", "onscreen", "range", (char *) NULL
@@ -3489,8 +3440,7 @@ TreeDebugCmd(
 	}
 
 	/* T debug expose x1 y1 x2 y2 */
-	case COMMAND_EXPOSE:
-	{
+	case COMMAND_EXPOSE: {
 	    int x1, y1, x2, y2;
 
 	    if (objc != 7) {
@@ -3510,8 +3460,7 @@ TreeDebugCmd(
 	    break;
 	}
 
-	case COMMAND_SCROLL:
-	{
+	case COMMAND_SCROLL: {
 	    int visHeight = Tree_ContentHeight(tree);
 	    int totHeight = Tree_TotalHeight(tree);
 	    int yIncr = tree->yScrollIncrement;
@@ -3671,8 +3620,7 @@ TextLayoutCmd(
 	}
 
 	switch (index) {
-	    case OPT_IGNORENEWLINES:
-	    {
+	    case OPT_IGNORENEWLINES: {
 		int v;
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &v) != TCL_OK) {
 		    result = TCL_ERROR;
@@ -3684,8 +3632,7 @@ TextLayoutCmd(
 		    flags &= ~TK_IGNORE_NEWLINES;
 		break;
 	    }
-	    case OPT_IGNORETABS:
-	    {
+	    case OPT_IGNORETABS: {
 		int v;
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &v) != TCL_OK) {
 		    result = TCL_ERROR;
@@ -3697,16 +3644,14 @@ TextLayoutCmd(
 		    flags &= ~TK_IGNORE_TABS;
 		break;
 	    }
-	    case OPT_JUSTIFY:
-	    {
+	    case OPT_JUSTIFY: {
 		if (Tk_GetJustifyFromObj(interp, objv[i + 1], &justify) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto done;
 		}
 		break;
 	    }
-	    case OPT_WIDTH:
-	    {
+	    case OPT_WIDTH: {
 		if (Tk_GetPixelsFromObj(interp, tkwin, objv[i + 1], &width) != TCL_OK) {
 		    result = TCL_ERROR;
 		    goto done;

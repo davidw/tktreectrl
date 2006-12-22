@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.98 2006/12/08 20:48:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.99 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1562,21 +1562,18 @@ Qualifiers_Scan(
 	    goto errorExit;
 	}
 	switch ((enum qualEnum) qual) {
-	    case QUAL_DEPTH:
-	    {
+	    case QUAL_DEPTH: {
 		if (Tcl_GetIntFromObj(interp, objv[j + 1], &q->depth) != TCL_OK)
 		    goto errorExit;
 		break;
 	    }
-	    case QUAL_STATE:
-	    {
+	    case QUAL_STATE: {
 		if (Tree_StateFromListObj(tree, objv[j + 1], q->states,
 			SFO_NOT_TOGGLE) != TCL_OK)
 		    goto errorExit;
 		break;
 	    }
-	    case QUAL_TAG:
-	    {
+	    case QUAL_TAG: {
 		if (q->exprOK)
 		    TagExpr_Free(&q->expr);
 		if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
@@ -1584,13 +1581,11 @@ Qualifiers_Scan(
 		q->exprOK = TRUE;
 		break;
 	    }
-	    case QUAL_VISIBLE:
-	    {
+	    case QUAL_VISIBLE: {
 		q->visible = 1;
 		break;
 	    }
-	    case QUAL_NOT_VISIBLE:
-	    {
+	    case QUAL_NOT_VISIBLE: {
 		q->visible = 0;
 		break;
 	    }
@@ -1831,13 +1826,11 @@ TreeItemList_FromObj(
 	}
 
 	switch ((enum indexEnum) index) {
-	    case INDEX_ACTIVE:
-	    {
+	    case INDEX_ACTIVE: {
 		item = tree->activeItem;
 		break;
 	    }
-	    case INDEX_ALL:
-	    {
+	    case INDEX_ALL: {
 		if (qualArgsTotal) {
 		    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		    while (hPtr != NULL) {
@@ -1861,21 +1854,18 @@ TreeItemList_FromObj(
 		}
 		break;
 	    }
-	    case INDEX_ANCHOR:
-	    {
+	    case INDEX_ANCHOR: {
 		item = tree->anchorItem;
 		break;
 	    }
-	    case INDEX_FIRST:
-	    {
+	    case INDEX_FIRST: {
 		item = tree->root;
 		while (!Qualifies(&q, item))
 		    item = TreeItem_Next(tree, item);
 		break;
 	    }
 	    case INDEX_END:
-	    case INDEX_LAST:
-	    {
+	    case INDEX_LAST: {
 		item = tree->root;
 		while (item->lastChild) {
 		    item = item->lastChild;
@@ -1884,8 +1874,7 @@ TreeItemList_FromObj(
 		    item = TreeItem_Prev(tree, item);
 		break;
 	    }
-	    case INDEX_LIST:
-	    {
+	    case INDEX_LIST: {
 		int listObjc;
 		Tcl_Obj **listObjv;
 		int count;
@@ -1917,8 +1906,7 @@ TreeItemList_FromObj(
 		    item = NULL;
 		break;
 	    }
-	    case INDEX_NEAREST:
-	    {
+	    case INDEX_NEAREST: {
 		int x, y;
 
 		if (Tk_GetPixelsFromObj(interp, tree->tkwin,
@@ -1932,8 +1920,7 @@ TreeItemList_FromObj(
 		item = Tree_ItemUnderPoint(tree, &x, &y, TRUE);
 		break;
 	    }
-	    case INDEX_RANGE:
-	    {
+	    case INDEX_RANGE: {
 		TreeItem itemFirst, itemLast;
 
 		if (TreeItem_FromObj(tree, objv[listIndex + 1], &itemFirst,
@@ -1955,8 +1942,7 @@ TreeItemList_FromObj(
 		item = NULL;
 		break;
 	    }
-	    case INDEX_RNC:
-	    {
+	    case INDEX_RNC: {
 		int row, col;
 
 		if (Tcl_GetIntFromObj(interp, objv[listIndex + 1], &row) != TCL_OK)
@@ -1966,8 +1952,7 @@ TreeItemList_FromObj(
 		item = Tree_RNCToItem(tree, row, col);
 		break;
 	    }
-	    case INDEX_ROOT:
-	    {
+	    case INDEX_ROOT: {
 		item = tree->root;
 		break;
 	    }
@@ -2107,13 +2092,11 @@ gotFirstPart:
 	}
 
 	switch ((enum modEnum) index) {
-	    case TMOD_ABOVE:
-	    {
+	    case TMOD_ABOVE: {
 		item = Tree_ItemAbove(tree, item);
 		break;
 	    }
-	    case TMOD_ANCESTORS:
-	    {
+	    case TMOD_ANCESTORS: {
 		item = item->parent;
 		while (item != NULL) {
 		    if (Qualifies(&q, item)) {
@@ -2124,18 +2107,15 @@ gotFirstPart:
 		item = NULL;
 		break;
 	    }
-	    case TMOD_BELOW:
-	    {
+	    case TMOD_BELOW: {
 		item = Tree_ItemBelow(tree, item);
 		break;
 	    }
-	    case TMOD_BOTTOM:
-	    {
+	    case TMOD_BOTTOM: {
 		item = Tree_ItemBottom(tree, item);
 		break;
 	    }
-	    case TMOD_CHILD:
-	    {
+	    case TMOD_CHILD: {
 		int n, endRelative;
 
 		if (Tree_GetIntForIndex(tree, objv[listIndex + 1], &n,
@@ -2161,8 +2141,7 @@ gotFirstPart:
 		}
 		break;
 	    }
-	    case TMOD_CHILDREN:
-	    {
+	    case TMOD_CHILDREN: {
 		item = item->firstChild;
 		while (item != NULL) {
 		    if (Qualifies(&q, item)) {
@@ -2173,8 +2152,7 @@ gotFirstPart:
 		item = NULL;
 		break;
 	    }
-	    case TMOD_DESCENDANTS:
-	    {
+	    case TMOD_DESCENDANTS: {
 		TreeItem last = item;
 
 		while (last->lastChild != NULL)
@@ -2191,75 +2169,63 @@ gotFirstPart:
 		item = NULL;
 		break;
 	    }
-	    case TMOD_FIRSTCHILD:
-	    {
+	    case TMOD_FIRSTCHILD: {
 		item = item->firstChild;
 		while (!Qualifies(&q, item))
 		    item = item->nextSibling;
 		break;
 	    }
-	    case TMOD_LASTCHILD:
-	    {
+	    case TMOD_LASTCHILD: {
 		item = item->lastChild;
 		while (!Qualifies(&q, item))
 		    item = item->prevSibling;
 		break;
 	    }
-	    case TMOD_LEFT:
-	    {
+	    case TMOD_LEFT: {
 		item = Tree_ItemLeft(tree, item);
 		break;
 	    }
-	    case TMOD_LEFTMOST:
-	    {
+	    case TMOD_LEFTMOST: {
 		item = Tree_ItemLeftMost(tree, item);
 		break;
 	    }
-	    case TMOD_NEXT:
-	    {
+	    case TMOD_NEXT: {
 		item = TreeItem_Next(tree, item);
 		while (!Qualifies(&q, item))
 		    item = TreeItem_Next(tree, item);
 		break;
 	    }
-	    case TMOD_NEXTSIBLING:
-	    {
+	    case TMOD_NEXTSIBLING: {
 		item = item->nextSibling;
 		while (!Qualifies(&q, item))
 		    item = item->nextSibling;
 		break;
 	    }
-	    case TMOD_PARENT:
-	    {
+	    case TMOD_PARENT: {
 		item = item->parent;
 		break;
 	    }
-	    case TMOD_PREV:
-	    {
+	    case TMOD_PREV: {
 		item = TreeItem_Prev(tree, item);
 		while (!Qualifies(&q, item))
 		    item = TreeItem_Prev(tree, item);
 		break;
 	    }
-	    case TMOD_PREVSIBLING:
-	    {
+	    case TMOD_PREVSIBLING: {
 		item = item->prevSibling;
 		while (!Qualifies(&q, item))
 		    item = item->prevSibling;
 		break;
 	    }
-	    case TMOD_RIGHT:
-	    {
+	    case TMOD_RIGHT: {
 		item = Tree_ItemRight(tree, item);
 		break;
 	    }
-	    case TMOD_RIGHTMOST:
-	    {
+	    case TMOD_RIGHTMOST: {
 		item = Tree_ItemRightMost(tree, item);
 		break;
 	    }
-	    case TMOD_SIBLING:
-	    {
+	    case TMOD_SIBLING: {
 		int n, endRelative;
 
 		if (Tree_GetIntForIndex(tree, objv[listIndex + 1], &n,
@@ -2288,8 +2254,7 @@ gotFirstPart:
 		}
 		break;
 	    }
-	    case TMOD_TOP:
-	    {
+	    case TMOD_TOP: {
 		item = Tree_ItemTop(tree, item);
 		break;
 	    }
@@ -4824,8 +4789,7 @@ ItemCreateCmd(
 	    return TCL_ERROR;
 	}
 	switch (index) {
-	    case OPT_BUTTON:
-	    {
+	    case OPT_BUTTON: {
 		int length;
 		char *s = Tcl_GetStringFromObj(objv[i + 1], &length);
 		if (s[0] == 'a' && strncmp(s, "auto", length) == 0) {
@@ -5127,8 +5091,7 @@ ItemElementCmd(
 #ifdef DEPRECATED
 	case COMMAND_ACTUAL:
 #endif
-	case COMMAND_PERSTATE:
-	{
+	case COMMAND_PERSTATE: {
 	    int state;
 
 	    if (objc < 8 || objc > 9) {
@@ -5164,8 +5127,7 @@ ItemElementCmd(
 	}
 
 	/* T item element cget I C E option */
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    if (objc != 8) {
 		Tcl_WrongNumArgs(tree->interp, 4, objv,
 			"item column element option");
@@ -5188,8 +5150,7 @@ ItemElementCmd(
 	}
 
 	/* T item element configure I C E ... */
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    struct columnObj {
 		TreeColumnList columns;
 		int isColumn;
@@ -5438,8 +5399,7 @@ ItemStyleCmd(
 
     switch (index) {
 	/* T item style elements I C */
-	case COMMAND_ELEMENTS:
-	{
+	case COMMAND_ELEMENTS: {
 	    Column *column;
 	    int columnIndex;
 
@@ -5463,8 +5423,7 @@ ItemStyleCmd(
 	}
 
 	/* T item style map I C S map */
-	case COMMAND_MAP:
-	{
+	case COMMAND_MAP: {
 	    TreeStyle style;
 	    TreeColumnList columns;
 	    TreeColumn treeColumn;
@@ -5526,8 +5485,7 @@ doneMAP:
 	}
 
 	/* T item style set I ?C? ?S? ?C S ...?*/
-	case COMMAND_SET:
-	{
+	case COMMAND_SET: {
 	    struct columnStyle {
 		TreeColumnList columns;
 		TreeStyle style;
@@ -6220,8 +6178,7 @@ ItemSortCmd(
 	    case OPT_DICT:
 		sortData.columns[sortData.columnCount - 1].sortBy = SORT_DICT;
 		break;
-	    case OPT_ELEMENT:
-	    {
+	    case OPT_ELEMENT: {
 		int listObjc;
 		Tcl_Obj **listObjv;
 
@@ -6666,8 +6623,7 @@ ItemStateCmd(
 
     switch (index) {
 	/* T item state forcolumn I C ?stateList? */
-	case COMMAND_FORCOLUMN:
-	{
+	case COMMAND_FORCOLUMN: {
 	    TreeItemList itemList;
 	    TreeColumnList columns;
 	    TreeColumn treeColumn;
@@ -6742,8 +6698,7 @@ doneFORC:
 	}
 
 	/* T item state get I ?state? */
-	case COMMAND_GET:
-	{
+	case COMMAND_GET: {
 	    Tcl_Obj *listObj;
 	    int i, states[3];
 
@@ -6776,8 +6731,7 @@ doneFORC:
 	}
 
 	/* T item state set I ?I? {state ...} */
-	case COMMAND_SET:
-	{
+	case COMMAND_SET: {
 	    TreeItemList itemList, item2List;
 	    int states[3], stateOn, stateOff;
 	    ItemForEach iter;
@@ -6863,29 +6817,24 @@ ItemTagCmd(
     TreeItem item;
     int result = TCL_OK;
 
-    if (objc < 4)
-    {
+    if (objc < 4) {
 	Tcl_WrongNumArgs(interp, 3, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
+    switch (index) {
 	/* T item tag add I tagList */
-	case COMMAND_ADD:
-	{
+	case COMMAND_ADD: {
 	    int i, numTags;
 	    Tcl_Obj **listObjv;
 	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
 		return TCL_ERROR;
 	    }
@@ -6908,13 +6857,11 @@ ItemTagCmd(
 	}
 
 	/* T item tag expr I tagExpr */
-	case COMMAND_EXPR:
-	{
+	case COMMAND_EXPR: {
 	    TagExpr expr;
 	    int ok = TRUE;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagExpr");
 		return TCL_ERROR;
 	    }
@@ -6937,14 +6884,12 @@ ItemTagCmd(
 	}
 
 	/* T item tag names I */
-	case COMMAND_NAMES:
-	{
+	case COMMAND_NAMES: {
 	    Tcl_Obj *listObj;
 	    Tk_Uid *tags = NULL;
 	    int i, tagSpace, numTags = 0;
 
-	    if (objc != 5)
-	    {
+	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item");
 		return TCL_ERROR;
 	    }
@@ -6967,14 +6912,12 @@ ItemTagCmd(
 	}
 
 	/* T item tag remove I tagList */
-	case COMMAND_REMOVE:
-	{
+	case COMMAND_REMOVE: {
 	    int i, numTags;
 	    Tcl_Obj **listObjv;
 	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "item tagList");
 		return TCL_ERROR;
 	    }
@@ -7310,8 +7253,7 @@ TreeItemCmd(
     }
 
     switch (index) {
-	case COMMAND_ANCESTORS:
-	{
+	case COMMAND_ANCESTORS: {
 	    Tcl_Obj *listObj;
 	    TreeItem parent = item->parent;
 
@@ -7327,8 +7269,7 @@ TreeItemCmd(
 	    break;
 	}
 	/* T item bbox I ?C? ?E? */
-	case COMMAND_BBOX:
-	{
+	case COMMAND_BBOX: {
 	    int x, y, w, h;
 	    int count;
 	    TreeColumn treeColumn;
@@ -7371,8 +7312,7 @@ TreeItemCmd(
 		    y - tree->yOrigin + h);
 	    break;
 	}
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr;
 
 	    resultObjPtr = Tk_GetOptionValue(interp, (char *) item,
@@ -7382,8 +7322,7 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, resultObjPtr);
 	    break;
 	}
-	case COMMAND_CHILDREN:
-	{
+	case COMMAND_CHILDREN: {
 	    if (item->numChildren != 0) {
 		Tcl_Obj *listObj;
 
@@ -7400,8 +7339,7 @@ TreeItemCmd(
 	}
 	case COMMAND_COLLAPSE:
 	case COMMAND_EXPAND:
-	case COMMAND_TOGGLE:
-	{
+	case COMMAND_TOGGLE: {
 	    int recurse = 0;
 	    int mode = 0; /* lint */
 	    int i, count;
@@ -7447,8 +7385,7 @@ TreeItemCmd(
 	    break;
 	}
 	/* T item compare I op I */
-	case COMMAND_COMPARE:
-	{
+	case COMMAND_COMPARE: {
 	    static CONST char *opName[] = { "<", "<=", "==", ">=", ">", "!=", NULL };
 	    int op, compare = 0, index1, index2;
 
@@ -7470,8 +7407,7 @@ TreeItemCmd(
 	}
 
 #ifdef DEPRECATED
-	case COMMAND_COMPLEX:
-	{
+	case COMMAND_COMPLEX: {
 	    int i, j, columnIndex;
 	    int objc1, objc2;
 	    Tcl_Obj **objv1, **objv2;
@@ -7553,8 +7489,7 @@ TreeItemCmd(
 #endif /* DEPRECATED*/
 
 	/* T item configure I ?option? ?value? ?option value ...? */
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    if (objc <= 5) {
 		Tcl_Obj *resultObjPtr;
 
@@ -7578,8 +7513,7 @@ TreeItemCmd(
 	    }
 	    break;
 	}
-	case COMMAND_COUNT:
-	{
+	case COMMAND_COUNT: {
 	    int count = tree->itemCount;
 
 	    if (objc == 4) {
@@ -7591,8 +7525,7 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(count));
 	    break;
 	}
-	case COMMAND_DELETE:
-	{
+	case COMMAND_DELETE: {
 	    TreeItemList deleted, selected;
 	    int i, count;
 
@@ -7688,8 +7621,7 @@ TreeItemCmd(
 	    TreeItemList_Free(&deleted);
 	    break;
 	}
-	case COMMAND_DESCENDANTS:
-	{
+	case COMMAND_DESCENDANTS: {
 	    Tcl_Obj *listObj;
 
 	    if (item->firstChild == NULL)
@@ -7709,16 +7641,14 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
-	case COMMAND_DUMP:
-	{
+	case COMMAND_DUMP: {
 	    Tree_UpdateItemIndex(tree);
 	    FormatResult(interp, "index %d indexVis %d",
 		    item->index, item->indexVis);
 	    break;
 	}
 	/* T item enabled I ?boolean? */
-	case COMMAND_ENABLED:
-	{
+	case COMMAND_ENABLED: {
 	    int enabled;
 	    TreeItemList newD;
 	    int stateOff, stateOn;
@@ -7753,8 +7683,7 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(enabled));
 	    break;
 	}
-	case COMMAND_FIRSTCHILD:
-	{
+	case COMMAND_FIRSTCHILD: {
 	    if (item2 != NULL && item2 != item->firstChild) {
 		TreeItem_RemoveFromParent(tree, item2);
 		item2->nextSibling = item->firstChild;
@@ -7775,8 +7704,7 @@ TreeItemCmd(
 	    break;
 	}
 	/* T item id I */
-	case COMMAND_ID:
-	{
+	case COMMAND_ID: {
 	    Tcl_Obj *listObj;
 
 	    listObj = Tcl_NewListObj(0, NULL);
@@ -7787,19 +7715,16 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
-	case COMMAND_ISANCESTOR:
-	{
+	case COMMAND_ISANCESTOR: {
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(
 				 TreeItem_IsAncestor(tree, item, item2)));
 	    break;
 	}
-	case COMMAND_ISOPEN:
-	{
+	case COMMAND_ISOPEN: {
 	    Tcl_SetObjResult(interp, Tcl_NewBooleanObj(item->state & STATE_OPEN));
 	    break;
 	}
-	case COMMAND_LASTCHILD:
-	{
+	case COMMAND_LASTCHILD: {
 	    /* Don't allow non-deleted items to become children of a
 	     * deleted item. */
 	    if (item2 != NULL && item2 != item->lastChild) {
@@ -7821,8 +7746,7 @@ TreeItemCmd(
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->lastChild));
 	    break;
 	}
-	case COMMAND_NEXTSIBLING:
-	{
+	case COMMAND_NEXTSIBLING: {
 	    if (item2 != NULL && item2 != item->nextSibling) {
 		TreeItem_RemoveFromParent(tree, item2);
 		item2->prevSibling = item;
@@ -7843,14 +7767,12 @@ TreeItemCmd(
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->nextSibling));
 	    break;
 	}
-	case COMMAND_NUMCHILDREN:
-	{
+	case COMMAND_NUMCHILDREN: {
 	    Tcl_SetObjResult(interp, Tcl_NewIntObj(item->numChildren));
 	    break;
 	}
 	/* T item order I ?-visible? */
-	case COMMAND_ORDER:
-	{
+	case COMMAND_ORDER: {
 	    int visible = FALSE;
 	    if (objc == 5) {
 		int len;
@@ -7869,8 +7791,7 @@ TreeItemCmd(
 	    break;
 	}
 	/* T item range I I */
-	case COMMAND_RANGE:
-	{
+	case COMMAND_RANGE: {
 	    TreeItem itemFirst = item;
 	    TreeItem itemLast = item2;
 	    Tcl_Obj *listObj;
@@ -7891,14 +7812,12 @@ TreeItemCmd(
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
-	case COMMAND_PARENT:
-	{
+	case COMMAND_PARENT: {
 	    if (item->parent != NULL)
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->parent));
 	    break;
 	}
-	case COMMAND_PREVSIBLING:
-	{
+	case COMMAND_PREVSIBLING: {
 	    if (item2 != NULL && item2 != item->prevSibling) {
 		TreeItem_RemoveFromParent(tree, item2);
 		item2->nextSibling = item;
@@ -7919,8 +7838,7 @@ TreeItemCmd(
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->prevSibling));
 	    break;
 	}
-	case COMMAND_REMOVE:
-	{
+	case COMMAND_REMOVE: {
 	    int removed = FALSE;
 
 	    ITEM_FOR_EACH(item, &itemList, NULL, &iter) {
@@ -7940,8 +7858,7 @@ TreeItemCmd(
 #endif
 	    break;
 	}
-	case COMMAND_RNC:
-	{
+	case COMMAND_RNC: {
 	    int row,col;
 
 	    if (Tree_ItemToRNC(tree, item, &row, &col) == TCL_OK)
@@ -7950,8 +7867,7 @@ TreeItemCmd(
 	}
 
 	/* T item span I ?C? ?span? ?C span ...? */
-	case COMMAND_SPAN:
-	{
+	case COMMAND_SPAN: {
 	    TreeColumn treeColumn = tree->columns;
 	    Column *column = item->columns;
 	    Tcl_Obj *listObj;
@@ -8049,8 +7965,7 @@ doneSPAN:
 	/* T item image I ?C? ?image? ?C image ...? */
 	case COMMAND_IMAGE:
 	/* T item text I ?C? ?text? ?C text ...? */
-	case COMMAND_TEXT:
-	{
+	case COMMAND_TEXT: {
 	    TreeColumn treeColumn = tree->columns;
 	    Column *column;
 	    Tcl_Obj *objPtr;

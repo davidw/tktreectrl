@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.60 2006/12/06 01:24:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.61 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -159,14 +159,12 @@ Ellipsis(
 	&pixels);
 
     /* The whole string fits. No ellipsis needed (unless forced) */
-    if ((bytesThatFit == numBytes) && !force)
-    {
+    if ((bytesThatFit == numBytes) && !force) {
 	(*maxPixels) = pixels;
 	return numBytes;
     }
 
-    if (bytesThatFit <= 1)
-    {
+    if (bytesThatFit <= 1) {
 	(*maxPixels) = pixels;
 	return -bytesThatFit;
     }
@@ -179,14 +177,12 @@ Ellipsis(
     if (bytesTest + ellipsisNumBytes > sizeof(staticStr))
 	tmpStr = ckalloc(bytesTest + ellipsisNumBytes);
     memcpy(tmpStr, string, bytesTest);
-    while (bytesTest > 0)
-    {
+    while (bytesTest > 0) {
 	memcpy(tmpStr + bytesTest, ellipsis, ellipsisNumBytes);
 	numBytes = Tk_MeasureChars(tkfont, tmpStr,
 	    bytesTest + ellipsisNumBytes,
 	    *maxPixels, 0, &pixelsTest);
-	if (numBytes == bytesTest + ellipsisNumBytes)
-	{
+	if (numBytes == bytesTest + ellipsisNumBytes) {
 	    (*maxPixels) = pixelsTest;
 	    if (tmpStr != staticStr)
 		ckfree(tmpStr);
@@ -242,8 +238,7 @@ HDotLine(
     oldPen = SelectObject(dc, pen);
 
     nw = !(wx & 1) == !(wy & 1);
-    for (x1 += !nw; x1 < x2; x1 += 2)
-    {
+    for (x1 += !nw; x1 < x2; x1 += 2) {
 	MoveToEx(dc, x1, y1, NULL);
 	LineTo(dc, x1 + 1, y1);
     }
@@ -258,8 +253,7 @@ HDotLine(
     int wy = y1 + tree->drawableYOrigin;
 
     nw = !(wx & 1) == !(wy & 1);
-    for (x1 += !nw; x1 < x2; x1 += 2)
-    {
+    for (x1 += !nw; x1 < x2; x1 += 2) {
 	XDrawPoint(tree->display, drawable, gc, x1, y1);
     }
 #endif
@@ -303,8 +297,7 @@ VDotLine(
     oldPen = SelectObject(dc, pen);
 
     nw = !(wx & 1) == !(wy & 1);
-    for (y1 += !nw; y1 < y2; y1 += 2)
-    {
+    for (y1 += !nw; y1 < y2; y1 += 2) {
 	MoveToEx(dc, x1, y1, NULL);
 	LineTo(dc, x1 + 1, y1);
     }
@@ -319,8 +312,7 @@ VDotLine(
     int wy = y1 + tree->drawableYOrigin;
 
     nw = !(wx & 1) == !(wy & 1);
-    for (y1 += !nw; y1 < y2; y1 += 2)
-    {
+    for (y1 += !nw; y1 < y2; y1 += 2) {
 	XDrawPoint(tree->display, drawable, gc, x1, y1);
     }
 #endif
@@ -380,32 +372,28 @@ DrawActiveOutline(
 
     if (w) /* left */
     {
-	for (i = !nw; i < height; i += 2)
-	{
+	for (i = !nw; i < height; i += 2) {
 	    MoveToEx(dc, x, y + i, NULL);
 	    LineTo(dc, x + 1, y + i);
 	}
     }
     if (n) /* top */
     {
-	for (i = nw ? w * 2 : 1; i < width; i += 2)
-	{
+	for (i = nw ? w * 2 : 1; i < width; i += 2) {
 	    MoveToEx(dc, x + i, y, NULL);
 	    LineTo(dc, x + i + 1, y);
 	}
     }
     if (e) /* right */
     {
-	for (i = ne ? n * 2 : 1; i < height; i += 2)
-	{
+	for (i = ne ? n * 2 : 1; i < height; i += 2) {
 	    MoveToEx(dc, x + width - 1, y + i, NULL);
 	    LineTo(dc, x + width, y + i);
 	}
     }
     if (s) /* bottom */
     {
-	for (i = sw ? w * 2 : 1; i < width - (se && e); i += 2)
-	{
+	for (i = sw ? w * 2 : 1; i < width - (se && e); i += 2) {
 	    MoveToEx(dc, x + i, y + height - 1, NULL);
 	    LineTo(dc, x + i + 1, y + height - 1);
 	}
@@ -441,29 +429,25 @@ DrawActiveOutline(
 
     if (w) /* left */
     {
-	for (i = !nw; i < height; i += 2)
-	{
+	for (i = !nw; i < height; i += 2) {
 	    XDrawPoint(tree->display, drawable, gc, x, y + i);
 	}
     }
     if (n) /* top */
     {
-	for (i = nw ? w * 2 : 1; i < width; i += 2)
-	{
+	for (i = nw ? w * 2 : 1; i < width; i += 2) {
 	    XDrawPoint(tree->display, drawable, gc, x + i, y);
 	}
     }
     if (e) /* right */
     {
-	for (i = ne ? n * 2 : 1; i < height; i += 2)
-	{
+	for (i = ne ? n * 2 : 1; i < height; i += 2) {
 	    XDrawPoint(tree->display, drawable, gc, x + width - 1, y + i);
 	}
     }
     if (s) /* bottom */
     {
-	for (i = sw ? w * 2 : 1; i < width - (se && e); i += 2)
-	{
+	for (i = sw ? w * 2 : 1; i < width - (se && e); i += 2) {
 	    XDrawPoint(tree->display, drawable, gc, x + i, y + height - 1);
 	}
     }
@@ -646,23 +630,19 @@ DotRect_Draw(
     sw = !(wx & 1) == !((wy + height - 1) & 1);
     se = !((wx + width - 1) & 1) == !((wy + height - 1) & 1);
 
-    for (i = !nw; i < height; i += 2)
-    {
+    for (i = !nw; i < height; i += 2) {
 	MoveToEx(dc, x, y + i, NULL);
 	LineTo(dc, x + 1, y + i);
     }
-    for (i = nw ? 2 : 1; i < width; i += 2)
-    {
+    for (i = nw ? 2 : 1; i < width; i += 2) {
 	MoveToEx(dc, x + i, y, NULL);
 	LineTo(dc, x + i + 1, y);
     }
-    for (i = ne ? 2 : 1; i < height; i += 2)
-    {
+    for (i = ne ? 2 : 1; i < height; i += 2) {
 	MoveToEx(dc, x + width - 1, y + i, NULL);
 	LineTo(dc, x + width, y + i);
     }
-    for (i = sw ? 2 : 1; i < width - se; i += 2)
-    {
+    for (i = sw ? 2 : 1; i < width - se; i += 2) {
 	MoveToEx(dc, x + i, y + height - 1, NULL);
 	LineTo(dc, x + i + 1, y + height - 1);
     }
@@ -683,23 +663,19 @@ DotRect_Draw(
     x += macWin->xOff;
     y += macWin->yOff;
 
-    for (i = !nw; i < height; i += 2)
-    {
+    for (i = !nw; i < height; i += 2) {
 	MoveTo(x, y + i);
 	LineTo(x, y + i);
     }
-    for (i = nw ? 2 : 1; i < width; i += 2)
-    {
+    for (i = nw ? 2 : 1; i < width; i += 2) {
 	MoveTo(x + i, y);
 	LineTo(x + i, y);
     }
-    for (i = ne ? 2 : 1; i < height; i += 2)
-    {
+    for (i = ne ? 2 : 1; i < height; i += 2) {
 	MoveTo(x + width, y + i);
 	LineTo(x + width, y + i);
     }
-    for (i = sw ? 2 : 1; i < width - se; i += 2)
-    {
+    for (i = sw ? 2 : 1; i < width - se; i += 2) {
 	MoveTo(x + i, y + height - 1);
 	LineTo(x + i, y + height - 1);
     }
@@ -1483,8 +1459,7 @@ static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
 
     layoutPtr = *layoutPtrPtr;
 #ifdef TEXTLAYOUT_ALLOCHAX
-    if (layoutPtr->numChunks == layoutPtr->maxChunks)
-    {
+    if (layoutPtr->numChunks == layoutPtr->maxChunks) {
 	layoutPtr->maxChunks *= 2;
 	s = sizeof(LayoutInfo) + ((layoutPtr->maxChunks - 1) * sizeof(LayoutChunk));
 	layoutPtr = (LayoutInfo *) ckrealloc((char *) layoutPtr, s);
@@ -1493,8 +1468,7 @@ static LayoutChunk *NewChunk(LayoutInfo **layoutPtrPtr, int *maxPtr,
     }
 #else
     maxChunks = *maxPtr;
-    if (layoutPtr->numChunks == maxChunks)
-    {
+    if (layoutPtr->numChunks == maxChunks) {
 	maxChunks *= 2;
 	s = sizeof(LayoutInfo) + ((maxChunks - 1) * sizeof(LayoutChunk));
 	layoutPtr = (LayoutInfo *) ckrealloc((char *) layoutPtr, s);
@@ -1560,8 +1534,7 @@ TextLayout TextLayout_Compute(
 
 #ifdef TEXTLAYOUT_ALLOCHAX
     Tcl_MutexLock(&textLayoutMutex);
-    if (freeLayoutInfo != NULL)
-    {
+    if (freeLayoutInfo != NULL) {
 	layoutPtr = freeLayoutInfo;
 	freeLayoutInfo = layoutPtr->nextFree;
     }
@@ -1594,19 +1567,14 @@ TextLayout TextLayout_Compute(
 
     flags &= TK_WHOLE_WORDS | TK_IGNORE_TABS | TK_IGNORE_NEWLINES;
     flags |= TK_AT_LEAST_ONE;
-    for (start = string; start < end;)
-    {
-	if (start >= special)
-	{
-	    for (special = start; special < end; special++)
-	    {
-		if (!(flags & TK_IGNORE_NEWLINES))
-		{
+    for (start = string; start < end;) {
+	if (start >= special) {
+	    for (special = start; special < end; special++) {
+		if (!(flags & TK_IGNORE_NEWLINES)) {
 		    if ((*special == '\n') || (*special == '\r'))
 			break;
 		}
-		if (!(flags & TK_IGNORE_TABS))
-		{
+		if (!(flags & TK_IGNORE_TABS)) {
 		    if (*special == '\t')
 			break;
 		}
@@ -1614,14 +1582,12 @@ TextLayout TextLayout_Compute(
 	}
 
 	chunkPtr = NULL;
-	if (start < special)
-	{
+	if (start < special) {
 	    bytesThisChunk = Tk_MeasureChars(tkfont, start, special - start,
 		wrapLength - curX, flags, &newX);
 	    newX += curX;
 	    flags &= ~TK_AT_LEAST_ONE;
-	    if (bytesThisChunk > 0)
-	    {
+	    if (bytesThisChunk > 0) {
 #ifdef TEXTLAYOUT_ALLOCHAX
 		chunkPtr = NewChunk(&layoutPtr, start,
 #else
@@ -1633,11 +1599,9 @@ TextLayout TextLayout_Compute(
 	    }
 	}
 
-	if ((start == special) && (special < end))
-	{
+	if ((start == special) && (special < end)) {
 	    chunkPtr = NULL;
-	    if (*special == '\t')
-	    {
+	    if (*special == '\t') {
 		newX = curX + tabWidth;
 		newX -= newX % tabWidth;
 #ifdef TEXTLAYOUT_ALLOCHAX
@@ -1648,8 +1612,7 @@ TextLayout TextLayout_Compute(
 		    baseline)->numDisplayChars = -1;
 		start++;
 		if ((start < end) && ((wrapLength <= 0) ||
-		    (newX <= wrapLength)))
-		{
+		    (newX <= wrapLength))) {
 		    curX = newX;
 		    flags &= ~TK_AT_LEAST_ONE;
 		    continue;
@@ -1668,28 +1631,23 @@ TextLayout TextLayout_Compute(
 	    }
 	}
 
-	while ((start < end) && isspace(UCHAR(*start)))
-	{
-	    if (!(flags & TK_IGNORE_NEWLINES))
-	    {
+	while ((start < end) && isspace(UCHAR(*start))) {
+	    if (!(flags & TK_IGNORE_NEWLINES)) {
 		if ((*start == '\n') || (*start == '\r'))
 		    break;
 	    }
-	    if (!(flags & TK_IGNORE_TABS))
-	    {
+	    if (!(flags & TK_IGNORE_TABS)) {
 		if (*start == '\t')
 		    break;
 	    }
 	    start++;
 	}
-	if (chunkPtr != NULL)
-	{
+	if (chunkPtr != NULL) {
 	    CONST char *end;
 
 	    end = chunkPtr->start + chunkPtr->numBytes;
 	    bytesThisChunk = start - end;
-	    if (bytesThisChunk > 0)
-	    {
+	    if (bytesThisChunk > 0) {
 		bytesThisChunk =
 		    Tk_MeasureChars(tkfont, end, bytesThisChunk, -1, 0,
 		    &chunkPtr->totalWidth);
@@ -1716,10 +1674,8 @@ wrapLine:
     }
 
     if (start >= end)
-    if ((layoutPtr->numChunks > 0) && !(flags & TK_IGNORE_NEWLINES))
-    {
-	if (layoutPtr->chunks[layoutPtr->numChunks - 1].start[0] == '\n')
-	{
+    if ((layoutPtr->numChunks > 0) && !(flags & TK_IGNORE_NEWLINES)) {
+	if (layoutPtr->chunks[layoutPtr->numChunks - 1].start[0] == '\n') {
 	    chunkPtr =
 #ifdef TEXTLAYOUT_ALLOCHAX
 		NewChunk(&layoutPtr, start, 0, curX, curX,
@@ -1736,18 +1692,15 @@ wrapLine:
 #ifdef TEXTLAYOUT_ELLIPSIS
     /* Fiddle with chunks on the last line to add ellipsis if there is some
      * text remaining */
-    if ((start < end) && (layoutPtr->numChunks > 0))
-    {
+    if ((start < end) && (layoutPtr->numChunks > 0)) {
 	char *ellipsis = "...";
 	int ellipsisLen = strlen(ellipsis);
 	char staticStr[256], *buf = staticStr;
 
 	chunkPtr = &layoutPtr->chunks[layoutPtr->numChunks - 1];
-	if (wrapLength > 0)
-	{
+	if (wrapLength > 0) {
 	    y = chunkPtr->y;
-	    for (n = layoutPtr->numChunks - 1; n >= 0; n--)
-	    {
+	    for (n = layoutPtr->numChunks - 1; n >= 0; n--) {
 		chunkPtr = &layoutPtr->chunks[n];
 
 		/* Only consider the last line */
@@ -1762,8 +1715,7 @@ wrapLine:
 		    newX = wrapLength - chunkPtr->x;
 		bytesThisChunk = Ellipsis(tkfont, (char *) chunkPtr->start,
 		    chunkPtr->numBytes, &newX, ellipsis, TRUE);
-		if (bytesThisChunk > 0)
-		{
+		if (bytesThisChunk > 0) {
 		    chunkPtr->numBytes = bytesThisChunk;
 		    chunkPtr->numChars = Tcl_NumUtfChars(chunkPtr->start, bytesThisChunk);
 		    chunkPtr->numDisplayChars = chunkPtr->numChars;
@@ -1780,8 +1732,7 @@ wrapLine:
 	}
 	else
 	{
-	    if (chunkPtr->start[0] == '\n')
-	    {
+	    if (chunkPtr->start[0] == '\n') {
 		if (layoutPtr->numChunks == 1)
 		    goto finish;
 		if (layoutPtr->chunks[layoutPtr->numChunks - 2].y != chunkPtr->y)
@@ -1812,8 +1763,7 @@ finish:
     layoutPtr->width = maxWidth;
     layoutPtr->height = baseline - fm.ascent;
 layoutPtr->totalWidth = 0;
-    if (layoutPtr->numChunks == 0)
-    {
+    if (layoutPtr->numChunks == 0) {
 	layoutPtr->height = height;
 
 	layoutPtr->numChunks = 1;
@@ -1832,22 +1782,18 @@ layoutPtr->totalWidth = 0;
 	chunkPtr = layoutPtr->chunks;
 	y = chunkPtr->y;
 	lineLengths = (int *) Tcl_DStringValue(&lineBuffer);
-	for (n = 0; n < layoutPtr->numChunks; n++)
-	{
+	for (n = 0; n < layoutPtr->numChunks; n++) {
 	    int extra;
 
-	    if (chunkPtr->y != y)
-	    {
+	    if (chunkPtr->y != y) {
 		curLine++;
 		y = chunkPtr->y;
 	    }
 	    extra = maxWidth - lineLengths[curLine];
-	    if (justify == TK_JUSTIFY_CENTER)
-	    {
+	    if (justify == TK_JUSTIFY_CENTER) {
 		chunkPtr->x += extra / 2;
 	    }
-	    else if (justify == TK_JUSTIFY_RIGHT)
-	    {
+	    else if (justify == TK_JUSTIFY_RIGHT) {
 		chunkPtr->x += extra;
 	    }
 if (chunkPtr->x + chunkPtr->totalWidth > layoutPtr->totalWidth)
@@ -1923,13 +1869,10 @@ void TextLayout_Draw(
     if (lastChar < 0)
 	lastChar = 100000000;
     chunkPtr = layoutPtr->chunks;
-    for (i = 0; i < layoutPtr->numChunks; i++)
-    {
+    for (i = 0; i < layoutPtr->numChunks; i++) {
 	numDisplayChars = chunkPtr->numDisplayChars;
-	if ((numDisplayChars > 0) && (firstChar < numDisplayChars))
-	{
-	    if (firstChar <= 0)
-	    {
+	if ((numDisplayChars > 0) && (firstChar < numDisplayChars)) {
+	    if (firstChar <= 0) {
 		drawX = 0;
 		firstChar = 0;
 		firstByte = chunkPtr->start;
@@ -1944,8 +1887,7 @@ void TextLayout_Draw(
 		numDisplayChars = lastChar;
 	    lastByte = Tcl_UtfAtIndex(chunkPtr->start, numDisplayChars);
 #ifdef TEXTLAYOUT_ELLIPSIS
-	    if (chunkPtr->ellipsis)
-	    {
+	    if (chunkPtr->ellipsis) {
 		char staticStr[256], *buf = staticStr;
 		char *ellipsis = "...";
 		int ellipsisLen = strlen(ellipsis);
@@ -1966,8 +1908,7 @@ void TextLayout_Draw(
 		firstByte, lastByte - firstByte, x + chunkPtr->x + drawX,
 		y + chunkPtr->y);
 #if 1
-	    if (underline >= firstChar && underline < numDisplayChars)
-	    {
+	    if (underline >= firstChar && underline < numDisplayChars) {
 		CONST char *fstBytePtr = Tcl_UtfAtIndex(chunkPtr->start, underline);
 		CONST char *sndBytePtr = Tcl_UtfNext(fstBytePtr);
 		Tk_UnderlineChars(display, drawable, gc,

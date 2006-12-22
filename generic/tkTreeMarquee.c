@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.12 2006/12/02 21:36:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.13 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -67,8 +67,7 @@ TreeMarquee_Init(
     marquee->tree = tree;
     marquee->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
     if (Tk_InitOptions(tree->interp, (char *) marquee, marquee->optionTable,
-	tree->tkwin) != TCL_OK)
-    {
+	tree->tkwin) != TCL_OK) {
 	WFREE(marquee, TreeMarquee_);
 	return TCL_ERROR;
     }
@@ -126,8 +125,7 @@ TreeMarquee_Display(
 {
     TreeCtrl *tree = marquee->tree;
 
-    if (!marquee->onScreen && marquee->visible)
-    {
+    if (!marquee->onScreen && marquee->visible) {
 	marquee->sx = 0 - tree->xOrigin;
 	marquee->sy = 0 - tree->yOrigin;
 	TreeMarquee_Draw(marquee, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
@@ -158,8 +156,7 @@ TreeMarquee_Undisplay(
 {
     TreeCtrl *tree = marquee->tree;
 
-    if (marquee->onScreen)
-    {
+    if (marquee->onScreen) {
 	TreeMarquee_Draw(marquee, Tk_WindowId(tree->tkwin), marquee->sx, marquee->sy);
 	marquee->onScreen = FALSE;
     }
@@ -236,13 +233,10 @@ Marquee_Config(
     Tcl_Obj *errorResult = NULL;
     int mask;
 
-    for (error = 0; error <= 1; error++)
-    {
-	if (error == 0)
-	{
+    for (error = 0; error <= 1; error++) {
+	if (error == 0) {
 	    if (Tk_SetOptions(tree->interp, (char *) marquee, marquee->optionTable,
-		objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK)
-	    {
+		objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK) {
 		mask = 0;
 		continue;
 	    }
@@ -266,8 +260,7 @@ Marquee_Config(
 	}
     }
 
-    if (mask & MARQ_CONF_VISIBLE)
-    {
+    if (mask & MARQ_CONF_VISIBLE) {
 	TreeMarquee_Undisplay(marquee);
 	TreeMarquee_Display(marquee);
     }
@@ -309,32 +302,26 @@ TreeMarqueeCmd(
 	COMMAND_CORNER, COMMAND_IDENTIFY };
     int index;
 
-    if (objc < 3)
-    {
+    if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
+    switch (index) {
 	/* T marquee anchor ?x y?*/
-	case COMMAND_ANCHOR:
-	{
+	case COMMAND_ANCHOR: {
 	    int x, y;
 
-	    if (objc != 3 && objc != 5)
-	    {
+	    if (objc != 3 && objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?x y?");
 		return TCL_ERROR;
 	    }
-	    if (objc == 3)
-	    {
+	    if (objc == 3) {
 		FormatResult(interp, "%d %d", marquee->x1, marquee->y1);
 		break;
 	    }
@@ -352,12 +339,10 @@ TreeMarqueeCmd(
 	}
 
 	/* T marquee cget option */
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr;
 
-	    if (objc != 4)
-	    {
+	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "option");
 		return TCL_ERROR;
 	    }
@@ -370,17 +355,14 @@ TreeMarqueeCmd(
 	}
 
 	/* T marquee configure ?option? ?value? ?option value ...? */
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr;
 
-	    if (objc < 3)
-	    {
+	    if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?option? ?value?");
 		return TCL_ERROR;
 	    }
-	    if (objc <= 4)
-	    {
+	    if (objc <= 4) {
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) marquee,
 		    marquee->optionTable,
 		    (objc == 3) ? (Tcl_Obj *) NULL : objv[3],
@@ -394,17 +376,14 @@ TreeMarqueeCmd(
 	}
 
 	/* T marquee coords ?x y x y? */
-	case COMMAND_COORDS:
-	{
+	case COMMAND_COORDS: {
 	    int x1, y1, x2, y2;
 
-	    if (objc != 3 && objc != 7)
-	    {
+	    if (objc != 3 && objc != 7) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?x y x y?");
 		return TCL_ERROR;
 	    }
-	    if (objc == 3)
-	    {
+	    if (objc == 3) {
 		FormatResult(interp, "%d %d %d %d", marquee->x1, marquee->y1,
 		    marquee->x2, marquee->y2);
 		break;
@@ -430,17 +409,14 @@ TreeMarqueeCmd(
 	}
 
 	/* T marquee corner ?x y?*/
-	case COMMAND_CORNER:
-	{
+	case COMMAND_CORNER: {
 	    int x, y;
 
-	    if (objc != 3 && objc != 5)
-	    {
+	    if (objc != 3 && objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?x y?");
 		return TCL_ERROR;
 	    }
-	    if (objc == 3)
-	    {
+	    if (objc == 3) {
 		FormatResult(interp, "%d %d", marquee->x2, marquee->y2);
 		break;
 	    }
@@ -458,16 +434,14 @@ TreeMarqueeCmd(
 	}
 
 	/* T marquee identify */
-	case COMMAND_IDENTIFY:
-	{
+	case COMMAND_IDENTIFY: {
 	    int x1, y1, x2, y2, n = 0;
 	    int totalWidth = Tree_TotalWidth(tree);
 	    int totalHeight = Tree_TotalHeight(tree);
 	    TreeItemList items;
 	    Tcl_Obj *listObj;
 
-	    if (objc != 3)
-	    {
+	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
@@ -504,8 +478,7 @@ TreeMarqueeCmd(
 	    }
 
 	    listObj = Tcl_NewListObj(0, NULL);
-	    for (n = 0; n < TreeItemList_Count(&items); n++)
-	    {
+	    for (n = 0; n < TreeItemList_Count(&items); n++) {
 		Tcl_Obj *subListObj = Tcl_NewListObj(0, NULL);
 		TreeItem item = TreeItemList_Nth(&items, n);
 		Tcl_ListObjAppendElement(interp, subListObj,

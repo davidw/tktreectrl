@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.23 2006/12/02 21:23:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.24 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -141,8 +141,7 @@ TreeDragImage_Init(
     dragImage->tree = tree;
     dragImage->optionTable = Tk_CreateOptionTable(tree->interp, optionSpecs);
     if (Tk_InitOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
-	tree->tkwin) != TCL_OK)
-    {
+	tree->tkwin) != TCL_OK) {
 	WFREE(dragImage, TreeDragImage_);
 	return TCL_ERROR;
     }
@@ -204,8 +203,7 @@ TreeDragImage_Display(
 {
     TreeCtrl *tree = dragImage->tree;
 
-    if (!dragImage->onScreen && dragImage->visible)
-    {
+    if (!dragImage->onScreen && dragImage->visible) {
 	dragImage->sx = 0 - tree->xOrigin;
 	dragImage->sy = 0 - tree->yOrigin;
 	TreeDragImage_Draw(dragImage, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
@@ -236,8 +234,7 @@ TreeDragImage_Undisplay(
 {
     TreeCtrl *tree = dragImage->tree;
 
-    if (dragImage->onScreen)
-    {
+    if (dragImage->onScreen) {
 	TreeDragImage_Draw(dragImage, Tk_WindowId(tree->tkwin), dragImage->sx, dragImage->sy);
 	dragImage->onScreen = FALSE;
     }
@@ -276,13 +273,10 @@ DragImage_Config(
     Tcl_Obj *errorResult = NULL;
     int mask;
 
-    for (error = 0; error <= 1; error++)
-    {
-	if (error == 0)
-	{
+    for (error = 0; error <= 1; error++) {
+	if (error == 0) {
 	    if (Tk_SetOptions(tree->interp, (char *) dragImage, dragImage->optionTable,
-		objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK)
-	    {
+		objc, objv, tree->tkwin, &savedOptions, &mask) != TCL_OK) {
 		mask = 0;
 		continue;
 	    }
@@ -306,8 +300,7 @@ DragImage_Config(
 	}
     }
 
-    if (mask & DRAG_CONF_VISIBLE)
-    {
+    if (mask & DRAG_CONF_VISIBLE) {
 	TreeDragImage_Undisplay((TreeDragImage) dragImage);
 	TreeDragImage_Display((TreeDragImage) dragImage);
     }
@@ -344,8 +337,7 @@ void TreeDragImage_Draw(TreeDragImage dragImage, Drawable drawable, int x, int y
 
     DotRect_Setup(tree, drawable, &dotState);
 
-    while (elem != NULL)
-    {
+    while (elem != NULL) {
 	DotRect_Draw(&dotState,
 	    x + dragImage->x + elem->x,
 	    y + dragImage->y + elem->y,
@@ -390,23 +382,19 @@ DragImageCmd(
 	COMMAND_OFFSET };
     int index;
 
-    if (objc < 3)
-    {
+    if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
+    switch (index) {
 	/* T dragimage add I ?C? ?E ...? */
-	case COMMAND_ADD:
-	{
+	case COMMAND_ADD: {
 	    TreeItem item;
 	    TreeItemColumn itemColumn;
 	    TreeColumn treeColumn;
@@ -414,8 +402,7 @@ DragImageCmd(
 	    DragElem *elem;
 	    int i, count, result = TCL_OK;
 
-	    if (objc < 4)
-	    {
+	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "item ?column? ?element ...?");
 		return TCL_ERROR;
 	    }
@@ -505,12 +492,10 @@ doneADD:
 	}
 
 	/* T dragimage cget option */
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr;
 
-	    if (objc != 4)
-	    {
+	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "option");
 		return TCL_ERROR;
 	    }
@@ -523,15 +508,12 @@ doneADD:
 	}
 
 	/* T dragimage clear */
-	case COMMAND_CLEAR:
-	{
-	    if (objc != 3)
-	    {
+	case COMMAND_CLEAR: {
+	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
-	    if (dragImage->elem != NULL)
-	    {
+	    if (dragImage->elem != NULL) {
 		DragElem *elem = dragImage->elem;
 		TreeDragImage_Undisplay(tree->dragImage);
 /*				if (dragImage->visible)
@@ -544,17 +526,14 @@ doneADD:
 	}
 
 	/* T dragimage configure ?option? ?value? ?option value ...? */
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr;
 
-	    if (objc < 3)
-	    {
+	    if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?option? ?value?");
 		return TCL_ERROR;
 	    }
-	    if (objc <= 4)
-	    {
+	    if (objc <= 4) {
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) dragImage,
 		    dragImage->optionTable,
 		    (objc == 3) ? (Tcl_Obj *) NULL : objv[3],
@@ -568,17 +547,14 @@ doneADD:
 	}
 
 	/* T dragimage offset ?x y? */
-	case COMMAND_OFFSET:
-	{
+	case COMMAND_OFFSET: {
 	    int x, y;
 
-	    if (objc != 3 && objc != 5)
-	    {
+	    if (objc != 3 && objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?x y?");
 		return TCL_ERROR;
 	    }
-	    if (objc == 3)
-	    {
+	    if (objc == 3) {
 		FormatResult(interp, "%d %d", dragImage->x, dragImage->y);
 		break;
 	    }

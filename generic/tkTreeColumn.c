@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.74 2006/12/08 20:45:57 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.75 2006/12/22 22:32:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -912,15 +912,13 @@ Qualifiers_Scan(
 	    goto errorExit;
 	}
 	switch ((enum qualEnum) qual) {
-	    case QUAL_LOCK:
-	    {
+	    case QUAL_LOCK: {
 		if (Tcl_GetIndexFromObj(interp, objv[j + 1], lockST,
 			"lock", 0, &q->lock) != TCL_OK)
 		    goto errorExit;
 		break;
 	    }
-	    case QUAL_STATE:
-	    {
+	    case QUAL_STATE: {
 		int i, listObjc;
 		Tcl_Obj **listObjv;
 
@@ -936,8 +934,7 @@ Qualifiers_Scan(
 		}
 		break;
 	    }
-	    case QUAL_TAG:
-	    {
+	    case QUAL_TAG: {
 		if (q->exprOK)
 		    TagExpr_Free(&q->expr);
 		if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
@@ -945,18 +942,15 @@ Qualifiers_Scan(
 		q->exprOK = TRUE;
 		break;
 	    }
-	    case QUAL_VISIBLE:
-	    {
+	    case QUAL_VISIBLE: {
 		q->visible = 1;
 		break;
 	    }
-	    case QUAL_NOT_TAIL:
-	    {
+	    case QUAL_NOT_TAIL: {
 		q->ntail = 1;
 		break;
 	    }
-	    case QUAL_NOT_VISIBLE:
-	    {
+	    case QUAL_NOT_VISIBLE: {
 		q->visible = 0;
 		break;
 	    }
@@ -1159,8 +1153,7 @@ TreeColumnList_FromObj(
 	}
 
 	switch ((enum indexEnum) index) {
-	    case INDEX_ALL:
-	    {
+	    case INDEX_ALL: {
 		if (qualArgsTotal) {
 		    column = tree->columns;
 		    while (column != NULL) {
@@ -1190,24 +1183,21 @@ TreeColumnList_FromObj(
 		}
 		break;
 	    }
-	    case INDEX_FIRST:
-	    {
+	    case INDEX_FIRST: {
 		column = tree->columns;
 		while (!Qualifies(&q, column))
 		    column = column->next;
 		break;
 	    }
 	    case INDEX_END:
-	    case INDEX_LAST:
-	    {
+	    case INDEX_LAST: {
 		column = tree->columnLast;
 		while (!Qualifies(&q, column)) {
 		    column = column->prev;
 		}
 		break;
 	    }
-	    case INDEX_LIST:
-	    {
+	    case INDEX_LIST: {
 		int listObjc;
 		Tcl_Obj **listObjv;
 		int count;
@@ -1241,8 +1231,7 @@ TreeColumnList_FromObj(
 		    column = NULL;
 		break;
 	    }
-	    case INDEX_ORDER:
-	    {
+	    case INDEX_ORDER: {
 		int order;
 
 		if (Tcl_GetIntFromObj(NULL, objv[listIndex + 1], &order) != TCL_OK)
@@ -1256,8 +1245,7 @@ TreeColumnList_FromObj(
 		}
 		break;
 	    }
-	    case INDEX_RANGE:
-	    {
+	    case INDEX_RANGE: {
 		TreeColumn _first, _last;
 
 		if (TreeColumn_FromObj(tree, objv[listIndex + 1],
@@ -1281,13 +1269,11 @@ TreeColumnList_FromObj(
 		column = NULL;
 		break;
 	    }
-	    case INDEX_TAIL:
-	    {
+	    case INDEX_TAIL: {
 		column = tree->columnTail;
 		break;
 	    }
-	    case INDEX_TREE:
-	    {
+	    case INDEX_TREE: {
 		column = tree->columnTree;
 		break;
 	    }
@@ -1429,8 +1415,7 @@ gotFirstPart:
 	    }
 	}
 	switch ((enum modEnum) index) {
-	    case TMOD_NEXT:
-	    {
+	    case TMOD_NEXT: {
 		int isTail = IS_TAIL(column);
 		if (isTail) {
 		    column = NULL;
@@ -1446,8 +1431,7 @@ gotFirstPart:
 		}
 		break;
 	    }
-	    case TMOD_PREV:
-	    {
+	    case TMOD_PREV: {
 		int isTail = IS_TAIL(column);
 		if (isTail)
 		    column = tree->columnLast;
@@ -3587,29 +3571,24 @@ ColumnTagCmd(
     TreeColumn column;
     int result = TCL_OK;
 
-    if (objc < 4)
-    {
+    if (objc < 4) {
 	Tcl_WrongNumArgs(interp, 3, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[3], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
+    switch (index) {
 	/* T column tag add C tagList */
-	case COMMAND_ADD:
-	{
+	case COMMAND_ADD: {
 	    int i, numTags;
 	    Tcl_Obj **listObjv;
 	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "column tagList");
 		return TCL_ERROR;
 	    }
@@ -3632,13 +3611,11 @@ ColumnTagCmd(
 	}
 
 	/* T column tag expr C tagExpr */
-	case COMMAND_EXPR:
-	{
+	case COMMAND_EXPR: {
 	    TagExpr expr;
 	    int ok = TRUE;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "column tagExpr");
 		return TCL_ERROR;
 	    }
@@ -3661,14 +3638,12 @@ ColumnTagCmd(
 	}
 
 	/* T column tag names C */
-	case COMMAND_NAMES:
-	{
+	case COMMAND_NAMES: {
 	    Tcl_Obj *listObj;
 	    Tk_Uid *tags = NULL;
 	    int i, tagSpace, numTags = 0;
 
-	    if (objc != 5)
-	    {
+	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 4, objv, "column");
 		return TCL_ERROR;
 	    }
@@ -3691,14 +3666,12 @@ ColumnTagCmd(
 	}
 
 	/* T column tag remove C tagList */
-	case COMMAND_REMOVE:
-	{
+	case COMMAND_REMOVE: {
 	    int i, numTags;
 	    Tcl_Obj **listObjv;
 	    Tk_Uid staticTags[STATIC_SIZE], *tags = staticTags;
 
-	    if (objc != 6)
-	    {
+	    if (objc != 6) {
 		Tcl_WrongNumArgs(interp, 4, objv, "column tagList");
 		return TCL_ERROR;
 	    }
@@ -3786,8 +3759,7 @@ TreeColumnCmd(
     }
 
     switch (index) {
-	case COMMAND_BBOX:
-	{
+	case COMMAND_BBOX: {
 	    int left, top, width, height;
 
 	    if (objc != 4) {
@@ -3804,8 +3776,7 @@ TreeColumnCmd(
 	    break;
 	}
 
-	case COMMAND_CGET:
-	{
+	case COMMAND_CGET: {
 	    TreeColumn column;
 	    Tcl_Obj *resultObjPtr;
 
@@ -3825,8 +3796,7 @@ TreeColumnCmd(
 	}
 
 	/* T column compare C op C */
-	case COMMAND_COMPARE:
-	{
+	case COMMAND_COMPARE: {
 	    TreeColumn column1, column2;
 	    static CONST char *opName[] = { "<", "<=", "==", ">=", ">", "!=", NULL };
 	    int op, compare = 0, index1, index2;
@@ -3858,8 +3828,7 @@ TreeColumnCmd(
 	    break;
 	}
 
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column ?option? ?value? ?option value ...?");
 		return TCL_ERROR;
@@ -3892,14 +3861,12 @@ TreeColumnCmd(
 	    break;
 	}
 
-	case COMMAND_CREATE:
-	{
+	case COMMAND_CREATE: {
 	    TreeColumn column, last = tree->columnLast;
 
 	    /* FIXME: -count N -tags $tags */
 	    column = Column_Alloc(tree);
-	    if (Column_Config(column, objc - 3, objv + 3, TRUE) != TCL_OK)
-	    {
+	    if (Column_Config(column, objc - 3, objv + 3, TRUE) != TCL_OK) {
 		Column_Free(column);
 		return TCL_ERROR;
 	    }
@@ -3944,8 +3911,7 @@ TreeColumnCmd(
 	}
 
 	/* T column delete first ?last? */
-	case COMMAND_DELETE:
-	{
+	case COMMAND_DELETE: {
 	    TreeColumnList columns, column2s;
 	    TreeColumn prev, next;
 	    int flags = CFO_NOT_NULL | CFO_NOT_TAIL;
@@ -4073,8 +4039,7 @@ doneDELETE:
 	}
 
 	/* T column dragcget option */
-	case COMMAND_DRAGCGET:
-	{
+	case COMMAND_DRAGCGET: {
 	    Tcl_Obj *resultObjPtr;
 
 	    if (objc != 4) {
@@ -4090,8 +4055,7 @@ doneDELETE:
 	}
 
 	/* T column dragconfigure ?option? ?value? ?option value ...? */
-	case COMMAND_DRAGCONF:
-	{
+	case COMMAND_DRAGCONF: {
 	    Tcl_Obj *resultObjPtr;
 	    Tk_SavedOptions savedOptions;
 	    int mask, result;
@@ -4128,8 +4092,7 @@ doneDELETE:
 	    break;
 	}
 
-	case COMMAND_COUNT:
-	{
+	case COMMAND_COUNT: {
 	    int count = tree->columnCount;
 
 	    if (objc < 3 || objc > 4) {
@@ -4149,8 +4112,7 @@ doneDELETE:
 	    break;
 	}
 
-	case COMMAND_WIDTH:
-	{
+	case COMMAND_WIDTH: {
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "column");
 		return TCL_ERROR;
@@ -4189,8 +4151,7 @@ doneDELETE:
 	}
 
 	/* T column list ?-visible? */
-	case COMMAND_LIST:
-	{
+	case COMMAND_LIST: {
 	    TreeColumn column = tree->columns;
 	    Tcl_Obj *listObj;
 	    int visible = FALSE;
@@ -4222,8 +4183,7 @@ doneDELETE:
 	}
 
 	/* T column move C before */
-	case COMMAND_MOVE:
-	{
+	case COMMAND_MOVE: {
 	    TreeColumn move, before;
 	    TreeColumn first = NULL, last = tree->columnTail;
 
@@ -4271,8 +4231,7 @@ doneDELETE:
 	    break;
 	}
 
-	case COMMAND_NEEDEDWIDTH:
-	{
+	case COMMAND_NEEDEDWIDTH: {
 	    TreeColumn column;
 	    int width;
 
@@ -4293,8 +4252,7 @@ doneDELETE:
 	}
 
 	/* T column order C ?-visible? */
-	case COMMAND_ORDER:
-	{
+	case COMMAND_ORDER: {
 	    TreeColumn column;
 	    int visible = FALSE;
 	    int index = 0;
@@ -4335,8 +4293,7 @@ doneDELETE:
 	    break;
 	}
 
-	case COMMAND_TAG:
-	{
+	case COMMAND_TAG: {
 	    return ColumnTagCmd(clientData, interp, objc, objv);
 	}
     }

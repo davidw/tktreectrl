@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.70 2006/12/07 03:46:32 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.71 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -226,8 +226,7 @@ Style_DoExpandH(
     {
 	if (flags & ELF_eEXPAND_W) numExpand++;
 	if (flags & ELF_iEXPAND_W) numExpand++;
-	if (flags & ELF_iEXPAND_X)
-	{
+	if (flags & ELF_iEXPAND_X) {
 	    if ((eLink1->maxWidth < 0) ||
 		(eLink1->maxWidth > layout->useWidth))
 		numExpand++;
@@ -236,8 +235,7 @@ Style_DoExpandH(
 	if (flags & ELF_eEXPAND_E) numExpand++;
     }
 
-    while ((spaceRemaining > 0) && (numExpand > 0))
-    {
+    while ((spaceRemaining > 0) && (numExpand > 0)) {
 	int each = (spaceRemaining >= numExpand) ? (spaceRemaining / numExpand) : 1;
 
 	numExpand = 0;
@@ -245,8 +243,7 @@ Style_DoExpandH(
 	/* Allocate extra space to the *right* padding first so that any
 	 * extra single pixel is given to the right. */
 
-	if (flags & ELF_eEXPAND_E)
-	{
+	if (flags & ELF_eEXPAND_E) {
 	    int add = each;
 	    ePadX[PAD_BOTTOM_RIGHT] += add;
 	    layout->eWidth += add;
@@ -257,8 +254,7 @@ Style_DoExpandH(
 	    numExpand++;
 	}
 
-	if (flags & ELF_iEXPAND_E)
-	{
+	if (flags & ELF_iEXPAND_E) {
 	    int add = each;
 	    iPadX[PAD_BOTTOM_RIGHT] += add;
 	    layout->iWidth += add;
@@ -270,11 +266,9 @@ Style_DoExpandH(
 	    numExpand++;
 	}
 
-	if (flags & ELF_iEXPAND_X)
-	{
+	if (flags & ELF_iEXPAND_X) {
 	    int max = eLink1->maxWidth;
-	    if ((max < 0) || (layout->useWidth < max))
-	    {
+	    if ((max < 0) || (layout->useWidth < max)) {
 		int add = (max < 0) ? each : MIN(each, max - layout->useWidth);
 		layout->useWidth += add;
 		layout->iWidth += add;
@@ -290,8 +284,7 @@ Style_DoExpandH(
 	    }
 	}
 
-	if (flags & ELF_iEXPAND_W)
-	{
+	if (flags & ELF_iEXPAND_W) {
 	    int add = each;
 	    iPadX[PAD_TOP_LEFT] += add;
 	    layout->iWidth += add;
@@ -303,8 +296,7 @@ Style_DoExpandH(
 	    numExpand++;
 	}
 
-	if (flags & ELF_eEXPAND_W)
-	{
+	if (flags & ELF_eEXPAND_W) {
 	    int add = each;
 	    ePadX[PAD_TOP_LEFT] += add;
 	    layout->eWidth += add;
@@ -369,8 +361,7 @@ Style_DoExpandV(
     {
 	if (flags & ELF_eEXPAND_N) numExpand++;
 	if (flags & ELF_iEXPAND_N) numExpand++;
-	if (flags & ELF_iEXPAND_Y)
-	{
+	if (flags & ELF_iEXPAND_Y) {
 	    if ((eLink1->maxHeight < 0) ||
 		(eLink1->maxHeight > layout->useHeight))
 		numExpand++;
@@ -379,8 +370,7 @@ Style_DoExpandV(
 	if (flags & ELF_eEXPAND_S) numExpand++;
     }
 
-    while ((spaceRemaining > 0) && (numExpand > 0))
-    {
+    while ((spaceRemaining > 0) && (numExpand > 0)) {
 	int each = (spaceRemaining >= numExpand) ? (spaceRemaining / numExpand) : 1;
 
 	numExpand = 0;
@@ -388,8 +378,7 @@ Style_DoExpandV(
 	/* Allocate extra space to the *bottom* padding first so that any
 	 * extra single pixel is given to the bottom. */
 
-	if (flags & ELF_eEXPAND_S)
-	{
+	if (flags & ELF_eEXPAND_S) {
 	    int add = each;
 	    ePadY[PAD_BOTTOM_RIGHT] += add;
 	    layout->eHeight += add;
@@ -400,8 +389,7 @@ Style_DoExpandV(
 	    numExpand++;
 	}
 
-	if (flags & ELF_iEXPAND_S)
-	{
+	if (flags & ELF_iEXPAND_S) {
 	    int add = each;
 	    iPadY[PAD_BOTTOM_RIGHT] += add;
 	    layout->iHeight += add;
@@ -413,11 +401,9 @@ Style_DoExpandV(
 	    numExpand++;
 	}
 
-	if (flags & ELF_iEXPAND_Y)
-	{
+	if (flags & ELF_iEXPAND_Y) {
 	    int max = eLink1->maxHeight;
-	    if ((max < 0) || (layout->useHeight < max))
-	    {
+	    if ((max < 0) || (layout->useHeight < max)) {
 		int add = (max < 0) ? each : MIN(each, max - layout->useHeight);
 		layout->useHeight += add;
 		layout->iHeight += add;
@@ -433,8 +419,7 @@ Style_DoExpandV(
 	    }
 	}
 
-	if (flags & ELF_iEXPAND_N)
-	{
+	if (flags & ELF_iEXPAND_N) {
 	    int add = each;
 	    iPadY[PAD_TOP_LEFT] += add;
 	    layout->iHeight += add;
@@ -446,8 +431,7 @@ Style_DoExpandV(
 	    numExpand++;
 	}
 
-	if (flags & ELF_eEXPAND_N)
-	{
+	if (flags & ELF_eEXPAND_N) {
 	    int add = each;
 	    ePadY[PAD_TOP_LEFT] += add;
 	    layout->eHeight += add;
@@ -491,8 +475,7 @@ Element_NeededSize(
     ElementArgs args;
     int width, height;
 
-    if ((eLink1->fixedWidth >= 0) && (eLink1->fixedHeight >= 0))
-    {
+    if ((eLink1->fixedWidth >= 0) && (eLink1->fixedHeight >= 0)) {
 	width = eLink1->fixedWidth;
 	height = eLink1->fixedHeight;
     }
@@ -580,8 +563,7 @@ Style_DoLayoutH(
     eLinks2 = style->elements;
     eLinkCount = masterStyle->numElements;
 
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	eLink1 = &eLinks1[i];
@@ -608,8 +590,7 @@ Style_DoLayoutH(
 #endif
 	}
 
-	for (j = 0; j < 2; j++)
-	{
+	for (j = 0; j < 2; j++) {
 	    /* Pad values before expansion */
 	    layout->ePadX[j] = eLink1->ePadX[j];
 	    layout->ePadY[j] = eLink1->ePadY[j];
@@ -629,8 +610,7 @@ Style_DoLayoutH(
     }
 
     /* Calculate the padding around elements surrounded by -union elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 	int first = -1, last = -1;
 
@@ -642,8 +622,7 @@ Style_DoLayoutH(
 	if (eLink1->onion == NULL)
 	    continue;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout))
@@ -668,8 +647,7 @@ Style_DoLayoutH(
 	iPadX = eLink1->iPadX;
 	iPadY = eLink1->iPadY;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout))
@@ -678,8 +656,7 @@ Style_DoLayoutH(
 	    uPadX = layout->uPadX;
 	    uPadY = layout->uPadY;
 
-	    if (masterStyle->vertical)
-	    {
+	    if (masterStyle->vertical) {
 		uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
 		if (j == first) /* topmost */
@@ -702,19 +679,16 @@ Style_DoLayoutH(
     /* Left-to-right layout. Make the width of some elements less than they
      * need */
     if (!masterStyle->vertical &&
-	(drawArgs->width < style->neededWidth + drawArgs->indent) &&
-	(numSqueezeX > 0))
-    {
+	    (drawArgs->width < style->neededWidth + drawArgs->indent) &&
+	    (numSqueezeX > 0)) {
 	int numSqueeze = numSqueezeX;
 	int spaceRemaining  = (style->neededWidth + drawArgs->indent) - drawArgs->width;
 
-	while ((spaceRemaining > 0) && (numSqueeze > 0))
-	{
+	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
 	    int each = (spaceRemaining >= numSqueeze) ? (spaceRemaining / numSqueeze) : 1;
 
 	    numSqueeze = 0;
-	    for (i = 0; i < eLinkCount; i++)
-	    {
+	    for (i = 0; i < eLinkCount; i++) {
 		struct Layout *layout = &layouts[i];
 		int min = 0;
 
@@ -731,8 +705,7 @@ Style_DoLayoutH(
 
 		if (eLink1->minWidth >= 0)
 		    min = eLink1->minWidth;
-		if (layout->useWidth > min)
-		{
+		if (layout->useWidth > min) {
 		    int sub = MIN(each, layout->useWidth - min);
 		    layout->useWidth -= sub;
 		    spaceRemaining -= sub;
@@ -746,8 +719,7 @@ Style_DoLayoutH(
 
     /* Reduce the width of all non-union elements, except for the
      * cases handled above. */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 	int width, subtract;
 
@@ -778,8 +750,7 @@ Style_DoLayoutH(
 	if (!(eLink1->flags & ELF_DETACH) || (eLink1->flags & ELF_INDENT))
 	    subtract += drawArgs->indent;
 
-	if (subtract > 0)
-	{
+	if (subtract > 0) {
 	    if ((eLink1->minWidth >= 0) &&
 		(eLink1->minWidth <= layout->useWidth) &&
 		(layout->useWidth - subtract < eLink1->minWidth))
@@ -790,8 +761,7 @@ Style_DoLayoutH(
     }
 
     /* Layout elements left-to-right */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 	int right;
 
@@ -833,14 +803,12 @@ Style_DoLayoutH(
      * more space available horizontally than is needed by the Style. */
     if (!masterStyle->vertical &&
 	(drawArgs->width > rightEdge) &&
-	(numExpandWE > 0))
-    {
+	(numExpandWE > 0)) {
 	int numExpand = 0;
 	int spaceRemaining = drawArgs->width - rightEdge;
 
 	/* Each element has 5 areas that can optionally expand. */
-	for (i = 0; i < eLinkCount; i++)
-	{
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 
 	    if (IS_HIDDEN(layout))
@@ -855,8 +823,7 @@ Style_DoLayoutH(
 
 	    if (eLink1->flags & ELF_eEXPAND_W) layout->temp++;
 	    if (eLink1->flags & ELF_iEXPAND_W) layout->temp++;
-	    if (eLink1->flags & ELF_iEXPAND_X)
-	    {
+	    if (eLink1->flags & ELF_iEXPAND_X) {
 		if ((eLink1->maxWidth < 0) ||
 		    (eLink1->maxWidth > layout->useWidth))
 		    layout->temp++;
@@ -867,13 +834,11 @@ Style_DoLayoutH(
 	    numExpand += layout->temp;
 	}
 
-	while ((spaceRemaining > 0) && (numExpand > 0))
-	{
+	while ((spaceRemaining > 0) && (numExpand > 0)) {
 	    int each = (spaceRemaining >= numExpand) ? spaceRemaining / numExpand : 1;
 
 	    numExpand = 0;
-	    for (i = 0; i < eLinkCount; i++)
-	    {
+	    for (i = 0; i < eLinkCount; i++) {
 		struct Layout *layout = &layouts[i];
 		int spaceUsed;
 
@@ -890,8 +855,7 @@ Style_DoLayoutH(
 		    MAX(layout->ePadX[PAD_BOTTOM_RIGHT], layout->uPadX[PAD_BOTTOM_RIGHT]) +
 		    MIN(each * layout->temp, spaceRemaining));
 
-		if (spaceUsed)
-		{
+		if (spaceUsed) {
 		    /* Shift following elements to the right */
 		    for (j = i + 1; j < eLinkCount; j++)
 			if (!DETACH_OR_UNION(&eLinks1[j]))
@@ -912,10 +876,8 @@ Style_DoLayoutH(
     }
 
     /* Top-to-bottom layout. Expand some elements horizontally */
-    if (masterStyle->vertical && (numExpandWE > 0))
-    {
-	for (i = 0; i < eLinkCount; i++)
-	{
+    if (masterStyle->vertical && (numExpandWE > 0)) {
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 	    int right;
 
@@ -939,12 +901,10 @@ Style_DoLayoutH(
 
     /* Now handle column justification */
     /* All the non-union, non-detach elements are moved as a group */
-    if (drawArgs->width > rightEdge)
-    {
+    if (drawArgs->width > rightEdge) {
 	int dx = drawArgs->width - rightEdge;
 
-	for (i = 0; i < eLinkCount; i++)
-	{
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 
 	    if (IS_HIDDEN(layout))
@@ -955,8 +915,7 @@ Style_DoLayoutH(
 	    if (DETACH_OR_UNION(eLink1))
 		continue;
 
-	    switch (drawArgs->justify)
-	    {
+	    switch (drawArgs->justify) {
 		case TK_JUSTIFY_LEFT:
 		    break;
 		case TK_JUSTIFY_RIGHT:
@@ -970,8 +929,7 @@ Style_DoLayoutH(
     }
 
     /* Position and expand -detach elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -998,8 +956,7 @@ Style_DoLayoutH(
     }
 
     /* Now calculate layout of -union elements. */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	eLink1 = &eLinks1[i];
@@ -1016,8 +973,7 @@ Style_DoLayoutH(
 
 	w = 1000000, e = -1000000;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout2 = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout2))
@@ -1035,8 +991,7 @@ Style_DoLayoutH(
 
     /* Expand -union elements if needed: horizontal */
     /* Expansion of "-union" elements is different than non-"-union" elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 	int extraWidth;
 
@@ -1053,10 +1008,8 @@ Style_DoLayoutH(
 
 	/* External and internal expansion: W */
 	extraWidth = layout->x - drawArgs->indent;
-	if ((extraWidth > 0) && (eLink1->flags & ELF_EXPAND_W))
-	{
-	    if ((eLink1->flags & ELF_EXPAND_W) == ELF_EXPAND_W)
-	    {
+	if ((extraWidth > 0) && (eLink1->flags & ELF_EXPAND_W)) {
+	    if ((eLink1->flags & ELF_EXPAND_W) == ELF_EXPAND_W) {
 		int eExtra = extraWidth / 2;
 		int iExtra = extraWidth - extraWidth / 2;
 
@@ -1072,8 +1025,7 @@ Style_DoLayoutH(
 	    }
 
 	    /* External expansion only: W */
-	    else if (eLink1->flags & ELF_eEXPAND_W)
-	    {
+	    else if (eLink1->flags & ELF_eEXPAND_W) {
 		layout->ePadX[PAD_TOP_LEFT] += extraWidth;
 		layout->x = drawArgs->indent;
 		layout->eWidth += extraWidth;
@@ -1091,10 +1043,8 @@ Style_DoLayoutH(
 
 	/* External and internal expansion: E */
 	extraWidth = drawArgs->width - (layout->x + layout->eWidth);
-	if ((extraWidth > 0) && (eLink1->flags & ELF_EXPAND_E))
-	{
-	    if ((eLink1->flags & ELF_EXPAND_E) == ELF_EXPAND_E)
-	    {
+	if ((extraWidth > 0) && (eLink1->flags & ELF_EXPAND_E)) {
+	    if ((eLink1->flags & ELF_EXPAND_E) == ELF_EXPAND_E) {
 		int eExtra = extraWidth / 2;
 		int iExtra = extraWidth - extraWidth / 2;
 
@@ -1108,8 +1058,7 @@ Style_DoLayoutH(
 	    }
 
 	    /* External expansion only: E */
-	    else if (eLink1->flags & ELF_eEXPAND_E)
-	    {
+	    else if (eLink1->flags & ELF_eEXPAND_E) {
 		layout->ePadX[PAD_BOTTOM_RIGHT] += extraWidth;
 		layout->eWidth += extraWidth;
 	    }
@@ -1125,8 +1074,7 @@ Style_DoLayoutH(
     }
 
     /* Add internal padding to display area for -union elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1186,8 +1134,7 @@ Style_DoLayoutV(
     eLinks2 = style->elements;
     eLinkCount = masterStyle->numElements;
 
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	if (IS_HIDDEN(&layouts[i]))
 	    continue;
 
@@ -1203,19 +1150,16 @@ Style_DoLayoutV(
     /* Top-top-bottom layout. Make the height of some elements less than they
      * need */
     if (masterStyle->vertical &&
-	(drawArgs->height < style->neededHeight) &&
-	(numSqueezeY > 0))
-    {
+	    (drawArgs->height < style->neededHeight) &&
+	    (numSqueezeY > 0)) {
 	int numSqueeze = numSqueezeY;
 	int spaceRemaining  = style->neededHeight - drawArgs->height;
 
-	while ((spaceRemaining > 0) && (numSqueeze > 0))
-	{
+	while ((spaceRemaining > 0) && (numSqueeze > 0)) {
 	    int each = (spaceRemaining >= numSqueeze) ? (spaceRemaining / numSqueeze) : 1;
 
 	    numSqueeze = 0;
-	    for (i = 0; i < eLinkCount; i++)
-	    {
+	    for (i = 0; i < eLinkCount; i++) {
 		struct Layout *layout = &layouts[i];
 		int min = 0;
 
@@ -1232,8 +1176,7 @@ Style_DoLayoutV(
 
 		if (eLink1->minHeight >= 0)
 		    min = eLink1->minHeight;
-		if (layout->useHeight > min)
-		{
+		if (layout->useHeight > min) {
 		    int sub = MIN(each, layout->useHeight - min);
 		    layout->useHeight -= sub;
 		    spaceRemaining -= sub;
@@ -1247,10 +1190,8 @@ Style_DoLayoutV(
 
     /* Reduce the height of all non-union elements, except for the
      * cases handled above. */
-    if (drawArgs->height < style->neededHeight)
-    {
-	for (i = 0; i < eLinkCount; i++)
-	{
+    if (drawArgs->height < style->neededHeight) {
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 	    int height, subtract;
 
@@ -1278,8 +1219,7 @@ Style_DoLayoutV(
 		MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
 	    subtract = height - drawArgs->height;
 
-	    if (subtract > 0)
-	    {
+	    if (subtract > 0) {
 		if ((eLink1->minHeight >= 0) &&
 		    (eLink1->minHeight <= layout->useHeight) &&
 		    (layout->useHeight - subtract < eLink1->minHeight))
@@ -1291,8 +1231,7 @@ Style_DoLayoutV(
     }
 
     /* Layout elements top-to-bottom */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1315,8 +1254,7 @@ Style_DoLayoutV(
 	if (masterStyle->vertical)
 	    y = layout->y + layout->eHeight;
 
-	if (masterStyle->vertical)
-	{
+	if (masterStyle->vertical) {
 	    bottomEdge = layout->y + layout->ePadY[PAD_TOP_LEFT] +
 		layout->iHeight +
 		MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
@@ -1331,13 +1269,11 @@ Style_DoLayoutV(
      * more space available vertically than is needed by the Style. */
     if (masterStyle->vertical &&
 	(drawArgs->height > bottomEdge) &&
-	(numExpandNS > 0))
-    {
+	(numExpandNS > 0)) {
 	int numExpand = 0;
 	int spaceRemaining = drawArgs->height - bottomEdge;
 
-	for (i = 0; i < eLinkCount; i++)
-	{
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 
 	    if (IS_HIDDEN(layout))
@@ -1352,8 +1288,7 @@ Style_DoLayoutV(
 
 	    if (eLink1->flags & ELF_eEXPAND_N) layout->temp++;
 	    if (eLink1->flags & ELF_iEXPAND_N) layout->temp++;
-	    if (eLink1->flags & ELF_iEXPAND_Y)
-	    {
+	    if (eLink1->flags & ELF_iEXPAND_Y) {
 		if ((eLink1->maxHeight < 0) ||
 		    (eLink1->maxHeight > layout->useHeight))
 		    layout->temp++;
@@ -1364,13 +1299,11 @@ Style_DoLayoutV(
 	    numExpand += layout->temp;
 	}
 
-	while ((spaceRemaining > 0) && (numExpand > 0))
-	{
+	while ((spaceRemaining > 0) && (numExpand > 0)) {
 	    int each = (spaceRemaining >= numExpand) ? spaceRemaining / numExpand : 1;
 
 	    numExpand = 0;
-	    for (i = 0; i < eLinkCount; i++)
-	    {
+	    for (i = 0; i < eLinkCount; i++) {
 		struct Layout *layout = &layouts[i];
 		int spaceUsed;
 
@@ -1387,8 +1320,7 @@ Style_DoLayoutV(
 		    MAX(layout->ePadY[PAD_BOTTOM_RIGHT], layout->uPadY[PAD_BOTTOM_RIGHT]) +
 		    MIN(each * layout->temp, spaceRemaining));
 
-		if (spaceUsed)
-		{
+		if (spaceUsed) {
 		    /* Shift following elements down */
 		    for (j = i + 1; j < eLinkCount; j++)
 			if (!DETACH_OR_UNION(&eLinks1[j]))
@@ -1407,10 +1339,8 @@ Style_DoLayoutV(
     }
 
     /* Left-to-right layout. Expand some elements vertically */
-    if (!masterStyle->vertical && (numExpandNS > 0))
-    {
-	for (i = 0; i < eLinkCount; i++)
-	{
+    if (!masterStyle->vertical && (numExpandNS > 0)) {
+	for (i = 0; i < eLinkCount; i++) {
 	    struct Layout *layout = &layouts[i];
 
 	    if (IS_HIDDEN(layout))
@@ -1427,8 +1357,7 @@ Style_DoLayoutV(
     }
 
     /* Position and expand -detach elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1453,8 +1382,7 @@ Style_DoLayoutV(
     }
 
     /* Now calculate layout of -union elements. */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1471,8 +1399,7 @@ Style_DoLayoutV(
 
 	n = 1000000, s = -1000000;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout2 = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout2))
@@ -1489,8 +1416,7 @@ Style_DoLayoutV(
     }
 
     /* Expand -union elements if needed: vertical */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 	int extraHeight;
 
@@ -1507,10 +1433,8 @@ Style_DoLayoutV(
 
 	/* External and internal expansion: N */
 	extraHeight = layout->y;
-	if ((extraHeight > 0) && (eLink1->flags & ELF_EXPAND_N))
-	{
-	    if ((eLink1->flags & ELF_EXPAND_N) == ELF_EXPAND_N)
-	    {
+	if ((extraHeight > 0) && (eLink1->flags & ELF_EXPAND_N)) {
+	    if ((eLink1->flags & ELF_EXPAND_N) == ELF_EXPAND_N) {
 		int eExtra = extraHeight / 2;
 		int iExtra = extraHeight - extraHeight / 2;
 
@@ -1525,8 +1449,7 @@ Style_DoLayoutV(
 	    }
 
 	    /* External expansion only: N */
-	    else if (eLink1->flags & ELF_eEXPAND_N)
-	    {
+	    else if (eLink1->flags & ELF_eEXPAND_N) {
 		layout->ePadY[PAD_TOP_LEFT] += extraHeight;
 		layout->y = 0;
 		layout->eHeight += extraHeight;
@@ -1544,10 +1467,8 @@ Style_DoLayoutV(
 
 	/* External and internal expansion: S */
 	extraHeight = drawArgs->height - (layout->y + layout->eHeight);
-	if ((extraHeight > 0) && (eLink1->flags & ELF_EXPAND_S))
-	{
-	    if ((eLink1->flags & ELF_EXPAND_S) == ELF_EXPAND_S)
-	    {
+	if ((extraHeight > 0) && (eLink1->flags & ELF_EXPAND_S)) {
+	    if ((eLink1->flags & ELF_EXPAND_S) == ELF_EXPAND_S) {
 		int eExtra = extraHeight / 2;
 		int iExtra = extraHeight - extraHeight / 2;
 
@@ -1561,8 +1482,7 @@ Style_DoLayoutV(
 	    }
 
 	    /* External expansion only: S */
-	    else if (eLink1->flags & ELF_eEXPAND_S)
-	    {
+	    else if (eLink1->flags & ELF_eEXPAND_S) {
 		layout->ePadY[PAD_BOTTOM_RIGHT] += extraHeight;
 		layout->eHeight += extraHeight;
 	    }
@@ -1578,8 +1498,7 @@ Style_DoLayoutV(
     }
 
     /* Add internal padding to display area for -union elements */
-    for (i = 0; i < eLinkCount; i++)
-    {
+    for (i = 0; i < eLinkCount; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1629,8 +1548,7 @@ Layout_Size(
 
     W = 1000000, N = 1000000, E = -1000000, S = -1000000;
 
-    for (i = 0; i < numLayouts; i++)
-    {
+    for (i = 0; i < numLayouts; i++) {
 	struct Layout *layout = &layouts[i];
 	int w, n, e, s;
 	int *ePadX, *iPadX, *uPadX, *ePadY, *iPadY, *uPadY;
@@ -1646,8 +1564,7 @@ Layout_Size(
 	e = layout->x + layout->eWidth - ePadX[PAD_BOTTOM_RIGHT] + MAX(ePadX[PAD_BOTTOM_RIGHT], uPadX[PAD_BOTTOM_RIGHT]);
 	s = layout->y + layout->eHeight - ePadY[PAD_BOTTOM_RIGHT] + MAX(ePadY[PAD_BOTTOM_RIGHT], uPadY[PAD_BOTTOM_RIGHT]);
 
-	if (vertical)
-	{
+	if (vertical) {
 	    N = MIN(N, n);
 	    S = MAX(S, s);
 	    width = MAX(width, e - w);
@@ -1708,8 +1625,7 @@ Style_DoLayoutNeededV(
     eLinks2 = style->elements;
 
     /* Layout elements left-to-right, or top-to-bottom */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1720,8 +1636,7 @@ Style_DoLayoutNeededV(
 
 	/* The size of a -union element is determined by the elements
 	 * it surrounds */
-	if (eLink1->onion != NULL)
-	{
+	if (eLink1->onion != NULL) {
 	    /* I don't need good values because I'm only calculating the
 	     * needed height */
 	    layout->y = layout->iHeight = layout->eHeight = 0;
@@ -1745,8 +1660,7 @@ Style_DoLayoutNeededV(
     }
 
     /* -detach elements */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -1810,8 +1724,7 @@ Style_DoLayout(
 #endif
     Style_DoLayoutH(drawArgs, layouts);
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 	MElementLink *eLink1 = layout->master;
 	IElementLink *eLink2 = layout->eLink;
@@ -1822,8 +1735,7 @@ Style_DoLayout(
 
 	/* The size of a -union element is determined by the elements
 	 * it surrounds */
-	if (eLink1->onion != NULL)
-	{
+	if (eLink1->onion != NULL) {
 	    layout->useHeight = 0;
 	    continue;
 	}
@@ -1849,8 +1761,7 @@ Style_DoLayout(
 	    continue;
 
 	/* Already calculated the height at this width */
-	if (layout->useWidth == eLink2->layoutWidth)
-	{
+	if (layout->useWidth == eLink2->layoutWidth) {
 	    layout->useHeight = eLink2->layoutHeight;
 	    continue;
 	}
@@ -1938,8 +1849,7 @@ Style_NeededSize(
     eLinks1 = masterStyle->elements;
     eLinks2 = style->elements;
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	eLink1 = &eLinks1[i];
@@ -1977,8 +1887,7 @@ Style_NeededSize(
     }
 
     /* Figure out the padding around elements surrounded by -union elements */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 	int first = -1, last = -1;
 
@@ -1990,8 +1899,7 @@ Style_NeededSize(
 	if (eLink1->onion == NULL)
 	    continue;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout))
@@ -2016,8 +1924,7 @@ Style_NeededSize(
 	iPadX = eLink1->iPadX;
 	iPadY = eLink1->iPadY;
 
-	for (j = 0; j < eLink1->onionCount; j++)
-	{
+	for (j = 0; j < eLink1->onionCount; j++) {
 	    struct Layout *layout = &layouts[eLink1->onion[j]];
 
 	    if (IS_HIDDEN(layout))
@@ -2026,8 +1933,7 @@ Style_NeededSize(
 	    uPadX = layout->uPadX;
 	    uPadY = layout->uPadY;
 
-	    if (masterStyle->vertical)
-	    {
+	    if (masterStyle->vertical) {
 		uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		uPadX[PAD_BOTTOM_RIGHT] = MAX(uPadX[PAD_BOTTOM_RIGHT], iPadX[PAD_BOTTOM_RIGHT] + ePadX[PAD_BOTTOM_RIGHT]);
 		if (j == first) /* topmost */
@@ -2048,8 +1954,7 @@ Style_NeededSize(
     }
 
     /* Layout elements left-to-right, or top-to-bottom */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -2067,8 +1972,7 @@ Style_NeededSize(
 
 	/* The size of a -union element is determined by the elements
 	 * it surrounds */
-	if (eLink1->onion != NULL)
-	{
+	if (eLink1->onion != NULL) {
 	    layout->x = layout->y = layout->eWidth = layout->eHeight = 0;
 	    layout->ePadX[PAD_TOP_LEFT]     = 0;
 	    layout->ePadX[PAD_BOTTOM_RIGHT] = 0;
@@ -2081,8 +1985,7 @@ Style_NeededSize(
 	    continue;
 	}
 
-	if (eLink1->flags & ELF_SQUEEZE_X)
-	{
+	if (eLink1->flags & ELF_SQUEEZE_X) {
 	    if ((eLink1->minWidth >= 0) &&
 		    (eLink1->minWidth <= layout->useWidth)) {
 		squeezeX += layout->useWidth - eLink1->minWidth;
@@ -2090,8 +1993,7 @@ Style_NeededSize(
 		squeezeX += layout->useWidth;
 	    }
 	}
-	if (eLink1->flags & ELF_SQUEEZE_Y)
-	{
+	if (eLink1->flags & ELF_SQUEEZE_Y) {
 	    if ((eLink1->minHeight >= 0) &&
 		    (eLink1->minHeight <= layout->useHeight)) {
 		squeezeY += layout->useHeight - eLink1->minHeight;
@@ -2112,8 +2014,7 @@ Style_NeededSize(
 	layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 	layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
-	for (j = 0; j < 2; j++)
-	{
+	for (j = 0; j < 2; j++) {
 	    layout->ePadX[j] = eLink1->ePadX[j];
 	    layout->ePadY[j] = eLink1->ePadY[j];
 	    layout->iPadX[j] = eLink1->iPadX[j];
@@ -2127,8 +2028,7 @@ Style_NeededSize(
     }
 
     /* -detach elements */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -2156,8 +2056,7 @@ Style_NeededSize(
 	layout->eWidth = ePadX[PAD_TOP_LEFT] + layout->iWidth + ePadX[PAD_BOTTOM_RIGHT];
 	layout->eHeight = ePadY[PAD_TOP_LEFT] + layout->iHeight + ePadY[PAD_BOTTOM_RIGHT];
 
-	for (j = 0; j < 2; j++)
-	{
+	for (j = 0; j < 2; j++) {
 	    layout->ePadX[j] = eLink1->ePadX[j];
 	    layout->ePadY[j] = eLink1->ePadY[j];
 	    layout->iPadX[j] = eLink1->iPadX[j];
@@ -2199,8 +2098,7 @@ Style_CheckNeededSize(
     int state			/* STATE_xxx flags. */
     )
 {
-    if (style->neededWidth == -1)
-    {
+    if (style->neededWidth == -1) {
 	int minWidth, minHeight;
 
 	Style_NeededSize(tree, style, state,
@@ -2366,8 +2264,7 @@ TreeStyle_UseHeight(
      */
     if ((drawArgs->width == -1) ||
 	(drawArgs->width >= style->neededWidth + drawArgs->indent) ||
-	(style->neededWidth == minWidth))
-    {
+	(style->neededWidth == minWidth)) {
 	return style->neededHeight;
     }
 
@@ -2469,8 +2366,7 @@ void TreeStyle_Draw(
     args.state = drawArgs->state;
     args.display.drawable = drawArgs->drawable;
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -2490,8 +2386,7 @@ void TreeStyle_Draw(
 	    continue;
 #endif
 
-	if ((layout->useWidth > 0) && (layout->useHeight > 0))
-	{
+	if ((layout->useWidth > 0) && (layout->useHeight > 0)) {
 	    args.elem = layout->eLink->elem;
 	    args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 	    args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
@@ -2501,13 +2396,11 @@ void TreeStyle_Draw(
 	    args.display.height = layout->useHeight;
 	    args.display.sticky = layout->master->flags & ELF_STICKY;
 #ifdef DEBUG_DRAW
-	    if (debugDraw)
-	    {
+	    if (debugDraw) {
 		XColor *color[3];
 		GC gc[3];
 
-		if (layout->master->onion != NULL)
-		{
+		if (layout->master->onion != NULL) {
 		    color[0] = Tk_GetColor(tree->interp, tree->tkwin, "blue2");
 		    gc[0] = Tk_GCForColor(color[0], Tk_WindowId(tree->tkwin));
 		    color[1] = Tk_GetColor(tree->interp, tree->tkwin, "blue3");
@@ -2550,8 +2443,7 @@ void TreeStyle_Draw(
 
 #ifdef DEBUG_DRAW
     if (debugDraw)
-	for (i = 0; i < masterStyle->numElements; i++)
-	{
+	for (i = 0; i < masterStyle->numElements; i++) {
 	    struct Layout *layout = &layouts[i];
 
 	    if (IS_HIDDEN(layout))
@@ -2559,8 +2451,7 @@ void TreeStyle_Draw(
 
 	    if (layout->master->onion == NULL)
 		continue;
-	    if (layout->useWidth > 0 && layout->useHeight > 0)
-	    {
+	    if (layout->useWidth > 0 && layout->useHeight > 0) {
 		args.elem = layout->eLink->elem;
 		args.display.x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 		args.display.y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
@@ -2672,8 +2563,7 @@ TreeStyle_UpdateWindowPositions(
     args.state = drawArgs->state;
     args.display.drawable = drawArgs->drawable;
 
-    for (i = 0; i < numElements; i++)
-    {
+    for (i = 0; i < numElements; i++) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -2686,8 +2576,7 @@ TreeStyle_UpdateWindowPositions(
 		drawArgs->state, NULL) == 0)
 	    continue;
 
-	if ((layout->useWidth > 0) && (layout->useHeight > 0))
-	{
+	if ((layout->useWidth > 0) && (layout->useHeight > 0)) {
 	    int requests;
 
 	    TreeDisplay_GetReadyForTrouble(tree, &requests);
@@ -2751,8 +2640,7 @@ TreeStyle_OnScreen(
     args.tree = tree;
     args.screen.visible = onScreen;
 
-    for (i = 0; i < style->master->numElements; i++)
-    {
+    for (i = 0; i < style->master->numElements; i++) {
 	IElementLink *eLink = &style->elements[i];
 
 	if (eLink->elem->typePtr->onScreenProc == NULL)
@@ -2789,8 +2677,7 @@ Element_FreeResources(
     ElementArgs args;
     Tcl_HashEntry *hPtr;
 
-    if (elem->master == NULL)
-    {
+    if (elem->master == NULL) {
 	hPtr = Tcl_FindHashEntry(&tree->elementHash, elem->name);
 	Tcl_DeleteHashEntry(hPtr);
     }
@@ -2925,8 +2812,7 @@ MStyle_FreeResources(
     hPtr = Tcl_FindHashEntry(&tree->styleHash, style->name);
     Tcl_DeleteHashEntry(hPtr);
 
-    if (style->numElements > 0)
-    {
+    if (style->numElements > 0) {
 	for (i = 0; i < style->numElements; i++)
 	    MElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
@@ -2968,8 +2854,7 @@ IStyle_FreeResources(
     MStyle *masterStyle = style->master;
     int i;
 
-    if (masterStyle->numElements > 0)
-    {
+    if (masterStyle->numElements > 0) {
 	for (i = 0; i < masterStyle->numElements; i++)
 	    IElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
@@ -3045,11 +2930,9 @@ MStyle_FindElem(
 {
     int i;
 
-    for (i = 0; i < style->numElements; i++)
-    {
+    for (i = 0; i < style->numElements; i++) {
 	MElementLink *eLink = &style->elements[i];
-	if (eLink->elem->name == master->name)
-	{
+	if (eLink->elem->name == master->name) {
 	    if (index != NULL) (*index) = i;
 	    return eLink;
 	}
@@ -3086,11 +2969,9 @@ IStyle_FindElem(
     MStyle *masterStyle = style->master;
     int i;
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	IElementLink *eLink = &style->elements[i];
-	if (eLink->elem->name == master->name)
-	{
+	if (eLink->elem->name == master->name) {
 	    if (index != NULL) (*index) = i;
 	    return eLink;
 	}
@@ -3131,8 +3012,7 @@ TreeStyle_FindElement(
     if (((style->master == NULL) &&
 	    (MStyle_FindElem(tree, masterStyle, elem, index) == NULL)) ||
 	    ((style->master != NULL) &&
-	    (IStyle_FindElem(tree, style, elem, index) == NULL)))
-    {
+	    (IStyle_FindElem(tree, style, elem, index) == NULL))) {
 	FormatResult(tree->interp, "style %s does not use element %s",
 	    style->master ? style->master->name : masterStyle->name,
 	    elem->name);
@@ -3179,8 +3059,7 @@ Element_CreateAndConfig(
     Element *elem;
     ElementArgs args;
 
-    if (masterElem != NULL)
-    {
+    if (masterElem != NULL) {
 	type = masterElem->typePtr;
 	name = masterElem->name;
     }
@@ -3199,8 +3078,7 @@ Element_CreateAndConfig(
     args.elem = elem;
     args.create.item = item;
     args.create.column = column;
-    if ((*type->createProc)(&args) != TCL_OK)
-    {
+    if ((*type->createProc)(&args) != TCL_OK) {
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
@@ -3210,8 +3088,7 @@ Element_CreateAndConfig(
     }
 
     if (Tk_InitOptions(tree->interp, (char *) elem,
-	type->optionTable, tree->tkwin) != TCL_OK)
-    {
+	type->optionTable, tree->tkwin) != TCL_OK) {
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
@@ -3224,8 +3101,7 @@ Element_CreateAndConfig(
     args.config.flagSelf = 0;
     args.config.item = item;
     args.config.column = column;
-    if ((*type->configProc)(&args) != TCL_OK)
-    {
+    if ((*type->configProc)(&args) != TCL_OK) {
 	(*type->deleteProc)(&args);
 	Tk_FreeConfigOptions((char *) elem,
 	    type->optionTable,
@@ -3291,11 +3167,9 @@ Style_CreateElem(
 
     if (isNew != NULL) (*isNew) = FALSE;
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	eLink = &style->elements[i];
-	if (eLink->elem == masterElem)
-	{
+	if (eLink->elem == masterElem) {
 	    /* Allocate instance Element here */
 	    break;
 	}
@@ -3356,8 +3230,7 @@ TreeStyle_NewInstance(
     copy->master = style;
     copy->neededWidth = -1;
     copy->neededHeight = -1;
-    if (style->numElements > 0)
-    {
+    if (style->numElements > 0) {
 #ifdef ALLOC_HAX
 	copy->elements = (IElementLink *) AllocHax_CAlloc(tree->allocData,
 		IElementLinkUid, sizeof(IElementLink), style->numElements,
@@ -3367,8 +3240,7 @@ TreeStyle_NewInstance(
 		style->numElements);
 #endif
 	memset(copy->elements, '\0', sizeof(IElementLink) * style->numElements);
-	for (i = 0; i < style->numElements; i++)
-	{
+	for (i = 0; i < style->numElements; i++) {
 	    eLink = &copy->elements[i];
 	    eLink->elem = style->elements[i].elem;
 #ifdef CACHE_ELEM_SIZE
@@ -3409,8 +3281,7 @@ Element_FromObj(
 
     name = Tcl_GetString(obj);
     hPtr = Tcl_FindHashEntry(&tree->elementHash, name);
-    if (hPtr == NULL)
-    {
+    if (hPtr == NULL) {
 	Tcl_AppendResult(tree->interp, "element \"", name, "\" doesn't exist",
 	    NULL);
 	return TCL_ERROR;
@@ -3499,8 +3370,7 @@ TreeStyle_FromObj(
 
     name = Tcl_GetString(obj);
     hPtr = Tcl_FindHashEntry(&tree->styleHash, name);
-    if (hPtr == NULL)
-    {
+    if (hPtr == NULL) {
 	Tcl_AppendResult(tree->interp, "style \"", name, "\" doesn't exist",
 	    NULL);
 	return TCL_ERROR;
@@ -3596,22 +3466,18 @@ Style_Changed(
     IStyle *style;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
 	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	layout = FALSE;
-	while (column != NULL)
-	{
+	while (column != NULL) {
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
-	    if ((style != NULL) && (style->master == masterStyle))
-	    {
+	    if ((style != NULL) && (style->master == masterStyle)) {
 #ifdef CACHE_ELEM_SIZE
 		int i;
-		for (i = 0; i < masterStyle->numElements; i++)
-		{
+		for (i = 0; i < masterStyle->numElements; i++) {
 		    IElementLink *eLink = &style->elements[i];
 		    /* This is needed if the -width/-height layout options change */
 		    eLink->neededWidth = eLink->neededHeight = -1;
@@ -3626,8 +3492,7 @@ Style_Changed(
 	    column = TreeItemColumn_GetNext(tree, column);
 	    treeColumn = TreeColumn_Next(treeColumn);
 	}
-	if (layout)
-	{
+	if (layout) {
 	    TreeItem_InvalidateHeight(tree, item);
 	    Tree_FreeItemDInfo(tree, item, NULL);
 	    updateDInfo = TRUE;
@@ -3685,10 +3550,8 @@ MStyle_ChangeElementsAux(
     for (i = 0; i < style->numElements; i++)
 	keep[i] = 0;
 
-    for (i = 0; i < count; i++)
-    {
-	if (map[i] != -1)
-	{
+    for (i = 0; i < count; i++) {
+	if (map[i] != -1) {
 	    eLinks[i] = style->elements[map[i]];
 	    keep[map[i]] = 1;
 	}
@@ -3698,11 +3561,9 @@ MStyle_ChangeElementsAux(
 	}
     }
 
-    if (style->numElements > 0)
-    {
+    if (style->numElements > 0) {
 	/* Free unused ElementLinks */
-	for (i = 0; i < style->numElements; i++)
-	{
+	for (i = 0; i < style->numElements; i++) {
 	    if (!keep[i]) {
 		MElementLink_FreeResources(tree, &style->elements[i]);
 	    }
@@ -3770,10 +3631,8 @@ IStyle_ChangeElementsAux(
     for (i = 0; i < oldCount; i++)
 	keep[i] = 0;
 
-    for (i = 0; i < count; i++)
-    {
-	if (map[i] != -1)
-	{
+    for (i = 0; i < count; i++) {
+	if (map[i] != -1) {
 	    eLinks[i] = style->elements[map[i]];
 	    keep[map[i]] = 1;
 	}
@@ -3787,11 +3646,9 @@ IStyle_ChangeElementsAux(
 	}
     }
 
-    if (oldCount > 0)
-    {
+    if (oldCount > 0) {
 	/* Free unused ElementLinks */
-	for (i = 0; i < oldCount; i++)
-	{
+	for (i = 0; i < oldCount; i++) {
 	    if (!keep[i]) {
 		IElementLink_FreeResources(tree, &style->elements[i]);
 	    }
@@ -3851,8 +3708,7 @@ Style_ChangeElements(
     int i, j, k, oldCount;
 
     /* Update -union lists */
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	MElementLink *eLink = &masterStyle->elements[i];
 	int staticKeep[STATIC_SIZE], *keep = staticKeep;
 	int onionCnt = 0, *onion = NULL;
@@ -3863,17 +3719,14 @@ Style_ChangeElements(
 	STATIC_ALLOC(keep, int, eLink->onionCount);
 
 	/* Check every Element in this -union */
-	for (j = 0; j < eLink->onionCount; j++)
-	{
+	for (j = 0; j < eLink->onionCount; j++) {
 	    MElementLink *eLink2 = &masterStyle->elements[eLink->onion[j]];
 
 	    /* Check the new list of Elements */
 	    keep[j] = -1;
-	    for (k = 0; k < count; k++)
-	    {
+	    for (k = 0; k < count; k++) {
 		/* This new Element is in the -union */
-		if (elemList[k] == eLink2->elem)
-		{
+		if (elemList[k] == eLink2->elem) {
 		    keep[j] = k;
 		    onionCnt++;
 		    break;
@@ -3881,15 +3734,13 @@ Style_ChangeElements(
 	    }
 	}
 
-	if (onionCnt > 0)
-	{
+	if (onionCnt > 0) {
 	    if (onionCnt != eLink->onionCount)
 		onion = (int *) ckalloc(sizeof(int) * onionCnt);
 	    else
 		onion = eLink->onion;
 	    k = 0;
-	    for (j = 0; j < eLink->onionCount; j++)
-	    {
+	    for (j = 0; j < eLink->onionCount; j++) {
 		if (keep[j] != -1)
 		    onion[k++] = keep[j];
 	    }
@@ -3897,8 +3748,7 @@ Style_ChangeElements(
 
 	STATIC_FREE(keep, int, eLink->onionCount);
 
-	if (onionCnt != eLink->onionCount)
-	{
+	if (onionCnt != eLink->onionCount) {
 	    WCFREE(eLink->onion, int, eLink->onionCount);
 	    eLink->onion = onion;
 	    eLink->onionCount = onionCnt;
@@ -3909,18 +3759,15 @@ Style_ChangeElements(
     MStyle_ChangeElementsAux(tree, masterStyle, count, elemList, map);
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
 	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	layout = FALSE;
-	while (column != NULL)
-	{
+	while (column != NULL) {
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
-	    if ((style != NULL) && (style->master == masterStyle))
-	    {
+	    if ((style != NULL) && (style->master == masterStyle)) {
 		IStyle_ChangeElementsAux(tree, style, oldCount, count, elemList, map);
 		style->neededWidth = style->neededHeight = -1;
 		Tree_InvalidateColumnWidth(tree, treeColumn);
@@ -3931,8 +3778,7 @@ Style_ChangeElements(
 	    column = TreeItemColumn_GetNext(tree, column);
 	    treeColumn = TreeColumn_Next(treeColumn);
 	}
-	if (layout)
-	{
+	if (layout) {
 	    TreeItem_InvalidateHeight(tree, item);
 	    Tree_FreeItemDInfo(tree, item, NULL);
 	    updateDInfo = TRUE;
@@ -3995,22 +3841,18 @@ Style_ElemChanged(
     args.change.flagSelf = 0;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
 	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
 	iMask = 0;
-	while (column != NULL)
-	{
+	while (column != NULL) {
 	    cMask = 0;
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
-	    if ((style != NULL) && (style->master == masterStyle))
-	    {
+	    if ((style != NULL) && (style->master == masterStyle)) {
 		eLink = &style->elements[masterElemIndex];
-		if (eLink->elem == masterElem)
-		{
+		if (eLink->elem == masterElem) {
 #ifdef CACHE_ELEM_SIZE
 		    if (csM & CS_LAYOUT)
 			eLink->neededWidth = eLink->neededHeight = -1;
@@ -4029,14 +3871,12 @@ Style_ElemChanged(
 		    cMask |= eMask;
 		}
 		iMask |= cMask;
-		if (cMask & CS_LAYOUT)
-		{
+		if (cMask & CS_LAYOUT) {
 		    style->neededWidth = style->neededHeight = -1;
 		    Tree_InvalidateColumnWidth(tree, treeColumn);
 		    TreeItemColumn_InvalidateSize(tree, column);
 		}
-		else if (cMask & CS_DISPLAY)
-		{
+		else if (cMask & CS_DISPLAY) {
 		    Tree_InvalidateItemDInfo(tree, treeColumn, item, NULL);
 		}
 	    }
@@ -4044,14 +3884,12 @@ Style_ElemChanged(
 	    column = TreeItemColumn_GetNext(tree, column);
 	    treeColumn = TreeColumn_Next(treeColumn);
 	}
-	if (iMask & CS_LAYOUT)
-	{
+	if (iMask & CS_LAYOUT) {
 	    TreeItem_InvalidateHeight(tree, item);
 	    Tree_FreeItemDInfo(tree, item, NULL);
 	    updateDInfo = TRUE;
 	}
-	else if (iMask & CS_DISPLAY)
-	{
+	else if (iMask & CS_DISPLAY) {
 	}
 	hPtr = Tcl_NextHashEntry(&search);
     }
@@ -4118,17 +3956,14 @@ Style_GetImageOrText(
     IElementLink *eLink;
     int i;
 
-    if (*optionNameObj == NULL)
-    {
+    if (*optionNameObj == NULL) {
 	*optionNameObj = Tcl_NewStringObj(optionName, -1);
 	Tcl_IncrRefCount(*optionNameObj);
     }
 
-    for (i = 0; i < style->master->numElements; i++)
-    {
+    for (i = 0; i < style->master->numElements; i++) {
 	eLink = &style->elements[i];
-	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, typePtr))
-	{
+	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, typePtr)) {
 	    Tcl_Obj *resultObjPtr;
 	    resultObjPtr = Tk_GetOptionValue(tree->interp,
 		(char *) eLink->elem, eLink->elem->typePtr->optionTable,
@@ -4232,17 +4067,14 @@ Style_SetImageOrText(
     IElementLink *eLink;
     int i;
 
-    if (*optionNameObj == NULL)
-    {
+    if (*optionNameObj == NULL) {
 	*optionNameObj = Tcl_NewStringObj(optionName, -1);
 	Tcl_IncrRefCount(*optionNameObj);
     }
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	Element *masterElem = masterStyle->elements[i].elem;
-	if (ELEMENT_TYPE_MATCHES(masterElem->typePtr, typePtr))
-	{
+	if (ELEMENT_TYPE_MATCHES(masterElem->typePtr, typePtr)) {
 	    Tcl_Obj *objv[2];
 	    ElementArgs args;
 
@@ -4371,17 +4203,14 @@ Style_Deleted(
     int columnIndex;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
 	treeColumn = tree->columns;
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
-	while (column != NULL)
-	{
+	while (column != NULL) {
 	    style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
-	    if ((style != NULL) && (style->master == masterStyle))
-	    {
+	    if ((style != NULL) && (style->master == masterStyle)) {
 		Tree_InvalidateColumnWidth(tree, treeColumn);
 		TreeItemColumn_ForgetStyle(tree, column);
 		TreeItem_InvalidateHeight(tree, item);
@@ -4403,18 +4232,15 @@ Style_Deleted(
 
 #ifdef DEPRECATED
     /* Update -defaultstyle option */
-    if (tree->defaultStyle.stylesObj != NULL)
-    {
+    if (tree->defaultStyle.stylesObj != NULL) {
 	Tcl_Obj *stylesObj = tree->defaultStyle.stylesObj;
-	if (Tcl_IsShared(stylesObj))
-	{
+	if (Tcl_IsShared(stylesObj)) {
 	    stylesObj = Tcl_DuplicateObj(stylesObj);
 	    Tcl_DecrRefCount(tree->defaultStyle.stylesObj);
 	    Tcl_IncrRefCount(stylesObj);
 	    tree->defaultStyle.stylesObj = stylesObj;
 	}
-	for (columnIndex = 0; columnIndex < tree->defaultStyle.numStyles; columnIndex++)
-	{
+	for (columnIndex = 0; columnIndex < tree->defaultStyle.numStyles; columnIndex++) {
 	    Tcl_Obj *emptyObj;
 	    if (tree->defaultStyle.styles[columnIndex] != (TreeStyle) masterStyle)
 		continue;
@@ -4463,14 +4289,11 @@ Element_Changed(
     int i;
 
     hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	masterStyle = (MStyle *) Tcl_GetHashValue(hPtr);
-	for (i = 0; i < masterStyle->numElements; i++)
-	{
+	for (i = 0; i < masterStyle->numElements; i++) {
 	    eLink = &masterStyle->elements[i];
-	    if (eLink->elem == masterElem)
-	    {
+	    if (eLink->elem == masterElem) {
 		Style_ElemChanged(tree, masterStyle, masterElem, i, flagM, flagT, csM);
 		break;
 	    }
@@ -4509,22 +4332,18 @@ Element_Deleted(
     int i, j;
 
     hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	masterStyle = (MStyle *) Tcl_GetHashValue(hPtr);
-	for (i = 0; i < masterStyle->numElements; i++)
-	{
+	for (i = 0; i < masterStyle->numElements; i++) {
 	    eLink = &masterStyle->elements[i];
-	    if (eLink->elem == masterElem)
-	    {
+	    if (eLink->elem == masterElem) {
 		Element *staticElemList[STATIC_SIZE], **elemList = staticElemList;
 		int staticElemMap[STATIC_SIZE], *elemMap = staticElemMap;
 
 		STATIC_ALLOC(elemList, Element *, masterStyle->numElements);
 		STATIC_ALLOC(elemMap, int, masterStyle->numElements);
 
-		for (j = 0; j < masterStyle->numElements; j++)
-		{
+		for (j = 0; j < masterStyle->numElements; j++) {
 		    if (j == i)
 			continue;
 		    elemList[(j < i) ? j : (j - 1)] =
@@ -4566,8 +4385,7 @@ Tree_RedrawElement(
     )
 {
     /* Master element */
-    if (elem->master == NULL)
-    {
+    if (elem->master == NULL) {
     }
 
     /* Instance element */
@@ -4594,13 +4412,10 @@ static int IterateItem(Iterate *iter)
 {
     int i;
 
-    while (iter->column != NULL)
-    {
+    while (iter->column != NULL) {
 	iter->style = (IStyle *) TreeItemColumn_GetStyle(iter->tree, iter->column);
-	if (iter->style != NULL)
-	{
-	    for (i = 0; i < iter->style->master->numElements; i++)
-	    {
+	if (iter->style != NULL) {
+	    for (i = 0; i < iter->style->master->numElements; i++) {
 		iter->eLink = &iter->style->elements[i];
 		if (ELEMENT_TYPE_MATCHES(iter->eLink->elem->typePtr, iter->elemTypePtr))
 		    return 1;
@@ -4620,8 +4435,7 @@ TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr)
     iter->tree = tree;
     iter->elemTypePtr = elemTypePtr;
     iter->hPtr = Tcl_FirstHashEntry(&tree->itemHash, &iter->search);
-    while (iter->hPtr != NULL)
-    {
+    while (iter->hPtr != NULL) {
 	iter->item = (TreeItem) Tcl_GetHashValue(iter->hPtr);
 	iter->column = TreeItem_GetFirstColumn(tree, iter->item);
 	iter->columnIndex = 0;
@@ -4642,8 +4456,7 @@ TreeIterate Tree_ElementIterateNext(TreeIterate iter_)
     if (IterateItem(iter))
 	return iter_;
     iter->hPtr = Tcl_NextHashEntry(&iter->search);
-    while (iter->hPtr != NULL)
-    {
+    while (iter->hPtr != NULL) {
 	iter->item = (TreeItem) Tcl_GetHashValue(iter->hPtr);
 	iter->column = TreeItem_GetFirstColumn(iter->tree, iter->item);
 	iter->columnIndex = 0;
@@ -4686,13 +4499,11 @@ Tree_ElementChangedItself(
     )
 {
     /* Master element. */
-    if (item == NULL)
-    {
+    if (item == NULL) {
 	Element_Changed(tree, elem, flags, 0, csM);
 	return;
     }
-    if (csM & CS_LAYOUT)
-    {
+    if (csM & CS_LAYOUT) {
 	IStyle *style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
 	int i;
 	IElementLink *eLink = NULL;
@@ -4701,8 +4512,7 @@ Tree_ElementChangedItself(
 	if (style == NULL)
 	    panic("Tree_ElementChangedItself but style is NULL\n");
 
-	for (i = 0; i < style->master->numElements; i++)
-	{
+	for (i = 0; i < style->master->numElements; i++) {
 	    eLink = &style->elements[i];
 	    if (eLink->elem == elem)
 		break;
@@ -4737,8 +4547,7 @@ void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
 {
     Iterate *iter = (Iterate *) iter_;
 
-    if (mask & CS_LAYOUT)
-    {
+    if (mask & CS_LAYOUT) {
 #ifdef CACHE_ELEM_SIZE
 	iter->eLink->neededWidth = iter->eLink->neededHeight = -1;
 #endif
@@ -4800,8 +4609,7 @@ TreeStyle_TreeChanged(
     args.change.flagSelf = 0;
 
     hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	masterElem = (Element *) Tcl_GetHashValue(hPtr);
 	args.elem = masterElem;
 	eMask = (*masterElem->typePtr->changeProc)(&args);
@@ -4847,8 +4655,7 @@ TreeStyle_ElementCget(
 	return TCL_ERROR;
 
     eLink = IStyle_FindElem(tree, style, elem, NULL);
-    if ((eLink != NULL) && (eLink->elem == elem))
-    {
+    if ((eLink != NULL) && (eLink->elem == elem)) {
 	int index = TreeItemColumn_Index(tree, item, column);
 	TreeColumn treeColumn = Tree_FindColumn(tree, index);
 
@@ -4858,8 +4665,7 @@ TreeStyle_ElementCget(
 	    tree->columnPrefix, TreeColumn_GetID(treeColumn));
 	return TCL_ERROR;
     }
-    if (eLink == NULL)
-    {
+    if (eLink == NULL) {
 	FormatResult(tree->interp, "style %s does not use element %s",
 	    style->master->name, elem->name);
 	return TCL_ERROR;
@@ -4913,13 +4719,11 @@ TreeStyle_ElementConfigure(
     if (Element_FromObj(tree, elemObj, &elem) != TCL_OK)
 	return TCL_ERROR;
 
-    if (objc <= 1)
-    {
+    if (objc <= 1) {
 	Tcl_Obj *resultObjPtr;
 
 	eLink = IStyle_FindElem(tree, style, elem, NULL);
-	if ((eLink != NULL) && (eLink->elem == elem))
-	{
+	if ((eLink != NULL) && (eLink->elem == elem)) {
 	    int index = TreeItemColumn_Index(tree, item, column);
 	    TreeColumn treeColumn = Tree_FindColumn(tree, index);
 
@@ -4929,8 +4733,7 @@ TreeStyle_ElementConfigure(
 		tree->columnPrefix, TreeColumn_GetID(treeColumn));
 	    return TCL_ERROR;
 	}
-	if (eLink == NULL)
-	{
+	if (eLink == NULL) {
 	    FormatResult(tree->interp, "style %s does not use element %s",
 		style->master->name, elem->name);
 	    return TCL_ERROR;
@@ -4949,8 +4752,7 @@ TreeStyle_ElementConfigure(
 	int isNew;
 
 	eLink = Style_CreateElem(tree, item, column, style, elem, &isNew);
-	if (eLink == NULL)
-	{
+	if (eLink == NULL) {
 	    FormatResult(tree->interp, "style %s does not use element %s",
 		style->master->name, elem->name);
 	    return TCL_ERROR;
@@ -4959,8 +4761,7 @@ TreeStyle_ElementConfigure(
 	/* Do this before configProc(). If eLink was just allocated and an
 	 * error occurs in configProc() it won't be done */
 	(*eMask) = 0;
-	if (isNew)
-	{
+	if (isNew) {
 #ifdef CACHE_ELEM_SIZE
 	    eLink->neededWidth = eLink->neededHeight = -1;
 #endif
@@ -4983,8 +4784,7 @@ TreeStyle_ElementConfigure(
 	args.change.flagMaster = 0;
 	(*eMask) |= (*elem->typePtr->changeProc)(&args);
 
-	if (!isNew && ((*eMask) & CS_LAYOUT))
-	{
+	if (!isNew && ((*eMask) & CS_LAYOUT)) {
 #ifdef CACHE_ELEM_SIZE
 	    eLink->neededWidth = eLink->neededHeight = -1;
 #endif
@@ -5030,8 +4830,7 @@ TreeStyle_ElementActual(
 	return TCL_ERROR;
 
     eLink = IStyle_FindElem(tree, style, masterElem, NULL);
-    if (eLink == NULL)
-    {
+    if (eLink == NULL) {
 	FormatResult(tree->interp, "style %s does not use element %s",
 	    style->master->name, masterElem->name);
 	return TCL_ERROR;
@@ -5081,27 +4880,22 @@ TreeElementCmd(
     };
     int index;
 
-    if (objc < 3)
-    {
+    if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
-	case COMMAND_CGET:
-	{
+    switch (index) {
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr = NULL;
 	    Element *elem;
 
-	    if (objc != 5)
-	    {
+	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name option");
 		return TCL_ERROR;
 	    }
@@ -5115,21 +4909,18 @@ TreeElementCmd(
 	    break;
 	}
 
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr = NULL;
 	    Element *elem;
 	    int eMask;
 
-	    if (objc < 4)
-	    {
+	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value ...?");
 		return TCL_ERROR;
 	    }
 	    if (Element_FromObj(tree, objv[3], &elem) != TCL_OK)
 		return TCL_ERROR;
-	    if (objc <= 5)
-	    {
+	    if (objc <= 5) {
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) elem,
 		    elem->typePtr->optionTable,
 		    (objc == 4) ? (Tcl_Obj *) NULL : objv[4],
@@ -5162,8 +4953,7 @@ TreeElementCmd(
 	    break;
 	}
 
-	case COMMAND_CREATE:
-	{
+	case COMMAND_CREATE: {
 	    char *name;
 	    int length;
 	    int isNew;
@@ -5171,8 +4961,7 @@ TreeElementCmd(
 	    ElementType *typePtr;
 	    Tcl_HashEntry *hPtr;
 
-	    if (objc < 5)
-	    {
+	    if (objc < 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name type ?option value ...?");
 		return TCL_ERROR;
 	    }
@@ -5180,8 +4969,7 @@ TreeElementCmd(
 	    if (!length)
 		return TCL_ERROR;
 	    hPtr = Tcl_FindHashEntry(&tree->elementHash, name);
-	    if (hPtr != NULL)
-	    {
+	    if (hPtr != NULL) {
 		FormatResult(interp, "element \"%s\" already exists", name);
 		return TCL_ERROR;
 	    }
@@ -5196,13 +4984,11 @@ TreeElementCmd(
 	    break;
 	}
 
-	case COMMAND_DELETE:
-	{
+	case COMMAND_DELETE: {
 	    Element *elem;
 	    int i;
 
-	    for (i = 3; i < objc; i++)
-	    {
+	    for (i = 3; i < objc; i++) {
 		if (Element_FromObj(tree, objv[i], &elem) != TCL_OK)
 		    return TCL_ERROR;
 		Element_Deleted(tree, elem);
@@ -5211,22 +4997,19 @@ TreeElementCmd(
 	    break;
 	}
 
-	case COMMAND_NAMES:
-	{
+	case COMMAND_NAMES: {
 	    Tcl_Obj *listObj;
 	    Tcl_HashSearch search;
 	    Tcl_HashEntry *hPtr;
 	    Element *elem;
 
-	    if (objc != 3)
-	    {
+	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, NULL);
 		return TCL_ERROR;
 	    }
 	    listObj = Tcl_NewListObj(0, NULL);
 	    hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
-	    while (hPtr != NULL)
-	    {
+	    while (hPtr != NULL) {
 		elem = (Element *) Tcl_GetHashValue(hPtr);
 		Tcl_ListObjAppendElement(interp, listObj, Element_ToObj(elem));
 		hPtr = Tcl_NextHashEntry(&search);
@@ -5236,8 +5019,7 @@ TreeElementCmd(
 	}
 
 	/* T element perstate E option stateList */
-	case COMMAND_PERSTATE:
-	{
+	case COMMAND_PERSTATE: {
 	    Element *elem;
 	    int states[3];
 	    ElementArgs args;
@@ -5262,12 +5044,10 @@ TreeElementCmd(
 	    return (*elem->typePtr->actualProc)(&args);
 	}
 
-	case COMMAND_TYPE:
-	{
+	case COMMAND_TYPE: {
 	    Element *elem;
 
-	    if (objc != 4)
-	    {
+	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name");
 		return TCL_ERROR;
 	    }
@@ -5316,8 +5096,7 @@ Style_CreateAndConfig(
     style->name = Tk_GetUid(name);
 
     if (Tk_InitOptions(tree->interp, (char *) style,
-	tree->styleOptionTable, tree->tkwin) != TCL_OK)
-    {
+	tree->styleOptionTable, tree->tkwin) != TCL_OK) {
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
@@ -5328,8 +5107,7 @@ Style_CreateAndConfig(
 
     if (Tk_SetOptions(tree->interp, (char *) style,
 	tree->styleOptionTable, objc, objv, tree->tkwin,
-	NULL, NULL) != TCL_OK)
-    {
+	NULL, NULL) != TCL_OK) {
 	Tk_FreeConfigOptions((char *) style, tree->styleOptionTable, tree->tkwin);
 #ifdef ALLOC_HAX
 	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
@@ -5377,8 +5155,7 @@ TreeStyle_ListElements(
 	return;
 
     listObj = Tcl_NewListObj(0, NULL);
-    for (i = 0; i < numElements; i++)
-    {
+    for (i = 0; i < numElements; i++) {
 	if (style->master != NULL) {
 	    elem = style->elements[i].elem;
 	    if (elem->master == NULL)
@@ -5426,8 +5203,7 @@ LayoutOptionToObj(
 {
     Tcl_Interp *interp = tree->interp;
 
-    switch (option)
-    {
+    switch (option) {
 	case OPTION_PADX:
 	    return TreeCtrl_NewPadAmountObj(eLink->ePadX);
 	case OPTION_PADY:
@@ -5438,8 +5214,7 @@ LayoutOptionToObj(
 	    return TreeCtrl_NewPadAmountObj(eLink->iPadY);
 	case OPTION_DETACH:
 	    return Tcl_NewStringObj((eLink->flags & ELF_DETACH) ? "yes" : "no", -1);
-	case OPTION_EXPAND:
-	{
+	case OPTION_EXPAND: {
 	    char flags[4];
 	    int n = 0;
 
@@ -5451,8 +5226,7 @@ LayoutOptionToObj(
 		return Tcl_NewStringObj(flags, n);
 	    break;
 	}
-	case OPTION_iEXPAND:
-	{
+	case OPTION_iEXPAND: {
 	    char flags[6];
 	    int n = 0;
 
@@ -5468,8 +5242,7 @@ LayoutOptionToObj(
 	}
 	case OPTION_INDENT:
 	    return Tcl_NewStringObj((eLink->flags & ELF_INDENT) ? "yes" : "no", -1);
-	case OPTION_SQUEEZE:
-	{
+	case OPTION_SQUEEZE: {
 	    char flags[2];
 	    int n = 0;
 
@@ -5479,8 +5252,7 @@ LayoutOptionToObj(
 		return Tcl_NewStringObj(flags, n);
 	    break;
 	}
-	case OPTION_UNION:
-	{
+	case OPTION_UNION: {
 	    int i;
 	    Tcl_Obj *objPtr;
 
@@ -5492,44 +5264,37 @@ LayoutOptionToObj(
 		    Element_ToObj(style->elements[eLink->onion[i]].elem));
 	    return objPtr;
 	}
-	case OPTION_MAXHEIGHT:
-	{
+	case OPTION_MAXHEIGHT: {
 	    if (eLink->maxHeight >= 0)
 		return Tcl_NewIntObj(eLink->maxHeight);
 	    break;
 	}
-	case OPTION_MINHEIGHT:
-	{
+	case OPTION_MINHEIGHT: {
 	    if (eLink->minHeight >= 0)
 		return Tcl_NewIntObj(eLink->minHeight);
 	    break;
 	}
-	case OPTION_HEIGHT:
-	{
+	case OPTION_HEIGHT: {
 	    if (eLink->fixedHeight >= 0)
 		return Tcl_NewIntObj(eLink->fixedHeight);
 	    break;
 	}
-	case OPTION_MAXWIDTH:
-	{
+	case OPTION_MAXWIDTH: {
 	    if (eLink->maxWidth >= 0)
 		return Tcl_NewIntObj(eLink->maxWidth);
 	    break;
 	}
-	case OPTION_MINWIDTH:
-	{
+	case OPTION_MINWIDTH: {
 	    if (eLink->minWidth >= 0)
 		return Tcl_NewIntObj(eLink->minWidth);
 	    break;
 	}
-	case OPTION_WIDTH:
-	{
+	case OPTION_WIDTH: {
 	    if (eLink->fixedWidth >= 0)
 		return Tcl_NewIntObj(eLink->fixedWidth);
 	    break;
 	}
-	case OPTION_STICKY:
-	{
+	case OPTION_STICKY: {
 	    char flags[4];
 	    int n = 0;
 
@@ -5541,12 +5306,10 @@ LayoutOptionToObj(
 		return Tcl_NewStringObj(flags, n);
 	    break;
 	}
-	case OPTION_DRAW:
-	{
+	case OPTION_DRAW: {
 	    return eLink->draw.obj;
 	}
-	case OPTION_VISIBLE:
-	{
+	case OPTION_VISIBLE: {
 	    return eLink->visible.obj;
 	}
     }
@@ -5592,8 +5355,7 @@ StyleLayoutCmd(
 	"-width", "-visible",
 	(char *) NULL
     };
-    if (objc < 5)
-    {
+    if (objc < 5) {
 	Tcl_WrongNumArgs(interp, 3, objv, "name element ?option? ?value? ?option value ...?");
 	return TCL_ERROR;
     }
@@ -5606,21 +5368,18 @@ StyleLayoutCmd(
 	return TCL_ERROR;
 
     eLink = MStyle_FindElem(tree, style, elem, NULL);
-    if (eLink == NULL)
-    {
+    if (eLink == NULL) {
 	FormatResult(interp, "style %s does not use element %s",
 	    style->name, elem->name);
 	return TCL_ERROR;
     }
 
     /* T style layout S E */
-    if (objc == 5)
-    {
+    if (objc == 5) {
 	Tcl_Obj *listObj = Tcl_NewListObj(0, NULL);
 	Tcl_Obj *objPtr;
 
-	for (i = 0; optionNames[i] != NULL; i++)
-	{
+	for (i = 0; optionNames[i] != NULL; i++) {
 	    Tcl_ListObjAppendElement(interp, listObj,
 		Tcl_NewStringObj(optionNames[i], -1));
 	    objPtr = LayoutOptionToObj(tree, style, eLink, i);
@@ -5632,8 +5391,7 @@ StyleLayoutCmd(
     }
 
     /* T style layout S E option */
-    if (objc == 6)
-    {
+    if (objc == 6) {
 	Tcl_Obj *objPtr;
 
 	if (Tcl_GetIndexFromObj(interp, objv[5], optionNames, "option",
@@ -5647,23 +5405,18 @@ StyleLayoutCmd(
 
     saved = *eLink;
 
-    for (i = 5; i < objc; i += 2)
-    {
-	if (i + 2 > objc)
-	{
+    for (i = 5; i < objc; i += 2) {
+	if (i + 2 > objc) {
 	    FormatResult(interp, "value for \"%s\" missing",
 		Tcl_GetString(objv[i]));
 	    goto badConfig;
 	}
 	if (Tcl_GetIndexFromObj(interp, objv[i], optionNames, "option",
-	    0, &index) != TCL_OK)
-	{
+	    0, &index) != TCL_OK) {
 	    goto badConfig;
 	}
-	switch (index)
-	{
-	    case OPTION_PADX:
-	    {
+	switch (index) {
+	    case OPTION_PADX: {
 		if (TreeCtrl_GetPadAmountFromObj(interp,
 		    tree->tkwin, objv[i + 1],
 		    &eLink->ePadX[PAD_TOP_LEFT],
@@ -5671,8 +5424,7 @@ StyleLayoutCmd(
 		    goto badConfig;
 		break;
 	    }
-	    case OPTION_PADY:
-	    {
+	    case OPTION_PADY: {
 		if (TreeCtrl_GetPadAmountFromObj(interp,
 		    tree->tkwin, objv[i + 1],
 		    &eLink->ePadY[PAD_TOP_LEFT],
@@ -5680,8 +5432,7 @@ StyleLayoutCmd(
 		    goto badConfig;
 		break;
 	    }
-	    case OPTION_iPADX:
-	    {
+	    case OPTION_iPADX: {
 		if (TreeCtrl_GetPadAmountFromObj(interp,
 		    tree->tkwin, objv[i + 1],
 		    &eLink->iPadX[PAD_TOP_LEFT],
@@ -5689,8 +5440,7 @@ StyleLayoutCmd(
 		    goto badConfig;
 		break;
 	    }
-	    case OPTION_iPADY:
-	    {
+	    case OPTION_iPADY: {
 		if (TreeCtrl_GetPadAmountFromObj(interp,
 		    tree->tkwin, objv[i + 1],
 		    &eLink->iPadY[PAD_TOP_LEFT],
@@ -5698,8 +5448,7 @@ StyleLayoutCmd(
 		    goto badConfig;
 		break;
 	    }
-	    case OPTION_DETACH:
-	    {
+	    case OPTION_DETACH: {
 		int detach;
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &detach) != TCL_OK)
 		    goto badConfig;
@@ -5709,22 +5458,18 @@ StyleLayoutCmd(
 		    eLink->flags &= ~ELF_DETACH;
 		break;
 	    }
-	    case OPTION_EXPAND:
-	    {
+	    case OPTION_EXPAND: {
 		char *expand;
 		int len, k;
 		expand = Tcl_GetStringFromObj(objv[i + 1], &len);
 		eLink->flags &= ~ELF_eEXPAND;
-		for (k = 0; k < len; k++)
-		{
-		    switch (expand[k])
-		    {
+		for (k = 0; k < len; k++) {
+		    switch (expand[k]) {
 			case 'w': case 'W': eLink->flags |= ELF_eEXPAND_W; break;
 			case 'n': case 'N': eLink->flags |= ELF_eEXPAND_N; break;
 			case 'e': case 'E': eLink->flags |= ELF_eEXPAND_E; break;
 			case 's': case 'S': eLink->flags |= ELF_eEXPAND_S; break;
-			default:
-			{
+			default: {
 			    Tcl_ResetResult(tree->interp);
 			    Tcl_AppendResult(tree->interp, "bad expand value \"",
 				expand, "\": must be a string ",
@@ -5736,24 +5481,20 @@ StyleLayoutCmd(
 		}
 		break;
 	    }
-	    case OPTION_iEXPAND:
-	    {
+	    case OPTION_iEXPAND: {
 		char *expand;
 		int len, k;
 		expand = Tcl_GetStringFromObj(objv[i + 1], &len);
 		eLink->flags &= ~(ELF_iEXPAND | ELF_iEXPAND_X | ELF_iEXPAND_Y);
-		for (k = 0; k < len; k++)
-		{
-		    switch (expand[k])
-		    {
+		for (k = 0; k < len; k++) {
+		    switch (expand[k]) {
 			case 'x': case 'X': eLink->flags |= ELF_iEXPAND_X; break;
 			case 'y': case 'Y': eLink->flags |= ELF_iEXPAND_Y; break;
 			case 'w': case 'W': eLink->flags |= ELF_iEXPAND_W; break;
 			case 'n': case 'N': eLink->flags |= ELF_iEXPAND_N; break;
 			case 'e': case 'E': eLink->flags |= ELF_iEXPAND_E; break;
 			case 's': case 'S': eLink->flags |= ELF_iEXPAND_S; break;
-			default:
-			{
+			default: {
 			    Tcl_ResetResult(tree->interp);
 			    Tcl_AppendResult(tree->interp, "bad iexpand value \"",
 				expand, "\": must be a string ",
@@ -5765,8 +5506,7 @@ StyleLayoutCmd(
 		}
 		break;
 	    }
-	    case OPTION_INDENT:
-	    {
+	    case OPTION_INDENT: {
 		int indent;
 		if (Tcl_GetBooleanFromObj(interp, objv[i + 1], &indent) != TCL_OK)
 		    goto badConfig;
@@ -5776,20 +5516,16 @@ StyleLayoutCmd(
 		    eLink->flags &= ~ELF_INDENT;
 		break;
 	    }
-	    case OPTION_SQUEEZE:
-	    {
+	    case OPTION_SQUEEZE: {
 		char *string;
 		int len, k;
 		string = Tcl_GetStringFromObj(objv[i + 1], &len);
 		eLink->flags &= ~(ELF_SQUEEZE_X | ELF_SQUEEZE_Y);
-		for (k = 0; k < len; k++)
-		{
-		    switch (string[k])
-		    {
+		for (k = 0; k < len; k++) {
+		    switch (string[k]) {
 			case 'x': case 'X': eLink->flags |= ELF_SQUEEZE_X; break;
 			case 'y': case 'Y': eLink->flags |= ELF_SQUEEZE_Y; break;
-			default:
-			{
+			default: {
 			    Tcl_ResetResult(tree->interp);
 			    Tcl_AppendResult(tree->interp, "bad squeeze value \"",
 				string, "\": must be a string ",
@@ -5801,8 +5537,7 @@ StyleLayoutCmd(
 		}
 		break;
 	    }
-	    case OPTION_UNION:
-	    {
+	    case OPTION_UNION: {
 		int objc1;
 		Tcl_Obj **objv1;
 		int j, k, n, *onion, count = 0;
@@ -5810,10 +5545,8 @@ StyleLayoutCmd(
 		if (Tcl_ListObjGetElements(interp, objv[i + 1],
 		    &objc1, &objv1) != TCL_OK)
 		    goto badConfig;
-		if (objc1 == 0)
-		{
-		    if (eLink->onion != NULL)
-		    {
+		if (objc1 == 0) {
+		    if (eLink->onion != NULL) {
 			if (eLink->onion != saved.onion)
 			    WCFREE(eLink->onion, int, eLink->onionCount);
 			eLink->onionCount = 0;
@@ -5822,28 +5555,24 @@ StyleLayoutCmd(
 		    break;
 		}
 		onion = (int *) ckalloc(sizeof(int) * objc1);
-		for (j = 0; j < objc1; j++)
-		{
+		for (j = 0; j < objc1; j++) {
 		    Element *elem2;
 		    MElementLink *eLink2;
 
-		    if (Element_FromObj(tree, objv1[j], &elem2) != TCL_OK)
-		    {
+		    if (Element_FromObj(tree, objv1[j], &elem2) != TCL_OK) {
 			ckfree((char *) onion);
 			goto badConfig;
 		    }
 
 		    eLink2 = MStyle_FindElem(tree, style, elem2, &n);
-		    if (eLink2 == NULL)
-		    {
+		    if (eLink2 == NULL) {
 			ckfree((char *) onion);
 			FormatResult(interp,
 			    "style %s does not use element %s",
 			    style->name, elem2->name);
 			goto badConfig;
 		    }
-		    if (eLink == eLink2)
-		    {
+		    if (eLink == eLink2) {
 			ckfree((char *) onion);
 			FormatResult(interp,
 			    "element %s can't form union with itself",
@@ -5851,8 +5580,7 @@ StyleLayoutCmd(
 			goto badConfig;
 		    }
 		    /* Silently ignore duplicates */
-		    for (k = 0; k < count; k++)
-		    {
+		    for (k = 0; k < count; k++) {
 			if (onion[k] == n)
 			    break;
 		    }
@@ -5874,17 +5602,14 @@ StyleLayoutCmd(
 		eLink->onionCount = count;
 		break;
 	    }
-	    case OPTION_MAXHEIGHT:
-	    {
+	    case OPTION_MAXHEIGHT: {
 		int height;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->maxHeight = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &height) != TCL_OK) || (height < 0))
-		{
+		    &height) != TCL_OK) || (height < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5892,17 +5617,14 @@ StyleLayoutCmd(
 		eLink->maxHeight = height;
 		break;
 	    }
-	    case OPTION_MINHEIGHT:
-	    {
+	    case OPTION_MINHEIGHT: {
 		int height;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->minHeight = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &height) != TCL_OK) || (height < 0))
-		{
+		    &height) != TCL_OK) || (height < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5910,17 +5632,14 @@ StyleLayoutCmd(
 		eLink->minHeight = height;
 		break;
 	    }
-	    case OPTION_HEIGHT:
-	    {
+	    case OPTION_HEIGHT: {
 		int height;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->fixedHeight = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &height) != TCL_OK) || (height < 0))
-		{
+			&height) != TCL_OK) || (height < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5928,17 +5647,14 @@ StyleLayoutCmd(
 		eLink->fixedHeight = height;
 		break;
 	    }
-	    case OPTION_MAXWIDTH:
-	    {
+	    case OPTION_MAXWIDTH: {
 		int width;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->maxWidth = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &width) != TCL_OK) || (width < 0))
-		{
+		    &width) != TCL_OK) || (width < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5946,17 +5662,14 @@ StyleLayoutCmd(
 		eLink->maxWidth = width;
 		break;
 	    }
-	    case OPTION_MINWIDTH:
-	    {
+	    case OPTION_MINWIDTH: {
 		int width;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->minWidth = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &width) != TCL_OK) || (width < 0))
-		{
+			&width) != TCL_OK) || (width < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5964,17 +5677,14 @@ StyleLayoutCmd(
 		eLink->minWidth = width;
 		break;
 	    }
-	    case OPTION_WIDTH:
-	    {
+	    case OPTION_WIDTH: {
 		int width;
-		if (ObjectIsEmpty(objv[i + 1]))
-		{
+		if (ObjectIsEmpty(objv[i + 1])) {
 		    eLink->fixedWidth = -1;
 		    break;
 		}
 		if ((Tk_GetPixelsFromObj(interp, tree->tkwin, objv[i + 1],
-		    &width) != TCL_OK) || (width < 0))
-		{
+			&width) != TCL_OK) || (width < 0)) {
 		    FormatResult(interp, "bad screen distance \"%s\"",
 			Tcl_GetString(objv[i + 1]));
 		    goto badConfig;
@@ -5982,22 +5692,18 @@ StyleLayoutCmd(
 		eLink->fixedWidth = width;
 		break;
 	    }
-	    case OPTION_STICKY:
-	    {
+	    case OPTION_STICKY: {
 		char *sticky;
 		int len, k;
 		sticky = Tcl_GetStringFromObj(objv[i + 1], &len);
 		eLink->flags &= ~ELF_STICKY;
-		for (k = 0; k < len; k++)
-		{
-		    switch (sticky[k])
-		    {
+		for (k = 0; k < len; k++) {
+		    switch (sticky[k]) {
 			case 'w': case 'W': eLink->flags |= ELF_STICKY_W; break;
 			case 'n': case 'N': eLink->flags |= ELF_STICKY_N; break;
 			case 'e': case 'E': eLink->flags |= ELF_STICKY_E; break;
 			case 's': case 'S': eLink->flags |= ELF_STICKY_S; break;
-			default:
-			{
+			default: {
 			    Tcl_ResetResult(tree->interp);
 			    Tcl_AppendResult(tree->interp, "bad sticky value \"",
 				sticky, "\": must be a string ",
@@ -6010,8 +5716,7 @@ StyleLayoutCmd(
 		break;
 	    }
 	    case OPTION_DRAW:
-	    case OPTION_VISIBLE:
-	    {
+	    case OPTION_VISIBLE: {
 		PerStateInfo *psi, *psiSaved;
 
 		if (index == OPTION_DRAW) {
@@ -6111,26 +5816,21 @@ TreeStyleCmd(
     TreeStyle _style;
     MStyle *style;
 
-    if (objc < 3)
-    {
+    if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[2], commandNames, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
-	case COMMAND_CGET:
-	{
+    switch (index) {
+	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr;
 
-	    if (objc != 5)
-	    {
+	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name option");
 		return TCL_ERROR;
 	    }
@@ -6145,20 +5845,17 @@ TreeStyleCmd(
 	    break;
 	}
 
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr = NULL;
 
-	    if (objc < 4)
-	    {
+	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name ?option? ?value option value ...?");
 		return TCL_ERROR;
 	    }
 	    if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 		return TCL_ERROR;
 	    style = (MStyle *) _style;
-	    if (objc <= 5)
-	    {
+	    if (objc <= 5) {
 		resultObjPtr = Tk_GetOptionInfo(interp, (char *) style,
 		    tree->styleOptionTable,
 		    (objc == 4) ? (Tcl_Obj *) NULL : objv[4],
@@ -6178,27 +5875,23 @@ TreeStyleCmd(
 	    break;
 	}
 
-	case COMMAND_CREATE:
-	{
+	case COMMAND_CREATE: {
 	    char *name;
 	    int len;
 	    Tcl_HashEntry *hPtr;
 	    int isNew;
 
-	    if (objc < 4)
-	    {
+	    if (objc < 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name ?option value ...?");
 		return TCL_ERROR;
 	    }
 	    name = Tcl_GetStringFromObj(objv[3], &len);
-	    if (!len)
-	    {
+	    if (!len) {
 		FormatResult(interp, "invalid style name \"\"");
 		return TCL_ERROR;
 	    }
 	    hPtr = Tcl_FindHashEntry(&tree->styleHash, name);
-	    if (hPtr != NULL)
-	    {
+	    if (hPtr != NULL) {
 		FormatResult(interp, "style \"%s\" already exists", name);
 		return TCL_ERROR;
 	    }
@@ -6211,17 +5904,14 @@ TreeStyleCmd(
 	    break;
 	}
 
-	case COMMAND_DELETE:
-	{
+	case COMMAND_DELETE: {
 	    int i;
 
-	    if (objc < 3)
-	    {
+	    if (objc < 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?name ...?");
 		return TCL_ERROR;
 	    }
-	    for (i = 3; i < objc; i++)
-	    {
+	    for (i = 3; i < objc; i++) {
 		if (TreeStyle_FromObj(tree, objv[i], &_style) != TCL_OK)
 		    return TCL_ERROR;
 		Style_Deleted(tree, (MStyle *) _style);
@@ -6231,39 +5921,33 @@ TreeStyleCmd(
 	}
 
 	/* T style elements S ?{E ...}? */
-	case COMMAND_ELEMENTS:
-	{
+	case COMMAND_ELEMENTS: {
 	    Element *elem, **elemList = NULL;
 	    int i, j, count = 0;
 	    int staticMap[STATIC_SIZE], *map = staticMap;
 	    int listObjc;
 	    Tcl_Obj **listObjv;
 
-	    if (objc < 4 || objc > 5)
-	    {
+	    if (objc < 4 || objc > 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name ?elementList?");
 		return TCL_ERROR;
 	    }
 	    if (TreeStyle_FromObj(tree, objv[3], &_style) != TCL_OK)
 		return TCL_ERROR;
 	    style = (MStyle *) _style;
-	    if (objc == 5)
-	    {
+	    if (objc == 5) {
 		if (Tcl_ListObjGetElements(interp, objv[4], &listObjc, &listObjv) != TCL_OK)
 		    return TCL_ERROR;
 		if (listObjc > 0)
 		    elemList = (Element **) ckalloc(sizeof(Element *) * listObjc);
-		for (i = 0; i < listObjc; i++)
-		{
-		    if (Element_FromObj(tree, listObjv[i], &elem) != TCL_OK)
-		    {
+		for (i = 0; i < listObjc; i++) {
+		    if (Element_FromObj(tree, listObjv[i], &elem) != TCL_OK) {
 			ckfree((char *) elemList);
 			return TCL_ERROR;
 		    }
 
 		    /* Ignore duplicate elements */
-		    for (j = 0; j < count; j++)
-		    {
+		    for (j = 0; j < count; j++) {
 			if (elemList[j] == elem)
 			    break;
 		    }
@@ -6279,16 +5963,12 @@ TreeStyleCmd(
 		    map[i] = -1;
 
 		/* Reassigning Elements to a Style */
-		if (style->numElements > 0)
-		{
+		if (style->numElements > 0) {
 		    /* Check each Element */
-		    for (i = 0; i < count; i++)
-		    {
+		    for (i = 0; i < count; i++) {
 			/* See if this Element is already used by the Style */
-			for (j = 0; j < style->numElements; j++)
-			{
-			    if (elemList[i] == style->elements[j].elem)
-			    {
+			for (j = 0; j < style->numElements; j++) {
+			    if (elemList[i] == style->elements[j].elem) {
 				/* Preserve it */
 				map[i] = j;
 				break;
@@ -6307,21 +5987,18 @@ TreeStyleCmd(
 	}
 
 	/* T style layout S E ?option? ?value? ?option value ...? */
-	case COMMAND_LAYOUT:
-	{
+	case COMMAND_LAYOUT: {
 	    return StyleLayoutCmd(clientData, interp, objc, objv);
 	}
 
-	case COMMAND_NAMES:
-	{
+	case COMMAND_NAMES: {
 	    Tcl_Obj *listObj;
 	    Tcl_HashSearch search;
 	    Tcl_HashEntry *hPtr;
 
 	    listObj = Tcl_NewListObj(0, NULL);
 	    hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
-	    while (hPtr != NULL)
-	    {
+	    while (hPtr != NULL) {
 		_style = (TreeStyle) Tcl_GetHashValue(hPtr);
 		Tcl_ListObjAppendElement(interp, listObj,
 		    TreeStyle_ToObj(_style));
@@ -6365,8 +6042,7 @@ ButtonMaxWidth(
     PerStateBitmap_MaxSize(tree, &tree->buttonBitmap, &w, &h);
     width = MAX(width, w);
 
-    if (tree->useTheme)
-    {
+    if (tree->useTheme) {
 	if (TreeTheme_GetButtonSize(tree, Tk_WindowId(tree->tkwin),
 	    TRUE, &w, &h) == TCL_OK)
 	    width = MAX(width, w);
@@ -6474,8 +6150,7 @@ TreeStyle_Identify(
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
-    for (i = style->master->numElements - 1; i >= 0; i--)
-    {
+    for (i = style->master->numElements - 1; i >= 0; i--) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -6483,8 +6158,7 @@ TreeStyle_Identify(
 
 	eLink = layout->eLink;
 	if ((x >= layout->x + layout->ePadX[PAD_TOP_LEFT]) && (x < layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth) &&
-	    (y >= layout->y + layout->ePadY[PAD_TOP_LEFT]) && (y < layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight))
-	{
+	    (y >= layout->y + layout->ePadY[PAD_TOP_LEFT]) && (y < layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight)) {
 	    goto done;
 	}
     }
@@ -6547,8 +6221,7 @@ TreeStyle_Identify2(
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
-    for (i = style->master->numElements - 1; i >= 0; i--)
-    {
+    for (i = style->master->numElements - 1; i >= 0; i--) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
@@ -6558,8 +6231,7 @@ TreeStyle_Identify2(
 	if ((drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] < x2) &&
 	    (drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT] + layout->iWidth > x1) &&
 	    (drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT] < y2) &&
-	    (drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight > y1))
-	{
+	    (drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT] + layout->iHeight > y1)) {
 	    Tcl_ListObjAppendElement(drawArgs->tree->interp, listObj,
 		Tcl_NewStringObj(eLink->elem->name, -1));
 	}
@@ -6626,18 +6298,15 @@ TreeStyle_Remap(
     for (i = 0; i < styleFromNumElements; i++)
 	map[i] = -1;
 
-    for (i = 0; i < objc; i += 2)
-    {
+    for (i = 0; i < objc; i += 2) {
 	/* Get the old-style element */
-	if (Element_FromObj(tree, objv[i], &elemFrom) != TCL_OK)
-	{
+	if (Element_FromObj(tree, objv[i], &elemFrom) != TCL_OK) {
 	    result = TCL_ERROR;
 	    goto done;
 	}
 
 	/* Verify the old style uses the element */
-	if (MStyle_FindElem(tree, styleFrom->master, elemFrom, &indexFrom) == NULL)
-	{
+	if (MStyle_FindElem(tree, styleFrom->master, elemFrom, &indexFrom) == NULL) {
 	    FormatResult(tree->interp, "style %s does not use element %s",
 		styleFrom->master->name, elemFrom->name);
 	    result = TCL_ERROR;
@@ -6645,15 +6314,13 @@ TreeStyle_Remap(
 	}
 
 	/* Get the new-style element */
-	if (Element_FromObj(tree, objv[i + 1], &elemTo) != TCL_OK)
-	{
+	if (Element_FromObj(tree, objv[i + 1], &elemTo) != TCL_OK) {
 	    result = TCL_ERROR;
 	    goto done;
 	}
 
 	/* Verify the new style uses the element */
-	if (MStyle_FindElem(tree, styleTo, elemTo, &indexTo) == NULL)
-	{
+	if (MStyle_FindElem(tree, styleTo, elemTo, &indexTo) == NULL) {
 	    FormatResult(tree->interp, "style %s does not use element %s",
 		styleTo->name, elemTo->name);
 	    result = TCL_ERROR;
@@ -6661,8 +6328,7 @@ TreeStyle_Remap(
 	}
 
 	/* Must be the same type */
-	if (elemFrom->typePtr != elemTo->typePtr)
-	{
+	if (elemFrom->typePtr != elemTo->typePtr) {
 	    FormatResult(tree->interp, "can't map element type %s to %s",
 		elemFrom->typePtr->name, elemTo->typePtr->name);
 	    result = TCL_ERROR;
@@ -6671,36 +6337,31 @@ TreeStyle_Remap(
 
 	/* See if the instance style has any info for this element */
 	eLink = &styleFrom->elements[indexFrom];
-	if (eLink->elem->master != NULL)
-	{
+	if (eLink->elem->master != NULL) {
 	    map[indexFrom] = indexTo;
 	    elemMap[indexFrom] = eLink->elem;
 	}
     }
 
-    for (i = 0; i < styleFromNumElements; i++)
-    {
+    for (i = 0; i < styleFromNumElements; i++) {
 	eLink = &styleFrom->elements[i];
 	indexTo = map[i];
 
 	/* Free info for any Elements not being remapped */
-	if ((indexTo == -1) && (eLink->elem->master != NULL))
-	{
+	if ((indexTo == -1) && (eLink->elem->master != NULL)) {
 	    elemFrom = eLink->elem->master;
 	    Element_FreeResources(tree, eLink->elem);
 	    eLink->elem = elemFrom;
 	}
 
 	/* Remap this Element */
-	if (indexTo != -1)
-	{
+	if (indexTo != -1) {
 	    elemMap[i]->master = styleTo->elements[indexTo].elem;
 	    elemMap[i]->name = styleTo->elements[indexTo].elem->name;
 	}
     }
 
-    if (styleFromNumElements != styleTo->numElements)
-    {
+    if (styleFromNumElements != styleTo->numElements) {
 #ifdef ALLOC_HAX
 	if (styleFromNumElements > 0)
 	    AllocHax_CFree(tree->allocData, IElementLinkUid,
@@ -6717,16 +6378,14 @@ TreeStyle_Remap(
 #endif
 	memset(styleFrom->elements, '\0', sizeof(IElementLink) * styleTo->numElements);
     }
-    for (i = 0; i < styleTo->numElements; i++)
-    {
+    for (i = 0; i < styleTo->numElements; i++) {
 	styleFrom->elements[i].elem = styleTo->elements[i].elem;
 #ifdef CACHE_ELEM_SIZE
 	styleFrom->elements[i].neededWidth = -1;
 	styleFrom->elements[i].neededHeight = -1;
 #endif
     }
-    for (i = 0; i < styleFromNumElements; i++)
-    {
+    for (i = 0; i < styleFromNumElements; i++) {
 	indexTo = map[i];
 	if (indexTo != -1)
 	    styleFrom->elements[indexTo].elem = elemMap[i];
@@ -6773,10 +6432,8 @@ TreeStyle_GetSortData(
     IElementLink *eLink = style->elements;
     int i;
 
-    if (elemIndex == -1)
-    {
-	for (i = 0; i < style->master->numElements; i++)
-	{
+    if (elemIndex == -1) {
+	for (i = 0; i < style->master->numElements; i++) {
 	    if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
 		return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	    eLink++;
@@ -6829,14 +6486,12 @@ TreeStyle_ValidateElements(
     MElementLink *eLink;
     int i;
 
-    for (i = 0; i < objc; i++)
-    {
+    for (i = 0; i < objc; i++) {
 	if (Element_FromObj(tree, objv[i], &elem) != TCL_OK)
 	    return TCL_ERROR;
 
 	eLink = MStyle_FindElem(tree, master, elem, NULL);
-	if (eLink == NULL)
-	{
+	if (eLink == NULL) {
 	    FormatResult(tree->interp,
 		"style %s does not use element %s",
 		master->name, elem->name);
@@ -6882,17 +6537,14 @@ TreeStyle_GetElemRects(
 
     STATIC_ALLOC(elems, Element *, objc);
 
-    for (j = 0; j < objc; j++)
-    {
-	if (Element_FromObj(drawArgs->tree, objv[j], &elems[j]) != TCL_OK)
-	{
+    for (j = 0; j < objc; j++) {
+	if (Element_FromObj(drawArgs->tree, objv[j], &elems[j]) != TCL_OK) {
 	    count = -1;
 	    goto done;
 	}
 
 	eLink = MStyle_FindElem(drawArgs->tree, master, elems[j], NULL);
-	if (eLink == NULL)
-	{
+	if (eLink == NULL) {
 	    FormatResult(drawArgs->tree->interp,
 		"style %s does not use element %s",
 		master->name, elems[j]->name);
@@ -6917,15 +6569,13 @@ TreeStyle_GetElemRects(
 
     Style_DoLayout(drawArgs, layouts, FALSE, __FILE__, __LINE__);
 
-    for (i = master->numElements - 1; i >= 0; i--)
-    {
+    for (i = master->numElements - 1; i >= 0; i--) {
 	struct Layout *layout = &layouts[i];
 
 	if (IS_HIDDEN(layout))
 	    continue;
 
-	if (objc > 0)
-	{
+	if (objc > 0) {
 	    for (j = 0; j < objc; j++)
 		if (elems[j] == layout->eLink->elem ||
 		    elems[j] == layout->master->elem)
@@ -6935,8 +6585,7 @@ TreeStyle_GetElemRects(
 	}
 	rects[count].x = drawArgs->x + layout->x + layout->ePadX[PAD_TOP_LEFT];
 	rects[count].y = drawArgs->y + layout->y + layout->ePadY[PAD_TOP_LEFT];
-	if (layout->master->onion == NULL)
-	{
+	if (layout->master->onion == NULL) {
 	    rects[count].x += layout->iPadX[PAD_TOP_LEFT];
 	    rects[count].y += layout->iPadY[PAD_TOP_LEFT];
 	    rects[count].width = layout->useWidth;
@@ -6976,7 +6625,7 @@ done:
 int
 TreeStyle_ChangeState(
     TreeCtrl *tree,		/* Widget info. */
-    TreeStyle style_,		/* This instance style. */
+    TreeStyle style_,		/* The instance style. */
     int state1,			/* The previous state. */
     int state2			/* The current state. */
     )
@@ -6994,8 +6643,7 @@ TreeStyle_ChangeState(
 
     args.tree = tree;
 
-    for (i = 0; i < masterStyle->numElements; i++)
-    {
+    for (i = 0; i < masterStyle->numElements; i++) {
 	eLink2 = &style->elements[i];
 	args.elem = eLink2->elem;
 	args.states.state1 = state1;
@@ -7006,6 +6654,8 @@ TreeStyle_ChangeState(
 	eLink1 = &masterStyle->elements[i];
 	undisplay = FALSE;
 	eMask = 0;
+
+	/* Check for the style layout option -draw changing. */
 	if (eLink1->draw.count > 0) {
 	    args.states.draw1 = PerStateBoolean_ForState(tree,
 		    &eLink1->draw, state1, NULL) != 0;
@@ -7017,6 +6667,8 @@ TreeStyle_ChangeState(
 		    undisplay = TRUE;
 	    }
 	}
+
+	/* Check for the style layout option -visible changing. */
 	if (eLink1->visible.count > 0) {
 	    args.states.visible1 = PerStateBoolean_ForState(tree,
 		    &eLink1->visible, state1, NULL) != 0;
@@ -7030,19 +6682,19 @@ TreeStyle_ChangeState(
 	    }
 	}
 
+	/* Tell the element about the state change. */
 	eMask |= (*args.elem->typePtr->stateProc)(&args);
 
 	/* Hack: If a window element becomes hidden, then tell it it is
-	* not onscreen, otherwise it will never be "drawn" in the
-	* hidden state. */
+	 * not onscreen, otherwise it will never be "drawn" in the
+	 * hidden state. */
 	if (undisplay && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
 		&elemTypeWindow)) {
 	    args.screen.visible = FALSE;
 	    (*args.elem->typePtr->onScreenProc)(&args);
 	}
 
-	if (eMask)
-	{
+	if (eMask) {
 #ifdef CACHE_ELEM_SIZE
 	    if (eMask & CS_LAYOUT)
 		eLink2->neededWidth = eLink2->neededHeight = -1;
@@ -7095,12 +6747,12 @@ Tree_UndefineState(
     int i, columnIndex;
     ElementArgs args;
 
+    /* Undefine the state for the -draw and -visible style layout
+     * options for each element of this style. */
     hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	MStyle *masterStyle = (MStyle *) Tcl_GetHashValue(hPtr);
-	for (i = 0; i < masterStyle->numElements; i++)
-	{
+	for (i = 0; i < masterStyle->numElements; i++) {
 	    MElementLink *eLink1 = &masterStyle->elements[i];
 	    PerStateInfo_Undefine(tree, &pstBoolean, &eLink1->draw, state);
 	    PerStateInfo_Undefine(tree, &pstBoolean, &eLink1->visible, state);
@@ -7112,18 +6764,14 @@ Tree_UndefineState(
     args.state = state;
 
     hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	item = (TreeItem) Tcl_GetHashValue(hPtr);
 	column = TreeItem_GetFirstColumn(tree, item);
 	columnIndex = 0;
-	while (column != NULL)
-	{
+	while (column != NULL) {
 	    IStyle *style = (IStyle *) TreeItemColumn_GetStyle(tree, column);
-	    if (style != NULL)
-	    {
-		for (i = 0; i < style->master->numElements; i++)
-		{
+	    if (style != NULL) {
+		for (i = 0; i < style->master->numElements; i++) {
 		    eLink = &style->elements[i];
 		    /* Instance element */
 		    if (eLink->elem->master != NULL) {
@@ -7149,8 +6797,7 @@ Tree_UndefineState(
     Tree_DInfoChanged(tree, DINFO_REDO_RANGES);
 
     hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
-    while (hPtr != NULL)
-    {
+    while (hPtr != NULL) {
 	args.elem = (Element *) Tcl_GetHashValue(hPtr);
 	(*args.elem->typePtr->undefProc)(&args);
 	hPtr = Tcl_NextHashEntry(&search);
@@ -7207,7 +6854,8 @@ TreeStyle_Init(
     TreeCtrl *tree		/* Widget info. */
     )
 {
-    tree->styleOptionTable = Tk_CreateOptionTable(tree->interp, styleOptionSpecs); 
+    tree->styleOptionTable = Tk_CreateOptionTable(tree->interp,
+	styleOptionSpecs); 
     return TCL_OK;
 }
 
@@ -7237,8 +6885,7 @@ TreeStyle_Free(
     Element *elem;
     TreeStyle style;
 
-    while (1)
-    {
+    while (1) {
 	hPtr = Tcl_FirstHashEntry(&tree->styleHash, &search);
 	if (hPtr == NULL)
 	    break;
@@ -7246,8 +6893,7 @@ TreeStyle_Free(
 	TreeStyle_FreeResources(tree, style);
     }
 
-    while (1)
-    {
+    while (1) {
 	hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
 	if (hPtr == NULL)
 	    break;

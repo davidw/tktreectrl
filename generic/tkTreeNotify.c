@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.19 2006/12/02 21:36:13 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.20 2006/12/22 22:33:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -88,8 +88,7 @@ DumpPercents(
     buf[1] = '\0';
 
     Tcl_DStringStartSublist(args->result);
-    for (i = 0; chars[i]; i++)
-    {
+    for (i = 0; chars[i]; i++) {
 	args->which = chars[i];
 	buf[0] = chars[i];
 	Tcl_DStringAppendElement(args->result, buf);
@@ -131,8 +130,7 @@ Percents_Any(
     } *data = args->clientData;
     char chars2[64];
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'd': /* detail */
 	    QE_ExpandDetail(args->bindingTable, args->event, args->detail,
 		args->result);
@@ -192,8 +190,7 @@ Percents_Expand(
 	int id;
     } *data = args->clientData;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'I':
 	    ExpandItem(data->tree, data->id, args->result);
 	    break;
@@ -234,15 +231,13 @@ Percents_ItemVisibility(
     TreeItemList *table;
     int i, count;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'v':
 	case 'h':
 	    table = (args->which == 'v') ? data->v : data->h;
 	    Tcl_DStringStartSublist(args->result);
 	    count = TreeItemList_Count(table);
-	    for (i = 0; i < count; i++)
-	    {
+	    for (i = 0; i < count; i++) {
 		TreeItem item = TreeItemList_Nth(table, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
@@ -295,23 +290,20 @@ Percents_Selection(
     TreeItemList *itemList;
     int i, count;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'c':
 	    QE_ExpandNumber(data->count, args->result);
 	    break;
 	case 'D':
 	case 'S':
 	    itemList = (args->which == 'D') ? data->deselect : data->select;
-	    if (itemList == NULL)
-	    {
+	    if (itemList == NULL) {
 		Tcl_DStringAppend(args->result, "{}", 2);
 		break;
 	    }
 	    Tcl_DStringStartSublist(args->result);
 	    count = TreeItemList_Count(itemList);
-	    for (i = 0; i < count; i++)
-	    {
+	    for (i = 0; i < count; i++) {
 		TreeItem item = TreeItemList_Nth(itemList, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
@@ -360,8 +352,7 @@ Percents_ActiveItem(
 	int current;
     } *data = args->clientData;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'c':
 	    ExpandItem(data->tree, data->current, args->result);
 	    break;
@@ -403,8 +394,7 @@ Percents_Scroll(
 	double upper;
     } *data = args->clientData;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'l':
 	    QE_ExpandDouble(data->lower, args->result);
 	    break;
@@ -456,37 +446,30 @@ TreeNotifyCmd(
     };
     int index;
 
-    if (objc < 3)
-    {
+    if (objc < 3) {
 	Tcl_WrongNumArgs(interp, 2, objv, "command ?arg arg ...?");
 	return TCL_ERROR;
     }
 
     if (Tcl_GetIndexFromObj(interp, objv[2], commandName, "command", 0,
-	&index) != TCL_OK)
-    {
+	&index) != TCL_OK) {
 	return TCL_ERROR;
     }
 
-    switch (index)
-    {
-	case COMMAND_BIND:
-	{
+    switch (index) {
+	case COMMAND_BIND: {
 	    return QE_BindCmd(tree->bindingTable, 2, objc, objv);
 	}
 
-	case COMMAND_CONFIGURE:
-	{
+	case COMMAND_CONFIGURE: {
 	    return QE_ConfigureCmd(tree->bindingTable, 2, objc, objv);
 	}
 
 	/* T notify detailnames $eventName */
-	case COMMAND_DETAILNAMES:
-	{
+	case COMMAND_DETAILNAMES: {
 	    char *eventName;
 
-	    if (objc != 4)
-	    {
+	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "eventName");
 		return TCL_ERROR;
 	    }
@@ -495,38 +478,31 @@ TreeNotifyCmd(
 	}
 
 	/* T notify eventnames */
-	case COMMAND_EVENTNAMES:
-	{
-	    if (objc != 3)
-	    {
+	case COMMAND_EVENTNAMES: {
+	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
 	    return QE_GetEventNames(tree->bindingTable);
 	}
 
-	case COMMAND_GENERATE:
-	{
+	case COMMAND_GENERATE: {
 	    return QE_GenerateCmd(tree->bindingTable, 2, objc, objv);
 	}
 
-	case COMMAND_INSTALL:
-	{
+	case COMMAND_INSTALL: {
 	    return QE_InstallCmd(tree->bindingTable, 2, objc, objv);
 	}
 
-	case COMMAND_LINKAGE:
-	{
+	case COMMAND_LINKAGE: {
 	    return QE_LinkageCmd(tree->bindingTable, 2, objc, objv);
 	}
 
-	case COMMAND_UNBIND:
-	{
+	case COMMAND_UNBIND: {
 	    return QE_UnbindCmd(tree->bindingTable, 2, objc, objv);
 	}
 
-	case COMMAND_UNINSTALL:
-	{
+	case COMMAND_UNINSTALL: {
 	    return QE_UninstallCmd(tree->bindingTable, 2, objc, objv);
 	}
     }
@@ -568,8 +544,7 @@ TreeNotify_OpenClose(
     data.tree = tree;
     data.id = TreeItem_GetID(tree, item);
 
-    if (state & STATE_OPEN)
-    {
+    if (state & STATE_OPEN) {
 	event.type = EVENT_EXPAND;
 	event.detail = before ? DETAIL_EXPAND_BEFORE : DETAIL_EXPAND_AFTER;
     }
@@ -737,13 +712,11 @@ Percents_ItemDelete(
     TreeCtrl *tree = data->tree;
     int i, count;
 
-    switch (args->which)
-    {
+    switch (args->which) {
 	case 'i':
 	    Tcl_DStringStartSublist(args->result);
 	    count = TreeItemList_Count(data->items);
-	    for (i = 0; i < count; i++)
-	    {
+	    for (i = 0; i < count; i++) {
 		TreeItem item = TreeItemList_Nth(data->items, i);
 		if (tree->itemPrefixLen) {
 		    char buf[10 + TCL_INTEGER_SPACE];
