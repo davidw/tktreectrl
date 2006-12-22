@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.78 2006/12/09 01:16:23 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.79 2006/12/22 04:43:40 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3070,7 +3070,8 @@ UpdateDInfoForRange(
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
 		/* Items may have alternating background colors. */
-		else if ((tree->columnBgCnt > 1) && ((index % tree->columnBgCnt) !=
+		else if ((tree->columnBgCnt > 1) &&
+			((index % tree->columnBgCnt) !=
 				 (dItem->index % tree->columnBgCnt)))
 		    area->flags |= DITEM_DIRTY | DITEM_ALL_DIRTY;
 
@@ -3938,14 +3939,15 @@ ScrollHorizontalSimple(
     /* Move pixels right */
     if (offset > 0) {
 	x = minX;
-    }
-    /* Move pixels left */
-    else {
-	x = maxX - width;
-    }
+	dirtyMin = minX;
+	dirtyMax = maxX - width;
 
-    dirtyMin = minX + width;
-    dirtyMax = maxX - width;
+    /* Move pixels left */
+    } else {
+	x = maxX - width;
+	dirtyMin = minX + width;
+	dirtyMax = maxX;
+    }
 
     damageRgn = Tree_GetRegion(tree);
 
@@ -3954,10 +3956,6 @@ ScrollHorizontalSimple(
 		tree->copyGC,
 		x, minY, width, maxY - minY,
 		x + offset, minY);
-	if (offset < 0)
-	    dirtyMax = maxX;
-	else
-	    dirtyMin = minX;
 	Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
 	Tree_FreeRegion(tree, damageRgn);
 	return;
@@ -3969,14 +3967,7 @@ ScrollHorizontalSimple(
 	Tree_InvalidateRegion(tree, damageRgn);
     }
     Tree_FreeRegion(tree, damageRgn);
-#ifndef WIN32
-    if (offset < 0)
-	dirtyMax = maxX;
-    else
-	dirtyMin = minX;
-#endif
-    if (dirtyMin < dirtyMax)
-	Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
+    Tree_InvalidateArea(tree, dirtyMin, minY, dirtyMax, maxY);
 }
 
 /*
@@ -4046,14 +4037,15 @@ ScrollVerticalSimple(
     /* Move pixels down */
     if (offset > 0) {
 	y = minY;
-    }
-    /* Move pixels up */
-    else {
-	y = maxY - height;
-    }
+	dirtyMin = minY;
+	dirtyMax = maxY - height;
 
-    dirtyMin = minY + height;
-    dirtyMax = maxY - height;
+    /* Move pixels up */
+    } else {
+	y = maxY - height;
+	dirtyMin = minY + height;
+	dirtyMax = maxY;
+    }
 
     damageRgn = Tree_GetRegion(tree);
 
@@ -4062,10 +4054,6 @@ ScrollVerticalSimple(
 		tree->copyGC,
 		minX, y, maxX - minX, height,
 		minX, y + offset);
-	if (offset < 0)
-	    dirtyMax = maxY;
-	else
-	    dirtyMin = minY;
 	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
 	Tree_FreeRegion(tree, damageRgn);
 	return;
@@ -4077,14 +4065,7 @@ ScrollVerticalSimple(
 	Tree_InvalidateRegion(tree, damageRgn);
     }
     Tree_FreeRegion(tree, damageRgn);
-#ifndef WIN32
-    if (offset < 0)
-	dirtyMax = maxY;
-    else
-	dirtyMin = minY;
-#endif
-    if (dirtyMin < dirtyMax)
-	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
+    Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
 }
 
 /*
