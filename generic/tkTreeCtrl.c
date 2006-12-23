@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.98 2006/12/22 22:32:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.99 2006/12/23 04:29:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -432,7 +432,6 @@ TreeObjCmd(
 
     if (Tk_InitOptions(interp, (char *) tree, optionTable, tkwin) != TCL_OK) {
 	Tk_DestroyWindow(tree->tkwin);
-	WFREE(tree, TreeCtrl);
 	return TCL_ERROR;
     }
 
