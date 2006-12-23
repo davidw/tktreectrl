@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.13 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.14 2006/12/23 04:32:08 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -245,9 +245,7 @@ Marquee_Config(
 
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
-	}
-	else
-	{
+	} else {
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);

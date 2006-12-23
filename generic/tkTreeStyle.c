@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.71 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.72 2006/12/23 04:32:08 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -222,8 +222,7 @@ Style_DoExpandH(
     if (layout->temp)
 	numExpand = layout->temp;
     /* For -detach or vertical layout, just set layout->temp to zero */
-    else
-    {
+    else {
 	if (flags & ELF_eEXPAND_W) numExpand++;
 	if (flags & ELF_iEXPAND_W) numExpand++;
 	if (flags & ELF_iEXPAND_X) {
@@ -357,8 +356,7 @@ Style_DoExpandV(
     if (layout->temp)
 	numExpand = layout->temp;
     /* For -detach or vertical layout, just set layout->temp to zero */
-    else
-    {
+    else {
 	if (flags & ELF_eEXPAND_N) numExpand++;
 	if (flags & ELF_iEXPAND_N) numExpand++;
 	if (flags & ELF_iEXPAND_Y) {
@@ -478,9 +476,7 @@ Element_NeededSize(
     if ((eLink1->fixedWidth >= 0) && (eLink1->fixedHeight >= 0)) {
 	width = eLink1->fixedWidth;
 	height = eLink1->fixedHeight;
-    }
-    else
-    {
+    } else {
 	args.tree = tree;
 	args.state = state;
 	args.elem = elem;
@@ -663,9 +659,7 @@ Style_DoLayoutH(
 		    uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 		if (j == last) /* bottommost */
 		    uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
-	    }
-	    else
-	    {
+	    } else {
 		if (j == first) /* leftmost */
 		    uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		if (j == last) /* rightmost */
@@ -788,8 +782,7 @@ Style_DoLayoutH(
 
 	if (masterStyle->vertical)
 	    rightEdge = MAX(rightEdge, right);
-	else
-	{
+	else {
 	    rightEdge = right;
 	    x = layout->x + layout->eWidth;
 	}
@@ -868,8 +861,7 @@ Style_DoLayoutH(
 			break;
 
 		    numExpand += layout->temp;
-		}
-		else
+		} else
 		    layout->temp = 0;
 	    }
 	}
@@ -1032,8 +1024,7 @@ Style_DoLayoutH(
 	    }
 
 	    /* Internal expansion only: W */
-	    else
-	    {
+	    else {
 		layout->iPadX[PAD_TOP_LEFT] += extraWidth;
 		layout->x = drawArgs->indent;
 		layout->iWidth += extraWidth;
@@ -1064,8 +1055,7 @@ Style_DoLayoutH(
 	    }
 
 	    /* Internal expansion only: E */
-	    else
-	    {
+	    else {
 		layout->iPadX[PAD_BOTTOM_RIGHT] += extraWidth;
 		layout->iWidth += extraWidth;
 		layout->eWidth += extraWidth;
@@ -1331,8 +1321,7 @@ Style_DoLayoutV(
 			break;
 
 		    numExpand += layout->temp;
-		}
-		else
+		} else
 		    layout->temp = 0;
 	    }
 	}
@@ -1456,8 +1445,7 @@ Style_DoLayoutV(
 	    }
 
 	    /* Internal expansion only: N */
-	    else
-	    {
+	    else {
 		layout->iPadY[PAD_TOP_LEFT] += extraHeight;
 		layout->y = 0;
 		layout->iHeight += extraHeight;
@@ -1488,8 +1476,7 @@ Style_DoLayoutV(
 	    }
 
 	    /* Internal expansion only */
-	    else
-	    {
+	    else {
 		layout->iPadY[PAD_BOTTOM_RIGHT] += extraHeight;
 		layout->iHeight += extraHeight;
 		layout->eHeight += extraHeight;
@@ -1568,9 +1555,7 @@ Layout_Size(
 	    N = MIN(N, n);
 	    S = MAX(S, s);
 	    width = MAX(width, e - w);
-	}
-	else
-	{
+	} else {
 	    W = MIN(W, w);
 	    E = MAX(E, e);
 	    height = MAX(height, s - n);
@@ -1940,9 +1925,7 @@ Style_NeededSize(
 		    uPadY[PAD_TOP_LEFT] = MAX(uPadY[PAD_TOP_LEFT], iPadY[PAD_TOP_LEFT] + ePadY[PAD_TOP_LEFT]);
 		if (j == last) /* bottommost */
 		    uPadY[PAD_BOTTOM_RIGHT] = MAX(uPadY[PAD_BOTTOM_RIGHT], iPadY[PAD_BOTTOM_RIGHT] + ePadY[PAD_BOTTOM_RIGHT]);
-	    }
-	    else
-	    {
+	    } else {
 		if (j == first) /* leftmost */
 		    uPadX[PAD_TOP_LEFT] = MAX(uPadX[PAD_TOP_LEFT], iPadX[PAD_TOP_LEFT] + ePadX[PAD_TOP_LEFT]);
 		if (j == last) /* rightmost */
@@ -2405,9 +2388,7 @@ void TreeStyle_Draw(
 		    gc[0] = Tk_GCForColor(color[0], Tk_WindowId(tree->tkwin));
 		    color[1] = Tk_GetColor(tree->interp, tree->tkwin, "blue3");
 		    gc[1] = Tk_GCForColor(color[1], Tk_WindowId(tree->tkwin));
-		}
-		else
-		{
+		} else {
 		    color[0] = Tk_GetColor(tree->interp, tree->tkwin, "gray50");
 		    gc[0] = Tk_GCForColor(color[0], Tk_WindowId(tree->tkwin));
 		    color[1] = Tk_GetColor(tree->interp, tree->tkwin, "gray60");
@@ -2434,8 +2415,7 @@ void TreeStyle_Draw(
 		    args.display.x + layout->iPadX[PAD_TOP_LEFT],
 		    args.display.y + layout->iPadY[PAD_TOP_LEFT],
 		    layout->eLink->neededWidth, layout->eLink->neededHeight);
-	    }
-	    else
+	    } else
 #endif /* DEBUG_DRAW */
 		(*args.elem->typePtr->displayProc)(&args);
 	}
@@ -3554,9 +3534,7 @@ MStyle_ChangeElementsAux(
 	if (map[i] != -1) {
 	    eLinks[i] = style->elements[map[i]];
 	    keep[map[i]] = 1;
-	}
-	else
-	{
+	} else {
 	    eLink = MElementLink_Init(&eLinks[i], elemList[i]);
 	}
     }
@@ -3635,9 +3613,7 @@ IStyle_ChangeElementsAux(
 	if (map[i] != -1) {
 	    eLinks[i] = style->elements[map[i]];
 	    keep[map[i]] = 1;
-	}
-	else
-	{
+	} else {
 	    eLink = &eLinks[i];
 	    eLink->elem = elemList[i];
 #ifdef CACHE_ELEM_SIZE
@@ -3860,8 +3836,7 @@ Style_ElemChanged(
 		    cMask |= csM;
 		}
 		/* Instance element */
-		else
-		{
+		else {
 		    args.elem = eLink->elem;
 		    eMask = (*masterElem->typePtr->changeProc)(&args);
 #ifdef CACHE_ELEM_SIZE
@@ -4389,8 +4364,7 @@ Tree_RedrawElement(
     }
 
     /* Instance element */
-    else
-    {
+    else {
 	Tree_InvalidateItemDInfo(tree, NULL, item, NULL);
     }
 }
@@ -4746,9 +4720,7 @@ TreeStyle_ElementConfigure(
 	if (resultObjPtr == NULL)
 	    return TCL_ERROR;
 	Tcl_SetObjResult(tree->interp, resultObjPtr);
-    }
-    else
-    {
+    } else {
 	int isNew;
 
 	eLink = Style_CreateElem(tree, item, column, style, elem, &isNew);
@@ -4928,9 +4900,7 @@ TreeElementCmd(
 		if (resultObjPtr == NULL)
 		    return TCL_ERROR;
 		Tcl_SetObjResult(interp, resultObjPtr);
-	    }
-	    else
-	    {
+	    } else {
 		ElementArgs args;
 
 		args.tree = tree;
@@ -5592,8 +5562,7 @@ StyleLayoutCmd(
 		    WCFREE(eLink->onion, int, eLink->onionCount);
 		if (count == objc1)
 		    eLink->onion = onion;
-		else
-		{
+		else {
 		    eLink->onion = (int *) ckalloc(sizeof(int) * count);
 		    for (k = 0; k < count; k++)
 			eLink->onion[k] = onion[k];
@@ -5863,9 +5832,7 @@ TreeStyleCmd(
 		if (resultObjPtr == NULL)
 		    return TCL_ERROR;
 		Tcl_SetObjResult(interp, resultObjPtr);
-	    }
-	    else
-	    {
+	    } else {
 		if (Tk_SetOptions(tree->interp, (char *) style,
 		    tree->styleOptionTable, objc - 4, objv + 4, tree->tkwin,
 		    NULL, NULL) != TCL_OK)
@@ -6438,9 +6405,7 @@ TreeStyle_GetSortData(
 		return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	    eLink++;
 	}
-    }
-    else
-    {
+    } else {
 	if ((elemIndex < 0) || (elemIndex >= style->master->numElements))
 	    panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
 	eLink = &style->elements[elemIndex];
@@ -6590,9 +6555,7 @@ TreeStyle_GetElemRects(
 	    rects[count].y += layout->iPadY[PAD_TOP_LEFT];
 	    rects[count].width = layout->useWidth;
 	    rects[count].height = layout->useHeight;
-	}
-	else
-	{
+	} else {
 	    rects[count].width = layout->iWidth;
 	    rects[count].height = layout->iHeight;
 	}

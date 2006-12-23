@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.75 2006/12/22 22:32:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.76 2006/12/23 04:32:07 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2206,8 +2206,7 @@ Column_Config(
 		    before = tree->columnLockNone;
 		    if (before == NULL)
 			before = tree->columnLockRight;
-		}
-		else
+		} else
 		    before = tree->columnLockRight;
 		break;
 	    case COLUMN_LOCK_RIGHT:

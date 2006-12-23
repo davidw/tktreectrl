@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.24 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.25 2006/12/23 04:32:08 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -76,8 +76,7 @@ DragElem_Alloc(
     memset(elem, '\0', sizeof(DragElem));
     if (dragImage->elem == NULL)
 	dragImage->elem = elem;
-    else
-    {
+    else {
 	while (walk->next != NULL)
 	    walk = walk->next;
 	walk->next = elem;
@@ -285,9 +284,7 @@ DragImage_Config(
 
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
-	}
-	else
-	{
+	} else {
 	    errorResult = Tcl_GetObjResult(tree->interp);
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);

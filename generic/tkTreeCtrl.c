@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.99 2006/12/23 04:29:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.100 2006/12/23 04:32:07 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1344,8 +1344,7 @@ badWrap:
 			if ((ch0 == 'w') && !strncmp(s0, "window", len0)) {
 			    tree->wrapMode = TREE_WRAP_WINDOW;
 			    tree->wrapArg = 0;
-			}
-			else
+			} else
 			    goto badWrap;
 		    } else {
 			s1 = Tcl_GetStringFromObj(listObjv[1], &len1);
@@ -1367,8 +1366,7 @@ badWrap:
 			    }
 			    tree->wrapMode = TREE_WRAP_PIXELS;
 			    tree->wrapArg = n;
-			}
-			else
+			} else
 			    goto badWrap;
 		    }
 		}
