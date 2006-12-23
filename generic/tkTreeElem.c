@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.61 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.62 2006/12/23 04:02:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2732,8 +2732,9 @@ TextUpdateLayout(
     DynamicOption *opt;
 
     if (tree->debug.enable && tree->debug.textLayout)
-	dbwin("TextUpdateLayout: %s %p (%s) %s\n",
-	    Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master", func);
+	dbwin("TextUpdateLayout: %s %p (%s) %s\n    fixedWidth %d maxWidth %d\n",
+	    Tk_PathName(tree->tkwin), elemX, masterX ? "instance" : "master",
+	    func, fixedWidth, maxWidth);
 
     etl2 = DynamicOption_FindData(elem->options, 1007);
     if (etl2 != NULL && etl2->layout != NULL) {
@@ -2800,7 +2801,7 @@ TextUpdateLayout(
 	if (width == 0)
 	    return etl2;
 	textWidth = Tk_TextWidth(tkfont, text, textLen);
-if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", textWidth);
+if (tree->debug.enable && tree->debug.textLayout) dbwin("    available width %d textWidth %d\n", width, textWidth);
 	if (width >= textWidth)
 	    return etl2;
     }
@@ -2813,9 +2814,15 @@ if (tree->debug.enable && tree->debug.textLayout) dbwin("    textWidth %d\n", te
     if (wrap == TEXT_WRAP_WORD)
 	flags |= TK_WHOLE_WORDS;
 
-    opt = (DynamicOption *) DynamicOption_AllocIfNeeded(tree, &elem->options,
-	1007, sizeof(ElementTextLayout2), NULL);
-    etl2 = (ElementTextLayout2 *) opt->data;
+    if (etl2 == NULL) {
+	opt = (DynamicOption *) DynamicOption_AllocIfNeeded(tree,
+	    &elem->options, 1007, sizeof(ElementTextLayout2), NULL);
+	etl2 = (ElementTextLayout2 *) opt->data;
+	/* It is possible that the needed size of this element does not
+	 * require a TextLayout, in which case neededWidth never gets
+	 * set. */
+	etl2->neededWidth = -1;
+    }
 
     etl2->layout = TextLayout_Compute(tkfont, text,
 	    Tcl_NumUtfChars(text, textLen), width, justify, lines, flags);
@@ -3033,6 +3040,7 @@ TextRedoLayoutIfNeeded(
 	return etl2;
 
     if (etl2 != NULL && etl2->layout != NULL) {
+
 	/* See comment in NeededProc about totalWidth */
 	if ((etl2->neededWidth != -1) && (fixedWidth >= etl2->neededWidth))
 	    fixedWidth = etl2->totalWidth;
@@ -3147,6 +3155,7 @@ static void DisplayProcText(ElementArgs *args)
 
     if (layout != NULL) {
 	TextLayout_Size(layout, &width, &height);
+	pixelsForText = width;
 	/* Hack -- The actual size of the text may be slightly smaller than
 	 * the available space when squeezed. If so we don't want to center
 	 * the text horizontally */
@@ -3156,8 +3165,8 @@ static void DisplayProcText(ElementArgs *args)
 	    args->display.width, args->display.height,
 	    FALSE, FALSE,
 	    &x, &y, &width, &height);
-	/* Use clipping if text is taller than display height */
-	if (height > args->display.height) {
+	/* Use clipping if text is larger than the display area. */
+	if (pixelsForText > args->display.width || height > args->display.height) {
 	    XRectangle rect;
 	    clipRgn = Tree_GetRegion(tree);
 	    rect.x = x;
@@ -3190,8 +3199,8 @@ static void DisplayProcText(ElementArgs *args)
 	args->display.width, args->display.height,
 	FALSE, FALSE,
 	&x, &y, &width, &height);
-    /* Use clipping if text is taller than display height */
-    if (height > args->display.height) {
+    /* Use clipping if text is larger than the display area. */
+    if (pixelsForText > args->display.width || height > args->display.height) {
 	XRectangle rect;
 	clipRgn = Tree_GetRegion(tree);
 	rect.x = x;

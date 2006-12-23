@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.61 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.62 2006/12/23 04:02:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -126,10 +126,15 @@ DStringAppendf(
  *	with an ellipsis "..." appended that will fit.
  *
  * Results:
- *	When the return value is positive the caller should add the
- *	ellipsis to the string (unless the entire string fits).
- *	When the return value is negative the caller should not add
- *	the ellipsis because only a few characters fit.
+ *	When the return value is equal to numBytes the caller should
+ *	not add the ellipsis to the string (unless force is TRUE). In
+ *	this case maxPixels contains the number of pixels for the entire
+ *	string (plus ellipsis if force is TRUE).
+ *
+ *	When the return value is less than numBytes the caller should add
+ *	the ellipsis because only a substring fits. In this case
+ *	maxPixels contains the number of pixels for the substring
+ *	plus ellipsis. The substring has a minimum of one character.
  *
  * Side effects:
  *	None.
@@ -154,6 +159,8 @@ Ellipsis(
     char staticStr[256], *tmpStr = staticStr;
     int pixels, pixelsTest, bytesThatFit, bytesTest;
     int ellipsisNumBytes = strlen(ellipsis);
+    int bytesInFirstCh;
+    Tcl_UniChar uniCh;
 
     bytesThatFit = Tk_MeasureChars(tkfont, string, numBytes, *maxPixels, 0,
 	&pixels);
@@ -164,9 +171,9 @@ Ellipsis(
 	return numBytes;
     }
 
-    if (bytesThatFit <= 1) {
-	(*maxPixels) = pixels;
-	return -bytesThatFit;
+    bytesInFirstCh = Tcl_UtfToUniChar(string, &uniCh);
+    if (bytesThatFit <= bytesInFirstCh) {
+	goto singleChar;
     }
 
     /* Strip off one character at a time, adding ellipsis, until it fits */
@@ -191,12 +198,19 @@ Ellipsis(
 	bytesTest = Tcl_UtfPrev(string + bytesTest, string) - string;
     }
 
-    /* No single char + ellipsis fits. Return number of chars that fit */
-    /* Negative tells caller to not add ellipsis */
+    singleChar:
+    /* No single char + ellipsis fits. Return the number of bytes for
+     * the first character. The returned pixel width is the width of the
+     * first character plus ellipsis. */
+    bytesThatFit = bytesInFirstCh;
+    memcpy(tmpStr, string, bytesThatFit);
+    memcpy(tmpStr + bytesThatFit, ellipsis, ellipsisNumBytes);
+    (void) Tk_MeasureChars(tkfont, tmpStr, bytesThatFit + ellipsisNumBytes,
+	-1, 0, &pixels);
     (*maxPixels) = pixels;
     if (tmpStr != staticStr)
 	ckfree(tmpStr);
-    return -bytesThatFit;
+    return bytesThatFit;
 }
 
 /*
@@ -1537,9 +1551,7 @@ TextLayout TextLayout_Compute(
     if (freeLayoutInfo != NULL) {
 	layoutPtr = freeLayoutInfo;
 	freeLayoutInfo = layoutPtr->nextFree;
-    }
-    else
-    {
+    } else {
 	maxChunks = 1;
 	layoutPtr = (LayoutInfo *) ckalloc(sizeof(LayoutInfo) +
 	    (maxChunks - 1) * sizeof(LayoutChunk));
@@ -1617,9 +1629,7 @@ TextLayout TextLayout_Compute(
 		    flags &= ~TK_AT_LEAST_ONE;
 		    continue;
 		}
-	    }
-	    else
-	    {
+	    } else {
 #ifdef TEXTLAYOUT_ALLOCHAX
 		NewChunk(&layoutPtr, start, 1, curX, curX,
 #else
@@ -1696,6 +1706,7 @@ wrapLine:
 	char *ellipsis = "...";
 	int ellipsisLen = strlen(ellipsis);
 	char staticStr[256], *buf = staticStr;
+	int pixelsForText;
 
 	chunkPtr = &layoutPtr->chunks[layoutPtr->numChunks - 1];
 	if (wrapLength > 0) {
@@ -1710,28 +1721,29 @@ wrapLine:
 		if (chunkPtr->start[0] == '\n')
 		    continue;
 
-		newX = chunkPtr->totalWidth - 1;
 		if (chunkPtr->x + chunkPtr->totalWidth < wrapLength)
-		    newX = wrapLength - chunkPtr->x;
+		    pixelsForText = wrapLength - chunkPtr->x;
+		else
+		    pixelsForText = chunkPtr->totalWidth - 1;
 		bytesThisChunk = Ellipsis(tkfont, (char *) chunkPtr->start,
-		    chunkPtr->numBytes, &newX, ellipsis, TRUE);
+		    chunkPtr->numBytes, &pixelsForText, ellipsis, TRUE);
+		if (pixelsForText > wrapLength - chunkPtr->x)
+		    pixelsForText = wrapLength - chunkPtr->x;
 		if (bytesThisChunk > 0) {
 		    chunkPtr->numBytes = bytesThisChunk;
 		    chunkPtr->numChars = Tcl_NumUtfChars(chunkPtr->start, bytesThisChunk);
 		    chunkPtr->numDisplayChars = chunkPtr->numChars;
 		    chunkPtr->ellipsis = TRUE;
-		    chunkPtr->displayWidth = newX;
-		    chunkPtr->totalWidth = newX;
+		    chunkPtr->displayWidth = pixelsForText;
+		    chunkPtr->totalWidth = pixelsForText;
 		    lineLengths = (int *) Tcl_DStringValue(&lineBuffer);
-		    lineLengths[layoutPtr->numLines - 1] = chunkPtr->x + newX;
-		    if (chunkPtr->x + newX > maxWidth)
-			maxWidth = chunkPtr->x + newX;
+		    lineLengths[layoutPtr->numLines - 1] = chunkPtr->x + pixelsForText;
+		    if (chunkPtr->x + pixelsForText > maxWidth)
+			maxWidth = chunkPtr->x + pixelsForText;
 		    break;
 		}
 	    }
-	}
-	else
-	{
+	} else {
 	    if (chunkPtr->start[0] == '\n') {
 		if (layoutPtr->numChunks == 1)
 		    goto finish;
@@ -1775,9 +1787,7 @@ layoutPtr->totalWidth = 0;
 	layoutPtr->chunks[0].y = fm.ascent;
 	layoutPtr->chunks[0].totalWidth = 0;
 	layoutPtr->chunks[0].displayWidth = 0;
-    }
-    else
-    {
+    } else {
 	curLine = 0;
 	chunkPtr = layoutPtr->chunks;
 	y = chunkPtr->y;
@@ -1876,9 +1886,7 @@ void TextLayout_Draw(
 		drawX = 0;
 		firstChar = 0;
 		firstByte = chunkPtr->start;
-	    }
-	    else
-	    {
+	    } else {
 		firstByte = Tcl_UtfAtIndex(chunkPtr->start, firstChar);
 		Tk_MeasureChars(layoutPtr->tkfont, chunkPtr->start,
 		    firstByte - chunkPtr->start, -1, 0, &drawX);
@@ -1901,8 +1909,7 @@ void TextLayout_Draw(
 		    x + chunkPtr->x + drawX, y + chunkPtr->y);
 		if (buf != staticStr)
 		    ckfree(buf);
-	    }
-	    else
+	    } else
 #endif
 	    Tk_DrawChars(display, drawable, gc, layoutPtr->tkfont,
 		firstByte, lastByte - firstByte, x + chunkPtr->x + drawX,
