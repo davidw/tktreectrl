@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.80 2006/12/23 04:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.81 2007/01/21 23:20:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -7362,21 +7362,57 @@ TreeDInfo_Free(
     WFREE(dInfo, TreeDInfo_);
 }
 
-void
+int
 DumpDInfo(
     TreeCtrl *tree,		/* Widget info. */
-    int index
+    int objc,			/* Number of arguments. */
+    Tcl_Obj *CONST objv[]	/* Argument values. */
     )
 {
-    Tcl_DString dString;
+    Tcl_Interp *interp = tree->interp;
     TreeDInfo dInfo = tree->dInfo;
+    Tcl_DString dString;
     DItem *dItem;
     Range *range;
     RItem *rItem;
+    int index;
+
+    static CONST char *optionNames[] = {
+	"alloc", "ditem", "onscreen", "range", (char *) NULL
+    };
+    enum { DUMP_ALLOC, DUMP_DITEM, DUMP_ONSCREEN, DUMP_RANGE };
+
+    if (objc != 4) {
+	Tcl_WrongNumArgs(interp, 3, objv, "option");
+	return TCL_ERROR;
+    }
+
+    if (Tcl_GetIndexFromObj(interp, objv[3], optionNames, "option", 0,
+	    &index) != TCL_OK) {
+	return TCL_ERROR;
+    }
 
     Tcl_DStringInit(&dString);
 
-    if (index == 0) {
+    if (index == DUMP_ALLOC) {
+	int count = 0, size = 0;
+	for (dItem = dInfo->dItem; dItem != NULL; dItem = dItem->next) {
+	    count += 1;
+	}
+	for (dItem = dInfo->dItemFree; dItem != NULL; dItem = dItem->next) {
+	    count += 1;
+	}
+	size = count * sizeof(DItem);
+	DStringAppendf(&dString, "%-20s: %8d : %8d B %5d KB\n",
+		"DItem", count, size, (size + 1023) / 1024);
+
+	count = dInfo->rItemMax;
+	size = count * sizeof(RItem);
+	DStringAppendf(&dString, "%-20s: %8d : %8d B %5d KB\n",
+		"RItem", count, size, (size + 1023) / 1024);
+    }
+
+    if (index == DUMP_DITEM) {
 	DStringAppendf(&dString, "DumpDInfo: itemW,H %d,%d totalW,H %d,%d flags 0x%0x vertical %d itemVisCount %d\n",
 		dInfo->itemWidth, dInfo->itemHeight,
 		dInfo->totalWidth, dInfo->totalHeight,
@@ -7414,7 +7450,7 @@ DumpDInfo(
 	}
     }
 
-    if (index == 1) {
+    if (index == DUMP_ONSCREEN) {
 	dItem = dInfo->dItem;
 	while (dItem != NULL) {
 	    Tcl_HashEntry *hPtr = Tcl_FindHashEntry(&dInfo->itemVisHash, (char *) dItem->item);
@@ -7429,7 +7465,7 @@ DumpDInfo(
 	}
     }
 
-    if (index == 2) {
+    if (index == DUMP_RANGE) {
 	DStringAppendf(&dString, "  dInfo.rangeFirstD %p dInfo.rangeLastD %p\n",
 		dInfo->rangeFirstD, dInfo->rangeLastD);
 	for (range = dInfo->rangeFirstD;
@@ -7459,6 +7495,8 @@ DumpDInfo(
 	    }
 	}
     }
+
     Tcl_DStringResult(tree->interp, &dString);
+    return TCL_OK;
 }
 
