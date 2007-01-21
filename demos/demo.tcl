@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.61 2006/12/08 20:50:26 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.62 2007/01/21 22:57:24 treectrl Exp $
 
 set VERSION 2.2
 
@@ -58,10 +58,16 @@ if {[info procs lassign] eq ""} {
 }
 
 if {[catch {
-    package require dbwin 1.0
+    package require dbwin
 }]} {
-    proc dbwin s {puts -nonewline $s}
+    proc dbwin {s} {
+	puts [string trimright $s "\n"]
+    }
 }
+proc dbwintrace {name1 name2 op} {
+    dbwin $::dbwin
+}
+trace add variable ::dbwin write dbwintrace
 
 # This gets called if 'package require' won't work during development.
 proc LoadSharedLibrary {} {
