@@ -5,11 +5,10 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.62 2006/12/23 04:02:55 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.63 2007/01/21 23:23:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
-#include "tclInt.h" /* TCL_ALIGN */
 
 #ifdef WIN32
 #include "tkWinInt.h"
@@ -21,6 +20,74 @@
 #include "tkMacOSXInt.h"
 static PixPatHandle gPenPat = NULL;
 #endif
+
+struct dbwinterps {
+    int count;
+#define DBWIN_MAX_INTERPS 16
+    Tcl_Interp *interps[DBWIN_MAX_INTERPS];
+};
+
+static Tcl_ThreadDataKey dbwinTDK;
+static CONST char *DBWIN_VAR_NAME = "dbwin";
+
+static void dbwin_forget_interp(ClientData clientData, Tcl_Interp *interp)
+{
+    struct dbwinterps *dbwinterps =
+	    Tcl_GetThreadData(&dbwinTDK, sizeof(struct dbwinterps));
+    int i;
+
+    for (i = 0; i < dbwinterps->count; i++) {
+	if (dbwinterps->interps[i] == interp) {
+	    for (; i < dbwinterps->count - 1; i++) {
+		dbwinterps->interps[i] = dbwinterps->interps[i + 1];
+	    }
+	    dbwinterps->count--;
+	    break;
+	}
+    }
+}
+
+void dbwin_add_interp(Tcl_Interp *interp)
+{
+    struct dbwinterps *dbwinterps =
+	    Tcl_GetThreadData(&dbwinTDK, sizeof(struct dbwinterps));
+
+    if (dbwinterps->count < DBWIN_MAX_INTERPS) {
+	dbwinterps->interps[dbwinterps->count++] = interp;
+
+	Tcl_SetAssocData(interp,
+	    DBWIN_VAR_NAME,
+	    dbwin_forget_interp,
+	    NULL);
+    }
+}
+
+void dbwin(char *fmt, ...)
+{
+    struct dbwinterps *dbwinterps =
+	    Tcl_GetThreadData(&dbwinTDK, sizeof(struct dbwinterps));
+    char buf[512];
+    va_list args;
+    int i;
+
+    if (dbwinterps->count <= 0)
+	return;
+
+    va_start(args, fmt);
+    vsnprintf(buf, 512, fmt, args);
+    va_end(args);
+
+    buf[511] = '\0';
+
+    for (i = 0; i < dbwinterps->count; i++) {
+	/* All sorts of nasty stuff could happen here. */
+	Tcl_SetVar2(dbwinterps->interps[i],
+	    DBWIN_VAR_NAME,
+	    NULL,
+	    buf,
+	    TCL_GLOBAL_ONLY);
+    }
+}
 
 /*
  * Forward declarations for procedures defined later in this file:
@@ -320,6 +387,15 @@ VDotLine(
     DeleteObject(pen);
 
     TkWinReleaseDrawableDC(drawable, dc, &state);
+#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
+    int nw;
+    int wx = x1 + tree->drawableXOrigin;
+    int wy = y1 + tree->drawableYOrigin;
+
+    nw = !(wx & 1) == !(wy & 1);
+    for (y1 += !nw; y1 < y2; y1 += 2) {
+	XFillRectangle(tree->display, drawable, gc, x1, y1, 1, 1);
+    }
 #else
     int nw;
     int wx = x1 + tree->drawableXOrigin;
@@ -4218,6 +4294,7 @@ TagExpr_Init(
 	return TCL_ERROR;
     }
     expr->length = expr->index;
+
     return TCL_OK;
 }
 
@@ -4236,7 +4313,7 @@ typedef struct {
     Tk_Uid negtagvalUid;
 } SearchUids;
 
-static Tcl_ThreadDataKey dataKey;
+static Tcl_ThreadDataKey searchUidTDK;
 
 /*
  *----------------------------------------------------------------------
@@ -4262,7 +4339,7 @@ static SearchUids *
 GetStaticUids()
 {
     SearchUids *searchUids = (SearchUids *)
-	    Tcl_GetThreadData(&dataKey, sizeof(SearchUids));
+	    Tcl_GetThreadData(&searchUidTDK, sizeof(SearchUids));
 
     if (searchUids->andUid == NULL) {
 	searchUids->andUid       = Tk_GetUid("&&");
@@ -4327,7 +4404,7 @@ TagExpr_Scan(
 		    (expr->allocated)*sizeof(Tk_Uid));
 	    } else {
 		expr->uids =
-		(Tk_Uid *) ckalloc((expr->allocated)*sizeof(Tk_Uid));
+		    (Tk_Uid *) ckalloc((expr->allocated)*sizeof(Tk_Uid));
 		memcpy(expr->uids, expr->staticUids, sizeof(expr->staticUids));
 	    }
 	}
