@@ -7,11 +7,10 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.100 2006/12/23 04:32:07 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.101 2007/01/21 23:18:35 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
-#include "tclInt.h" /* TclGetIntForIndex */
 
 #ifdef WIN32
 #include <windows.h>
@@ -3419,21 +3418,8 @@ TreeDebugCmd(
 	}
 
 	case COMMAND_DINFO: {
-	    extern void DumpDInfo(TreeCtrl *tree, int index);
-	    static CONST char *optionNames[] = {
-		"ditem", "onscreen", "range", (char *) NULL
-	    };
-
-	    if (objc != 4) {
-		Tcl_WrongNumArgs(interp, 3, objv, "option");
-		return TCL_ERROR;
-	    }
-	    if (Tcl_GetIndexFromObj(interp, objv[3], optionNames, "option", 0,
-		    &index) != TCL_OK) {
-		return TCL_ERROR;
-	    }
-	    DumpDInfo(tree, index);
-	    break;
+	    extern int DumpDInfo(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
+	    return DumpDInfo(tree, objc, objv);
 	}
 
 	/* T debug expose x1 y1 x2 y2 */
@@ -4222,6 +4208,8 @@ Treectrl_Init(
 	return TCL_ERROR;
     }
 #endif
+
+    dbwin_add_interp(interp);
 
     PerStateCO_Init(optionSpecs, "-buttonbitmap", &pstBitmap, TreeStateFromObj);
     PerStateCO_Init(optionSpecs, "-buttonimage", &pstImage, TreeStateFromObj);
