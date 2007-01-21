@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.15 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.16 2007/01/21 23:17:00 treectrl Exp $
  */
 
 /*
@@ -33,11 +33,7 @@
 #include <tk.h>
 #include "qebind.h"
 
-#ifdef HAVE_DBWIN_H
-#include "dbwin.h"
-#else /* HAVE_DBWIN_H */
-#define dbwin printf
-#endif /* HAVE_DBWIN_H */
+extern void dbwin(char *fmt, ...);
 
 /*
  * The macro below is used to modify a "char" value (e.g. by casting
