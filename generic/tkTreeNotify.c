@@ -5,11 +5,10 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.21 2006/12/23 04:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.22 2007/01/21 23:21:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
-#include "tclInt.h" /* TclFormatInt */
 
 static int EVENT_EXPAND,
     DETAIL_EXPAND_BEFORE,
