@@ -7,19 +7,17 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.85 2006/12/08 23:14:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.86 2007/01/21 23:19:22 treectrl Exp $
  */
 
 #include "tkPort.h"
 #include "default.h"
+#include "tclInt.h"
 #include "tkInt.h"
 #include "qebind.h"
 
-#ifdef HAVE_DBWIN_H
-#include "dbwin.h"
-#else /* HAVE_DBWIN_H */
-#define dbwin printf
-#endif /* HAVE_DBWIN_H */
+extern void dbwin(char *fmt, ...);
+extern void dbwin_add_interp(Tcl_Interp *interp);
 
 #ifndef TRUE
 #define TRUE 1
