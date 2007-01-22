@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.64 2006/12/07 03:56:42 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.65 2007/01/22 22:44:44 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2 treectrl "Tk Commands"
 .BS
@@ -87,7 +87,7 @@ package require \fBtreectrl  2.2\fR
 .sp
 \fIpathName\fR \fBdebug configure\fR ?\fIoption\fR? ?\fIvalue\fR? ?\fIoption value ...\fR?
 .sp
-\fIpathName\fR \fBdebug dinfo\fR
+\fIpathName\fR \fBdebug dinfo\fR \fIoption\fR
 .sp
 \fIpathName\fR \fBdebug expose\fR \fIx1\fR \fIy1\fR \fIx2\fR \fIy2\fR
 .sp
@@ -1361,7 +1361,7 @@ Setting this option has only an effect if the
 debugging options \fB-enable\fR and \fB-display\fR are switched on.
 .TP
 \fB\fB-enable\fR\fR \fIboolean\fR
-All other debugging options only take effect,
+All other debugging options only take effect
 if this option is also switched on.
 .TP
 \fB\fB-erasecolor\fR\fR \fIcolor\fR
@@ -1372,10 +1372,17 @@ If you use an unusual color for this option (like \fBpink\fR),
 superflous screen redraws can be spotted more easily.
 Setting this option has only an effect if the
 debugging options \fB-enable\fR and \fB-display\fR are switched on.
+.TP
+\fB\fB-span\fR\fR \fIboolean\fR
+Debugging related to column spanning.
+.TP
+\fB\fB-textlayout\fR\fR \fIboolean\fR
+Debugging related to text-element layout.
 .RE
 .TP
-\fIpathName\fR \fBdebug dinfo\fR
-Returns a string describing item layout.
+\fIpathName\fR \fBdebug dinfo\fR \fIoption\fR
+Returns a string describing display-related stuff. \fIOption\fR must be one
+of \fBalloc\fR, \fBditem\fR, \fBonscreen\fR or \fBrange\fR.
 .TP
 \fIpathName\fR \fBdebug expose\fR \fIx1\fR \fIy1\fR \fIx2\fR \fIy2\fR
 Causes the area of the window bounded by the given window-coords to be

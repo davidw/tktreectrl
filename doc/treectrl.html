@@ -1,10 +1,10 @@
-<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.47 2006/12/07 03:56:41 treectrl Exp $
+<! -- Copyright (c) 2002-2003 Christian Krone.   --    --   See the file &quot;license.terms&quot; for information on usage and redistribution   --   of this file, and for a DISCLAIMER OF ALL WARRANTIES.   --    --   $Id: treectrl.html,v 1.48 2007/01/22 22:44:44 treectrl Exp $
    --><html><head>
 <title>treectrl - Tk Commands </title>
 </head>
 <! -- Generated from file 'doc/treectrl.man' by tcllib/doctools with format 'html'
    -->
-<! -- CVS: $Id: treectrl.html,v 1.47 2006/12/07 03:56:41 treectrl Exp $ treectrl.n
+<! -- CVS: $Id: treectrl.html,v 1.48 2007/01/22 22:44:44 treectrl Exp $ treectrl.n
    -->
 
 <body>
@@ -81,7 +81,7 @@ package require <b>treectrl 2.2</b><br>
 <tr valign=top ><td ><a href="#34"><i class='arg'>pathName</i> <b class='cmd'>debug alloc</b></a></td></tr>
 <tr valign=top ><td ><a href="#35"><i class='arg'>pathName</i> <b class='cmd'>debug cget</b> <i class='arg'>option</i></a></td></tr>
 <tr valign=top ><td ><a href="#36"><i class='arg'>pathName</i> <b class='cmd'>debug configure</b> ?<i class='arg'>option</i>? ?<i class='arg'>value</i>? ?<i class='arg'>option value ...</i>?</a></td></tr>
-<tr valign=top ><td ><a href="#37"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b></a></td></tr>
+<tr valign=top ><td ><a href="#37"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b> <i class='arg'>option</i></a></td></tr>
 <tr valign=top ><td ><a href="#38"><i class='arg'>pathName</i> <b class='cmd'>debug expose</b> <i class='arg'>x1</i> <i class='arg'>y1</i> <i class='arg'>x2</i> <i class='arg'>y2</i></a></td></tr>
 <tr valign=top ><td ><a href="#39"><i class='arg'>pathName</i> <b class='cmd'>debug scroll</b></a></td></tr>
 <tr valign=top ><td ><a href="#40"><i class='arg'>pathName</i> <b class='cmd'>depth</b> ?<i class='arg'>itemDesc</i>?</a></td></tr>
@@ -1193,7 +1193,7 @@ debugging options <strong>-enable</strong> and <strong>-display</strong> are swi
 
 <br><br>
 <dt><strong><strong>-enable</strong></strong> <i class='arg'>boolean</i><dd>
-All other debugging options only take effect,
+All other debugging options only take effect
 if this option is also switched on.
 
 <br><br>
@@ -1205,11 +1205,21 @@ If you use an unusual color for this option (like <strong>pink</strong>),
 superflous screen redraws can be spotted more easily.
 Setting this option has only an effect if the
 debugging options <strong>-enable</strong> and <strong>-display</strong> are switched on.
+
+<br><br>
+<dt><strong><strong>-span</strong></strong> <i class='arg'>boolean</i><dd>
+Debugging related to column spanning.
+
+<br><br>
+<dt><strong><strong>-textlayout</strong></strong> <i class='arg'>boolean</i><dd>
+Debugging related to text-element layout.
+
 </dl>
 
-<dt><a name="37"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b></a><dd>
+<dt><a name="37"><i class='arg'>pathName</i> <b class='cmd'>debug dinfo</b> <i class='arg'>option</i></a><dd>
 
-Returns a string describing item layout.
+Returns a string describing display-related stuff. <i class='arg'>Option</i> must be one
+of <strong>alloc</strong>, <strong>ditem</strong>, <strong>onscreen</strong> or <strong>range</strong>.
 
 <br><br>
 <dt><a name="38"><i class='arg'>pathName</i> <b class='cmd'>debug expose</b> <i class='arg'>x1</i> <i class='arg'>y1</i> <i class='arg'>x2</i> <i class='arg'>y2</i></a><dd>
