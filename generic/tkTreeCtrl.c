@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.101 2007/01/21 23:18:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.102 2007/01/22 23:29:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -428,6 +428,12 @@ TreeObjCmd(
 
     /* Window must exist on Win32. */
     TreeTheme_Init(tree);
+
+    /*
+     * Keep a hold of the associated tkwin until we destroy the listbox,
+     * otherwise Tk might free it while we still need it.
+     */
+    Tcl_Preserve((ClientData) tkwin);
 
     if (Tk_InitOptions(interp, (char *) tree, optionTable, tkwin) != TCL_OK) {
 	Tk_DestroyWindow(tree->tkwin);
@@ -1781,6 +1787,7 @@ TreeDestroy(
     AllocHax_Finalize(tree->allocData);
 #endif
 
+    Tcl_Release(tree->tkwin);
     WFREE(tree, TreeCtrl);
 }
 
