@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.76 2006/12/23 04:32:07 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.77 2007/01/23 22:41:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -249,7 +249,7 @@ UniformGroupCO_Free(
     }
 }
 
-Tk_ObjCustomOption uniformGroupCO =
+static Tk_ObjCustomOption uniformGroupCO =
 {
     "uniform group",
     UniformGroupCO_Set,
@@ -299,10 +299,10 @@ static Tk_OptionSpec columnSpecs[] = {
      COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowpadx", (char *) NULL, (char *) NULL,
      "6", Tk_Offset(TreeColumn_, arrowPadXObj), Tk_Offset(TreeColumn_, arrowPadX),
-     0, (ClientData) &PadAmountOption, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
+     0, (ClientData) &TreeCtrlCO_pad, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-arrowpady", (char *) NULL, (char *) NULL,
      "0", Tk_Offset(TreeColumn_, arrowPadYObj), Tk_Offset(TreeColumn_, arrowPadY),
-     0, (ClientData) &PadAmountOption, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
+     0, (ClientData) &TreeCtrlCO_pad, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
     {TK_OPTION_STRING_TABLE, "-arrowside", (char *) NULL, (char *) NULL,
      "right", -1, Tk_Offset(TreeColumn_, arrowSide),
      0, (ClientData) arrowSideST, COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
@@ -335,11 +335,11 @@ static Tk_OptionSpec columnSpecs[] = {
      COLU_CONF_IMAGE | COLU_CONF_NWIDTH | COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-imagepadx", (char *) NULL, (char *) NULL,
      "6", Tk_Offset(TreeColumn_, imagePadXObj),
-     Tk_Offset(TreeColumn_, imagePadX), 0, (ClientData) &PadAmountOption,
+     Tk_Offset(TreeColumn_, imagePadX), 0, (ClientData) &TreeCtrlCO_pad,
      COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-imagepady", (char *) NULL, (char *) NULL,
      "0", Tk_Offset(TreeColumn_, imagePadYObj),
-     Tk_Offset(TreeColumn_, imagePadY), 0, (ClientData) &PadAmountOption,
+     Tk_Offset(TreeColumn_, imagePadY), 0, (ClientData) &TreeCtrlCO_pad,
      COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_STRING, "-itembackground", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(TreeColumn_, itemBgObj), -1,
@@ -349,7 +349,7 @@ static Tk_OptionSpec columnSpecs[] = {
      TK_OPTION_NULL_OK, (ClientData) NULL, COLU_CONF_JUSTIFY},
     {TK_OPTION_CUSTOM, "-itemstyle", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeColumn_, itemStyle),
-     TK_OPTION_NULL_OK, (ClientData) &styleCO, 0},
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_style, 0},
     {TK_OPTION_JUSTIFY, "-justify", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(TreeColumn_, justify),
      0, (ClientData) NULL, COLU_CONF_DISPLAY | COLU_CONF_JUSTIFY},
@@ -379,7 +379,7 @@ static Tk_OptionSpec columnSpecs[] = {
 #endif /* DEPRECATED */
     {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeColumn_, tagInfo),
-     TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, COLU_CONF_TAGS},
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_tagInfo, COLU_CONF_TAGS},
     {TK_OPTION_STRING, "-text", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(TreeColumn_, textObj), Tk_Offset(TreeColumn_, text),
      TK_OPTION_NULL_OK, (ClientData) NULL,
@@ -393,11 +393,11 @@ static Tk_OptionSpec columnSpecs[] = {
      COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-textpadx", (char *) NULL, (char *) NULL,
      "6", Tk_Offset(TreeColumn_, textPadXObj),
-     Tk_Offset(TreeColumn_, textPadX), 0, (ClientData) &PadAmountOption,
+     Tk_Offset(TreeColumn_, textPadX), 0, (ClientData) &TreeCtrlCO_pad,
      COLU_CONF_NWIDTH | COLU_CONF_DISPLAY},
     {TK_OPTION_CUSTOM, "-textpady", (char *) NULL, (char *) NULL,
      "0", Tk_Offset(TreeColumn_, textPadYObj),
-     Tk_Offset(TreeColumn_, textPadY), 0, (ClientData) &PadAmountOption,
+     Tk_Offset(TreeColumn_, textPadY), 0, (ClientData) &TreeCtrlCO_pad,
      COLU_CONF_NHEIGHT | COLU_CONF_DISPLAY},
 #ifdef UNIFORM_GROUP
     {TK_OPTION_CUSTOM, "-uniform", (char *) NULL, (char *) NULL,
@@ -557,7 +557,7 @@ ColumnCO_Restore(
  * a custom config option that handles Tcl_Obj<->TreeColumn conversion.
  * A column description must refer to a single column.
  */
-Tk_ObjCustomOption columnCO =
+Tk_ObjCustomOption TreeCtrlCO_column =
 {
     "column",
     ColumnCO_Set,
@@ -573,7 +573,7 @@ Tk_ObjCustomOption columnCO =
  * A column description must refer to a single column.
  * "tail" is not allowed.
  */
-Tk_ObjCustomOption columnCO_NOT_TAIL =
+Tk_ObjCustomOption TreeCtrlCO_column_NOT_TAIL =
 {
     "column",
     ColumnCO_Set,
@@ -595,7 +595,7 @@ static Tk_OptionSpec dragSpecs[] = {
      0, (ClientData) NULL, 0},
     {TK_OPTION_CUSTOM, "-imagecolumn", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnDrag.column),
-     TK_OPTION_NULL_OK, (ClientData) &columnCO_NOT_TAIL, 0},
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_column_NOT_TAIL, 0},
     {TK_OPTION_PIXELS, "-imageoffset", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(TreeCtrl, columnDrag.offsetObj),
      Tk_Offset(TreeCtrl, columnDrag.offset), 0, (ClientData) NULL, 0},
@@ -604,7 +604,7 @@ static Tk_OptionSpec dragSpecs[] = {
      0, (ClientData) NULL, 0},
     {TK_OPTION_CUSTOM, "-indicatorcolumn", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnDrag.indColumn),
-     TK_OPTION_NULL_OK, (ClientData) &columnCO, 0},
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_column, 0},
     {TK_OPTION_STRING_TABLE, "-indicatorside", (char *) NULL, (char *) NULL,
      "left", -1, Tk_Offset(TreeCtrl, columnDrag.indSide),
      0, (ClientData) arrowSideST, 0},
@@ -1531,7 +1531,7 @@ TreeColumn_FromObj(
 /*
  *----------------------------------------------------------------------
  *
- * ColumnForEach_Start --
+ * TreeColumnForEach_Start --
  *
  *	Begin iterating over items. A command might accept two column
  *	descriptions for a range of column, or a single column description
@@ -1549,11 +1549,11 @@ TreeColumn_FromObj(
  */
 
 TreeColumn
-ColumnForEach_Start(
+TreeColumnForEach_Start(
     TreeColumnList *columns,	/* List of columns. */
     TreeColumnList *column2s,	/* List of columns or NULL. */
     ColumnForEach *iter		/* Returned info, pass to
-				   ColumnForEach_Next. */
+				   TreeColumnForEach_Next. */
     )
 {
     TreeCtrl *tree = columns->tree;
@@ -1596,7 +1596,7 @@ ColumnForEach_Start(
 /*
  *----------------------------------------------------------------------
  *
- * ColumnForEach_Next --
+ * TreeColumnForEach_Next --
  *
  *	Returns the next column to iterate over. Keep calling this until
  *	the result is NULL.
@@ -1611,8 +1611,8 @@ ColumnForEach_Start(
  */
 
 TreeColumn
-ColumnForEach_Next(
-    ColumnForEach *iter		/* Initialized by ColumnForEach_Start. */
+TreeColumnForEach_Next(
+    ColumnForEach *iter		/* Initialized by TreeColumnForEach_Start. */
     )
 {
     TreeCtrl *tree = iter->tree;
@@ -2787,8 +2787,9 @@ Column_DoLayout(
 	    } else {
 		partText.width = widthForText;
 		partText.height = layout->fm.linespace;
-		layout->bytesThatFit = Ellipsis(layout->tkfont, column->text,
-			column->textLen, &partText.width, "...", FALSE);
+		layout->bytesThatFit = Tree_Ellipsis(layout->tkfont,
+			column->text, column->textLen, &partText.width,
+			"...", FALSE);
 	    }
 	    parts[n] = &partText;
 	    padList[n] = MAX(partText.padX[PAD_TOP_LEFT], padList[n]);
@@ -4627,7 +4628,7 @@ SetImageForColumn(
 	panic("ximage is NULL");
 
     /* XImage -> Tk_Image */
-    XImage2Photo(tree->interp, photoH, ximage, tree->columnDrag.alpha);
+    Tree_XImage2Photo(tree->interp, photoH, ximage, tree->columnDrag.alpha);
 
     XDestroyImage(ximage);
     Tk_FreePixmap(tree->display, pixmap);
@@ -5665,7 +5666,7 @@ TreeColumn_InitInterp(
     Tk_OptionSpec *specPtr;
     Tcl_DString dString;
 
-    specPtr = OptionSpec_Find(columnSpecs, "-background");
+    specPtr = Tree_FindOptionSpec(columnSpecs, "-background");
     if (specPtr->defValue == NULL) {
 	Tcl_DStringInit(&dString);
 	Tcl_DStringAppendElement(&dString, DEF_BUTTON_BG_COLOR);

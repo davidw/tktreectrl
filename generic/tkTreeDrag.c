@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.25 2006/12/23 04:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.26 2007/01/23 22:41:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -332,23 +332,23 @@ void TreeDragImage_Draw(TreeDragImage dragImage, Drawable drawable, int x, int y
     if (elem == NULL)
 	return;
 
-    DotRect_Setup(tree, drawable, &dotState);
+    TreeDotRect_Setup(tree, drawable, &dotState);
 
     while (elem != NULL) {
-	DotRect_Draw(&dotState,
+	TreeDotRect_Draw(&dotState,
 	    x + dragImage->x + elem->x,
 	    y + dragImage->y + elem->y,
 	    elem->width, elem->height);
 	elem = elem->next;
     }
 
-    DotRect_Restore(&dotState);
+    TreeDotRect_Restore(&dotState);
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * DragImageCmd --
+ * TreeDragImageCmd --
  *
  *	This procedure is invoked to process the [dragimage] widget
  *	command.  See the user documentation for details on what it
@@ -364,7 +364,7 @@ void TreeDragImage_Draw(TreeDragImage dragImage, Drawable drawable, int x, int y
  */
 
 int
-DragImageCmd(
+TreeDragImageCmd(
     ClientData clientData,	/* Widget info. */
     Tcl_Interp *interp,		/* Current interpreter. */
     int objc,			/* Number of arguments. */

@@ -5,17 +5,17 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.24 2006/12/07 03:45:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.25 2007/01/23 22:41:31 treectrl Exp $
  */
 
-typedef struct ElementType ElementType;
-typedef struct Element Element;
-typedef struct ElementArgs ElementArgs;
+typedef struct TreeElementType TreeElementType;
+typedef struct TreeElement_ TreeElement_;
+typedef struct TreeElementArgs TreeElementArgs;
 
-struct ElementArgs
+struct TreeElementArgs
 {
     TreeCtrl *tree;
-    Element *elem;
+    TreeElement elem;
     int state;
     struct {
 	TreeItem item;
@@ -77,69 +77,69 @@ struct ElementArgs
     } screen;
 };
 
-struct ElementType
+struct TreeElementType
 {
     char *name; /* "image", "text" */
-    int size; /* size of an Element */
+    int size; /* size of an TreeElement */
     Tk_OptionSpec *optionSpecs;
     Tk_OptionTable optionTable;
-    int (*createProc)(ElementArgs *args);
-    void (*deleteProc)(ElementArgs *args);
-    int (*configProc)(ElementArgs *args);
-    void (*displayProc)(ElementArgs *args);
-    void (*neededProc)(ElementArgs *args);
-    void (*heightProc)(ElementArgs *args);
-    int (*changeProc)(ElementArgs *args);
-    int (*stateProc)(ElementArgs *args);
-    int (*undefProc)(ElementArgs *args);
-    int (*actualProc)(ElementArgs *args);
-    void (*onScreenProc)(ElementArgs *args);
-    ElementType *next;
+    int (*createProc)(TreeElementArgs *args);
+    void (*deleteProc)(TreeElementArgs *args);
+    int (*configProc)(TreeElementArgs *args);
+    void (*displayProc)(TreeElementArgs *args);
+    void (*neededProc)(TreeElementArgs *args);
+    void (*heightProc)(TreeElementArgs *args);
+    int (*changeProc)(TreeElementArgs *args);
+    int (*stateProc)(TreeElementArgs *args);
+    int (*undefProc)(TreeElementArgs *args);
+    int (*actualProc)(TreeElementArgs *args);
+    void (*onScreenProc)(TreeElementArgs *args);
+    TreeElementType *next;
 };
 
 /* list of these for each style */
-struct Element
+struct TreeElement_
 {
     Tk_Uid name;		/* "elem2", "eText" etc */
-    ElementType *typePtr;
-    Element *master;		/* NULL if this is master */
+    TreeElementType *typePtr;
+    TreeElement master;		/* NULL if this is master */
     DynamicOption *options;	/* Dynamically-allocated options. */
     /* type-specific data here */
 };
 
-extern ElementType elemTypeBitmap;
-extern ElementType elemTypeBorder;
-extern ElementType elemTypeCheckButton;
-extern ElementType elemTypeImage;
-extern ElementType elemTypeRect;
-extern ElementType elemTypeText;
-extern ElementType elemTypeWindow;
+extern TreeElementType TreeElemTypeBitmap;
+extern TreeElementType TreeElemTypeBorder;
+extern TreeElementType TreeElemTypeCheckButton;
+extern TreeElementType TreeElemTypeImage;
+extern TreeElementType TreeElemTypeRect;
+extern TreeElementType TreeElemTypeText;
+extern TreeElementType TreeElemTypeWindow;
 
 #define ELEMENT_TYPE_MATCHES(t1,t2) ((t1)->name == (t2)->name)
 
 /***** ***** *****/
 
-extern int Element_GetSortData(TreeCtrl *tree, Element *elem, int type, long *lv, double *dv, char **sv);
+extern int TreeElement_GetSortData(TreeCtrl *tree, TreeElement elem, int type, long *lv, double *dv, char **sv);
 
 typedef struct TreeIterate_ *TreeIterate;
 
-extern int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, ElementType **typePtrPtr);
-extern void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, Element *elem);
-extern TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr);
+extern int TreeElement_TypeFromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TreeElementType **typePtrPtr);
+extern void Tree_RedrawElement(TreeCtrl *tree, TreeItem item, TreeElement elem);
+extern TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, TreeElementType *elemTypePtr);
 extern TreeIterate Tree_ElementIterateNext(TreeIterate iter_);
-extern Element *Tree_ElementIterateGet(TreeIterate iter_);
+extern TreeElement Tree_ElementIterateGet(TreeIterate iter_);
 extern void Tree_ElementIterateChanged(TreeIterate iter_, int mask);
 extern void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
-    TreeItemColumn column, Element *elem, int flags, int mask);
+    TreeItemColumn column, TreeElement elem, int flags, int mask);
 
 typedef struct TreeCtrlStubs TreeCtrlStubs;
 struct TreeCtrlStubs
 {
-    int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, ElementType *typePtr);
-    void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item, Element *elem);
-    TreeIterate (*Tree_ElementIterateBegin)(TreeCtrl *tree, ElementType *elemTypePtr);
+    int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, TreeElementType *typePtr);
+    void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item, TreeElement elem);
+    TreeIterate (*Tree_ElementIterateBegin)(TreeCtrl *tree, TreeElementType *elemTypePtr);
     TreeIterate (*Tree_ElementIterateNext)(TreeIterate iter_);
-    Element *(*Tree_ElementIterateGet)(TreeIterate iter_);
+    TreeElement (*Tree_ElementIterateGet)(TreeIterate iter_);
     void (*Tree_ElementIterateChanged)(TreeIterate iter_, int mask);
     void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
     int (*PerStateInfo_FromObj)(TreeCtrl *tree, StateFromObjProc proc, PerStateType *typePtr, PerStateInfo *pInfo);

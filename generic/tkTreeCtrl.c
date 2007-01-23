@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.102 2007/01/22 23:29:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.103 2007/01/23 22:41:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -61,7 +61,7 @@ static CONST char *lineStyleST[] = {
 static CONST char *orientStringTable[] = {
     "horizontal", "vertical", (char *) NULL
 };
-extern Tk_ObjCustomOption columnCO_NOT_TAIL;
+extern Tk_ObjCustomOption TreeCtrlCO_column_NOT_TAIL;
 
 static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_BORDER, "-background", "background", "Background",
@@ -164,12 +164,12 @@ static Tk_OptionSpec optionSpecs[] = {
      "0",
      Tk_Offset(TreeCtrl, itemPadXObj),
      Tk_Offset(TreeCtrl, itemPadX),
-     0, (ClientData) &PadAmountOption, 0},
+     0, (ClientData) &TreeCtrlCO_pad, 0},
     {TK_OPTION_CUSTOM, "-itempady", (char *) NULL, (char *) NULL,
      "0",
      Tk_Offset(TreeCtrl, itemPadYObj),
      Tk_Offset(TreeCtrl, itemPadY),
-     0, (ClientData) &PadAmountOption, 0},
+     0, (ClientData) &TreeCtrlCO_pad, 0},
 #endif
     {TK_OPTION_STRING, "-itemprefix", "itemPrefix", "ItemPrefix",
      "", -1, Tk_Offset(TreeCtrl, itemPrefix), 0, (ClientData) NULL, 0},
@@ -235,7 +235,7 @@ static Tk_OptionSpec optionSpecs[] = {
      TK_OPTION_NULL_OK, 0, 0},
     {TK_OPTION_CUSTOM, "-treecolumn", "treeColumn", "TreeColumn",
      (char *) NULL, -1, Tk_Offset(TreeCtrl, columnTree),
-     TK_OPTION_NULL_OK, (ClientData) &columnCO_NOT_TAIL,
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_column_NOT_TAIL,
      TREE_CONF_RELAYOUT},
     {TK_OPTION_BOOLEAN, "-usetheme", "useTheme",
      "UseTheme", "0", -1, Tk_Offset(TreeCtrl, useTheme),
@@ -403,7 +403,7 @@ TreeObjCmd(
     TreeItemList_Init(tree, &tree->preserveItemList, 0);
 
 #ifdef ALLOC_HAX
-    tree->allocData = AllocHax_Init();
+    tree->allocData = TreeAlloc_Init();
 #endif
 
     Tree_InitColumns(tree);
@@ -826,7 +826,7 @@ static int TreeWidgetCmd(
 	}
 
 	case COMMAND_DRAGIMAGE: {
-	    result = DragImageCmd(clientData, interp, objc, objv);
+	    result = TreeDragImageCmd(clientData, interp, objc, objv);
 	    break;
 	}
 
@@ -1490,7 +1490,7 @@ badWrap:
 	TreeRowProxy_Display(tree);
     }
 
-    tree->useIndent = MAX(tree->indent, ButtonMaxWidth(tree));
+    tree->useIndent = MAX(tree->indent, Tree_ButtonMaxWidth(tree));
 
     if (createFlag)
 	mask |= TREE_CONF_BORDERS;
@@ -1784,7 +1784,7 @@ TreeDestroy(
 	ckfree((char *) tree->defaultStyle.styles);
 #endif
 #ifdef ALLOC_HAX
-    AllocHax_Finalize(tree->allocData);
+    TreeAlloc_Finalize(tree->allocData);
 #endif
 
     Tcl_Release(tree->tkwin);
@@ -3359,7 +3359,7 @@ TreeDebugCmd(
 	case COMMAND_ALLOC: {
 #ifdef ALLOC_HAX
 #ifdef TREECTRL_DEBUG
-	    AllocHax_Stats(interp, tree->allocData);
+	    TreeAlloc_Stats(interp, tree->allocData);
 #else
 	    FormatResult(interp, "TREECTRL_DEBUG is not defined");
 #endif
@@ -3425,8 +3425,8 @@ TreeDebugCmd(
 	}
 
 	case COMMAND_DINFO: {
-	    extern int DumpDInfo(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-	    return DumpDInfo(tree, objc, objv);
+	    extern int Tree_DumpDInfo(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
+	    return Tree_DumpDInfo(tree, objc, objv);
 	}
 
 	/* T debug expose x1 y1 x2 y2 */
@@ -3561,7 +3561,7 @@ textlayout $font $text
 	-ignoretabs boolean
 	-ignorenewlines boolean
 */
-int
+static int
 TextLayoutCmd(
     ClientData clientData,	/* Not used. */
     Tcl_Interp *interp,		/* Current interpreter. */
@@ -3680,7 +3680,7 @@ done:
  *--------------------------------------------------------------
  */
 
-int
+static int
 ImageTintCmd(
     ClientData clientData,	/* Not used. */
     Tcl_Interp *interp,		/* Current interpreter. */
@@ -3779,7 +3779,7 @@ ImageTintCmd(
  *--------------------------------------------------------------
  */
 
-int
+static int
 LoupeCmd(
     ClientData clientData,	/* Not used. */
     Tcl_Interp *interp,		/* Current interpreter. */

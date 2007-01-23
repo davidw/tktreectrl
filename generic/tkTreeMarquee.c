@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeMarquee.c,v 1.14 2006/12/23 04:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeMarquee.c,v 1.15 2007/01/23 22:41:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -195,9 +195,9 @@ TreeMarquee_Draw(
     y = MIN(marquee->y1, marquee->y2);
     h = abs(marquee->y1 - marquee->y2) + 1;
 
-    DotRect_Setup(tree, drawable, &dotState);
-    DotRect_Draw(&dotState, x1 + x, y1 + y, w, h);
-    DotRect_Restore(&dotState);
+    TreeDotRect_Setup(tree, drawable, &dotState);
+    TreeDotRect_Draw(&dotState, x1 + x, y1 + y, w, h);
+    TreeDotRect_Restore(&dotState);
 }
 
 /*

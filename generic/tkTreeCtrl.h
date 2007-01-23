@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.86 2007/01/21 23:19:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.87 2007/01/23 22:41:30 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -16,6 +16,8 @@
 #include "tkInt.h"
 #include "qebind.h"
 
+#define dbwin TreeCtrl_dbwin
+#define dbwin_add_interp TreeCtrl_dbwin_add_interp
 extern void dbwin(char *fmt, ...);
 extern void dbwin_add_interp(Tcl_Interp *interp);
 
@@ -474,15 +476,17 @@ struct ItemForEach {
     TreeItemList *items;
     int index;
 };
-extern TreeItem ItemForEach_Start(TreeItemList *items, TreeItemList *item2s,
+extern TreeItem TreeItemForEach_Start(TreeItemList *items, TreeItemList *item2s,
     ItemForEach *iter);
-extern TreeItem ItemForEach_Next(ItemForEach *iter);
+extern TreeItem TreeItemForEach_Next(ItemForEach *iter);
 #define ITEM_FOR_EACH(item, items, item2s, iter) \
-    for (item = ItemForEach_Start(items, item2s, iter); \
+    for (item = TreeItemForEach_Start(items, item2s, iter); \
 	 item != NULL; \
-	 item = ItemForEach_Next(iter))
+	 item = TreeItemForEach_Next(iter))
 
+#define FormatResult TreeCtrl_FormatResult
 extern void FormatResult(Tcl_Interp *interp, char *fmt, ...);
+#define DStringAppendf TreeCtrl_DStringAppendf
 extern void DStringAppendf(Tcl_DString *dString, char *fmt, ...);
 extern void Tree_Debug(TreeCtrl *tree);
 
@@ -636,8 +640,8 @@ extern int TreeStyle_NumElements(TreeCtrl *tree, TreeStyle style_);
 extern void TreeStyle_UpdateWindowPositions(StyleDrawArgs *drawArgs);
 extern void TreeStyle_OnScreen(TreeCtrl *tree, TreeStyle style_, int onScreen);
 
-extern int ButtonMaxWidth(TreeCtrl *tree);
-extern int ButtonHeight(TreeCtrl *tree, int state);
+extern int Tree_ButtonMaxWidth(TreeCtrl *tree);
+extern int Tree_ButtonHeight(TreeCtrl *tree, int state);
 
 /* tkTreeNotify.c */
 extern int TreeNotify_Init(TreeCtrl *tree);
@@ -675,13 +679,13 @@ struct ColumnForEach {
     TreeColumnList *list;
     int index;
 };
-extern TreeColumn ColumnForEach_Start(TreeColumnList *columns,
+extern TreeColumn TreeColumnForEach_Start(TreeColumnList *columns,
     TreeColumnList *column2s, ColumnForEach *iter);
-extern TreeColumn ColumnForEach_Next(ColumnForEach *iter);
+extern TreeColumn TreeColumnForEach_Next(ColumnForEach *iter);
 #define COLUMN_FOR_EACH(column, columns, column2s, iter) \
-    for (column = ColumnForEach_Start(columns, column2s, iter); \
+    for (column = TreeColumnForEach_Start(columns, column2s, iter); \
 	 column != NULL; \
-	 column = ColumnForEach_Next(iter))
+	 column = TreeColumnForEach_Next(iter))
     
 extern Tcl_Obj *TreeColumn_ToObj(TreeCtrl *tree, TreeColumn column_);
 extern int TreeColumnCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
@@ -730,7 +734,7 @@ extern void TreeDragImage_Free(TreeDragImage dragImage_);
 extern void TreeDragImage_Display(TreeDragImage dragImage_);
 extern void TreeDragImage_Undisplay(TreeDragImage dragImage_);
 extern void TreeDragImage_Draw(TreeDragImage dragImage_, Drawable drawable, int x, int y);
-extern int DragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
+extern int TreeDragImageCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
 
 /* tkTreeMarquee.c */
 extern int TreeMarquee_Init(TreeCtrl *tree);
@@ -850,18 +854,17 @@ extern void TreeTheme_Relayout(TreeCtrl *tree);
 #define WFREE(p,t) WIPEFREE(p, sizeof(t))
 #define WCFREE(p,t,c) WIPEFREE(p, sizeof(t) * (c))
 
-extern int Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force);
-extern void HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2);
-extern void VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2);
-extern void DotRect(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height);
-extern void DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height, int open);
+extern int Tree_Ellipsis(Tk_Font tkfont, char *string, int numBytes, int *maxPixels, char *ellipsis, int force);
+extern void Tree_HDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int x2);
+extern void Tree_VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int y1, int y2);
+extern void Tree_DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height, int open);
 typedef struct DotState
 {
     int stuff[10];
 } DotState;
-extern void DotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *dotState);
-extern void DotRect_Draw(DotState *dotState, int x, int y, int width, int height);
-extern void DotRect_Restore(DotState *dotState);
+extern void TreeDotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *dotState);
+extern void TreeDotRect_Draw(DotState *dotState, int x, int y, int width, int height);
+extern void TreeDotRect_Restore(DotState *dotState);
 typedef struct TextLayout_ *TextLayout;
 extern TextLayout TextLayout_Compute(Tk_Font tkfont, CONST char *string,
 	int numChars, int wrapLength, Tk_Justify justify, int maxLines, int flags);
@@ -882,16 +885,16 @@ extern void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
 	int src_x, int src_y, int width, int height, int dest_x, int dest_y);
 extern TkRegion Tree_GetRegion(TreeCtrl *tree);
 extern void Tree_FreeRegion(TreeCtrl *tree, TkRegion region);
-extern void Tk_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
-extern void Tk_OffsetRegion(TkRegion region, int xOffset, int yOffset);
+extern void Tree_FillRegion(Display *display, Drawable drawable, GC gc, TkRegion rgn);
+extern void Tree_OffsetRegion(TkRegion region, int xOffset, int yOffset);
 extern int Tree_ScrollWindow(TreeCtrl *tree, GC gc, int x, int y,
 	int width, int height, int dx, int dy, TkRegion damageRgn);
-extern void UnsetClipMask(TreeCtrl *tree, Drawable drawable, GC gc);
-extern void XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha);
+extern void Tree_UnsetClipMask(TreeCtrl *tree, Drawable drawable, GC gc);
+extern void Tree_XImage2Photo(Tcl_Interp *interp, Tk_PhotoHandle photoH, XImage *ximage, int alpha);
 
 #define PAD_TOP_LEFT     0
 #define PAD_BOTTOM_RIGHT 1
-extern Tk_ObjCustomOption PadAmountOption;
+extern Tk_ObjCustomOption TreeCtrlCO_pad;
 
 extern int       TreeCtrl_GetPadAmountFromObj(Tcl_Interp *interp,
 	Tk_Window tkwin, Tcl_Obj *padObj,
@@ -900,8 +903,16 @@ extern Tcl_Obj * TreeCtrl_NewPadAmountObj(int *padAmounts);
 
 /*****/
 
+#define ObjectIsEmpty TreeCtrl_ObjectIsEmpty
 extern int ObjectIsEmpty(Tcl_Obj *obj);
 
+#define pstBitmap TreeCtrl_pstBitmap
+#define pstBoolean TreeCtrl_pstBoolean
+#define pstBorder TreeCtrl_pstBorder
+#define pstColor TreeCtrl_pstColor
+#define pstFont TreeCtrl_pstFont
+#define pstImage TreeCtrl_pstImage
+#define pstRelief TreeCtrl_pstRelief
 extern PerStateType pstBitmap;
 extern PerStateType pstBoolean;
 extern PerStateType pstBorder;
@@ -954,14 +965,14 @@ extern void PSTRestore(TreeCtrl *tree, PerStateType *typePtr,
     PerStateInfo *pInfo, PerStateInfo *pSave);
 
 #ifdef ALLOC_HAX
-extern ClientData AllocHax_Init(void);
-extern void AllocHax_Finalize(ClientData data);
-extern char *AllocHax_Alloc(ClientData data, Tk_Uid id, int size);
-extern char *AllocHax_CAlloc(ClientData data, Tk_Uid id, int size, int count, int roundUp);
-extern char *AllocHax_Realloc(ClientData data, Tk_Uid id, char *ptr, int size1, int size2);
-extern void AllocHax_Free(ClientData data, Tk_Uid id, char *ptr, int size);
-extern void AllocHax_CFree(ClientData data, Tk_Uid id, char *ptr, int size, int count, int roundUp);
-extern void AllocHax_Stats(Tcl_Interp *interp, ClientData data);
+extern ClientData TreeAlloc_Init(void);
+extern void TreeAlloc_Finalize(ClientData data);
+extern char *TreeAlloc_Alloc(ClientData data, Tk_Uid id, int size);
+extern char *TreeAlloc_CAlloc(ClientData data, Tk_Uid id, int size, int count, int roundUp);
+extern char *TreeAlloc_Realloc(ClientData data, Tk_Uid id, char *ptr, int size1, int size2);
+extern void TreeAlloc_Free(ClientData data, Tk_Uid id, char *ptr, int size);
+extern void TreeAlloc_CFree(ClientData data, Tk_Uid id, char *ptr, int size, int count, int roundUp);
+extern void TreeAlloc_Stats(Tcl_Interp *interp, ClientData data);
 #endif
 
 /*****/
@@ -1010,7 +1021,7 @@ extern Tk_Uid *TagInfo_Names(TreeCtrl *tree, TagInfo *tagInfo, Tk_Uid *tags, int
 extern TagInfo *TagInfo_Copy(TreeCtrl *tree, TagInfo *tagInfo);
 extern void TagInfo_Free(TreeCtrl *tree, TagInfo *tagInfo);
 extern int TagInfo_FromObj(TreeCtrl *tree, Tcl_Obj *objPtr, TagInfo **tagInfoPtr);
-extern Tk_ObjCustomOption TagInfoCO;
+extern Tk_ObjCustomOption TreeCtrlCO_tagInfo;
 
 /*
  * This struct holds information about a tag expression.
@@ -1040,7 +1051,7 @@ extern int TagExpr_Scan(TagExpr *expr);
 extern int TagExpr_Eval(TagExpr *expr, TagInfo *tags);
 extern void TagExpr_Free(TagExpr *expr);
 
-extern Tk_OptionSpec *OptionSpec_Find(Tk_OptionSpec *optionTable, CONST char *optionName);
+extern Tk_OptionSpec *Tree_FindOptionSpec(Tk_OptionSpec *optionTable, CONST char *optionName);
     
 extern Tk_ObjCustomOption *PerStateCO_Alloc(CONST char *optionName,
     PerStateType *typePtr, StateFromObjProc proc);
@@ -1080,9 +1091,9 @@ extern int ItemButtonCO_Init(Tk_OptionSpec *optionTable, CONST char *optionName,
 extern int Tree_GetIntForIndex(TreeCtrl *tree, Tcl_Obj *objPtr, int *indexPtr,
     int *endRelativePtr);
 
-extern Tk_ObjCustomOption pixelsCO;
-extern Tk_ObjCustomOption stringCO;
-extern Tk_ObjCustomOption styleCO;
+extern Tk_ObjCustomOption TreeCtrlCO_pixels;
+extern Tk_ObjCustomOption TreeCtrlCO_string;
+extern Tk_ObjCustomOption TreeCtrlCO_style;
 
 /*****/
 

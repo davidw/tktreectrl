@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.99 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.100 2007/01/23 22:41:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -95,7 +95,7 @@ static Tk_OptionSpec itemOptionSpecs[] = {
      TK_OPTION_NULL_OK, (ClientData) NULL, ITEM_CONF_SIZE},
     {TK_OPTION_CUSTOM, "-tags", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(TreeItem_, tagInfo),
-     TK_OPTION_NULL_OK, (ClientData) &TagInfoCO, 0},
+     TK_OPTION_NULL_OK, (ClientData) &TreeCtrlCO_tagInfo, 0},
     {TK_OPTION_CUSTOM, "-visible", (char *) NULL, (char *) NULL,
      "1", -1, Tk_Offset(TreeItem_, flags),
      0, (ClientData) NULL, ITEM_CONF_VISIBLE},
@@ -125,7 +125,7 @@ Column_Alloc(
     )
 {
 #ifdef ALLOC_HAX
-    Column *column = (Column *) AllocHax_Alloc(tree->allocData, ItemColumnUid,
+    Column *column = (Column *) TreeAlloc_Alloc(tree->allocData, ItemColumnUid,
 	    sizeof(Column));
 #else
     Column *column = (Column *) ckalloc(sizeof(Column));
@@ -438,7 +438,7 @@ TreeItemColumn_GetNext(
  *----------------------------------------------------------------------
  */
 
-Column *
+static Column *
 Column_FreeResources(
     TreeCtrl *tree,		/* Widget info. */
     Column *self		/* Column to free. */
@@ -449,7 +449,7 @@ Column_FreeResources(
     if (self->style != NULL)
 	TreeStyle_FreeResources(tree, self->style);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, ItemColumnUid, (char *) self, sizeof(Column));
+    TreeAlloc_Free(tree->allocData, ItemColumnUid, (char *) self, sizeof(Column));
 #else
     WFREE(self, Column);
 #endif
@@ -589,7 +589,7 @@ Item_Alloc(
     )
 {
 #ifdef ALLOC_HAX
-    TreeItem item = (TreeItem) AllocHax_Alloc(tree->allocData, ItemUid, sizeof(TreeItem_));
+    TreeItem item = (TreeItem) TreeAlloc_Alloc(tree->allocData, ItemUid, sizeof(TreeItem_));
 #else
     TreeItem item = (TreeItem) ckalloc(sizeof(TreeItem_));
 #endif
@@ -2369,7 +2369,7 @@ TreeItem_FromObj(
 /*
  *----------------------------------------------------------------------
  *
- * ItemForEach_Start --
+ * TreeItemForEach_Start --
  *
  *	Begin iterating over items. A command might accept two item
  *	descriptions for a range of items, or a single item description
@@ -2387,11 +2387,11 @@ TreeItem_FromObj(
  */
 
 TreeItem
-ItemForEach_Start(
+TreeItemForEach_Start(
     TreeItemList *items,	/* List of items. */
     TreeItemList *item2s,	/* List of items or NULL. */
     ItemForEach *iter		/* Returned info, pass to
-				   ItemForEach_Next. */
+				   TreeItemForEach_Next. */
     )
 {
     TreeCtrl *tree = items->tree;
@@ -2429,7 +2429,7 @@ ItemForEach_Start(
 /*
  *----------------------------------------------------------------------
  *
- * ItemForEach_Next --
+ * TreeItemForEach_Next --
  *
  *	Returns the next item to iterate over. Keep calling this until
  *	the result is NULL.
@@ -2444,8 +2444,8 @@ ItemForEach_Start(
  */
 
 TreeItem
-ItemForEach_Next(
-    ItemForEach *iter		/* Initialized by ItemForEach_Start. */
+TreeItemForEach_Next(
+    ItemForEach *iter		/* Initialized by TreeItemForEach_Start. */
     )
 {
     TreeCtrl *tree = iter->tree;
@@ -3217,7 +3217,7 @@ TreeItem_Release(
     )
 {
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, ItemUid, (char *) item, sizeof(TreeItem_));
+    TreeAlloc_Free(tree->allocData, ItemUid, (char *) item, sizeof(TreeItem_));
 #else
     WFREE(item, TreeItem_);
 #endif
@@ -3312,7 +3312,7 @@ int TreeItem_Height(
 
     /* Can't have less height than our button */
     if (TreeItem_HasButton(tree, item)) {
-	buttonHeight = ButtonHeight(tree, item->state);
+	buttonHeight = Tree_ButtonHeight(tree, item->state);
     }
 
     /* User specified a fixed height for this item */
@@ -4198,7 +4198,7 @@ TreeItem_DrawLines(
 
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
-		VDotLine(tree, drawable, tree->lineGC,
+		Tree_VDotLine(tree, drawable, tree->lineGC,
 			lineLeft + i,
 			top,
 			bottom);
@@ -4217,7 +4217,7 @@ TreeItem_DrawLines(
     if (hasPrev || hasNext) {
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
-		HDotLine(tree, drawable, tree->lineGC,
+		Tree_HDotLine(tree, drawable, tree->lineGC,
 			lineLeft + vert,
 			lineTop + i,
 			x /* + tree->columnTreeLeft */ + indent);
@@ -4247,7 +4247,7 @@ TreeItem_DrawLines(
 	if (item != NULL) {
 	    if (tree->lineStyle == LINE_STYLE_DOT) {
 		for (i = 0; i < tree->lineThickness; i++)
-		    VDotLine(tree, drawable, tree->lineGC,
+		    Tree_VDotLine(tree, drawable, tree->lineGC,
 			    lineLeft + i,
 			    y,
 			    y + height);

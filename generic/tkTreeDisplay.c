@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.81 2007/01/21 23:20:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.82 2007/01/23 22:41:30 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4686,7 +4686,7 @@ DrawColumnBackground(
 	    gc = TreeColumn_BackgroundGC(treeColumn, 0);
 	if (gc == None)
 	    gc = backgroundGC;
-	Tk_FillRegion(tree->display, drawable, gc, dirtyRgn);
+	Tree_FillRegion(tree->display, drawable, gc, dirtyRgn);
 	return;
     }
 
@@ -4872,7 +4872,7 @@ DrawWhitespace(
      * color. */
     if (!ComplexWhitespace(tree)) {
 	GC gc = Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC);
-	Tk_FillRegion(tree->display, drawable, gc, dirtyRgn);
+	Tree_FillRegion(tree->display, drawable, gc, dirtyRgn);
 	return;
     }
 
@@ -5650,15 +5650,15 @@ displayRetry:
 	    GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
 
 	    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-		Tk_FillRegion(tree->display, Tk_WindowId(tkwin),
+		Tree_FillRegion(tree->display, Tk_WindowId(tkwin),
 			tree->debug.gcDraw, wsRgnDif);
 		DisplayDelay(tree);
 	    }
 
 	    /* FIXME: only if backgroundImage is transparent */
-	    Tk_OffsetRegion(wsRgnDif, -wsBox.x, -wsBox.y);
-	    Tk_FillRegion(tree->display, pixmap, gc, wsRgnDif);
-	    Tk_OffsetRegion(wsRgnDif, wsBox.x, wsBox.y);
+	    Tree_OffsetRegion(wsRgnDif, -wsBox.x, -wsBox.y);
+	    Tree_FillRegion(tree->display, pixmap, gc, wsRgnDif);
+	    Tree_OffsetRegion(wsRgnDif, wsBox.x, wsBox.y);
 
 /*	    tree->drawableXOrigin = tree->xOrigin + wsBox.x;
 	    tree->drawableYOrigin = tree->yOrigin + wsBox.y;*/
@@ -5707,14 +5707,14 @@ displayRetry:
 	    GC gc = Tk_3DBorderGC(tkwin, tree->border, TK_3D_FLAT_GC);
 #endif
 	    if (tree->debug.enable && tree->debug.display && tree->debug.drawColor) {
-		Tk_FillRegion(tree->display, Tk_WindowId(tkwin),
+		Tree_FillRegion(tree->display, Tk_WindowId(tkwin),
 			tree->debug.gcDraw, wsRgnDif);
 		DisplayDelay(tree);
 	    }
 #ifdef COMPLEX_WHITESPACE
 	    DrawWhitespace(tree, drawable, wsRgnDif);
 #else
-	    Tk_FillRegion(tree->display, drawable, gc, wsRgnDif);
+	    Tree_FillRegion(tree->display, drawable, gc, wsRgnDif);
 #endif
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		DblBufWinDirty(tree, wsBox.x, wsBox.y, wsBox.x + wsBox.width,
@@ -7137,7 +7137,7 @@ Tree_InvalidateRegion(
     Tree_FreeRegion(tree, rgn);
 
     if (tree->debug.enable && tree->debug.display && tree->debug.eraseColor) {
-	Tk_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
+	Tree_FillRegion(tree->display, Tk_WindowId(tree->tkwin),
 		tree->debug.gcErase, region);
 	DisplayDelay(tree);
     }
@@ -7363,7 +7363,7 @@ TreeDInfo_Free(
 }
 
 int
-DumpDInfo(
+Tree_DumpDInfo(
     TreeCtrl *tree,		/* Widget info. */
     int objc,			/* Number of arguments. */
     Tcl_Obj *CONST objv[]	/* Argument values. */

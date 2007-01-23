@@ -5,13 +5,13 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.72 2006/12/23 04:32:08 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.73 2007/01/23 22:41:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
 #include "tkTreeElem.h"
 
-/* This is the roundUp argument to AllocHax_CAlloc. */
+/* This is the roundUp argument to TreeAlloc_CAlloc. */
 #define ELEMENT_LINK_ROUND 1
 
 /* Define this for performance gain and increased memory usage. */
@@ -104,7 +104,7 @@ struct IStyle
  */
 struct MElementLink
 {
-    Element *elem;		/* Master element. */
+    TreeElement elem;		/* Master element. */
     int ePadX[2]; /* external horizontal padding */
     int ePadY[2]; /* external vertical padding */
     int iPadX[2]; /* internal horizontal padding */
@@ -122,7 +122,7 @@ struct MElementLink
  */
 struct IElementLink
 {
-    Element *elem;		/* Master or instance element. */
+    TreeElement elem;		/* Master or instance element. */
 #ifdef CACHE_ELEM_SIZE
     int neededWidth;
     int neededHeight;
@@ -464,13 +464,13 @@ static void
 Element_NeededSize(
     TreeCtrl *tree,		/* Widget info. */
     MElementLink *eLink1,	/* Master style layout info. */
-    Element *elem,		/* Master/Instance element. */
+    TreeElement elem,		/* Master/Instance element. */
     int state,			/* STATE_xxx flags. */
     int *widthPtr,		/* Out: width */
     int *heightPtr		/* Out: height */
     )
 {
-    ElementArgs args;
+    TreeElementArgs args;
     int width, height;
 
     if ((eLink1->fixedWidth >= 0) && (eLink1->fixedHeight >= 0)) {
@@ -1713,7 +1713,7 @@ Style_DoLayout(
 	struct Layout *layout = &layouts[i];
 	MElementLink *eLink1 = layout->master;
 	IElementLink *eLink2 = layout->eLink;
-	ElementArgs args;
+	TreeElementArgs args;
 
 	if (IS_HIDDEN(layout))
 	    continue;
@@ -2304,7 +2304,7 @@ void TreeStyle_Draw(
     MStyle *masterStyle = style->master;
     TreeCtrl *tree = drawArgs->tree;
     int *bounds = drawArgs->bounds;
-    ElementArgs args;
+    TreeElementArgs args;
     int i, x, y, minWidth, minHeight;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
 #undef DEBUG_DRAW
@@ -2357,7 +2357,7 @@ void TreeStyle_Draw(
 
 	/* Don't "draw" window elements. TreeStyle_UpdateWindowPositions()
 	 * does that for us. */
-	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
+	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &TreeElemTypeWindow))
 	    continue;
 
 	if (PerStateBoolean_ForState(tree, &layout->master->draw,
@@ -2492,7 +2492,7 @@ TreeStyle_UpdateWindowPositions(
     MStyle *masterStyle = style->master;
     TreeCtrl *tree = drawArgs->tree;
     int *bounds = drawArgs->bounds;
-    ElementArgs args;
+    TreeElementArgs args;
     int i, x, y, minWidth, minHeight;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
     int numElements = masterStyle->numElements;
@@ -2500,7 +2500,7 @@ TreeStyle_UpdateWindowPositions(
     /* FIXME: Perhaps remember whether this style has any window
      * elements */
     for (i = 0; i < numElements; i++) {
-	if (ELEMENT_TYPE_MATCHES(masterStyle->elements[i].elem->typePtr, &elemTypeWindow))
+	if (ELEMENT_TYPE_MATCHES(masterStyle->elements[i].elem->typePtr, &TreeElemTypeWindow))
 	    break;
     }
     if (i == numElements)
@@ -2549,7 +2549,7 @@ TreeStyle_UpdateWindowPositions(
 	if (IS_HIDDEN(layout))
 	    continue;
 
-	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &elemTypeWindow))
+	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &TreeElemTypeWindow))
 	    continue;
 
 	if (PerStateBoolean_ForState(tree, &layout->master->draw,
@@ -2614,7 +2614,7 @@ TreeStyle_OnScreen(
     )
 {
     IStyle *style = (IStyle *) style_;
-    ElementArgs args;
+    TreeElementArgs args;
     int i;
 
     args.tree = tree;
@@ -2650,11 +2650,11 @@ TreeStyle_OnScreen(
 static void
 Element_FreeResources(
     TreeCtrl *tree,		/* Widget info. */
-    Element *elem		/* Record to free. */
+    TreeElement elem		/* Record to free. */
     )
 {
-    ElementType *typePtr = elem->typePtr;
-    ElementArgs args;
+    TreeElementType *typePtr = elem->typePtr;
+    TreeElementArgs args;
     Tcl_HashEntry *hPtr;
 
     if (elem->master == NULL) {
@@ -2669,9 +2669,9 @@ Element_FreeResources(
 	tree->tkwin);
     DynamicOption_Free(tree, elem->options, typePtr->optionSpecs);
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
+    TreeAlloc_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
 #else
-    WFREE(elem, Element);
+    WFREE(elem, TreeElement);
 #endif
 }
 
@@ -2694,7 +2694,7 @@ Element_FreeResources(
 static MElementLink *
 MElementLink_Init(
     MElementLink *eLink,	/* Existing record to initialize. */
-    Element *elem		/* Existing element to point to. */
+    TreeElement elem		/* Existing element to point to. */
     )
 {
     memset(eLink, '\0', sizeof(MElementLink));
@@ -2796,14 +2796,14 @@ MStyle_FreeResources(
 	for (i = 0; i < style->numElements; i++)
 	    MElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, MElementLinkUid, (char *) style->elements,
+	TreeAlloc_CFree(tree->allocData, MElementLinkUid, (char *) style->elements,
 		sizeof(MElementLink), style->numElements, ELEMENT_LINK_ROUND);
 #else
 	WCFREE(style->elements, MElementLink, style->numElements);
 #endif
     }
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
+    TreeAlloc_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
     WFREE(style, MStyle);
 #endif
@@ -2838,7 +2838,7 @@ IStyle_FreeResources(
 	for (i = 0; i < masterStyle->numElements; i++)
 	    IElementLink_FreeResources(tree, &style->elements[i]);
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, IElementLinkUid,
+	TreeAlloc_CFree(tree->allocData, IElementLinkUid,
 		(char *) style->elements, sizeof(IElementLink),
 		masterStyle->numElements, ELEMENT_LINK_ROUND);
 #else
@@ -2846,7 +2846,7 @@ IStyle_FreeResources(
 #endif
     }
 #ifdef ALLOC_HAX
-    AllocHax_Free(tree->allocData, IStyleUid, (char *) style, sizeof(IStyle));
+    TreeAlloc_Free(tree->allocData, IStyleUid, (char *) style, sizeof(IStyle));
 #else
     WFREE(style, IStyle);
 #endif
@@ -2904,7 +2904,7 @@ static MElementLink *
 MStyle_FindElem(
     TreeCtrl *tree,		/* Widget info. */
     MStyle *style,		/* Style to search. */
-    Element *master,		/* Master element to find. */
+    TreeElement master,		/* Master element to find. */
     int *index			/* Returned index, may be NULL. */
     )
 {
@@ -2942,7 +2942,7 @@ static IElementLink *
 IStyle_FindElem(
     TreeCtrl *tree,		/* Widget info. */
     IStyle *style,		/* Style to search. */
-    Element *master,		/* Master element to find. */
+    TreeElement master,		/* Master element to find. */
     int *index			/* Returned index, may be NULL. */
     )
 {
@@ -2981,13 +2981,12 @@ int
 TreeStyle_FindElement(
     TreeCtrl *tree,		/* Widget info. */
     TreeStyle style_,		/* Token of style to search. */
-    TreeElement elem_,		/* Master element to find. */
+    TreeElement elem,		/* Master element to find. */
     int *index			/* Returned index, may be NULL. */
     )
 {
     MStyle *masterStyle = (MStyle *) style_;
     IStyle *style = (IStyle *) style_;
-    Element *elem = (Element *) elem_;
 
     if (((style->master == NULL) &&
 	    (MStyle_FindElem(tree, masterStyle, elem, index) == NULL)) ||
@@ -3020,15 +3019,15 @@ TreeStyle_FindElement(
  *----------------------------------------------------------------------
  */
 
-static Element *
+static TreeElement
 Element_CreateAndConfig(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. Should
 				 * be NULL for a master element. */
     TreeItemColumn column,	/* Item-column containing the element.
 				 * Should be NULL for a master element. */
-    Element *masterElem,	/* Master element if creating an instance. */
-    ElementType *type,		/* Element type. Should be NULL when
+    TreeElement masterElem,	/* Master element if creating an instance. */
+    TreeElementType *type,	/* Element type. Should be NULL when
 				 * creating an instance. */
     CONST char *name,		/* Name of master element, NULL for an
 				 * instance. */
@@ -3036,8 +3035,8 @@ Element_CreateAndConfig(
     Tcl_Obj *CONST objv[]	/* options. */
     )
 {
-    Element *elem;
-    ElementArgs args;
+    TreeElement elem;
+    TreeElementArgs args;
 
     if (masterElem != NULL) {
 	type = masterElem->typePtr;
@@ -3045,9 +3044,10 @@ Element_CreateAndConfig(
     }
 
 #ifdef ALLOC_HAX
-    elem = (Element *) AllocHax_Alloc(tree->allocData, type->name, type->size);
+    elem = (TreeElement) TreeAlloc_Alloc(tree->allocData, type->name,
+	    type->size);
 #else
-    elem = (Element *) ckalloc(type->size);
+    elem = (TreeElement) ckalloc(type->size);
 #endif
     memset(elem, '\0', type->size);
     elem->name = Tk_GetUid(name);
@@ -3060,9 +3060,9 @@ Element_CreateAndConfig(
     args.create.column = column;
     if ((*type->createProc)(&args) != TCL_OK) {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
+	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, Element);
+	WFREE(elem, TreeElement);
 #endif
 	return NULL;
     }
@@ -3070,9 +3070,9 @@ Element_CreateAndConfig(
     if (Tk_InitOptions(tree->interp, (char *) elem,
 	type->optionTable, tree->tkwin) != TCL_OK) {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
+	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, Element);
+	WFREE(elem, TreeElement);
 #endif
 	return NULL;
     }
@@ -3088,9 +3088,9 @@ Element_CreateAndConfig(
 	    tree->tkwin);
 	DynamicOption_Free(tree, elem->options, type->optionSpecs);
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, type->name, (char *) elem, type->size);
+	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, Element);
+	WFREE(elem, TreeElement);
 #endif
 	return NULL;
     }
@@ -3133,13 +3133,13 @@ Style_CreateElem(
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
     IStyle *style,		/* Style to search/add the element to. */
-    Element *masterElem,	/* Element to find or create and instance of. */
+    TreeElement masterElem,	/* Element to find or create and instance of. */
     int *isNew)			/* If non-NULL, set to TRUE if a new instance
 				 * element was created. */
 {
     MStyle *masterStyle = style->master;
     IElementLink *eLink = NULL;
-    Element *elem;
+    TreeElement elem;
     int i;
 
     if (masterElem->master != NULL)
@@ -3202,7 +3202,7 @@ TreeStyle_NewInstance(
     int i;
 
 #ifdef ALLOC_HAX
-    copy = (IStyle *) AllocHax_Alloc(tree->allocData, IStyleUid, sizeof(IStyle));
+    copy = (IStyle *) TreeAlloc_Alloc(tree->allocData, IStyleUid, sizeof(IStyle));
 #else
     copy = (IStyle *) ckalloc(sizeof(IStyle));
 #endif
@@ -3212,7 +3212,7 @@ TreeStyle_NewInstance(
     copy->neededHeight = -1;
     if (style->numElements > 0) {
 #ifdef ALLOC_HAX
-	copy->elements = (IElementLink *) AllocHax_CAlloc(tree->allocData,
+	copy->elements = (IElementLink *) TreeAlloc_CAlloc(tree->allocData,
 		IElementLinkUid, sizeof(IElementLink), style->numElements,
 		ELEMENT_LINK_ROUND);
 #else
@@ -3253,7 +3253,7 @@ static int
 Element_FromObj(
     TreeCtrl *tree,		/* Widget info. */
     Tcl_Obj *obj,		/* Object to convert from. */
-    Element **elemPtr		/* Returned record. */
+    TreeElement *elemPtr	/* Returned record. */
     )
 {
     char *name;
@@ -3266,7 +3266,7 @@ Element_FromObj(
 	    NULL);
 	return TCL_ERROR;
     }
-    (*elemPtr) = (Element *) Tcl_GetHashValue(hPtr);
+    (*elemPtr) = (TreeElement) Tcl_GetHashValue(hPtr);
     return TCL_OK;
 }
 
@@ -3293,7 +3293,7 @@ TreeElement_FromObj(
     TreeElement *elemPtr	/* Returned master element token. */
     )
 {
-    return Element_FromObj(tree, obj, (Element **) elemPtr);
+    return Element_FromObj(tree, obj, elemPtr);
 }
 
 
@@ -3316,11 +3316,11 @@ TreeElement_FromObj(
 int
 TreeElement_IsType(
     TreeCtrl *tree,		/* Widget info. */
-    TreeElement elem_,		/* Element to check. */
+    TreeElement elem,		/* Element to check. */
     CONST char *type		/* NULL-terminated element type name. */
     )
 {
-    return strcmp(((Element *) elem_)->typePtr->name, type) == 0;
+    return strcmp(elem->typePtr->name, type) == 0;
 }
 
 /*
@@ -3377,7 +3377,7 @@ TreeStyle_FromObj(
 
 static Tcl_Obj *
 Element_ToObj(
-    Element *elem		/* Element to create Tcl_Obj from. */
+    TreeElement elem		/* Element to create Tcl_Obj from. */
     )
 {
     return Tcl_NewStringObj(elem->name, -1);
@@ -3506,7 +3506,7 @@ MStyle_ChangeElementsAux(
     MStyle *style,		/* Master style to be updated. */
     int count,			/* The number of elements in the style after
 				 * this routine finishes. */
-    Element **elemList,		/* List of master elements the style uses. */
+    TreeElement *elemList,	/* List of master elements the style uses. */
     int *map			/* Array of indexes into the list of elements
 				 * currently used by the style. */
     )
@@ -3518,7 +3518,7 @@ MStyle_ChangeElementsAux(
 
     if (count > 0) {
 #ifdef ALLOC_HAX
-	eLinks = (MElementLink *) AllocHax_CAlloc(tree->allocData,
+	eLinks = (MElementLink *) TreeAlloc_CAlloc(tree->allocData,
 		MElementLinkUid, sizeof(MElementLink), count,
 		ELEMENT_LINK_ROUND);
 #else
@@ -3547,7 +3547,7 @@ MStyle_ChangeElementsAux(
 	    }
 	}
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, MElementLinkUid,
+	TreeAlloc_CFree(tree->allocData, MElementLinkUid,
 		(char *) style->elements, sizeof(MElementLink),
 		style->numElements, ELEMENT_LINK_ROUND);
 #else
@@ -3585,7 +3585,7 @@ IStyle_ChangeElementsAux(
     int oldCount,		/* The previous number of elements. */
     int count,			/* The number of elements in the style after
 				 * this routine finishes. */
-    Element **elemList,		/* List of master elements the style uses. */
+    TreeElement *elemList,	/* List of master elements the style uses. */
     int *map			/* Array of indexes into the list of elements
 				 * currently used by the style. */
     )
@@ -3597,7 +3597,7 @@ IStyle_ChangeElementsAux(
 
     if (count > 0) {
 #ifdef ALLOC_HAX
-	eLinks = (IElementLink *) AllocHax_CAlloc(tree->allocData,
+	eLinks = (IElementLink *) TreeAlloc_CAlloc(tree->allocData,
 		IElementLinkUid, sizeof(IElementLink), count,
 		ELEMENT_LINK_ROUND);
 #else
@@ -3630,7 +3630,7 @@ IStyle_ChangeElementsAux(
 	    }
 	}
 #ifdef ALLOC_HAX
-	AllocHax_CFree(tree->allocData, IElementLinkUid,
+	TreeAlloc_CFree(tree->allocData, IElementLinkUid,
 		(char *) style->elements, sizeof(IElementLink),
 		oldCount, ELEMENT_LINK_ROUND);
 #else
@@ -3668,7 +3668,7 @@ Style_ChangeElements(
     MStyle *masterStyle,	/* Master style to be updated. */
     int count,			/* The number of elements in the style after
 				 * this routine finishes. */
-    Element **elemList,		/* List of master elements the style uses. */
+    TreeElement *elemList,	/* List of master elements the style uses. */
     int *map			/* Array of indexes into the list of elements
 				 * currently used by the style. */
     )
@@ -3787,16 +3787,16 @@ static void
 Style_ElemChanged(
     TreeCtrl *tree,		/* Widget info. */
     MStyle *masterStyle,	/* Master style that uses the element. */
-    Element *masterElem,	/* Master element affected by the change. */
+    TreeElement masterElem,	/* Master element affected by the change. */
     int masterElemIndex,	/* Index of masterElem in masterStyle. */
-    int flagM,			/* Flags returned by ElementType.configProc()
+    int flagM,			/* Flags returned by TreeElementType.configProc()
 				 * if the master element was configured,
 				 * zero if the TreeCtrl was configured. */
     int flagT,			/* TREE_CONF_xxx flags if the TreeCtrl was
 				 * configured, zero if the master element
 				 * was configured. */
     int csM			/* CS_xxx flags returned by
-				 * ElementType.changeProc(). */
+				 * TreeElementType.changeProc(). */
     )
 {
     TreeItem item;
@@ -3806,7 +3806,7 @@ Style_ElemChanged(
     Tcl_HashSearch search;
     IElementLink *eLink;
     int columnIndex;
-    ElementArgs args;
+    TreeElementArgs args;
     IStyle *style;
     int eMask, cMask, iMask;
     int updateDInfo = FALSE;
@@ -3921,7 +3921,7 @@ static Tcl_Obj *
 Style_GetImageOrText(
     TreeCtrl *tree,		/* Widget info. */
     IStyle *style,		/* Style. */
-    ElementType *typePtr,	/* Type of element to look for. */
+    TreeElementType *typePtr,	/* Type of element to look for. */
     CONST char *optionName,	/* Name of config option to query. */
     Tcl_Obj **optionNameObj	/* Pointer to a Tcl_Obj to hold the
 				 * option name. Initialized
@@ -3974,7 +3974,7 @@ TreeStyle_GetImage(
     TreeStyle style_		/* Token for style to examine. */
     )
 {
-    return Style_GetImageOrText(tree, (IStyle *) style_, &elemTypeImage,
+    return Style_GetImageOrText(tree, (IStyle *) style_, &TreeElemTypeImage,
 	"-image", &confImageObj);
 }
 
@@ -4002,7 +4002,7 @@ TreeStyle_GetText(
     TreeStyle style_		/* Token for style to examine. */
     )
 {
-    return Style_GetImageOrText(tree, (IStyle *) style_, &elemTypeText,
+    return Style_GetImageOrText(tree, (IStyle *) style_, &TreeElemTypeText,
 	"-text", &confTextObj);
 }
 
@@ -4031,7 +4031,7 @@ Style_SetImageOrText(
 				 * a new instance Element is created. */
     TreeItemColumn column,	/* Item-column containing the style */
     IStyle *style,		/* The style */
-    ElementType *typePtr,	/* Element type to look for. */
+    TreeElementType *typePtr,	/* Element type to look for. */
     CONST char *optionName,	/* NULL-terminated config option name. */
     Tcl_Obj **optionNameObj,	/* Pointer to Tcl_Obj to hold the option
 				 * name; initialized on the first call. */
@@ -4048,10 +4048,10 @@ Style_SetImageOrText(
     }
 
     for (i = 0; i < masterStyle->numElements; i++) {
-	Element *masterElem = masterStyle->elements[i].elem;
+	TreeElement masterElem = masterStyle->elements[i].elem;
 	if (ELEMENT_TYPE_MATCHES(masterElem->typePtr, typePtr)) {
 	    Tcl_Obj *objv[2];
-	    ElementArgs args;
+	    TreeElementArgs args;
 
 	    eLink = Style_CreateElem(tree, item, column, style, masterElem, NULL);
 
@@ -4110,7 +4110,7 @@ TreeStyle_SetImage(
     )
 {
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
-	&elemTypeImage, "-image", &confImageObj, valueObj);
+	&TreeElemTypeImage, "-image", &confImageObj, valueObj);
 }
 
 /*
@@ -4141,7 +4141,7 @@ TreeStyle_SetText(
     )
 {
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
-	&elemTypeText, "-text", &confTextObj, valueObj);
+	&TreeElemTypeText, "-text", &confTextObj, valueObj);
 }
 
 /*
@@ -4246,15 +4246,15 @@ Style_Deleted(
 static void
 Element_Changed(
     TreeCtrl *tree,		/* Widget info. */
-    Element *masterElem,	/* Master element that may have changed. */
-    int flagM,			/* Flags returned by ElementType.configProc()
+    TreeElement masterElem,	/* Master element that may have changed. */
+    int flagM,			/* Flags returned by TreeElementType.configProc()
 				 * if the master element was configured,
 				 * zero if the TreeCtrl was configured. */
     int flagT,			/* TREE_CONF_xxx flags if the TreeCtrl was
 				 * configured, zero if the master element
 				 * was configured. */
     int csM			/* CS_xxx flags returned by
-				 * ElementType.changeProc(). */
+				 * TreeElementType.changeProc(). */
     )
 {
     Tcl_HashEntry *hPtr;
@@ -4297,7 +4297,7 @@ Element_Changed(
 static void
 Element_Deleted(
     TreeCtrl *tree,		/* Widget info. */
-    Element *masterElem		/* Master element being deleted. */
+    TreeElement masterElem	/* Master element being deleted. */
     )
 {
     Tcl_HashEntry *hPtr;
@@ -4312,10 +4312,11 @@ Element_Deleted(
 	for (i = 0; i < masterStyle->numElements; i++) {
 	    eLink = &masterStyle->elements[i];
 	    if (eLink->elem == masterElem) {
-		Element *staticElemList[STATIC_SIZE], **elemList = staticElemList;
+		TreeElement staticElemList[STATIC_SIZE],
+		    *elemList = staticElemList;
 		int staticElemMap[STATIC_SIZE], *elemMap = staticElemMap;
 
-		STATIC_ALLOC(elemList, Element *, masterStyle->numElements);
+		STATIC_ALLOC(elemList, TreeElement, masterStyle->numElements);
 		STATIC_ALLOC(elemMap, int, masterStyle->numElements);
 
 		for (j = 0; j < masterStyle->numElements; j++) {
@@ -4327,7 +4328,7 @@ Element_Deleted(
 		}
 		Style_ChangeElements(tree, masterStyle,
 		    masterStyle->numElements - 1, elemList, elemMap);
-		STATIC_FREE(elemList, Element *, masterStyle->numElements + 1);
+		STATIC_FREE(elemList, TreeElement, masterStyle->numElements + 1);
 		STATIC_FREE(elemMap, int, masterStyle->numElements + 1);
 		break;
 	    }
@@ -4356,7 +4357,7 @@ void
 Tree_RedrawElement(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
-    Element *elem		/* The element that changed. */
+    TreeElement elem		/* The element that changed. */
     )
 {
     /* Master element */
@@ -4376,7 +4377,7 @@ typedef struct Iterate
     TreeItemColumn column;
     int columnIndex;
     IStyle *style;
-    ElementType *elemTypePtr;
+    TreeElementType *elemTypePtr;
     IElementLink *eLink;
     Tcl_HashSearch search;
     Tcl_HashEntry *hPtr;
@@ -4401,7 +4402,10 @@ static int IterateItem(Iterate *iter)
     return 0;
 }
 
-TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr)
+TreeIterate
+Tree_ElementIterateBegin(
+    TreeCtrl *tree,
+    TreeElementType *elemTypePtr)
 {
     Iterate *iter;
 
@@ -4421,7 +4425,9 @@ TreeIterate Tree_ElementIterateBegin(TreeCtrl *tree, ElementType *elemTypePtr)
     return NULL;
 }
 
-TreeIterate Tree_ElementIterateNext(TreeIterate iter_)
+TreeIterate
+Tree_ElementIterateNext(
+    TreeIterate iter_)
 {
     Iterate *iter = (Iterate *) iter_;
 
@@ -4466,7 +4472,7 @@ Tree_ElementChangedItself(
     TreeCtrl *tree,		/* Widget info. */
     TreeItem item,		/* Item containing the element. */
     TreeItemColumn column,	/* Item-column containing the element. */
-    Element *elem,		/* The element that changed. */
+    TreeElement elem,		/* The element that changed. */
     int flags,			/* Element-specific configuration flags. */
     int csM			/* CS_xxx flags detailing the effects of
 				 * the change. */
@@ -4537,7 +4543,7 @@ void Tree_ElementIterateChanged(TreeIterate iter_, int mask)
 	Tree_InvalidateItemDInfo(iter->tree, NULL, iter->item, NULL);
 }
 
-Element *Tree_ElementIterateGet(TreeIterate iter_)
+TreeElement Tree_ElementIterateGet(TreeIterate iter_)
 {
     Iterate *iter = (Iterate *) iter_;
 
@@ -4570,8 +4576,8 @@ TreeStyle_TreeChanged(
 {
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
-    Element *masterElem;
-    ElementArgs args;
+    TreeElement masterElem;
+    TreeElementArgs args;
     int eMask;
 
     if (flagT == 0)
@@ -4584,7 +4590,7 @@ TreeStyle_TreeChanged(
 
     hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
     while (hPtr != NULL) {
-	masterElem = (Element *) Tcl_GetHashValue(hPtr);
+	masterElem = (TreeElement) Tcl_GetHashValue(hPtr);
 	args.elem = masterElem;
 	eMask = (*masterElem->typePtr->changeProc)(&args);
 	Element_Changed(tree, masterElem, 0, flagT, eMask);
@@ -4622,7 +4628,7 @@ TreeStyle_ElementCget(
 {
     IStyle *style = (IStyle *) style_;
     Tcl_Obj *resultObjPtr = NULL;
-    Element *elem;
+    TreeElement elem;
     IElementLink *eLink;
 
     if (Element_FromObj(tree, elemObj, &elem) != TCL_OK)
@@ -4684,9 +4690,9 @@ TreeStyle_ElementConfigure(
     )
 {
     IStyle *style = (IStyle *) style_;
-    Element *elem;
+    TreeElement elem;
     IElementLink *eLink;
-    ElementArgs args;
+    TreeElementArgs args;
 
     (*eMask) = 0;
 
@@ -4794,9 +4800,9 @@ TreeStyle_ElementActual(
     )
 {
     IStyle *style = (IStyle *) style_;
-    Element *masterElem;
+    TreeElement masterElem;
     IElementLink *eLink;
-    ElementArgs args;
+    TreeElementArgs args;
 
     if (Element_FromObj(tree, elemObj, &masterElem) != TCL_OK)
 	return TCL_ERROR;
@@ -4865,7 +4871,7 @@ TreeElementCmd(
     switch (index) {
 	case COMMAND_CGET: {
 	    Tcl_Obj *resultObjPtr = NULL;
-	    Element *elem;
+	    TreeElement elem;
 
 	    if (objc != 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name option");
@@ -4883,7 +4889,7 @@ TreeElementCmd(
 
 	case COMMAND_CONFIGURE: {
 	    Tcl_Obj *resultObjPtr = NULL;
-	    Element *elem;
+	    TreeElement elem;
 	    int eMask;
 
 	    if (objc < 4) {
@@ -4901,7 +4907,7 @@ TreeElementCmd(
 		    return TCL_ERROR;
 		Tcl_SetObjResult(interp, resultObjPtr);
 	    } else {
-		ElementArgs args;
+		TreeElementArgs args;
 
 		args.tree = tree;
 		args.elem = elem;
@@ -4927,8 +4933,8 @@ TreeElementCmd(
 	    char *name;
 	    int length;
 	    int isNew;
-	    Element *elem;
-	    ElementType *typePtr;
+	    TreeElement elem;
+	    TreeElementType *typePtr;
 	    Tcl_HashEntry *hPtr;
 
 	    if (objc < 5) {
@@ -4955,7 +4961,7 @@ TreeElementCmd(
 	}
 
 	case COMMAND_DELETE: {
-	    Element *elem;
+	    TreeElement elem;
 	    int i;
 
 	    for (i = 3; i < objc; i++) {
@@ -4971,7 +4977,7 @@ TreeElementCmd(
 	    Tcl_Obj *listObj;
 	    Tcl_HashSearch search;
 	    Tcl_HashEntry *hPtr;
-	    Element *elem;
+	    TreeElement elem;
 
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, NULL);
@@ -4980,7 +4986,7 @@ TreeElementCmd(
 	    listObj = Tcl_NewListObj(0, NULL);
 	    hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
 	    while (hPtr != NULL) {
-		elem = (Element *) Tcl_GetHashValue(hPtr);
+		elem = (TreeElement) Tcl_GetHashValue(hPtr);
 		Tcl_ListObjAppendElement(interp, listObj, Element_ToObj(elem));
 		hPtr = Tcl_NextHashEntry(&search);
 	    }
@@ -4990,9 +4996,9 @@ TreeElementCmd(
 
 	/* T element perstate E option stateList */
 	case COMMAND_PERSTATE: {
-	    Element *elem;
+	    TreeElement elem;
 	    int states[3];
-	    ElementArgs args;
+	    TreeElementArgs args;
 
 	    if (objc != 6) {
 		Tcl_WrongNumArgs(tree->interp, 3, objv,
@@ -5015,7 +5021,7 @@ TreeElementCmd(
 	}
 
 	case COMMAND_TYPE: {
-	    Element *elem;
+	    TreeElement elem;
 
 	    if (objc != 4) {
 		Tcl_WrongNumArgs(interp, 3, objv, "name");
@@ -5057,7 +5063,7 @@ Style_CreateAndConfig(
     MStyle *style;
 
 #ifdef ALLOC_HAX
-    style = (MStyle *) AllocHax_Alloc(tree->allocData, MStyleUid,
+    style = (MStyle *) TreeAlloc_Alloc(tree->allocData, MStyleUid,
 	    sizeof(MStyle));
 #else
     style = (MStyle *) ckalloc(sizeof(MStyle));
@@ -5068,7 +5074,7 @@ Style_CreateAndConfig(
     if (Tk_InitOptions(tree->interp, (char *) style,
 	tree->styleOptionTable, tree->tkwin) != TCL_OK) {
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
+	TreeAlloc_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
 	WFREE(style, MStyle);
 #endif
@@ -5080,7 +5086,7 @@ Style_CreateAndConfig(
 	NULL, NULL) != TCL_OK) {
 	Tk_FreeConfigOptions((char *) style, tree->styleOptionTable, tree->tkwin);
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
+	TreeAlloc_Free(tree->allocData, MStyleUid, (char *) style, sizeof(MStyle));
 #else
 	WFREE(style, MStyle);
 #endif
@@ -5118,7 +5124,7 @@ TreeStyle_ListElements(
     MStyle *masterStyle = (MStyle *) style_;
     IStyle *style = (IStyle *) style_;
     Tcl_Obj *listObj;
-    Element *elem;
+    TreeElement elem;
     int i, numElements = TreeStyle_NumElements(tree, style_);
 
     if (numElements <= 0)
@@ -5315,7 +5321,7 @@ StyleLayoutCmd(
     TreeCtrl *tree = clientData;
     TreeStyle _style;
     MStyle *style;
-    Element *elem;
+    TreeElement elem;
     MElementLink saved, *eLink;
     int i, index;
     static CONST char *optionNames[] = {
@@ -5526,7 +5532,7 @@ StyleLayoutCmd(
 		}
 		onion = (int *) ckalloc(sizeof(int) * objc1);
 		for (j = 0; j < objc1; j++) {
-		    Element *elem2;
+		    TreeElement elem2;
 		    MElementLink *eLink2;
 
 		    if (Element_FromObj(tree, objv1[j], &elem2) != TCL_OK) {
@@ -5889,7 +5895,7 @@ TreeStyleCmd(
 
 	/* T style elements S ?{E ...}? */
 	case COMMAND_ELEMENTS: {
-	    Element *elem, **elemList = NULL;
+	    TreeElement elem, *elemList = NULL;
 	    int i, j, count = 0;
 	    int staticMap[STATIC_SIZE], *map = staticMap;
 	    int listObjc;
@@ -5906,7 +5912,7 @@ TreeStyleCmd(
 		if (Tcl_ListObjGetElements(interp, objv[4], &listObjc, &listObjv) != TCL_OK)
 		    return TCL_ERROR;
 		if (listObjc > 0)
-		    elemList = (Element **) ckalloc(sizeof(Element *) * listObjc);
+		    elemList = (TreeElement *) ckalloc(sizeof(TreeElement_) * listObjc);
 		for (i = 0; i < listObjc; i++) {
 		    if (Element_FromObj(tree, listObjv[i], &elem) != TCL_OK) {
 			ckfree((char *) elemList);
@@ -5981,7 +5987,7 @@ TreeStyleCmd(
 /*
  *----------------------------------------------------------------------
  *
- * ButtonMaxWidth --
+ * Tree_ButtonMaxWidth --
  *
  *	Return the maximum possible size of a button in any state. This
  *	includes the size of the -buttonimage and -buttonbitmap options,
@@ -5997,7 +6003,7 @@ TreeStyleCmd(
  */
 
 int
-ButtonMaxWidth(
+Tree_ButtonMaxWidth(
     TreeCtrl *tree		/* Widget info. */
     )
 {
@@ -6024,7 +6030,7 @@ ButtonMaxWidth(
 /*
  *----------------------------------------------------------------------
  *
- * ButtonHeight --
+ * Tree_ButtonHeight --
  *
  *	Return the size of a button for a certain state.
  *
@@ -6038,7 +6044,7 @@ ButtonMaxWidth(
  */
 
 int
-ButtonHeight(
+Tree_ButtonHeight(
     TreeCtrl *tree,		/* Widget info. */
     int state			/* STATE_xxx flags. */
     )
@@ -6239,8 +6245,8 @@ TreeStyle_Remap(
     int i, indexFrom, indexTo;
     int staticMap[STATIC_SIZE], *map = staticMap;
     IElementLink *eLink;
-    Element *elemFrom, *elemTo;
-    Element *staticElemMap[STATIC_SIZE], **elemMap = staticElemMap;
+    TreeElement elemFrom, elemTo;
+    TreeElement staticElemMap[STATIC_SIZE], *elemMap = staticElemMap;
     int styleFromNumElements = styleFrom->master->numElements;
     int result = TCL_OK;
 
@@ -6260,7 +6266,7 @@ TreeStyle_Remap(
 	return TCL_ERROR;
 
     STATIC_ALLOC(map, int, styleFromNumElements);
-    STATIC_ALLOC(elemMap, Element *, styleFromNumElements);
+    STATIC_ALLOC(elemMap, TreeElement, styleFromNumElements);
 
     for (i = 0; i < styleFromNumElements; i++)
 	map[i] = -1;
@@ -6331,10 +6337,10 @@ TreeStyle_Remap(
     if (styleFromNumElements != styleTo->numElements) {
 #ifdef ALLOC_HAX
 	if (styleFromNumElements > 0)
-	    AllocHax_CFree(tree->allocData, IElementLinkUid,
+	    TreeAlloc_CFree(tree->allocData, IElementLinkUid,
 		(char *) styleFrom->elements, sizeof(IElementLink),
 		styleFromNumElements, ELEMENT_LINK_ROUND);
-	styleFrom->elements = (IElementLink *) AllocHax_CAlloc(tree->allocData,
+	styleFrom->elements = (IElementLink *) TreeAlloc_CAlloc(tree->allocData,
 	    IElementLinkUid, sizeof(IElementLink), styleTo->numElements,
 	    ELEMENT_LINK_ROUND);
 #else
@@ -6362,7 +6368,7 @@ TreeStyle_Remap(
 
 done:
     STATIC_FREE(map, int, styleFromNumElements);
-    STATIC_FREE(elemMap, Element *, styleFromNumElements);
+    STATIC_FREE(elemMap, TreeElement, styleFromNumElements);
     return result;
 }
 
@@ -6401,16 +6407,16 @@ TreeStyle_GetSortData(
 
     if (elemIndex == -1) {
 	for (i = 0; i < style->master->numElements; i++) {
-	    if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
-		return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
+	    if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &TreeElemTypeText))
+		return TreeElement_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	    eLink++;
 	}
     } else {
 	if ((elemIndex < 0) || (elemIndex >= style->master->numElements))
 	    panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
 	eLink = &style->elements[elemIndex];
-	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &elemTypeText))
-	    return Element_GetSortData(tree, eLink->elem, type, lv, dv, sv);
+	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &TreeElemTypeText))
+	    return TreeElement_GetSortData(tree, eLink->elem, type, lv, dv, sv);
     }
 
     FormatResult(tree->interp, "can't find text element in style %s",
@@ -6447,7 +6453,7 @@ TreeStyle_ValidateElements(
 {
     IStyle *style = (IStyle *) style_;
     MStyle *master = style->master;
-    Element *elem;
+    TreeElement elem;
     MElementLink *eLink;
     int i;
 
@@ -6497,10 +6503,10 @@ TreeStyle_GetElemRects(
     MStyle *master = style->master;
     int i, j, count = 0, minWidth, minHeight;
     struct Layout staticLayouts[STATIC_SIZE], *layouts = staticLayouts;
-    Element *staticElems[STATIC_SIZE], **elems = staticElems;
+    TreeElement staticElems[STATIC_SIZE], *elems = staticElems;
     MElementLink *eLink;
 
-    STATIC_ALLOC(elems, Element *, objc);
+    STATIC_ALLOC(elems, TreeElement, objc);
 
     for (j = 0; j < objc; j++) {
 	if (Element_FromObj(drawArgs->tree, objv[j], &elems[j]) != TCL_OK) {
@@ -6565,7 +6571,7 @@ TreeStyle_GetElemRects(
     STATIC_FREE(layouts, struct Layout, master->numElements);
 
 done:
-    STATIC_FREE(elems, Element *, objc);
+    STATIC_FREE(elems, TreeElement, objc);
     return count;
 }
 
@@ -6597,7 +6603,7 @@ TreeStyle_ChangeState(
     MStyle *masterStyle = style->master;
     MElementLink *eLink1;
     IElementLink *eLink2;
-    ElementArgs args;
+    TreeElementArgs args;
     int i, eMask, mask = 0;
     int undisplay;
 
@@ -6652,7 +6658,7 @@ TreeStyle_ChangeState(
 	 * not onscreen, otherwise it will never be "drawn" in the
 	 * hidden state. */
 	if (undisplay && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
-		&elemTypeWindow)) {
+		&TreeElemTypeWindow)) {
 	    args.screen.visible = FALSE;
 	    (*args.elem->typePtr->onScreenProc)(&args);
 	}
@@ -6708,7 +6714,7 @@ Tree_UndefineState(
     Tcl_HashSearch search;
     IElementLink *eLink;
     int i, columnIndex;
-    ElementArgs args;
+    TreeElementArgs args;
 
     /* Undefine the state for the -draw and -visible style layout
      * options for each element of this style. */
@@ -6761,7 +6767,7 @@ Tree_UndefineState(
 
     hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
     while (hPtr != NULL) {
-	args.elem = (Element *) Tcl_GetHashValue(hPtr);
+	args.elem = (TreeElement) Tcl_GetHashValue(hPtr);
 	(*args.elem->typePtr->undefProc)(&args);
 	hPtr = Tcl_NextHashEntry(&search);
     }
@@ -6845,7 +6851,7 @@ TreeStyle_Free(
 {
     Tcl_HashEntry *hPtr;
     Tcl_HashSearch search;
-    Element *elem;
+    TreeElement elem;
     TreeStyle style;
 
     while (1) {
@@ -6860,7 +6866,7 @@ TreeStyle_Free(
 	hPtr = Tcl_FirstHashEntry(&tree->elementHash, &search);
 	if (hPtr == NULL)
 	    break;
-	elem = (Element *) Tcl_GetHashValue(hPtr);
+	elem = (TreeElement) Tcl_GetHashValue(hPtr);
 	Element_FreeResources(tree, elem);
     }
 

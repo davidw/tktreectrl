@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.16 2007/01/21 23:17:00 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.17 2007/01/23 22:41:30 treectrl Exp $
  */
 
 /*
@@ -33,6 +33,7 @@
 #include <tk.h>
 #include "qebind.h"
 
+#define dbwin TreeCtrl_dbwin
 extern void dbwin(char *fmt, ...);
 
 /*

@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.63 2007/01/21 23:23:35 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.64 2007/01/23 22:41:31 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -108,11 +108,11 @@ static void	PadAmountOptionFree _ANSI_ARGS_((ClientData clientData,
 /*
  * The following Tk_ObjCustomOption structure can be used as clientData entry
  * of a Tk_OptionSpec record with a TK_OPTION_CUSTOM type in the form
- * "(ClientData) &PadAmountOption"; the option will then parse list with
+ * "(ClientData) &TreeCtrlCO_pad"; the option will then parse list with
  * one or two screen distances.
  */
 
-Tk_ObjCustomOption PadAmountOption = {
+Tk_ObjCustomOption TreeCtrlCO_pad = {
     "pad amount",
     PadAmountOptionSet,
     PadAmountOptionGet,
@@ -210,7 +210,7 @@ DStringAppendf(
  */
 
 int
-Ellipsis(
+Tree_Ellipsis(
     Tk_Font tkfont,		/* The font used to display the string. */
     char *string,		/* UTF-8 string, need not be NULL-terminated. */
     int numBytes,		/* Number of bytes to consider. */
@@ -283,7 +283,7 @@ Ellipsis(
 /*
  *----------------------------------------------------------------------
  *
- * HDotLine --
+ * Tree_HDotLine --
  *
  *	Draws a horizontal 1-pixel-tall dotted line.
  *
@@ -297,7 +297,7 @@ Ellipsis(
  */
 
 void
-HDotLine(
+Tree_HDotLine(
     TreeCtrl *tree,		/* Widget info. */
     Drawable drawable,		/* Where to draw. */
     GC gc,			/* Graphics context. */
@@ -343,7 +343,7 @@ HDotLine(
 /*
  *----------------------------------------------------------------------
  *
- * VDotLine --
+ * Tree_VDotLine --
  *
  *	Draws a vertical 1-pixel-wide dotted line.
  *
@@ -357,7 +357,7 @@ HDotLine(
  */
 
 void
-VDotLine(
+Tree_VDotLine(
     TreeCtrl *tree,		/* Widget info. */
     Drawable drawable,		/* Where to draw. */
     GC gc,			/* Graphics context. */
@@ -411,7 +411,7 @@ VDotLine(
 /*
  *----------------------------------------------------------------------
  *
- * DrawActiveOutline --
+ * Tree_DrawActiveOutline --
  *
  *	Draws 0 or more sides of a rectangle, dot-on dot-off, XOR style.
  *	This is used by rectangle Elements to indicate the "active"
@@ -427,7 +427,7 @@ VDotLine(
  */
 
 void
-DrawActiveOutline(
+Tree_DrawActiveOutline(
     TreeCtrl *tree,		/* Widget info. */
     Drawable drawable,		/* Where to draw. */
     int x, int y,		/* Left and top coordinates. */
@@ -569,12 +569,12 @@ struct DotStatePriv
 /*
  *----------------------------------------------------------------------
  *
- * DotRect_Setup --
+ * TreeDotRect_Setup --
  *
  *	Prepare a drawable for drawing a series of dotted XOR rectangles.
  *
  * Results:
- *	State info is returned to be used by the other DotRect_xxx()
+ *	State info is returned to be used by the other TreeDotRect_xxx()
  *	procedures.
  *
  * Side effects:
@@ -586,7 +586,7 @@ struct DotStatePriv
  */
 
 void
-DotRect_Setup(
+TreeDotRect_Setup(
     TreeCtrl *tree,		/* Widget info. */
     Drawable drawable,		/* Where to draw. */
     DotState *p			/* Where to save state info. */
@@ -606,7 +606,7 @@ DotRect_Setup(
 #endif
 
     if (sizeof(*dotState) > sizeof(*p))
-	panic("DotRect_Setup: DotState hack is too small");
+	panic("TreeDotRect_Setup: DotState hack is too small");
 
     dotState->tree = tree;
     dotState->drawable = drawable;
@@ -677,7 +677,7 @@ DotRect_Setup(
 /*
  *----------------------------------------------------------------------
  *
- * DotRect_Draw --
+ * TreeDotRect_Draw --
  *
  *	Draw a dotted XOR rectangle.
  *
@@ -691,8 +691,8 @@ DotRect_Setup(
  */
 
 void
-DotRect_Draw(
-    DotState *p,		/* Info returned by DotRect_Setup(). */
+TreeDotRect_Draw(
+    DotState *p,		/* Info returned by TreeDotRect_Setup(). */
     int x, int y,		/* Left and top coordinates. */
     int width, int height	/* Size of rectangle. */
     )
@@ -778,7 +778,7 @@ DotRect_Draw(
 /*
  *----------------------------------------------------------------------
  *
- * DotRect_Restore --
+ * TreeDotRect_Restore --
  *
  *	Restore the drawing environment.
  *
@@ -793,8 +793,8 @@ DotRect_Draw(
  */
 
 void
-DotRect_Restore(
-    DotState *p			/* Info returned by DotRect_Setup(). */
+TreeDotRect_Restore(
+    DotState *p			/* Info returned by TreeDotRect_Setup(). */
     )
 {
     struct DotStatePriv *dotState = (struct DotStatePriv *) p;
@@ -927,7 +927,7 @@ Tree_FreeRegion(
 /*
  *----------------------------------------------------------------------
  *
- * Tk_FillRegion --
+ * Tree_FillRegion --
  *
  *	Paint a region with the foreground color of a graphics context.
  *
@@ -941,7 +941,7 @@ Tree_FreeRegion(
  */
 
 void
-Tk_FillRegion(
+Tree_FillRegion(
     Display *display,		/* Display. */
     Drawable drawable,		/* Where to draw. */
     GC gc,			/* Foreground color. */
@@ -995,7 +995,7 @@ Tk_FillRegion(
 /*
  *----------------------------------------------------------------------
  *
- * Tk_OffsetRegion --
+ * Tree_OffsetRegion --
  *
  *	Offset a region.
  *
@@ -1009,7 +1009,7 @@ Tk_FillRegion(
  */
 
 void
-Tk_OffsetRegion(
+Tree_OffsetRegion(
     TkRegion region,		/* Region to modify. */
     int xOffset, int yOffset	/* Horizontal and vertical offsets. */
     )
@@ -1117,7 +1117,7 @@ Tree_ScrollWindow(
 /*
  *----------------------------------------------------------------------
  *
- * UnsetClipMask --
+ * Tree_UnsetClipMask --
  *
  *	Wrapper around XSetClipMask(). On Win32 Tk_DrawChars() does
  *	not clear the clipping region.
@@ -1132,7 +1132,7 @@ Tree_ScrollWindow(
  */
 
 void
-UnsetClipMask(
+Tree_UnsetClipMask(
     TreeCtrl *tree,		/* Widget info. */
     Drawable drawable,		/* Where to draw. */
     GC gc			/* Graphics context to modify. */
@@ -1284,7 +1284,7 @@ Tree_DrawBitmap(
 /*
  *----------------------------------------------------------------------
  *
- * XImage2Photo --
+ * Tree_XImage2Photo --
  *
  *	Copy pixels from an XImage to a Tk photo image.
  *
@@ -1301,7 +1301,7 @@ Tree_DrawBitmap(
 #if defined(WIN32) || defined(MAC_TCL) || defined(MAC_OSX_TK)
 
 void
-XImage2Photo(
+Tree_XImage2Photo(
     Tcl_Interp *interp,		/* Current interpreter. */
     Tk_PhotoHandle photoH,	/* Existing photo image. */
     XImage *ximage,		/* XImage to copy pixels from. */
@@ -1373,7 +1373,7 @@ XImage2Photo(
 #else /* not X11 */
 
 void
-XImage2Photo(
+Tree_XImage2Photo(
     Tcl_Interp *interp,		/* Current interpreter. */
     Tk_PhotoHandle photoH,	/* Existing photo image. */
     XImage *ximage,		/* XImage to copy pixels from. */
@@ -1801,8 +1801,9 @@ wrapLine:
 		    pixelsForText = wrapLength - chunkPtr->x;
 		else
 		    pixelsForText = chunkPtr->totalWidth - 1;
-		bytesThisChunk = Ellipsis(tkfont, (char *) chunkPtr->start,
-		    chunkPtr->numBytes, &pixelsForText, ellipsis, TRUE);
+		bytesThisChunk = Tree_Ellipsis(tkfont,
+			(char *) chunkPtr->start, chunkPtr->numBytes,
+			&pixelsForText, ellipsis, TRUE);
 		if (pixelsForText > wrapLength - chunkPtr->x)
 		    pixelsForText = wrapLength - chunkPtr->x;
 		if (bytesThisChunk > 0) {
@@ -2322,7 +2323,7 @@ PerStateInfo_Free(
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
 #ifdef ALLOC_HAX
-    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pInfo->data, typePtr->size,
+    TreeAlloc_CFree(tree->allocData, typePtr->name, (char *) pInfo->data, typePtr->size,
 	pInfo->count, PERSTATE_ROUNDUP);
 #else
     WIPEFREE(pInfo->data, typePtr->size * pInfo->count);
@@ -2381,7 +2382,7 @@ PerStateInfo_FromObj(
 
     if (objc == 1) {
 #ifdef ALLOC_HAX
-	pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
+	pData = (PerStateData *) TreeAlloc_CAlloc(tree->allocData,
 	    typePtr->name, typePtr->size, 1, PERSTATE_ROUNDUP);
 #else
 	pData = (PerStateData *) ckalloc(typePtr->size);
@@ -2389,7 +2390,7 @@ PerStateInfo_FromObj(
 	pData->stateOff = pData->stateOn = 0; /* all states */
 	if ((*typePtr->fromObjProc)(tree, objv[0], pData) != TCL_OK) {
 #ifdef ALLOC_HAX
-	    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pData,
+	    TreeAlloc_CFree(tree->allocData, typePtr->name, (char *) pData,
 		typePtr->size, 1, PERSTATE_ROUNDUP);
 #else
 	    WIPEFREE(pData, typePtr->size);
@@ -2407,7 +2408,7 @@ PerStateInfo_FromObj(
     }
 
 #ifdef ALLOC_HAX
-    pData = (PerStateData *) AllocHax_CAlloc(tree->allocData,
+    pData = (PerStateData *) TreeAlloc_CAlloc(tree->allocData,
 	typePtr->name, typePtr->size, objc / 2, PERSTATE_ROUNDUP);
 #else
     pData = (PerStateData *) ckalloc(typePtr->size * (objc / 2));
@@ -2438,7 +2439,7 @@ freeIt:
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
 #ifdef ALLOC_HAX
-    AllocHax_CFree(tree->allocData, typePtr->name, (char *) pInfo->data,
+    TreeAlloc_CFree(tree->allocData, typePtr->name, (char *) pInfo->data,
 	typePtr->size, objc / 2, PERSTATE_ROUNDUP);
 #else
     WIPEFREE(pInfo->data, typePtr->size * (objc / 2));
@@ -2565,27 +2566,7 @@ PerStateInfo_ObjForState(
     return NULL;
 }
 
-/*
- *----------------------------------------------------------------------
- *
- * PerStateInfo_Undefine --
- *
- *	Called when a user-defined state flag is undefined. The state
- *	flag is cleared from every PerStateData using that flag. The
- *	list object that was parsed by PerStateInfo_FromObj() is modified
- *	by removing any reference to the undefined state.
- *
- * Results:
- *	The return value is a boolean indicating whether or not pInfo
- *	was modified.
- *
- * Side effects:
- *	The list object pointed to by pInfo->obj may be recreated.
- *
- *----------------------------------------------------------------------
- */
-
-Tcl_Obj *
+static Tcl_Obj *
 DuplicateListObj(
     Tcl_Obj *objPtr
     )
@@ -2605,6 +2586,26 @@ DuplicateListObj(
     result = Tcl_ListObjGetElements(NULL, objPtr, &objc, &objv);
     return Tcl_NewListObj(objc, objv);
 }
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * PerStateInfo_Undefine --
+ *
+ *	Called when a user-defined state flag is undefined. The state
+ *	flag is cleared from every PerStateData using that flag. The
+ *	list object that was parsed by PerStateInfo_FromObj() is modified
+ *	by removing any reference to the undefined state.
+ *
+ * Results:
+ *	The return value is a boolean indicating whether or not pInfo
+ *	was modified.
+ *
+ * Side effects:
+ *	The list object pointed to by pInfo->obj may be recreated.
+ *
+ *----------------------------------------------------------------------
+ */
 
 int PerStateInfo_Undefine(
     TreeCtrl *tree,		/* Widget info. */
@@ -3145,7 +3146,7 @@ void PSTRestore(
 #ifdef ALLOC_HAX
 
 /*
- * The following AllocHax_xxx calls implement a mini memory allocator that
+ * The following TreeAlloc_xxx calls implement a mini memory allocator that
  * allocates blocks of same-sized chunks, and holds on to those chunks when
  * they are freed so they can be reused quickly. If you don't want to use it
  * just comment out #define ALLOC_HAX in tkTreeCtrl.h.
@@ -3259,7 +3260,7 @@ AllocStats_Get(
 }
 
 void
-AllocHax_Stats(
+TreeAlloc_Stats(
     Tcl_Interp *interp,
     ClientData _data
     )
@@ -3287,7 +3288,7 @@ AllocHax_Stats(
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_Alloc --
+ * TreeAlloc_Alloc --
  *
  *	Return storage for a piece of data of the given size.
  *
@@ -3302,8 +3303,8 @@ AllocHax_Stats(
  */
 
 char *
-AllocHax_Alloc(
-    ClientData _data,		/* Token returned by AllocHax_Init(). */
+TreeAlloc_Alloc(
+    ClientData _data,		/* Token returned by TreeAlloc_Init(). */
     Tk_Uid id,			/* ID for memory-usage reporting. */
     int size			/* Number of bytes needed. */
     )
@@ -3345,7 +3346,7 @@ AllocHax_Alloc(
 	block->count = freeList->blockSize;
 	block->next = freeList->blocks;
 
-/* dbwin("AllocHax_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
+/* dbwin("TreeAlloc_Alloc alloc %d of size %d\n", freeList->blockSize, size); */
 	freeList->blocks = block;
 	if (freeList->blockSize < 1024)
 	    freeList->blockSize *= 2;
@@ -3372,7 +3373,7 @@ AllocHax_Alloc(
     freeList->head = result->next;
 #ifdef TREECTRL_DEBUG
     if (!result->free)
-	panic("AllocHax_Alloc: element not marked free");
+	panic("TreeAlloc_Alloc: element not marked free");
     result->free = 0;
 #endif
     return result->body;
@@ -3381,7 +3382,7 @@ AllocHax_Alloc(
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_Realloc --
+ * TreeAlloc_Realloc --
  *
  *	Realloc.
  *
@@ -3396,8 +3397,8 @@ AllocHax_Alloc(
  */
 
 char *
-AllocHax_Realloc(
-    ClientData data,		/* Token returned by AllocHax_Init(). */
+TreeAlloc_Realloc(
+    ClientData data,		/* Token returned by TreeAlloc_Init(). */
     Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,
     int size1,			/* Number of bytes in ptr. */
@@ -3406,16 +3407,16 @@ AllocHax_Realloc(
 {
     char *ptr2;
 
-    ptr2 = AllocHax_Alloc(data, id, size2);
+    ptr2 = TreeAlloc_Alloc(data, id, size2);
     memcpy(ptr2, ptr, MIN(size1, size2));
-    AllocHax_Free(data, id, ptr, size1);
+    TreeAlloc_Free(data, id, ptr, size1);
     return ptr2;
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_Free --
+ * TreeAlloc_Free --
  *
  *	Mark a piece of memory as free for reuse.
  *
@@ -3430,13 +3431,13 @@ AllocHax_Realloc(
  */
 
 void
-AllocHax_Free(
-    ClientData _data,		/* Token returned by AllocHax_Init(). */
+TreeAlloc_Free(
+    ClientData _data,		/* Token returned by TreeAlloc_Init(). */
     Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,			/* Memory to mark for reuse. Must have
-				 * been allocated by AllocHax_Alloc(). */
+				 * been allocated by TreeAlloc_Alloc(). */
     int size			/* Number of bytes. Must match the size
-				 * passed to AllocHax_CAlloc(). */
+				 * passed to TreeAlloc_CAlloc(). */
     )
 {
     AllocData *data = (AllocData *) _data;
@@ -3464,14 +3465,14 @@ AllocHax_Free(
 
 #ifdef TREECTRL_DEBUG
     if (elem->free)
-	panic("AllocHax_Free: element already marked free");
+	panic("TreeAlloc_Free: element already marked free");
     if (elem->size != size)
-	panic("AllocHax_Free: element size %d != size %d", elem->size, size);
+	panic("TreeAlloc_Free: element size %d != size %d", elem->size, size);
 #endif
     while (freeList != NULL && freeList->size != size)
 	freeList = freeList->next;
     if (freeList == NULL)
-	panic("AllocHax_Free: can't find free list for size %d", size);
+	panic("TreeAlloc_Free: can't find free list for size %d", size);
 
     WIPE(elem->body, size);
     elem->next = freeList->head;
@@ -3484,7 +3485,7 @@ AllocHax_Free(
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_CAlloc --
+ * TreeAlloc_CAlloc --
  *
  *	Return storage for an array of pieces of memory.
  *
@@ -3498,8 +3499,8 @@ AllocHax_Free(
  */
 
 char *
-AllocHax_CAlloc(
-    ClientData data,		/* Token returned by AllocHax_Init(). */
+TreeAlloc_CAlloc(
+    ClientData data,		/* Token returned by TreeAlloc_Init(). */
     Tk_Uid id,			/* ID for memory-usage reporting. */
     int size,			/* Number of bytes needed for each piece
 				 * of memory. */
@@ -3517,13 +3518,13 @@ AllocHax_CAlloc(
 #ifdef ALLOC_STATS
     stats->count += count - 1;
 #endif
-    return AllocHax_Alloc(data, id, size * n);
+    return TreeAlloc_Alloc(data, id, size * n);
 }
 
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_CFree --
+ * TreeAlloc_CFree --
  *
  *	Mark a piece of memory as free for reuse.
  *
@@ -3538,14 +3539,14 @@ AllocHax_CAlloc(
  */
 
 void
-AllocHax_CFree(
-    ClientData data,		/* Token returned by AllocHax_Init(). */
+TreeAlloc_CFree(
+    ClientData data,		/* Token returned by TreeAlloc_Init(). */
     Tk_Uid id,			/* ID for memory-usage reporting. */
     char *ptr,			/* Memory to mark for reuse. Must have
-				 * been allocated by AllocHax_CAlloc(). */
-    int size,			/* Same arg to AllocHax_CAlloc(). */
-    int count,			/* Same arg to AllocHax_CAlloc(). */
-    int roundUp			/* Same arg to AllocHax_CAlloc(). */
+				 * been allocated by TreeAlloc_CAlloc(). */
+    int size,			/* Same arg to TreeAlloc_CAlloc(). */
+    int count,			/* Same arg to TreeAlloc_CAlloc(). */
+    int roundUp			/* Same arg to TreeAlloc_CAlloc(). */
     )
 {
     int n = (count / roundUp) * roundUp + ((count % roundUp) ? roundUp : 0);
@@ -3553,7 +3554,7 @@ AllocHax_CFree(
     AllocStats *stats = AllocStats_Get(data, id);
 #endif
 
-    AllocHax_Free(data, id, ptr, size * n);
+    TreeAlloc_Free(data, id, ptr, size * n);
 #ifdef ALLOC_STATS
     stats->count -= count - 1;
 #endif
@@ -3562,7 +3563,7 @@ AllocHax_CFree(
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_Init --
+ * TreeAlloc_Init --
  *
  *	Allocate and initialize a new memory-manager record.
  *
@@ -3576,7 +3577,7 @@ AllocHax_CFree(
  */
 
 ClientData
-AllocHax_Init(void)
+TreeAlloc_Init(void)
 {
     AllocData *data = (AllocData *) ckalloc(sizeof(AllocData));
     data->freeLists = NULL;
@@ -3589,7 +3590,7 @@ AllocHax_Init(void)
 /*
  *----------------------------------------------------------------------
  *
- * AllocHax_Finalize --
+ * TreeAlloc_Finalize --
  *
  *	Free all the memory associated with a memory-manager record.
  *
@@ -3603,9 +3604,9 @@ AllocHax_Init(void)
  */
 
 void
-AllocHax_Finalize(
+TreeAlloc_Finalize(
     ClientData _data		/* Pointer to AllocData created by
-				 * AllocHax_Init(). */
+				 * TreeAlloc_Init(). */
     )
 {
     AllocData *data = (AllocData *) _data;
@@ -3838,7 +3839,7 @@ TagInfo_Add(
     if (tagInfo == NULL) {
 	if (numTags <= TREE_TAG_SPACE) {
 #ifdef ALLOC_HAX
-	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
+	    tagInfo = (TagInfo *) TreeAlloc_Alloc(tree->allocData, TagInfoUid,
 		    sizeof(TagInfo));
 #else
 	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo));
@@ -3849,7 +3850,7 @@ TagInfo_Add(
 		((numTags % TREE_TAG_SPACE) ? TREE_TAG_SPACE : 0);
 if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 #ifdef ALLOC_HAX
-	    tagInfo = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
+	    tagInfo = (TagInfo *) TreeAlloc_Alloc(tree->allocData, TagInfoUid,
 		TAG_INFO_SIZE(tagSpace));
 #else
 	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) +
@@ -3869,7 +3870,7 @@ if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 	    if (tagInfo->tagSpace == tagInfo->numTags) {
 		tagInfo->tagSpace += TREE_TAG_SPACE;
 #ifdef ALLOC_HAX
-		tagInfo = (TagInfo *) AllocHax_Realloc(tree->allocData,
+		tagInfo = (TagInfo *) TreeAlloc_Realloc(tree->allocData,
 		    TagInfoUid, (char *) tagInfo,
 		    TAG_INFO_SIZE(tagInfo->tagSpace - TREE_TAG_SPACE),
 		    TAG_INFO_SIZE(tagInfo->tagSpace));
@@ -4012,7 +4013,7 @@ TagInfo_Copy(
     if (tagInfo != NULL) {
 	int tagSpace = tagInfo->tagSpace;
 #ifdef ALLOC_HAX
-	copy = (TagInfo *) AllocHax_Alloc(tree->allocData, TagInfoUid,
+	copy = (TagInfo *) TreeAlloc_Alloc(tree->allocData, TagInfoUid,
 		TAG_INFO_SIZE(tagSpace));
 #else
 	copy = (TagInfo *) ckalloc(TAG_INFO_SIZE(tagSpace));
@@ -4048,7 +4049,7 @@ TagInfo_Free(
 {
     if (tagInfo != NULL)
 #ifdef ALLOC_HAX
-	AllocHax_Free(tree->allocData, TagInfoUid, (char *) tagInfo,
+	TreeAlloc_Free(tree->allocData, TagInfoUid, (char *) tagInfo,
 	    TAG_INFO_SIZE(tagInfo->tagSpace));
 #else
 	ckfree((char *) tagInfo);
@@ -4197,7 +4198,7 @@ TagInfoCO_Free(
     TagInfo_Free(tree, *(TagInfo **)internalPtr);
 }
 
-Tk_ObjCustomOption TagInfoCO =
+Tk_ObjCustomOption TreeCtrlCO_tagInfo =
 {
     "tag list",
     TagInfoCO_Set,
@@ -4820,7 +4821,7 @@ TagExpr_Free(
  *----------------------------------------------------------------------
  */
 
-void
+static void
 OptionHax_Remember(
     TreeCtrl *tree,
     char *ptr
@@ -4840,7 +4841,7 @@ OptionHax_Remember(
 /*dbwin("OptionHax_Remember %p\n", ptr);*/
 }
 
-int
+static int
 OptionHax_Forget(
     TreeCtrl *tree,
     char *ptr
@@ -4861,7 +4862,7 @@ OptionHax_Forget(
 /*
  *----------------------------------------------------------------------
  *
- * OptionSpec_Find --
+ * Tree_FindOptionSpec --
  *
  *	Return a pointer to a name Tk_OptionSpec in a table.
  *
@@ -4875,7 +4876,7 @@ OptionHax_Forget(
  */
 
 Tk_OptionSpec *
-OptionSpec_Find(
+Tree_FindOptionSpec(
     Tk_OptionSpec *optionTable,
     CONST char *optionName
     )
@@ -4885,7 +4886,7 @@ OptionSpec_Find(
 	    return optionTable;
 	optionTable++;
     }
-    panic("OptionSpec_Find: can't find %s", optionName);
+    panic("Tree_FindOptionSpec: can't find %s", optionName);
     return NULL;
 }
 
@@ -5112,7 +5113,7 @@ PerStateCO_Init(
 {
     Tk_OptionSpec *specPtr;
 
-    specPtr = OptionSpec_Find(optionTable, optionName);
+    specPtr = Tree_FindOptionSpec(optionTable, optionName);
     if (specPtr->type != TK_OPTION_CUSTOM)
 	panic("PerStateCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
     if (specPtr->clientData != NULL)
@@ -5228,7 +5229,7 @@ DynamicOption_AllocIfNeeded(
 dbwin("DynamicOption_AllocIfNeeded allocated id=%d\n", id);
 #endif
 #ifdef ALLOC_HAX
-    opt = (DynamicOption *) AllocHax_Alloc(tree->allocData, DynamicOptionUid,
+    opt = (DynamicOption *) TreeAlloc_Alloc(tree->allocData, DynamicOptionUid,
 	    Tk_Offset(DynamicOption, data) + size);
 #else
     opt = (DynamicOption *) ckalloc(Tk_Offset(DynamicOption, data) + size);
@@ -5536,7 +5537,7 @@ DynamicCO_Init(
     if (size <= 0)
 	panic("DynamicCO_Init: option %s size=%d", optionName, size);
 
-    specPtr = OptionSpec_Find(optionTable, optionName);
+    specPtr = Tree_FindOptionSpec(optionTable, optionName);
     if (specPtr->type != TK_OPTION_CUSTOM)
 	panic("DynamicCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
     if (specPtr->clientData != NULL)
@@ -5614,7 +5615,7 @@ DynamicOption_Free(
 		continue;
 
 #ifdef ALLOC_HAX
-	    AllocHax_Free(tree->allocData, DynamicOptionUid, (char *) opt,
+	    TreeAlloc_Free(tree->allocData, DynamicOptionUid, (char *) opt,
 		    Tk_Offset(DynamicOption, data) + cd->size);
 #else
 	    ckfree((char *) opt);
@@ -5660,7 +5661,7 @@ DynamicOption_Free1(
 	    else
 		prev->next = opt->next;
 #ifdef ALLOC_HAX
-	    AllocHax_Free(tree->allocData, DynamicOptionUid, (char *) opt,
+	    TreeAlloc_Free(tree->allocData, DynamicOptionUid, (char *) opt,
 		    Tk_Offset(DynamicOption, data) + size);
 #else
 	    ckfree((char *) opt);
@@ -5771,7 +5772,7 @@ StringCO_Free(
     }
 }
 
-Tk_ObjCustomOption stringCO =
+Tk_ObjCustomOption TreeCtrlCO_string =
 {
     "string",
     StringCO_Set,
@@ -5863,7 +5864,7 @@ PixelsCO_Restore(
     *(int *) internalPtr = *(int *) saveInternalPtr;
 }
 
-Tk_ObjCustomOption pixelsCO =
+Tk_ObjCustomOption TreeCtrlCO_pixels =
 {
     "string",
     PixelsCO_Set,
@@ -5957,7 +5958,7 @@ StyleCO_Restore(
     *(TreeStyle *) internalPtr = *(TreeStyle *) saveInternalPtr;
 }
 
-Tk_ObjCustomOption styleCO =
+Tk_ObjCustomOption TreeCtrlCO_style =
 {
     "style",
     StyleCO_Set,
@@ -6062,9 +6063,9 @@ BooleanFlagCO_Init(
     Tk_OptionSpec *specPtr;
     Tk_ObjCustomOption *co;
 
-    specPtr = OptionSpec_Find(optionTable, optionName);
+    specPtr = Tree_FindOptionSpec(optionTable, optionName);
     if (specPtr->type != TK_OPTION_CUSTOM)
-	panic("IntegerCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+	panic("BooleanFlagCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
     if (specPtr->clientData != NULL)
 	return TCL_OK;
 
@@ -6200,9 +6201,9 @@ ItemButtonCO_Init(
     Tk_ObjCustomOption *co;
     struct ItemButtonCOClientData *cd;
 
-    specPtr = OptionSpec_Find(optionTable, optionName);
+    specPtr = Tree_FindOptionSpec(optionTable, optionName);
     if (specPtr->type != TK_OPTION_CUSTOM)
-	panic("IntegerCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
+	panic("BooleanFlagCO_Init: %s is not TK_OPTION_CUSTOM", optionName);
     if (specPtr->clientData != NULL)
 	return TCL_OK;
 
