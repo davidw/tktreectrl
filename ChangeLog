@@ -1,3 +1,7 @@
+2007-01-26  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeCtrl.h (vsnprintf): _vsnprintf on Windows.
+
 2006-08-15  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* library/filelist-bindings.tcl (::TreeCtrl::EditClose): rewrote

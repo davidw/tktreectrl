@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.87 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.88 2007/01/26 19:52:56 hobbs2 Exp $
  */
 
 #include "tkPort.h"
@@ -24,6 +24,10 @@ extern void dbwin_add_interp(Tcl_Interp *interp);
 #ifndef TRUE
 #define TRUE 1
 #define FALSE 0
+#endif
+
+#ifdef WIN32
+#define vsnprintf _vsnprintf
 #endif
 
 #ifndef MIN
