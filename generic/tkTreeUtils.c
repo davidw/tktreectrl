@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.64 2007/01/23 22:41:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.65 2007/01/31 23:27:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -387,15 +387,6 @@ Tree_VDotLine(
     DeleteObject(pen);
 
     TkWinReleaseDrawableDC(drawable, dc, &state);
-#elif defined(MAC_TCL) || defined(MAC_OSX_TK)
-    int nw;
-    int wx = x1 + tree->drawableXOrigin;
-    int wy = y1 + tree->drawableYOrigin;
-
-    nw = !(wx & 1) == !(wy & 1);
-    for (y1 += !nw; y1 < y2; y1 += 2) {
-	XFillRectangle(tree->display, drawable, gc, x1, y1, 1, 1);
-    }
 #else
     int nw;
     int wx = x1 + tree->drawableXOrigin;
@@ -2323,8 +2314,8 @@ PerStateInfo_Free(
 	pData = (PerStateData *) (((char *) pData) + typePtr->size);
     }
 #ifdef ALLOC_HAX
-    TreeAlloc_CFree(tree->allocData, typePtr->name, (char *) pInfo->data, typePtr->size,
-	pInfo->count, PERSTATE_ROUNDUP);
+    TreeAlloc_CFree(tree->allocData, typePtr->name, (char *) pInfo->data,
+	typePtr->size, pInfo->count, PERSTATE_ROUNDUP);
 #else
     WIPEFREE(pInfo->data, typePtr->size * pInfo->count);
 #endif
@@ -2607,7 +2598,8 @@ DuplicateListObj(
  *----------------------------------------------------------------------
  */
 
-int PerStateInfo_Undefine(
+int
+PerStateInfo_Undefine(
     TreeCtrl *tree,		/* Widget info. */
     PerStateType *typePtr,	/* Type-specific functions and values. */
     PerStateInfo *pInfo,	/* Per-state info to modify. */
@@ -2665,7 +2657,11 @@ int PerStateInfo_Undefine(
 
 /*****/
 
-GC Tree_GetGC(TreeCtrl *tree, unsigned long mask, XGCValues *gcValues)
+GC
+Tree_GetGC(
+    TreeCtrl *tree,
+    unsigned long mask,
+    XGCValues *gcValues)
 {
     GCCache *pGC;
     unsigned long valid = GCFont | GCForeground | GCFunction | GCBackground
@@ -2705,7 +2701,9 @@ GC Tree_GetGC(TreeCtrl *tree, unsigned long mask, XGCValues *gcValues)
     return pGC->gc;
 }
 
-void Tree_FreeAllGC(TreeCtrl *tree)
+void
+Tree_FreeAllGC(
+    TreeCtrl *tree)
 {
     GCCache *pGC = tree->gcCache, *next;
 
@@ -2727,7 +2725,11 @@ struct PerStateDataBitmap
     Pixmap bitmap;
 };
 
-static int PSDBitmapFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBitmap *pBitmap)
+static int
+PSDBitmapFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataBitmap *pBitmap)
 {
     if (ObjectIsEmpty(obj)) {
 	/* Specify empty string to override masterX */
@@ -2740,7 +2742,10 @@ static int PSDBitmapFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBitmap *pB
     return TCL_OK;
 }
 
-static void PSDBitmapFree(TreeCtrl *tree, PerStateDataBitmap *pBitmap)
+static void
+PSDBitmapFree(
+    TreeCtrl *tree,
+    PerStateDataBitmap *pBitmap)
 {
     if (pBitmap->bitmap != None)
 	Tk_FreeBitmap(tree->display, pBitmap->bitmap);
@@ -2754,7 +2759,8 @@ PerStateType pstBitmap =
     (PerStateType_FreeProc) PSDBitmapFree
 };
 
-Pixmap PerStateBitmap_ForState(
+Pixmap
+PerStateBitmap_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -2768,7 +2774,8 @@ Pixmap PerStateBitmap_ForState(
     return None;
 }
 
-void PerStateBitmap_MaxSize(
+void
+PerStateBitmap_MaxSize(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int *widthPtr,
@@ -2800,7 +2807,11 @@ struct PerStateDataBoolean
     int value;
 };
 
-static int PSDBooleanFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBoolean *pBoolean)
+static int
+PSDBooleanFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataBoolean *pBoolean)
 {
     if (ObjectIsEmpty(obj)) {
 	pBoolean->value = -1;
@@ -2811,7 +2822,10 @@ static int PSDBooleanFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBoolean *
     return TCL_OK;
 }
 
-static void PSDBooleanFree(TreeCtrl *tree, PerStateDataBoolean *pBoolean)
+static void
+PSDBooleanFree(
+    TreeCtrl *tree,
+    PerStateDataBoolean *pBoolean)
 {
 }
 
@@ -2823,7 +2837,8 @@ PerStateType pstBoolean =
     (PerStateType_FreeProc) PSDBooleanFree
 };
 
-int PerStateBoolean_ForState(
+int
+PerStateBoolean_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -2846,7 +2861,11 @@ struct PerStateDataBorder
     Tk_3DBorder border;
 };
 
-static int PSDBorderFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBorder *pBorder)
+static int
+PSDBorderFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataBorder *pBorder)
 {
     if (ObjectIsEmpty(obj)) {
 	/* Specify empty string to override masterX */
@@ -2859,7 +2878,10 @@ static int PSDBorderFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataBorder *pB
     return TCL_OK;
 }
 
-static void PSDBorderFree(TreeCtrl *tree, PerStateDataBorder *pBorder)
+static void
+PSDBorderFree(
+    TreeCtrl *tree,
+    PerStateDataBorder *pBorder)
 {
     if (pBorder->border != NULL)
 	Tk_Free3DBorder(pBorder->border);
@@ -2873,7 +2895,8 @@ PerStateType pstBorder =
     (PerStateType_FreeProc) PSDBorderFree
 };
 
-Tk_3DBorder PerStateBorder_ForState(
+Tk_3DBorder
+PerStateBorder_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -2896,7 +2919,11 @@ struct PerStateDataColor
     XColor *color;
 };
 
-static int PSDColorFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataColor *pColor)
+static int
+PSDColorFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataColor *pColor)
 {
     if (ObjectIsEmpty(obj)) {
 	/* Specify empty string to override masterX */
@@ -2909,7 +2936,10 @@ static int PSDColorFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataColor *pCol
     return TCL_OK;
 }
 
-static void PSDColorFree(TreeCtrl *tree, PerStateDataColor *pColor)
+static void
+PSDColorFree(
+    TreeCtrl *tree,
+    PerStateDataColor *pColor)
 {
     if (pColor->color != NULL)
 	Tk_FreeColor(pColor->color);
@@ -2923,7 +2953,8 @@ PerStateType pstColor =
     (PerStateType_FreeProc) PSDColorFree
 };
 
-XColor *PerStateColor_ForState(
+XColor *
+PerStateColor_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -2946,7 +2977,11 @@ struct PerStateDataFont
     Tk_Font tkfont;
 };
 
-static int PSDFontFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataFont *pFont)
+static int
+PSDFontFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataFont *pFont)
 {
     if (ObjectIsEmpty(obj)) {
 	/* Specify empty string to override masterX */
@@ -2959,7 +2994,10 @@ static int PSDFontFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataFont *pFont)
     return TCL_OK;
 }
 
-static void PSDFontFree(TreeCtrl *tree, PerStateDataFont *pFont)
+static void
+PSDFontFree(
+    TreeCtrl *tree,
+    PerStateDataFont *pFont)
 {
     if (pFont->tkfont != NULL)
 	Tk_FreeFont(pFont->tkfont);
@@ -2973,7 +3011,8 @@ PerStateType pstFont =
     (PerStateType_FreeProc) PSDFontFree
 };
 
-Tk_Font PerStateFont_ForState(
+Tk_Font
+PerStateFont_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -2997,7 +3036,11 @@ struct PerStateDataImage
     char *string;
 };
 
-static int PSDImageFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataImage *pImage)
+static int
+PSDImageFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataImage *pImage)
 {
     int length;
     char *string;
@@ -3017,7 +3060,10 @@ static int PSDImageFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataImage *pIma
     return TCL_OK;
 }
 
-static void PSDImageFree(TreeCtrl *tree, PerStateDataImage *pImage)
+static void
+PSDImageFree(
+    TreeCtrl *tree,
+    PerStateDataImage *pImage)
 {
     if (pImage->string != NULL)
 	ckfree(pImage->string);
@@ -3033,7 +3079,8 @@ PerStateType pstImage =
     (PerStateType_FreeProc) PSDImageFree
 };
 
-Tk_Image PerStateImage_ForState(
+Tk_Image
+PerStateImage_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -3047,7 +3094,8 @@ Tk_Image PerStateImage_ForState(
     return NULL;
 }
 
-void PerStateImage_MaxSize(
+void
+PerStateImage_MaxSize(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int *widthPtr,
@@ -3079,7 +3127,11 @@ struct PerStateDataRelief
     int relief;
 };
 
-static int PSDReliefFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataRelief *pRelief)
+static int
+PSDReliefFromObj(
+    TreeCtrl *tree,
+    Tcl_Obj *obj,
+    PerStateDataRelief *pRelief)
 {
     if (ObjectIsEmpty(obj)) {
 	/* Specify empty string to override masterX */
@@ -3091,7 +3143,10 @@ static int PSDReliefFromObj(TreeCtrl *tree, Tcl_Obj *obj, PerStateDataRelief *pR
     return TCL_OK;
 }
 
-static void PSDReliefFree(TreeCtrl *tree, PerStateDataRelief *pRelief)
+static void
+PSDReliefFree(
+    TreeCtrl *tree,
+    PerStateDataRelief *pRelief)
 {
 }
 
@@ -3103,7 +3158,8 @@ PerStateType pstRelief =
     (PerStateType_FreeProc) PSDReliefFree
 };
 
-int PerStateRelief_ForState(
+int
+PerStateRelief_ForState(
     TreeCtrl *tree,
     PerStateInfo *pInfo,
     int state,
@@ -3119,7 +3175,8 @@ int PerStateRelief_ForState(
 
 /*****/
 
-void PSTSave(
+void
+PSTSave(
     PerStateInfo *pInfo,
     PerStateInfo *pSave)
 {
@@ -3132,7 +3189,8 @@ void PSTSave(
     pInfo->count = 0;
 }
 
-void PSTRestore(
+void
+PSTRestore(
     TreeCtrl *tree,
     PerStateType *typePtr,
     PerStateInfo *pInfo,
@@ -3853,8 +3911,7 @@ if (tagSpace % TREE_TAG_SPACE) panic("TagInfo_Add miscalc");
 	    tagInfo = (TagInfo *) TreeAlloc_Alloc(tree->allocData, TagInfoUid,
 		TAG_INFO_SIZE(tagSpace));
 #else
-	    tagInfo = (TagInfo *) ckalloc(sizeof(TagInfo) +
-		TAG_INFO_SIZE(tagSpace));
+	    tagInfo = (TagInfo *) ckalloc(TAG_INFO_SIZE(tagSpace));
 #endif
 	    tagInfo->tagSpace = tagSpace;
 	}
