@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.63 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.64 2007/01/31 00:52:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -891,7 +891,7 @@ static int ActualProcBitmap(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeBitmap = {
+TreeElementType treeElemTypeBitmap = {
     "bitmap",
     sizeof(ElementBitmap),
     bitmapOptionSpecs,
@@ -1227,7 +1227,7 @@ static int ActualProcBorder(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeBorder = {
+TreeElementType treeElemTypeBorder = {
     "border",
     sizeof(ElementBorder),
     borderOptionSpecs,
@@ -1557,7 +1557,7 @@ static int ActualProcCheckButton(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeCheckButton = {
+TreeElementType treeElemTypeCheckButton = {
     "checkbutton",
     sizeof(ElementCheckButton),
     chkbutOptionSpecs,
@@ -1881,7 +1881,7 @@ static int ActualProcImage(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeImage = {
+TreeElementType treeElemTypeImage = {
     "image",
     sizeof(ElementImage),
     imageOptionSpecs,
@@ -2308,7 +2308,7 @@ static int ActualProcRect(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeRect = {
+TreeElementType treeElemTypeRect = {
     "rect",
     sizeof(ElementRect),
     rectOptionSpecs,
@@ -3557,7 +3557,7 @@ static int ActualProcText(TreeElementArgs *args)
     return TCL_OK;
 }
 
-TreeElementType TreeElemTypeText = {
+TreeElementType treeElemTypeText = {
     "text",
     sizeof(ElementText),
     textOptionSpecs,
@@ -4173,7 +4173,7 @@ static void OnScreenProcWindow(TreeElementArgs *args)
     }
 }
 
-TreeElementType TreeElemTypeWindow = {
+TreeElementType treeElemTypeWindow = {
     "window",
     sizeof(ElementWindow),
     windowOptionSpecs,
@@ -4294,7 +4294,8 @@ static TreeCtrlStubs stubs = {
     PSTRestore,
     TreeStateFromObj,
     BooleanCO_Init,
-    StringTableCO_Init
+    StringTableCO_Init,
+    PerStateCO_Init
 };
 
 static void FreeAssocData(ClientData clientData, Tcl_Interp *interp)
@@ -4321,55 +4322,55 @@ int TreeElement_Init(Tcl_Interp *interp)
     /*
      * bitmap
      */
-    PerStateCO_Init(TreeElemTypeBitmap.optionSpecs, "-background",
+    PerStateCO_Init(treeElemTypeBitmap.optionSpecs, "-background",
 	&pstColor, TreeStateFromObj);
-    PerStateCO_Init(TreeElemTypeBitmap.optionSpecs, "-bitmap",
+    PerStateCO_Init(treeElemTypeBitmap.optionSpecs, "-bitmap",
 	&pstBitmap, TreeStateFromObj);
 #ifdef DEPRECATED
-    PerStateCO_Init(TreeElemTypeBitmap.optionSpecs, "-draw",
+    PerStateCO_Init(treeElemTypeBitmap.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
 #endif
-    PerStateCO_Init(TreeElemTypeBitmap.optionSpecs, "-foreground",
+    PerStateCO_Init(treeElemTypeBitmap.optionSpecs, "-foreground",
 	&pstColor, TreeStateFromObj);
 
     /*
      * border
      */
 #ifdef DEPRECATED
-    PerStateCO_Init(TreeElemTypeBorder.optionSpecs, "-draw",
+    PerStateCO_Init(treeElemTypeBorder.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
 #endif
-    PerStateCO_Init(TreeElemTypeBorder.optionSpecs, "-background",
+    PerStateCO_Init(treeElemTypeBorder.optionSpecs, "-background",
 	&pstBorder, TreeStateFromObj);
-    PerStateCO_Init(TreeElemTypeBorder.optionSpecs, "-relief",
+    PerStateCO_Init(treeElemTypeBorder.optionSpecs, "-relief",
 	&pstRelief, TreeStateFromObj);
 
     /*
      * image
      */
 #ifdef DEPRECATED
-    DynamicCO_Init(TreeElemTypeImage.optionSpecs, "-draw",
+    DynamicCO_Init(treeElemTypeImage.optionSpecs, "-draw",
 	1002, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
 #endif
-    PerStateCO_Init(TreeElemTypeImage.optionSpecs, "-image",
+    PerStateCO_Init(treeElemTypeImage.optionSpecs, "-image",
 	&pstImage, TreeStateFromObj);
 
     /* 2 options in the same structure. */
-    DynamicCO_Init(TreeElemTypeImage.optionSpecs, "-height",
+    DynamicCO_Init(treeElemTypeImage.optionSpecs, "-height",
 	1001, sizeof(ElementImageSize),
 	Tk_Offset(ElementImageSize, heightObj),
 	Tk_Offset(ElementImageSize, height), &TreeCtrlCO_pixels,
 	(DynamicOptionInitProc *) NULL);
-    DynamicCO_Init(TreeElemTypeImage.optionSpecs, "-width",
+    DynamicCO_Init(treeElemTypeImage.optionSpecs, "-width",
 	1001, sizeof(ElementImageSize),
 	Tk_Offset(ElementImageSize, widthObj),
 	Tk_Offset(ElementImageSize, width), &TreeCtrlCO_pixels,
 	(DynamicOptionInitProc *) NULL);
 
-    DynamicCO_Init(TreeElemTypeImage.optionSpecs, "-tiled",
+    DynamicCO_Init(treeElemTypeImage.optionSpecs, "-tiled",
 	1003, sizeof(int),
 	-1,
 	0, &booleanCO,
@@ -4379,43 +4380,43 @@ int TreeElement_Init(Tcl_Interp *interp)
      * rect
      */
 #ifdef DEPRECATED
-    PerStateCO_Init(TreeElemTypeRect.optionSpecs, "-draw",
+    PerStateCO_Init(treeElemTypeRect.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
 #endif
-    PerStateCO_Init(TreeElemTypeRect.optionSpecs, "-fill",
+    PerStateCO_Init(treeElemTypeRect.optionSpecs, "-fill",
 	&pstColor, TreeStateFromObj);
-    PerStateCO_Init(TreeElemTypeRect.optionSpecs, "-outline",
+    PerStateCO_Init(treeElemTypeRect.optionSpecs, "-outline",
 	&pstColor, TreeStateFromObj);
 
     /* 
      * text
      */
     /* 3 options in the same structure. */
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-data",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-data",
 	1006, sizeof(ElementTextData),
 	Tk_Offset(ElementTextData, dataObj),
 	-1, &TreeCtrlCO_string,
 	ElementTextDataInit);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-datatype",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-datatype",
 	1006, sizeof(ElementTextData),
 	-1,
 	Tk_Offset(ElementTextData, dataType),
 	StringTableCO_Alloc("-datatype", textDataTypeST),
 	ElementTextDataInit);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-format",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-format",
 	1006, sizeof(ElementTextData),
 	Tk_Offset(ElementTextData, formatObj),
 	-1, &TreeCtrlCO_string,
 	ElementTextDataInit);
 
     /* 4 options in the same structure. */
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-justify",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-justify",
 	1005, sizeof(ElementTextLayout),
 	-1,
 	Tk_Offset(ElementTextLayout, justify),
 	StringTableCO_Alloc("-justify", textJustifyST),
 	ElementTextLayoutInit);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-lines",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-lines",
 	1005, sizeof(ElementTextLayout),
 	-1,
 	Tk_Offset(ElementTextLayout, lines),
@@ -4425,12 +4426,12 @@ int TreeElement_Init(Tcl_Interp *interp)
 	    -1,		/* empty */
 	    0x01),	/* flags: min */
 	ElementTextLayoutInit);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-width",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-width",
 	1005, sizeof(ElementTextLayout),
 	Tk_Offset(ElementTextLayout, widthObj),
 	Tk_Offset(ElementTextLayout, width), &TreeCtrlCO_pixels,
 	ElementTextLayoutInit);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-wrap",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-wrap",
 	1005, sizeof(ElementTextLayout),
 	-1,
 	Tk_Offset(ElementTextLayout, wrap),
@@ -4438,30 +4439,30 @@ int TreeElement_Init(Tcl_Interp *interp)
 	ElementTextLayoutInit);
 
 #ifdef DEPRECATED
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-draw",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-draw",
 	1002, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-draw", &pstBoolean, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
 #endif
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-fill",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-fill",
 	1003, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-fill", &pstColor, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-font",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-font",
 	1004, sizeof(PerStateInfo),
 	Tk_Offset(PerStateInfo, obj),
 	0, PerStateCO_Alloc("-font", &pstFont, TreeStateFromObj),
 	(DynamicOptionInitProc *) NULL);
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-textvariable",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-textvariable",
 	1001, sizeof(ElementTextVar),
 	Tk_Offset(struct ElementTextVar, varNameObj),
 	-1, &TreeCtrlCO_string,
 	(DynamicOptionInitProc *) NULL);
 
 #ifdef TEXT_STYLE
-    DynamicCO_Init(TreeElemTypeText.optionSpecs, "-underline",
+    DynamicCO_Init(treeElemTypeText.optionSpecs, "-underline",
 	1008, sizeof(ElementTextStyle),
 	-1,
 	Tk_Offset(ElementTextStyle, underline),
@@ -4477,7 +4478,7 @@ int TreeElement_Init(Tcl_Interp *interp)
      * window
      */
 #ifdef DEPRECATED
-    PerStateCO_Init(TreeElemTypeWindow.optionSpecs, "-draw",
+    PerStateCO_Init(treeElemTypeWindow.optionSpecs, "-draw",
 	&pstBoolean, TreeStateFromObj);
 #endif
 
@@ -4485,13 +4486,13 @@ int TreeElement_Init(Tcl_Interp *interp)
     assocData->typeList = NULL;
     Tcl_SetAssocData(interp, "TreeCtrlElementTypes", FreeAssocData, assocData);
 
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeBitmap);
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeBorder);
-/*    TreeCtrl_RegisterElementType(interp, &TreeElemTypeCheckButton);*/
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeImage);
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeRect);
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeText);
-    TreeCtrl_RegisterElementType(interp, &TreeElemTypeWindow);
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeBitmap);
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeBorder);
+/*    TreeCtrl_RegisterElementType(interp, &treeElemTypeCheckButton);*/
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeImage);
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeRect);
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeText);
+    TreeCtrl_RegisterElementType(interp, &treeElemTypeWindow);
 
     Tcl_SetAssocData(interp, "TreeCtrlStubs", NULL, &stubs);
 
