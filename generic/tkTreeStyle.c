@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.73 2007/01/23 22:41:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.74 2007/01/31 00:52:17 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2357,7 +2357,7 @@ void TreeStyle_Draw(
 
 	/* Don't "draw" window elements. TreeStyle_UpdateWindowPositions()
 	 * does that for us. */
-	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &TreeElemTypeWindow))
+	if (ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &treeElemTypeWindow))
 	    continue;
 
 	if (PerStateBoolean_ForState(tree, &layout->master->draw,
@@ -2500,7 +2500,7 @@ TreeStyle_UpdateWindowPositions(
     /* FIXME: Perhaps remember whether this style has any window
      * elements */
     for (i = 0; i < numElements; i++) {
-	if (ELEMENT_TYPE_MATCHES(masterStyle->elements[i].elem->typePtr, &TreeElemTypeWindow))
+	if (ELEMENT_TYPE_MATCHES(masterStyle->elements[i].elem->typePtr, &treeElemTypeWindow))
 	    break;
     }
     if (i == numElements)
@@ -2549,7 +2549,7 @@ TreeStyle_UpdateWindowPositions(
 	if (IS_HIDDEN(layout))
 	    continue;
 
-	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &TreeElemTypeWindow))
+	if (!ELEMENT_TYPE_MATCHES(layout->eLink->elem->typePtr, &treeElemTypeWindow))
 	    continue;
 
 	if (PerStateBoolean_ForState(tree, &layout->master->draw,
@@ -2671,7 +2671,7 @@ Element_FreeResources(
 #ifdef ALLOC_HAX
     TreeAlloc_Free(tree->allocData, typePtr->name, (char *) elem, typePtr->size);
 #else
-    WFREE(elem, TreeElement);
+    WFREE(elem, TreeElement_);
 #endif
 }
 
@@ -3062,7 +3062,7 @@ Element_CreateAndConfig(
 #ifdef ALLOC_HAX
 	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, TreeElement);
+	WFREE(elem, TreeElement_);
 #endif
 	return NULL;
     }
@@ -3072,7 +3072,7 @@ Element_CreateAndConfig(
 #ifdef ALLOC_HAX
 	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, TreeElement);
+	WFREE(elem, TreeElement_);
 #endif
 	return NULL;
     }
@@ -3090,7 +3090,7 @@ Element_CreateAndConfig(
 #ifdef ALLOC_HAX
 	TreeAlloc_Free(tree->allocData, type->name, (char *) elem, type->size);
 #else
-	WFREE(elem, TreeElement);
+	WFREE(elem, TreeElement_);
 #endif
 	return NULL;
     }
@@ -3974,7 +3974,7 @@ TreeStyle_GetImage(
     TreeStyle style_		/* Token for style to examine. */
     )
 {
-    return Style_GetImageOrText(tree, (IStyle *) style_, &TreeElemTypeImage,
+    return Style_GetImageOrText(tree, (IStyle *) style_, &treeElemTypeImage,
 	"-image", &confImageObj);
 }
 
@@ -4002,7 +4002,7 @@ TreeStyle_GetText(
     TreeStyle style_		/* Token for style to examine. */
     )
 {
-    return Style_GetImageOrText(tree, (IStyle *) style_, &TreeElemTypeText,
+    return Style_GetImageOrText(tree, (IStyle *) style_, &treeElemTypeText,
 	"-text", &confTextObj);
 }
 
@@ -4110,7 +4110,7 @@ TreeStyle_SetImage(
     )
 {
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
-	&TreeElemTypeImage, "-image", &confImageObj, valueObj);
+	&treeElemTypeImage, "-image", &confImageObj, valueObj);
 }
 
 /*
@@ -4141,7 +4141,7 @@ TreeStyle_SetText(
     )
 {
     return Style_SetImageOrText(tree, item, column, (IStyle *) style_,
-	&TreeElemTypeText, "-text", &confTextObj, valueObj);
+	&treeElemTypeText, "-text", &confTextObj, valueObj);
 }
 
 /*
@@ -6407,7 +6407,7 @@ TreeStyle_GetSortData(
 
     if (elemIndex == -1) {
 	for (i = 0; i < style->master->numElements; i++) {
-	    if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &TreeElemTypeText))
+	    if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &treeElemTypeText))
 		return TreeElement_GetSortData(tree, eLink->elem, type, lv, dv, sv);
 	    eLink++;
 	}
@@ -6415,7 +6415,7 @@ TreeStyle_GetSortData(
 	if ((elemIndex < 0) || (elemIndex >= style->master->numElements))
 	    panic("bad elemIndex %d to TreeStyle_GetSortData", elemIndex);
 	eLink = &style->elements[elemIndex];
-	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &TreeElemTypeText))
+	if (ELEMENT_TYPE_MATCHES(eLink->elem->typePtr, &treeElemTypeText))
 	    return TreeElement_GetSortData(tree, eLink->elem, type, lv, dv, sv);
     }
 
@@ -6658,7 +6658,7 @@ TreeStyle_ChangeState(
 	 * not onscreen, otherwise it will never be "drawn" in the
 	 * hidden state. */
 	if (undisplay && ELEMENT_TYPE_MATCHES(args.elem->typePtr,
-		&TreeElemTypeWindow)) {
+		&treeElemTypeWindow)) {
 	    args.screen.visible = FALSE;
 	    (*args.elem->typePtr->onScreenProc)(&args);
 	}
