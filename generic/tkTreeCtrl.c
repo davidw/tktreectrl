@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.103 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.104 2007/01/31 23:21:25 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -299,18 +299,24 @@ static Tk_OptionSpec debugSpecs[] = {
      (char *) NULL, -1, -1, 0, (ClientData) NULL, 0}
 };
 
-static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc, Tcl_Obj *CONST objv[]);
-static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[], int createFlag);
+static int TreeWidgetCmd(ClientData clientData, Tcl_Interp *interp, int objc,
+    Tcl_Obj *CONST objv[]);
+static int TreeConfigure(Tcl_Interp *interp, TreeCtrl *tree, int objc,
+    Tcl_Obj *CONST objv[], int createFlag);
 static void TreeEventProc(ClientData clientData, XEvent * eventPtr);
 static void TreeDestroy(char *memPtr);
 static void TreeCmdDeletedProc(ClientData clientData);
 static void TreeWorldChanged(ClientData instanceData);
 static void TreeComputeGeometry(TreeCtrl *tree);
 static int TreeStateCmd(TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc, Tcl_Obj *CONST objv[]);
-static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,Tcl_Obj *CONST objv[]);
+static int TreeSelectionCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc,
+    Tcl_Obj *CONST objv[]);
+static int TreeXviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc,
+    Tcl_Obj *CONST objv[]);
+static int TreeYviewCmd(Tcl_Interp *interp, TreeCtrl *tree, int objc,
+    Tcl_Obj *CONST objv[]);
+static int TreeDebugCmd(ClientData clientData, Tcl_Interp *interp, int objc,
+    Tcl_Obj *CONST objv[]);
 
 static Tk_ClassProcs treectrlClass = {
     sizeof(Tk_ClassProcs),	/* size */
@@ -3058,11 +3064,9 @@ A_XviewCmd(
 
     if (objc == 2) {
 	double fractions[2];
-	char buf[TCL_DOUBLE_SPACE * 2];
 
 	Tree_GetScrollFractionsX(tree, fractions);
-	sprintf(buf, "%g %g", fractions[0], fractions[1]);
-	Tcl_SetResult(interp, buf, TCL_VOLATILE);
+	FormatResult(interp, "%g %g", fractions[0], fractions[1]);
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
@@ -3164,11 +3168,9 @@ A_YviewCmd(
 
     if (objc == 2) {
 	double fractions[2];
-	char buf[TCL_DOUBLE_SPACE * 2];
 
 	Tree_GetScrollFractionsY(tree, fractions);
-	sprintf(buf, "%g %g", fractions[0], fractions[1]);
-	Tcl_SetResult(interp, buf, TCL_VOLATILE);
+	FormatResult(interp, "%g %g", fractions[0], fractions[1]);
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
@@ -3300,7 +3302,8 @@ TreeYviewCmd(
     return A_YviewCmd(tree, objc, objv);
 }
 
-void Tree_Debug(
+void
+Tree_Debug(
     TreeCtrl *tree		/* Widget info. */
     )
 {
