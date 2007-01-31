@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.25 2007/01/23 22:41:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.26 2007/01/31 00:51:07 treectrl Exp $
  */
 
 typedef struct TreeElementType TreeElementType;
@@ -107,13 +107,13 @@ struct TreeElement_
     /* type-specific data here */
 };
 
-extern TreeElementType TreeElemTypeBitmap;
-extern TreeElementType TreeElemTypeBorder;
-extern TreeElementType TreeElemTypeCheckButton;
-extern TreeElementType TreeElemTypeImage;
-extern TreeElementType TreeElemTypeRect;
-extern TreeElementType TreeElemTypeText;
-extern TreeElementType TreeElemTypeWindow;
+extern TreeElementType treeElemTypeBitmap;
+extern TreeElementType treeElemTypeBorder;
+extern TreeElementType treeElemTypeCheckButton;
+extern TreeElementType treeElemTypeImage;
+extern TreeElementType treeElemTypeRect;
+extern TreeElementType treeElemTypeText;
+extern TreeElementType treeElemTypeWindow;
 
 #define ELEMENT_TYPE_MATCHES(t1,t2) ((t1)->name == (t2)->name)
 
@@ -135,23 +135,37 @@ extern void Tree_ElementChangedItself(TreeCtrl *tree, TreeItem item,
 typedef struct TreeCtrlStubs TreeCtrlStubs;
 struct TreeCtrlStubs
 {
-    int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp, TreeElementType *typePtr);
-    void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item, TreeElement elem);
-    TreeIterate (*Tree_ElementIterateBegin)(TreeCtrl *tree, TreeElementType *elemTypePtr);
+    int (*TreeCtrl_RegisterElementType)(Tcl_Interp *interp,
+		TreeElementType *typePtr);
+    void (*Tree_RedrawElement)(TreeCtrl *tree, TreeItem item,
+		TreeElement elem);
+    TreeIterate (*Tree_ElementIterateBegin)(TreeCtrl *tree,
+		TreeElementType *elemTypePtr);
     TreeIterate (*Tree_ElementIterateNext)(TreeIterate iter_);
     TreeElement (*Tree_ElementIterateGet)(TreeIterate iter_);
     void (*Tree_ElementIterateChanged)(TreeIterate iter_, int mask);
-    void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo);
-    int (*PerStateInfo_FromObj)(TreeCtrl *tree, StateFromObjProc proc, PerStateType *typePtr, PerStateInfo *pInfo);
-    PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
-    Tcl_Obj *(*PerStateInfo_ObjForState)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
-    int (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, int state);
+    void (*PerStateInfo_Free)(TreeCtrl *tree, PerStateType *typePtr,
+		PerStateInfo *pInfo);
+    int (*PerStateInfo_FromObj)(TreeCtrl *tree, StateFromObjProc proc,
+		PerStateType *typePtr, PerStateInfo *pInfo);
+    PerStateData *(*PerStateInfo_ForState)(TreeCtrl *tree,
+		PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
+    Tcl_Obj *(*PerStateInfo_ObjForState)(TreeCtrl *tree,
+		PerStateType *typePtr, PerStateInfo *pInfo, int state, int *match);
+    int (*PerStateInfo_Undefine)(TreeCtrl *tree, PerStateType *typePtr,
+		PerStateInfo *pInfo, int state);
     PerStateType *pstBoolean;
-    int (*PerStateBoolean_ForState)(TreeCtrl *tree, PerStateInfo *pInfo, int state, int *match);
+    int (*PerStateBoolean_ForState)(TreeCtrl *tree, PerStateInfo *pInfo,
+		int state, int *match);
     void (*PSTSave)(PerStateInfo *pInfo, PerStateInfo *pSave);
-    void (*PSTRestore)(TreeCtrl *tree, PerStateType *typePtr, PerStateInfo *pInfo, PerStateInfo *pSave);
-    int (*TreeStateFromObj)(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff, int *stateOn);
+    void (*PSTRestore)(TreeCtrl *tree, PerStateType *typePtr,
+		PerStateInfo *pInfo, PerStateInfo *pSave);
+    int (*TreeStateFromObj)(TreeCtrl *tree, Tcl_Obj *obj, int *stateOff,
+		int *stateOn);
     int (*BooleanCO_Init)(Tk_OptionSpec *optionTable, CONST char *optionName);
-    int (*StringTableCO_Init)(Tk_OptionSpec *optionTable, CONST char *optionName, CONST char **tablePtr);
+    int (*StringTableCO_Init)(Tk_OptionSpec *optionTable,
+		CONST char *optionName, CONST char **tablePtr);
+    int (*PerStateCO_Init)(Tk_OptionSpec *optionTable, CONST char *optionName,
+		PerStateType *typePtr, StateFromObjProc proc);
 };
 
