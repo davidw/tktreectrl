@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.82 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.83 2007/01/31 23:23:49 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -27,7 +27,8 @@ static int Range_TotalWidth(TreeCtrl *tree, Range *range_);
 static int Range_TotalHeight(TreeCtrl *tree, Range *range_);
 static void Range_Redo(TreeCtrl *tree);
 static Range *Range_UnderPoint(TreeCtrl *tree, int *x_, int *y_, int nearest);
-static RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_, int *y_);
+static RItem *Range_ItemUnderPoint(TreeCtrl *tree, Range *range, int *x_,
+    int *y_);
 
 /* One of these per TreeItem that is ReallyVisible(). */
 struct RItem
@@ -1568,11 +1569,9 @@ B_XviewCmd(
 
     if (objc == 2) {
 	double fractions[2];
-	char buf[TCL_DOUBLE_SPACE * 2];
 
 	Tree_GetScrollFractionsX(tree, fractions);
-	sprintf(buf, "%g %g", fractions[0], fractions[1]);
-	Tcl_SetResult(interp, buf, TCL_VOLATILE);
+	FormatResult(interp, "%g %g", fractions[0], fractions[1]);
     } else {
 	int count, index = 0, indexMax, offset, type;
 	double fraction;
@@ -1673,11 +1672,9 @@ B_YviewCmd(
 
     if (objc == 2) {
 	double fractions[2];
-	char buf[TCL_DOUBLE_SPACE * 2];
 
 	Tree_GetScrollFractionsY(tree, fractions);
-	sprintf(buf, "%g %g", fractions[0], fractions[1]);
-	Tcl_SetResult(interp, buf, TCL_VOLATILE);
+	FormatResult(interp, "%g %g", fractions[0], fractions[1]);
     }
     else {
 	int count, index = 0, indexMax, offset, type;
@@ -2096,25 +2093,33 @@ Tree_ItemLARB(
 }
 
 TreeItem
-Tree_ItemLeft(TreeCtrl *tree, TreeItem item)
+Tree_ItemLeft(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemLARB(tree, item, !tree->vertical, TRUE);
 }
 
 TreeItem
-Tree_ItemAbove(TreeCtrl *tree, TreeItem item)
+Tree_ItemAbove(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemLARB(tree, item, tree->vertical, TRUE);
 }
 
 TreeItem
-Tree_ItemRight(TreeCtrl *tree, TreeItem item)
+Tree_ItemRight(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemLARB(tree, item, !tree->vertical, FALSE);
 }
 
 TreeItem
-Tree_ItemBelow(TreeCtrl *tree, TreeItem item)
+Tree_ItemBelow(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemLARB(tree, item, tree->vertical, FALSE);
 }
@@ -2189,25 +2194,33 @@ Tree_ItemFL(
 }
 
 TreeItem
-Tree_ItemTop(TreeCtrl *tree, TreeItem item)
+Tree_ItemTop(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemFL(tree, item, tree->vertical, TRUE);
 }
 
 TreeItem
-Tree_ItemBottom(TreeCtrl *tree, TreeItem item)
+Tree_ItemBottom(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemFL(tree, item, tree->vertical, FALSE);
 }
 
 TreeItem
-Tree_ItemLeftMost(TreeCtrl *tree, TreeItem item)
+Tree_ItemLeftMost(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemFL(tree, item, !tree->vertical, TRUE);
 }
 
 TreeItem
-Tree_ItemRightMost(TreeCtrl *tree, TreeItem item)
+Tree_ItemRightMost(
+    TreeCtrl *tree,
+    TreeItem item)
 {
     return Tree_ItemFL(tree, item, !tree->vertical, FALSE);
 }
@@ -5249,7 +5262,7 @@ TreeDisplay_WasThereTrouble(
  *----------------------------------------------------------------------
  */
 
-static void
+static Pixmap
 DisplayGetPixmap(
     TreeCtrl *tree,
     struct DPixmap *dPixmap,
@@ -5272,6 +5285,7 @@ DisplayGetPixmap(
 	dPixmap->width = width;
 	dPixmap->height = height;
     }
+    return dPixmap->pixmap;
 }
 
 /*
@@ -5582,9 +5596,8 @@ displayRetry:
     }
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	DisplayGetPixmap(tree, &dInfo->pixmapW,
+	drawable = DisplayGetPixmap(tree, &dInfo->pixmapW,
 		Tk_Width(tkwin), Tk_Height(tkwin));
-	drawable = dInfo->pixmapW.pixmap;
     }
 
     /* XOR off */
@@ -5754,8 +5767,7 @@ displayRetry:
 	    /* Allocate pixmap for largest item */
 	    width = MIN(Tk_Width(tkwin), dInfo->itemWidth);
 	    height = MIN(Tk_Height(tkwin), dInfo->itemHeight);
-	    DisplayGetPixmap(tree, &dInfo->pixmapI, width, height);
-	    pixmap = dInfo->pixmapI.pixmap;
+	    pixmap = DisplayGetPixmap(tree, &dInfo->pixmapI, width, height);
 	}
 
 	for (dItem = dInfo->dItem;
@@ -5837,6 +5849,7 @@ displayRetry:
 	    XSetClipMask(tree->display, tree->copyGC, None);
 	}
 	TkSubtractRegion(dInfo->dirtyRgn, dInfo->dirtyRgn, dInfo->dirtyRgn);
+	DisplayDelay(tree);
     }
 
     /* XOR on */
@@ -7245,8 +7258,6 @@ Tree_ExposeArea(
     TreeDInfo dInfo = tree->dInfo;
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	DblBufWinDirty(tree, x1, y1, x2, y2);
-
 	if ((x1 < Tree_BorderLeft(tree)) ||
 		(y1 < Tree_BorderTop(tree)) ||
 		(x2 > Tree_BorderRight(tree)) ||
@@ -7254,6 +7265,15 @@ Tree_ExposeArea(
 	    dInfo->flags |= DINFO_DRAW_HIGHLIGHT;
 	    dInfo->flags |= DINFO_DRAW_BORDER;
 	}
+	if (x1 < Tree_BorderLeft(tree))
+	    x1 = Tree_BorderLeft(tree);
+	if (x2 > Tree_BorderRight(tree))
+	    x2 = Tree_BorderRight(tree);
+	if (y1 < Tree_BorderTop(tree))
+	    y1 = Tree_BorderTop(tree);
+	if (y2 > Tree_BorderBottom(tree))
+	    y2 = Tree_BorderBottom(tree);
+	DblBufWinDirty(tree, x1, y1, x2, y2);
     } else {
 	Tree_InvalidateArea(tree, x1, y1, x2, y2);
     }
