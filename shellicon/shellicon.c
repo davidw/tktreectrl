@@ -7,7 +7,7 @@
  *
  * Copyright (c) 2005 Tim Baker
  *
- * RCS: @(#) $Id: shellicon.c,v 1.3 2005/07/23 00:48:47 treectrl Exp $
+ * RCS: @(#) $Id: shellicon.c,v 1.4 2007/01/31 23:20:15 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -66,8 +66,9 @@ TreeCtrlStubs *stubs;
 	stubs->PerStateInfo_ObjForState(t,ty,in,st,ma)
 #define PerStateInfo_Undefine(t,ty,in,st) \
 	stubs->PerStateInfo_Undefine(t,ty,in,st)
+#undef pstBoolean
 #define pstBoolean \
-	(*stubs->pstBoolean)
+	(*stubs->TreeCtrl_pstBoolean)
 #define PerStateBoolean_ForState(t,in,st,ma) \
 	stubs->PerStateBoolean_ForState(t,in,st,ma)
 #define PSTSave(in,sa) \
@@ -80,6 +81,8 @@ TreeCtrlStubs *stubs;
 	stubs->BooleanCO_Init(ot,on)
 #define StringTableCO_Init(ot,on,ta) \
 	stubs->StringTableCO_Init(ot,on,ta)
+#define PerStateCO_Init(a,b,c,d) \
+	stubs->PerStateCO_Init(a,b,c,d)
 
 static void AdjustForSticky(int sticky, int cavityWidth, int cavityHeight,
     int expandX, int expandY,
@@ -142,7 +145,7 @@ typedef struct ElementShellIcon ElementShellIcon;
 
 struct ElementShellIcon
 {
-    Element header;
+    TreeElement_ header;
     PerStateInfo draw;
     Tcl_Obj *pathObj;		/* path of file or directory */
     char *path;
@@ -179,8 +182,9 @@ static Tk_OptionSpec shellIconOptionSpecs[] = {
     {TK_OPTION_CUSTOM, "-addoverlays", (char *) NULL, (char *) NULL,
      (char *) NULL, -1, Tk_Offset(ElementShellIcon, addOverlays),
      TK_OPTION_NULL_OK, (ClientData) NULL, SHELLICON_CONF_ICON},
-    {TK_OPTION_STRING, "-draw", (char *) NULL, (char *) NULL,
-     (char *) NULL, Tk_Offset(ElementShellIcon, draw.obj), -1,
+    {TK_OPTION_CUSTOM, "-draw", (char *) NULL, (char *) NULL,
+     (char *) NULL, Tk_Offset(ElementShellIcon, draw.obj),
+     Tk_Offset(ElementShellIcon, draw),
      TK_OPTION_NULL_OK, (ClientData) NULL, SHELLICON_CONF_DRAW},
     {TK_OPTION_PIXELS, "-height", (char *) NULL, (char *) NULL,
      (char *) NULL, Tk_Offset(ElementShellIcon, heightObj),
@@ -207,10 +211,10 @@ static Tk_OptionSpec shellIconOptionSpecs[] = {
      (char *) NULL, 0, -1, 0, (ClientData) NULL, 0}
 };
 
-static void LoadIconIfNeeded(ElementArgs *args)
+static void LoadIconIfNeeded(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
     ElementShellIcon *masterX = (ElementShellIcon *) elem->master;
     SHFILEINFO sfi;
@@ -393,17 +397,15 @@ static void ForgetIcon(ElementShellIcon *elemX)
     elemX->hIcon = elemX->hIconSel = NULL;
 }
 
-static void DeleteProcShellIcon(ElementArgs *args)
+static void DeleteProcShellIcon(TreeElementArgs *args)
 {
-    TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
 
-    PerStateInfo_Free(tree, &pstBoolean, &elemX->draw);
     ForgetIcon(elemX);
 }
 
-static int WorldChangedProcShellIcon(ElementArgs *args)
+static int WorldChangedProcShellIcon(TreeElementArgs *args)
 {
     ElementShellIcon *elemX = (ElementShellIcon *) args->elem;
     int flagM = args->change.flagMaster;
@@ -422,12 +424,11 @@ static int WorldChangedProcShellIcon(ElementArgs *args)
     return mask;
 }
 
-static int ConfigProcShellIcon(ElementArgs *args)
+static int ConfigProcShellIcon(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
-    ElementShellIcon savedX;
     Tk_SavedOptions savedOptions;
     int error;
     Tcl_Obj *errorResult = NULL;
@@ -442,16 +443,8 @@ static int ConfigProcShellIcon(ElementArgs *args)
 		continue;
 	    }
 
-	    if (args->config.flagSelf & SHELLICON_CONF_DRAW)
-		PSTSave(&elemX->draw, &savedX.draw);
+	    /* xxx */
 
-	    if (args->config.flagSelf & SHELLICON_CONF_DRAW) {
-		if (PerStateInfo_FromObj(tree, TreeStateFromObj, &pstBoolean, &elemX->draw) != TCL_OK)
-		    continue;
-	    }
-
-	    if (args->config.flagSelf & SHELLICON_CONF_DRAW)
-		PerStateInfo_Free(tree, &pstBoolean, &savedX.draw);
 	    Tk_FreeSavedOptions(&savedOptions);
 	    break;
 	} else {
@@ -459,8 +452,7 @@ static int ConfigProcShellIcon(ElementArgs *args)
 	    Tcl_IncrRefCount(errorResult);
 	    Tk_RestoreSavedOptions(&savedOptions);
 
-	    if (args->config.flagSelf & SHELLICON_CONF_DRAW)
-		PSTRestore(tree, &pstBoolean, &elemX->draw, &savedX.draw);
+	    /* xxx */
 
 	    Tcl_SetObjResult(tree->interp, errorResult);
 	    Tcl_DecrRefCount(errorResult);
@@ -471,7 +463,7 @@ static int ConfigProcShellIcon(ElementArgs *args)
     return TCL_OK;
 }
 
-static int CreateProcShellIcon(ElementArgs *args)
+static int CreateProcShellIcon(TreeElementArgs *args)
 {
     ElementShellIcon *elemX = (ElementShellIcon *) args->elem;
 
@@ -483,10 +475,10 @@ static int CreateProcShellIcon(ElementArgs *args)
     return TCL_OK;
 }
 
-static void DisplayProcShellIcon(ElementArgs *args)
+static void DisplayProcShellIcon(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
     ElementShellIcon *masterX = (ElementShellIcon *) elem->master;
     int state = args->state;
@@ -538,9 +530,9 @@ static void DisplayProcShellIcon(ElementArgs *args)
     }
 }
 
-static void NeededProcShellIcon(ElementArgs *args)
+static void NeededProcShellIcon(TreeElementArgs *args)
 {
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
     ElementShellIcon *masterX = (ElementShellIcon *) elem->master;
     int width = 0, height = 0;
@@ -583,10 +575,10 @@ static void NeededProcShellIcon(ElementArgs *args)
     args->needed.height = height;
 }
 
-static int StateProcShellIcon(ElementArgs *args)
+static int StateProcShellIcon(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
-    Element *elem = args->elem;
+    TreeElement elem = args->elem;
     ElementShellIcon *elemX = (ElementShellIcon *) elem;
     ElementShellIcon *masterX = (ElementShellIcon *) elem->master;
     int match, match2;
@@ -621,7 +613,7 @@ static int StateProcShellIcon(ElementArgs *args)
     return mask;
 }
 
-static int UndefProcShellIcon(ElementArgs *args)
+static int UndefProcShellIcon(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     ElementShellIcon *elemX = (ElementShellIcon *) args->elem;
@@ -631,7 +623,7 @@ static int UndefProcShellIcon(ElementArgs *args)
     return modified;
 }
 
-static int ActualProcShellIcon(ElementArgs *args)
+static int ActualProcShellIcon(TreeElementArgs *args)
 {
     TreeCtrl *tree = args->tree;
     ElementShellIcon *elemX = (ElementShellIcon *) args->elem;
@@ -658,7 +650,7 @@ static int ActualProcShellIcon(ElementArgs *args)
     return TCL_OK;
 }
 
-ElementType elemTypeShellIcon = {
+TreeElementType elemTypeShellIcon = {
     "shellicon",
     sizeof(ElementShellIcon),
     shellIconOptionSpecs,
@@ -735,6 +727,8 @@ DLLEXPORT int Shellicon_Init(Tcl_Interp *interp)
     /* Initialize the options table */
     BooleanCO_Init(shellIconOptionSpecs, "-addoverlays");
     BooleanCO_Init(shellIconOptionSpecs, "-useimagelist");
+    PerStateCO_Init(shellIconOptionSpecs, "-draw", &pstBoolean,
+	    TreeStateFromObj);
     StringTableCO_Init(shellIconOptionSpecs, "-size", sizeST);
     StringTableCO_Init(shellIconOptionSpecs, "-type", typeST);
 
