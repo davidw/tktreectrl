@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.1 2007/01/31 00:45:55 treectrl Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.2 2007/02/02 20:35:26 treectrl Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -236,7 +236,7 @@ demo: binaries libraries
 	@$(WISH) `@CYGPATH@ $(srcdir)/demos/demo.tcl` | cat
 
 gdb:
-	$(TCLSH_ENV) gdb --args $(WISH_PROG) $(srcdir)/demos/demo.tcl
+	$(TCLSH_ENV) gdb --silent --args $(WISH_PROG) $(srcdir)/demos/demo.tcl
 
 depend:
 
