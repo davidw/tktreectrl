@@ -11942,6 +11942,13 @@ echo "${ECHO_T}enabled $tcl_ok debugging" >&6; }
     fi
 
 
+if test "${enable_symbols+set}" = set && test "$enable_symbols" != no; then
+
+    PKG_CFLAGS="$PKG_CFLAGS -DTREECTRL_DEBUG"
+
+
+fi
+
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you
 # can't for some reason, remove this definition.  If you aren't using

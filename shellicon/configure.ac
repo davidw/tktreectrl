@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.1 2007/01/31 00:45:55 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.2 2007/02/02 20:34:01 treectrl Exp $
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.
@@ -153,6 +153,10 @@ TEA_CONFIG_CFLAGS
 #--------------------------------------------------------------------
 
 TEA_ENABLE_SYMBOLS
+
+if test "${enable_symbols+set}" = set && test "$enable_symbols" != no; then
+    TEA_ADD_CFLAGS([-DTREECTRL_DEBUG])
+fi
 
 #--------------------------------------------------------------------
 # Everyone should be linking against the Tcl stub library.  If you
