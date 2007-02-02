@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.10 2006/11/10 22:24:19 treectrl Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.11 2007/02/02 20:33:17 treectrl Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -235,7 +235,7 @@ demo: binaries libraries
 	@$(WISH) `@CYGPATH@ $(srcdir)/demos/demo.tcl` | cat
 
 gdb:
-	$(TCLSH_ENV) gdb --args $(WISH_PROG) $(srcdir)/demos/demo.tcl
+	$(TCLSH_ENV) gdb --silent --args $(WISH_PROG) $(srcdir)/demos/demo.tcl
 
 depend:
 
@@ -295,38 +295,134 @@ pkgIndex.tcl:
 #========================================================================
 
 #COMPRESS	= tar cvf $(PKG_DIR).tar $(PKG_DIR); compress $(PKG_DIR).tar
-COMPRESS	= gtar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
+#COMPRESS	= gtar zcvf $(PKG_DIR).tar.gz $(PKG_DIR)
+DIST_NAME	= tktreectrl-$(PACKAGE_PATCHLEVEL)
+DIST_ARC	= $(DIST_NAME).tar.gz
+COMPRESS	= tar zcvf $(DIST_ARC) $(DIST_NAME)
 DIST_ROOT	= /tmp/dist
-DIST_DIR	= $(DIST_ROOT)/$(PKG_DIR)
+DIST_DIR	= $(DIST_ROOT)/$(DIST_NAME)
+
+DIST_DEMOS	= biglist bitmaps column-lock demo explorer firefox help \
+		  imovie layout mailwasher mycomputer outlook-folders \
+		  outlook-newgroup random span style-editor textvariable \
+		  www-options
+
+DIST_DOCS	= man.macros treectrl.html treectrl.man treectrl.n
+DIST_DOCS2	= "What's New in TkTreeCtrl.html"
+
+DIST_LIBRARY	= filelist-bindings.tcl treectrl.tcl
 
 dist-clean:
-	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(PKG_DIR).tar.*
+	rm -rf $(DIST_DIR) $(DIST_ROOT)/$(DIST_ARC)
 
 dist: dist-clean
 	mkdir -p $(DIST_DIR)
-	cp -p $(srcdir)/ChangeLog $(srcdir)/README* $(srcdir)/license* \
-		$(srcdir)/aclocal.m4 $(srcdir)/configure $(srcdir)/*.ac \
-		$(srcdir)/*.in $(DIST_DIR)/
+	mkdir -p $(DIST_DIR)/demos
+	mkdir -p $(DIST_DIR)/demos/pics
+	mkdir -p $(DIST_DIR)/doc
+	mkdir -p $(DIST_DIR)/generic
+	mkdir -p $(DIST_DIR)/library
+	mkdir -p $(DIST_DIR)/shellicon
+	mkdir -p $(DIST_DIR)/shellicon/tclconfig
+	mkdir -p $(DIST_DIR)/tclconfig
+	mkdir -p $(DIST_DIR)/tests
+
+	list='aclocal.m4 ChangeLog configure configure.ac license.terms Makefile.in README.txt'; \
+	for p in $$list; do \
+	    cp -p $(srcdir)/$$p $(DIST_DIR)/$$p; \
+	done
 	chmod 664 $(DIST_DIR)/Makefile.in $(DIST_DIR)/aclocal.m4
 	chmod 775 $(DIST_DIR)/configure $(DIST_DIR)/configure.ac
 
-	cp -p $(srcdir)/*.[ch] $(DIST_DIR)/
+	list='$(DIST_DEMOS)'; for p in $$list; do \
+	    cp -p $(srcdir)/demos/$$p.tcl $(DIST_DIR)/demos/$$p.tcl; \
+	done
 
-	mkdir $(DIST_DIR)/tclconfig
+	cp -p $(srcdir)/demos/pics/*.gif $(DIST_DIR)/demos/pics/
+
+	list='$(DIST_DOCS)'; for p in $$list; do \
+	    cp -p $(srcdir)/doc/$$p $(DIST_DIR)/doc/$$p; \
+	done
+	cp -p $(srcdir)/doc/$(DIST_DOCS2) $(DIST_DIR)/doc/$(DIST_DOCS2)
+
+	cp -p $(srcdir)/generic/*.[ch] $(DIST_DIR)/generic/
+
+	list='$(DIST_LIBRARY)'; for p in $$list; do \
+	    cp -p $(srcdir)/library/$$p $(DIST_DIR)/library/$$p; \
+	done
+
+	list='aclocal.m4 configure configure.ac Makefile.in shellicon.c'; \
+	for p in $$list; do \
+	    cp -p $(srcdir)/shellicon/$$p $(DIST_DIR)/shellicon/$$p; \
+	done
+	chmod 664 $(DIST_DIR)/shellicon/Makefile.in $(DIST_DIR)/shellicon/aclocal.m4
+	chmod 775 $(DIST_DIR)/shellicon/configure $(DIST_DIR)/shellicon/configure.ac
+
+	list='install-sh README.txt tcl.m4'; \
+	for p in $$list; do \
+	    cp -p $(srcdir)/shellicon/tclconfig/$$p $(DIST_DIR)/shellicon/tclconfig/$$p; \
+	done
+	chmod 664 $(DIST_DIR)/shellicon/tclconfig/tcl.m4
+	chmod +x $(DIST_DIR)/shellicon/tclconfig/install-sh
+
 	cp $(srcdir)/tclconfig/install-sh $(srcdir)/tclconfig/tcl.m4 \
 		$(DIST_DIR)/tclconfig/
 	chmod 664 $(DIST_DIR)/tclconfig/tcl.m4
 	chmod +x $(DIST_DIR)/tclconfig/install-sh
 
-	list='demos doc generic library mac tests unix win'; \
-	for p in $$list; do \
-	    if test -d $(srcdir)/$$p ; then \
-		mkdir $(DIST_DIR)/$$p; \
-		cp -p $(srcdir)/$$p/*.* $(DIST_DIR)/$$p/; \
-	    fi; \
-	done
+	cp -p $(srcdir)/tests/all.tcl $(srcdir)/tests/*.test $(DIST_DIR)/tests/
 
 	(cd $(DIST_ROOT); $(COMPRESS);)
+
+#========================================================================
+# Windows binary distribution
+#========================================================================
+
+DIST_WIN_NAME	= treectrl$(PACKAGE_PATCHLEVEL)
+DIST_WIN_DIR	= $(DIST_ROOT)/$(DIST_WIN_NAME)
+DIST_WIN_ARC	= tktreectrl-$(PACKAGE_PATCHLEVEL)-win32.zip
+COMPRESS_WIN	= zip -r -v -9 $(DIST_WIN_ARC) $(DIST_WIN_NAME)
+UPX		= upx -9 $(DIST_WIN_DIR)/$(PKG_LIB_FILE)
+
+dist-win-clean:
+	rm -rf $(DIST_WIN_DIR) $(DIST_ROOT)/$(DIST_WIN_ARC)
+
+dist-win: dist-win-clean
+	mkdir -p $(DIST_WIN_DIR)
+	mkdir -p $(DIST_WIN_DIR)/demos
+	mkdir -p $(DIST_WIN_DIR)/demos/pics
+	mkdir -p $(DIST_WIN_DIR)/doc
+	mkdir -p $(DIST_WIN_DIR)/shellicon
+
+	list='license.terms pkgIndex.tcl README.txt $(PKG_LIB_FILE)'; \
+	for p in $$list; do \
+	    cp -p $(srcdir)/$$p $(DIST_WIN_DIR)/$$p; \
+	done
+	strip -s $(DIST_WIN_DIR)/$(PKG_LIB_FILE)
+	$(UPX)
+
+	list='$(DIST_LIBRARY)'; for p in $$list; do \
+	    cp -p $(srcdir)/library/$$p $(DIST_WIN_DIR)/$$p; \
+	done
+
+	list='$(DIST_DEMOS)'; for p in $$list; do \
+	    cp -p $(srcdir)/demos/$$p.tcl $(DIST_WIN_DIR)/demos/$$p.tcl; \
+	done
+
+	cp -p $(srcdir)/demos/pics/*.gif $(DIST_WIN_DIR)/demos/pics/
+
+	list='$(DIST_DOCS)'; for p in $$list; do \
+	    cp -p $(srcdir)/doc/$$p $(DIST_WIN_DIR)/doc/$$p; \
+	done
+	cp -p $(srcdir)/doc/$(DIST_DOCS2) $(DIST_WIN_DIR)/doc/$(DIST_DOCS2)
+
+	TCL_TRIM_DOTS=`echo $(PACKAGE_VERSION) | tr -d .`; \
+	SHELLICON_DLL="shellicon$$TCL_TRIM_DOTS.dll"; \
+	cp -p $(srcdir)/shellicon/$$SHELLICON_DLL $(DIST_WIN_DIR)/shellicon/$$SHELLICON_DLL; \
+	strip -s $(DIST_WIN_DIR)/shellicon/$$SHELLICON_DLL;
+	cp -p $(srcdir)/shellicon/pkgIndex.tcl $(DIST_WIN_DIR)/shellicon/pkgIndex.tcl
+
+	(cd $(DIST_ROOT); $(COMPRESS_WIN);)
 
 #========================================================================
 # End of user-definable section
