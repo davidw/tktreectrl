@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.19 2006/12/22 22:33:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.20 2007/02/06 22:34:05 treectrl Exp $
  */
 
 #ifdef WIN32
@@ -29,6 +29,7 @@
 
 #include <uxtheme.h>
 #include <tmschema.h>
+#include <shlwapi.h>
 
 #include <basetyps.h> /* Cygwin */
 #ifndef TMT_CONTENTMARGINS
@@ -67,6 +68,7 @@ typedef HRESULT (STDAPICALLTYPE GetThemeTextExtentProc)(HTHEME hTheme, HDC hdc,
     int iPartId, int iStateId, LPCWSTR pszText, int iCharCount,
     DWORD dwTextFlags, const RECT *pBoundingRect, RECT *pExtentRect);
 typedef BOOL (STDAPICALLTYPE IsThemeActiveProc)(VOID);
+typedef BOOL (STDAPICALLTYPE IsAppThemedProc)(VOID);
 typedef BOOL (STDAPICALLTYPE IsThemePartDefinedProc)(HTHEME, int, int);
 typedef HRESULT (STDAPICALLTYPE IsThemeBackgroundPartiallyTransparentProc)(
     HTHEME, int, int);
@@ -86,6 +88,7 @@ typedef struct
     GetThemePartSizeProc			*GetThemePartSize;
     GetThemeTextExtentProc			*GetThemeTextExtent;
     IsThemeActiveProc				*IsThemeActive;
+    IsAppThemedProc				*IsAppThemed;
     IsThemePartDefinedProc			*IsThemePartDefined;
     IsThemeBackgroundPartiallyTransparentProc 	*IsThemeBackgroundPartiallyTransparent;
 } XPThemeProcs;
@@ -110,6 +113,32 @@ static XPThemeProcs *procs = NULL;
 static XPThemeData *appThemeData = NULL; 
 TCL_DECLARE_MUTEX(themeMutex)
 
+/* http://www.manbu.net/Lib/En/Class5/Sub16/1/29.asp */
+static int
+ComCtlVersionOK(void)
+{
+    HINSTANCE handle;
+    typedef HRESULT (STDAPICALLTYPE DllGetVersionProc)(DLLVERSIONINFO *);
+    DllGetVersionProc *pDllGetVersion;
+    int result = FALSE;
+
+    handle = LoadLibrary("comctl32.dll");
+    if (handle == NULL)
+	return FALSE;
+    pDllGetVersion = (DllGetVersionProc *) GetProcAddress(handle,
+	    "DllGetVersion");
+    if (pDllGetVersion != NULL) {
+	DLLVERSIONINFO dvi;
+
+	memset(&dvi, '\0', sizeof(dvi));
+	dvi.cbSize = sizeof(dvi);
+	if ((*pDllGetVersion)(&dvi) == NOERROR)
+	    result = dvi.dwMajorVersion >= 6;
+    }
+    FreeLibrary(handle);
+    return result;
+}
+
 /*
  *----------------------------------------------------------------------
  *
@@ -122,6 +151,7 @@ TCL_DECLARE_MUTEX(themeMutex)
  *
  * Returns:
  *	A pointer to an XPThemeProcs table if successful, NULL otherwise.
+ *----------------------------------------------------------------------
  */
 
 static XPThemeProcs *
@@ -138,7 +168,8 @@ LoadXPThemeProcs(HINSTANCE *phlib)
     ZeroMemory(&os, sizeof(os));
     os.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
     GetVersionEx(&os);
-    if (os.dwMajorVersion >= 5 && os.dwMinorVersion >= 1) {
+    if ((os.dwMajorVersion >= 5 && os.dwMinorVersion >= 1) ||
+	    (os.dwMajorVersion > 5)) {
 	/*
 	 * We are running under Windows XP or a newer version.
 	 * Load the library "uxtheme.dll", where the native widget
@@ -168,8 +199,10 @@ LoadXPThemeProcs(HINSTANCE *phlib)
 		&& LOADPROC(GetThemePartSize)
 		&& LOADPROC(GetThemeTextExtent)
 		&& LOADPROC(IsThemeActive)
+		&& LOADPROC(IsAppThemed)
 		&& LOADPROC(IsThemePartDefined)
 		&& LOADPROC(IsThemeBackgroundPartiallyTransparent)
+		&& ComCtlVersionOK()
 	    ) {
 		return procs;
 	    }
@@ -582,7 +615,8 @@ WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
     switch (msg) {
 	case WM_THEMECHANGED:
 	    Tcl_MutexLock(&themeMutex);
-	    appThemeData->themeEnabled = procs->IsThemeActive();
+	    appThemeData->themeEnabled = procs->IsThemeActive() &&
+		    procs->IsAppThemed();
 	    appThemeData->buttonClosed.cx = appThemeData->buttonOpen.cx = -1;
 	    Tcl_MutexUnlock(&themeMutex);
 	    Tree_TheWorldHasChanged(interp);
@@ -717,7 +751,8 @@ int TreeTheme_InitInterp(Tcl_Interp *interp)
 
 	if (appThemeData->procs) {
 	    /* Check this again if WM_THEMECHANGED arrives */
-	    appThemeData->themeEnabled = procs->IsThemeActive();
+	    appThemeData->themeEnabled = procs->IsThemeActive() &&
+		    procs->IsAppThemed();
 
 	    appThemeData->registered =
 		RegisterThemeMonitorWindowClass(Tk_GetHINSTANCE());
