@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.65 2007/01/31 23:27:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.66 2007/03/03 22:16:44 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6228,7 +6228,7 @@ ItemButtonCO_Get(
 
     if (value & cd->flag2)
 	return Tcl_NewStringObj("auto", -1);
-    return Tcl_NewBooleanObj((value & cd->flag2) != 0);
+    return Tcl_NewBooleanObj((value & cd->flag1) != 0);
 }
 
 static void
