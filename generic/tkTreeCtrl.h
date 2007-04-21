@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.89 2007/01/31 23:21:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.90 2007/04/21 21:34:00 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -91,6 +91,13 @@ struct PerStateType
 };
 
 /*****/
+
+typedef struct
+{
+    Drawable drawable;
+    int width;
+    int height;
+} TreeDrawable;
 
 typedef struct GCCache GCCache;
 struct GCCache
@@ -537,9 +544,9 @@ extern int TreeItem_TotalHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_InvalidateHeight(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_SpansInvalidate(TreeCtrl *tree, TreeItem item_);
 extern int *TreeItem_GetSpans(TreeCtrl *tree, TreeItem item_);
-extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, Drawable drawable, int minX, int maxX, int index);
-extern void TreeItem_DrawLines(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
-extern void TreeItem_DrawButton(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, Drawable drawable);
+extern void TreeItem_Draw(TreeCtrl *tree, TreeItem self, int lock, int x, int y, int width, int height, TreeDrawable td, int minX, int maxX, int index);
+extern void TreeItem_DrawLines(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, TreeDrawable td);
+extern void TreeItem_DrawButton(TreeCtrl *tree, TreeItem self, int x, int y, int width, int height, TreeDrawable td);
 extern int TreeItem_ReallyVisible(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_FreeResources(TreeCtrl *tree, TreeItem self);
 extern void TreeItem_Release(TreeCtrl *tree, TreeItem item);
@@ -592,7 +599,7 @@ struct StyleDrawArgs
     int y;
     int width;
     int height;
-    Drawable drawable;
+    TreeDrawable td;
     int state;		/* STATE_xxx */
     Tk_Justify justify;
     int bounds[4];
@@ -714,7 +721,7 @@ extern int TreeColumn_Visible(TreeColumn column_);
 extern int TreeColumn_Squeeze(TreeColumn column_);
 extern int TreeColumn_BackgroundCount(TreeColumn column_);
 extern GC TreeColumn_BackgroundGC(TreeColumn column_, int which);
-extern void Tree_DrawHeader(TreeCtrl *tree, Drawable drawable, int x, int y);
+extern void Tree_DrawHeader(TreeCtrl *tree, TreeDrawable td, int x, int y);
 extern int TreeColumn_WidthOfItems(TreeColumn column_);
 extern void TreeColumn_InvalidateWidth(TreeColumn column_);
 extern void TreeColumn_Init(TreeCtrl *tree);
@@ -882,6 +889,8 @@ extern void TextLayout_Draw(Display *display, Drawable drawable, GC gc,
 extern void DrawXORLine(Display *display, Drawable drawable, int x1, int y1,
 	int x2, int y2);
 #endif
+extern void Tree_RedrawImage(Tk_Image image, int imageX, int imageY,
+	int width, int height, TreeDrawable td, int drawableX, int drawableY);
 extern void Tree_DrawBitmapWithGC(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,
 	GC gc, int src_x, int src_y, int width, int height, int dest_x, int dest_y);
 extern void Tree_DrawBitmap(TreeCtrl *tree, Pixmap bitmap, Drawable drawable,

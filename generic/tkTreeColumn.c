@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.77 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.78 2007/04/21 21:34:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4324,7 +4324,7 @@ errorExit:
 static void
 Column_DrawArrow(
     TreeColumn column,		/* Column record. */
-    Drawable drawable,		/* Where to draw. */
+    TreeDrawable td,		/* Where to draw. */
     int x, int y,		/* Top-left corner of the column's header. */
     struct Layout layout	/* Size/position info. */
     )
@@ -4344,8 +4344,8 @@ Column_DrawArrow(
 
     image = PerStateImage_ForState(tree, &column->arrowImage, state, NULL);
     if (image != NULL) {
-	Tk_RedrawImage(image, 0, 0, layout.arrowWidth, layout.arrowHeight,
-	    drawable,
+	Tree_RedrawImage(image, 0, 0, layout.arrowWidth, layout.arrowHeight,
+	    td,
 	    x + layout.arrowLeft + sunken,
 	    y + (height - (layout.arrowHeight + arrowPadY)) / 2 + sunken);
 	return;
@@ -4356,7 +4356,7 @@ Column_DrawArrow(
 	int bx, by;
 	bx = x + layout.arrowLeft + sunken;
 	by = y + (height - (layout.arrowHeight + arrowPadY)) / 2 + sunken;
-	Tree_DrawBitmap(tree, bitmap, drawable, NULL, NULL,
+	Tree_DrawBitmap(tree, bitmap, td.drawable, NULL, NULL,
 		0, 0,
 		(unsigned int) layout.arrowWidth, (unsigned int) layout.arrowHeight,
 		bx, by);
@@ -4364,7 +4364,7 @@ Column_DrawArrow(
     }
 
     if (tree->useTheme) {
-	if (TreeTheme_DrawHeaderArrow(tree, drawable,
+	if (TreeTheme_DrawHeaderArrow(tree, td.drawable,
 	    column->arrow == ARROW_UP, x + layout.arrowLeft + sunken,
 	    y + (height - (layout.arrowHeight + arrowPadY)) / 2 + sunken,
 	    layout.arrowWidth, layout.arrowHeight) == TCL_OK)
@@ -4415,14 +4415,13 @@ Column_DrawArrow(
 	    points[i].y += sunken;
 	}
 
-	border = PerStateBorder_ForState(tree, &column->border,
-	    Column_MakeState(column), NULL);
+	border = PerStateBorder_ForState(tree, &column->border, state, NULL);
 	if (border == NULL)
 	    border = tree->border;
-	XDrawLines(tree->display, drawable,
+	XDrawLines(tree->display, td.drawable,
 		Tk_3DBorderGC(tree->tkwin, border, color2),
 		points + 2, 3, CoordModeOrigin);
-	XDrawLines(tree->display, drawable,
+	XDrawLines(tree->display, td.drawable,
 		Tk_3DBorderGC(tree->tkwin, border, color1),
 		points, 2, CoordModeOrigin);
     }
@@ -4447,7 +4446,7 @@ Column_DrawArrow(
 static void
 Column_Draw(
     TreeColumn column,		/* Column record. */
-    Drawable drawable,		/* Where to draw. */
+    TreeDrawable td,		/* Where to draw. */
     int x, int y,		/* Top-left corner of the column's header. */
     int dragImage		/* TRUE if we are creating a transparent
 				 * drag image for this header. */
@@ -4473,14 +4472,14 @@ Column_Draw(
 
     if (dragImage) {
 	GC gc = Tk_GCForColor(tree->columnDrag.color, Tk_WindowId(tree->tkwin));
-	XFillRectangle(tree->display, drawable, gc, x, y, width, height);
+	XFillRectangle(tree->display, td.drawable, gc, x, y, width, height);
     } else {
 	if (tree->useTheme) {
-	    theme = TreeTheme_DrawHeaderItem(tree, drawable, column->state,
+	    theme = TreeTheme_DrawHeaderItem(tree, td.drawable, column->state,
 		    column->arrow, x, y, width, height);
 	}
 	if (theme != TCL_OK)
-	    Tk_Fill3DRectangle(tree->tkwin, drawable, border,
+	    Tk_Fill3DRectangle(tree->tkwin, td.drawable, border,
 		    x, y, width, height, 0, TK_RELIEF_FLAT);
     }
 
@@ -4492,7 +4491,7 @@ Column_Draw(
 	    + column->imagePadY[PAD_BOTTOM_RIGHT];
 	iy = y + (height - h) / 2 + sunken;
 	iy += column->imagePadY[PAD_TOP_LEFT];
-	Tk_RedrawImage(column->image, 0, 0, imgW, imgH, drawable, ix, iy);
+	Tree_RedrawImage(column->image, 0, 0, imgW, imgH, td, ix, iy);
     } else if (column->bitmap != None) {
 	int imgW, imgH, bx, by, h;
 
@@ -4502,7 +4501,7 @@ Column_Draw(
 	    + column->imagePadY[PAD_BOTTOM_RIGHT];
 	by = y + (height - h) / 2 + sunken;
 	by += column->imagePadY[PAD_TOP_LEFT];
-	Tree_DrawBitmapWithGC(tree, column->bitmap, drawable, column->bitmapGC,
+	Tree_DrawBitmapWithGC(tree, column->bitmap, td.drawable, column->bitmapGC,
 		0, 0, (unsigned int) imgW, (unsigned int) imgH,
 		bx, by);
     }
@@ -4519,7 +4518,7 @@ Column_Draw(
 	gcValues.graphics_exposures = False;
 	mask = GCFont | GCForeground | GCGraphicsExposures;
 	gc = Tree_GetGC(tree, mask, &gcValues);
-	TextLayout_Draw(tree->display, drawable, gc,
+	TextLayout_Draw(tree->display, td.drawable, gc,
 		column->textLayout,
 		x + layout.textLeft + sunken,
 		y + (height - h) / 2 + column->textPadY[PAD_TOP_LEFT] + sunken,
@@ -4555,7 +4554,7 @@ Column_Draw(
 	    + column->textPadY[PAD_BOTTOM_RIGHT];
 	ty = y + (height - h) / 2 + layout.fm.ascent + sunken;
 	ty += column->textPadY[PAD_TOP_LEFT];
-	Tk_DrawChars(tree->display, drawable, gc,
+	Tk_DrawChars(tree->display, td.drawable, gc,
 		layout.tkfont, text, textLen, tx, ty);
 	if (text != staticStr)
 	    ckfree(text);
@@ -4568,10 +4567,10 @@ Column_Draw(
     /* Under Aqua, we let the Appearance Manager draw the sort arrow */
     if (theme != TCL_OK)
 #endif
-    Column_DrawArrow(column, drawable, x, y, layout);
+    Column_DrawArrow(column, td, x, y, layout);
 
     if (theme != TCL_OK)
-	Tk_Draw3DRectangle(tree->tkwin, drawable, border,
+	Tk_Draw3DRectangle(tree->tkwin, td.drawable, border,
 		x, y, width, height, column->borderWidth, relief);
 }
 
@@ -4603,7 +4602,7 @@ SetImageForColumn(
     )
 {
     Tk_PhotoHandle photoH;
-    Pixmap pixmap;
+    TreeDrawable td;
     int width = column->useWidth; /* the entire column, not just what is visible */
     int height = tree->headerHeight;
     XImage *ximage;
@@ -4616,22 +4615,24 @@ SetImageForColumn(
 	    return NULL;
     }
 
-    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tree->tkwin),
+    td.width = width;
+    td.height = height;
+    td.drawable = Tk_GetPixmap(tree->display, Tk_WindowId(tree->tkwin),
 	    width, height, Tk_Depth(tree->tkwin));
 
-    Column_Draw(column, pixmap, 0, 0, TRUE);
+    Column_Draw(column, td, 0, 0, TRUE);
 
     /* Pixmap -> XImage */
-    ximage = XGetImage(tree->display, pixmap, 0, 0,
+    ximage = XGetImage(tree->display, td.drawable, 0, 0,
 	    (unsigned int)width, (unsigned int)height, AllPlanes, ZPixmap);
     if (ximage == NULL)
-	panic("ximage is NULL");
+	panic("tkTreeColumn.c:SetImageForColumn() ximage is NULL");
 
     /* XImage -> Tk_Image */
     Tree_XImage2Photo(tree->interp, photoH, ximage, tree->columnDrag.alpha);
 
     XDestroyImage(ximage);
-    Tk_FreePixmap(tree->display, pixmap);
+    Tk_FreePixmap(tree->display, td.drawable);
 
     return Tk_GetImage(tree->interp, tree->tkwin, "::TreeCtrl::ImageColumn",
 	NULL, (ClientData) NULL);
@@ -4686,65 +4687,69 @@ DrawDragIndicator(
 static void
 DrawHeaderLeft(
     TreeCtrl *tree,		/* Widget info. */
-    Drawable drawable		/* Where to draw. */
+    TreeDrawable td		/* Where to draw. */
     )
 {
     TreeColumn column = tree->columnLockLeft;
     Tk_Window tkwin = tree->tkwin;
     int x = Tree_HeaderLeft(tree), y = Tree_HeaderTop(tree);
-    Drawable pixmap;
+    TreeDrawable td2;
 
-    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-	    Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
+    td2.width = Tk_Width(tkwin);
+    td2.height = Tree_HeaderBottom(tree);
+    td2.drawable = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
+	    td2.width, td2.height, Tk_Depth(tkwin));
 
     while (column != NULL && column->lock == COLUMN_LOCK_LEFT) {
 	if (column->visible) {
-	    Column_Draw(column, pixmap, x, y, FALSE);
+	    Column_Draw(column, td2, x, y, FALSE);
 	    x += column->useWidth;
 	}
 	column = column->next;
     }
 
-    DrawDragIndicator(tree, pixmap, COLUMN_LOCK_LEFT);
+    DrawDragIndicator(tree, td2.drawable, COLUMN_LOCK_LEFT);
 
-    XCopyArea(tree->display, pixmap, drawable,
+    XCopyArea(tree->display, td2.drawable, td.drawable,
 	    tree->copyGC, Tree_HeaderLeft(tree), y,
 	    x - Tree_HeaderLeft(tree), tree->headerHeight,
 	    Tree_HeaderLeft(tree), y);
 
-    Tk_FreePixmap(tree->display, pixmap);
+    Tk_FreePixmap(tree->display, td2.drawable);
 }
 
 static void
 DrawHeaderRight(
     TreeCtrl *tree,		/* Widget info. */
-    Drawable drawable		/* Where to draw. */
+    TreeDrawable td		/* Where to draw. */
     )
 {
     TreeColumn column = tree->columnLockRight;
     Tk_Window tkwin = tree->tkwin;
     int x = Tree_ContentRight(tree), y = Tree_HeaderTop(tree);
-    Drawable pixmap;
+    TreeDrawable td2;
 
-    pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-	    Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
+    td2.width = Tk_Width(tkwin);
+    td2.height = Tree_HeaderBottom(tree);
+    td2.drawable = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
+	    td2.width, td2.height, Tk_Depth(tkwin));
 
     while (column != NULL && column->lock == COLUMN_LOCK_RIGHT) {
 	if (column->visible) {
-	    Column_Draw(column, pixmap, x, y, FALSE);
+	    Column_Draw(column, td2, x, y, FALSE);
 	    x += column->useWidth;
 	}
 	column = column->next;
     }
 
-    DrawDragIndicator(tree, pixmap, COLUMN_LOCK_RIGHT);
+    DrawDragIndicator(tree, td2.drawable, COLUMN_LOCK_RIGHT);
 
-    XCopyArea(tree->display, pixmap, drawable,
+    XCopyArea(tree->display, td2.drawable, td.drawable,
 	    tree->copyGC, Tree_ContentRight(tree), y,
 	    x - Tree_ContentRight(tree), tree->headerHeight,
 	    Tree_ContentRight(tree), y);
 
-    Tk_FreePixmap(tree->display, pixmap);
+    Tk_FreePixmap(tree->display, td2.drawable);
 }
 
 /*
@@ -4766,13 +4771,15 @@ DrawHeaderRight(
 void
 Tree_DrawHeader(
     TreeCtrl *tree,		/* Widget info. */
-    Drawable drawable,		/* Where to draw. */
+    TreeDrawable td,		/* Where to draw. */
     int x, int y		/* Top-left corner of the header. */
     )
 {
     TreeColumn column = tree->columns;
     Tk_Window tkwin = tree->tkwin;
     int minX, maxX, width, height;
+    Drawable drawable = td.drawable;
+    TreeDrawable tp;
     Drawable pixmap;
 
     /* Update layout if needed */
@@ -4782,17 +4789,21 @@ Tree_DrawHeader(
     minX = Tree_ContentLeft(tree);
     maxX = Tree_ContentRight(tree);
 
-    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM)
-	pixmap = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
-		Tk_Width(tkwin), Tree_HeaderBottom(tree), Tk_Depth(tkwin));
-    else
-	pixmap = drawable;
+    if (tree->doubleBuffer == DOUBLEBUFFER_ITEM) {
+	tp.width = Tk_Width(tkwin);
+	tp.height = Tree_HeaderBottom(tree);
+	tp.drawable = Tk_GetPixmap(tree->display, Tk_WindowId(tkwin),
+		tp.width, tp.height, Tk_Depth(tkwin));
+    } else {
+	tp = td;
+    }
+    pixmap = tp.drawable;
 
     column = tree->columnLockNone;
     while (column != NULL && column->lock == COLUMN_LOCK_NONE) {
 	if (column->visible) {
 	    if ((x < maxX) && (x + column->useWidth > minX))
-		Column_Draw(column, pixmap, x, y, FALSE);
+		Column_Draw(column, tp, x, y, FALSE);
 	    x += column->useWidth;
 	}
 	column = column->next;
@@ -4823,9 +4834,9 @@ Tree_DrawHeader(
 	DrawDragIndicator(tree, pixmap, COLUMN_LOCK_NONE);
 
     if (Tree_WidthOfLeftColumns(tree) > 0)
-	DrawHeaderLeft(tree, pixmap);
+	DrawHeaderLeft(tree, tp);
     if (Tree_WidthOfRightColumns(tree) > 0)
-	DrawHeaderRight(tree, pixmap);
+	DrawHeaderRight(tree, tp);
 
     if (tree->columnDrag.column != NULL) {
 	Tk_Image image;
@@ -4836,22 +4847,7 @@ Tree_DrawHeader(
 
 	    image = SetImageForColumn(tree, tree->columnDrag.column);
 	    x += tree->columnDrag.offset;
-#if !defined(WIN32) && !defined(MAC_TCL) && !defined(MAC_OSX_TK)
-	    /*
-	     * Do boundary clipping, so that Tk_RedrawImage is passed
-	     * valid coordinates. [Tk Bug 979239]
-	     */
-	    if (x < minX) {
-		ix = minX - x;
-		iw -= ix;
-		x = minX;
-		w -= ix;
-	    }
-	    if (x + w > maxX) {
-		iw -= (x + w) - maxX;
-	    }
-#endif
-	    Tk_RedrawImage(image, ix, iy, iw, ih, pixmap, x, y);
+	    Tree_RedrawImage(image, ix, iy, iw, ih, tp, x, y);
 	    Tk_FreeImage(image);
 	}
     }

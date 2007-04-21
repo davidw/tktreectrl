@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.26 2007/01/31 00:51:07 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.27 2007/04/21 21:34:01 treectrl Exp $
  */
 
 typedef struct TreeElementType TreeElementType;
@@ -41,6 +41,7 @@ struct TreeElementArgs
 #define STICKY_E 0x4000
 #define STICKY_S 0x8000
 	int sticky;
+	TreeDrawable td;
 	Drawable drawable;
 	int bounds[4];
     } display;

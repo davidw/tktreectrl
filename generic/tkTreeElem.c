@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.64 2007/01/31 00:52:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.65 2007/04/21 21:34:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1743,7 +1743,7 @@ static void DisplayProcImage(TreeElementArgs *args)
 	imgW = args->display.width;
     if (imgH > args->display.height)
 	imgH = args->display.height;
-    Tk_RedrawImage(image, 0, 0, imgW, imgH, args->display.drawable, x, y);
+    Tree_RedrawImage(image, 0, 0, imgW, imgH, args->display.td, x, y);
 }
 
 static void NeededProcImage(TreeElementArgs *args)

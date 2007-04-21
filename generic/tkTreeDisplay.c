@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.83 2007/01/31 23:23:49 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.84 2007/04/21 21:34:00 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -90,13 +90,6 @@ struct TreeColumnDInfo_
     int width;			/* Last seen column width */
 };
 
-struct DPixmap
-{
-    Pixmap pixmap;
-    int width;
-    int height;
-};
-
 /* Display information for a TreeCtrl. */
 struct TreeDInfo_
 {
@@ -117,8 +110,8 @@ struct TreeDInfo_
     int rItemMax;		/* size of rItem[] */
     int itemHeight;		/* Observed max TreeItem height */
     int itemWidth;		/* Observed max TreeItem width */
-    struct DPixmap pixmapW;	/* Pixmap as big as the window */
-    struct DPixmap pixmapI;	/* Pixmap as big as the largest item */
+    TreeDrawable pixmapW;	/* Pixmap as big as the window */
+    TreeDrawable pixmapI;	/* Pixmap as big as the largest item */
     TkRegion dirtyRgn;		/* DOUBLEBUFFER_WINDOW */
     int flags;			/* DINFO_XXX */
     int xScrollIncrement;	/* Last seen TreeCtr.xScrollIncrement */
@@ -3846,8 +3839,8 @@ ScrollVerticalComplex(
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	    int dirtyMin, dirtyMax;
-	    XCopyArea(tree->display, dInfo->pixmapW.pixmap,
-		    dInfo->pixmapW.pixmap, tree->copyGC,
+	    XCopyArea(tree->display, dInfo->pixmapW.drawable,
+		    dInfo->pixmapW.drawable, tree->copyGC,
 		    oldX, oldY, width, height,
 		    oldX, oldY + offset);
 	    if (offset < 0) {
@@ -3964,7 +3957,8 @@ ScrollHorizontalSimple(
     damageRgn = Tree_GetRegion(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	XCopyArea(tree->display, dInfo->pixmapW.pixmap, dInfo->pixmapW.pixmap,
+	XCopyArea(tree->display, dInfo->pixmapW.drawable,
+		dInfo->pixmapW.drawable,
 		tree->copyGC,
 		x, minY, width, maxY - minY,
 		x + offset, minY);
@@ -4062,8 +4056,8 @@ ScrollVerticalSimple(
     damageRgn = Tree_GetRegion(tree);
 
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	XCopyArea(tree->display, dInfo->pixmapW.pixmap, dInfo->pixmapW.pixmap,
-		tree->copyGC,
+	XCopyArea(tree->display, dInfo->pixmapW.drawable,
+		dInfo->pixmapW.drawable, tree->copyGC,
 		minX, y, maxX - minX, height,
 		minX, y + offset);
 	Tree_InvalidateArea(tree, minX, dirtyMin, maxX, dirtyMax);
@@ -4209,8 +4203,8 @@ ScrollHorizontalComplex(
 
 	if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 	    int dirtyMin, dirtyMax;
-	    XCopyArea(tree->display, dInfo->pixmapW.pixmap,
-		    dInfo->pixmapW.pixmap, tree->copyGC,
+	    XCopyArea(tree->display, dInfo->pixmapW.drawable,
+		    dInfo->pixmapW.drawable, tree->copyGC,
 		    oldX, oldY, width, height,
 		    oldX + offset, oldY);
 	    if (offset < 0) {
@@ -5077,8 +5071,8 @@ DisplayDItem(
     DItemArea *area,
     int lock,			/* Which set of columns. */
     int bounds[4],		/* TREE_AREA_xxx bounds of drawing. */
-    Drawable pixmap,		/* Where to draw. */
-    Drawable drawable		/* Where to copy to. */
+    TreeDrawable pixmap,	/* Where to draw. */
+    TreeDrawable drawable	/* Where to copy to. */
     )
 {
     Tk_Window tkwin = tree->tkwin;
@@ -5133,7 +5127,7 @@ DisplayDItem(
 		pixmap,
 		0, right - left,
 		dItem->index);
-	XCopyArea(tree->display, pixmap, drawable,
+	XCopyArea(tree->display, pixmap.drawable, drawable.drawable,
 		tree->copyGC,
 		0, 0,
 		right - left, bottom - top,
@@ -5265,27 +5259,27 @@ TreeDisplay_WasThereTrouble(
 static Pixmap
 DisplayGetPixmap(
     TreeCtrl *tree,
-    struct DPixmap *dPixmap,
+    TreeDrawable *dPixmap,
     int width,
     int height
     )
 {
     Tk_Window tkwin = tree->tkwin;
 
-    if (dPixmap->pixmap == None) {
-	dPixmap->pixmap = Tk_GetPixmap(tree->display,
+    if (dPixmap->drawable == None) {
+	dPixmap->drawable = Tk_GetPixmap(tree->display,
 		Tk_WindowId(tkwin), width, height, Tk_Depth(tkwin));
 	dPixmap->width = width;
 	dPixmap->height = height;
 
     } else if ((dPixmap->width < width) || (dPixmap->height < height)) {
-	Tk_FreePixmap(tree->display, dPixmap->pixmap);
-	dPixmap->pixmap = Tk_GetPixmap(tree->display,
+	Tk_FreePixmap(tree->display, dPixmap->drawable);
+	dPixmap->drawable = Tk_GetPixmap(tree->display,
 		Tk_WindowId(tkwin), width, height, Tk_Depth(tkwin));
 	dPixmap->width = width;
 	dPixmap->height = height;
     }
-    return dPixmap->pixmap;
+    return dPixmap->drawable;
 }
 
 /*
@@ -5315,8 +5309,9 @@ Tree_Display(
     TreeDInfo dInfo = tree->dInfo;
     DItem *dItem;
     Tk_Window tkwin = tree->tkwin;
-    Drawable drawable = Tk_WindowId(tkwin);
-    int minX, minY, maxX, maxY, height, width;
+    Drawable drawable;
+    TreeDrawable tdrawable;
+    int minX, minY, maxX, maxY;
     int count;
     int numCopy = 0, numDraw = 0;
     TkRegion wsRgnNew, wsRgnDif;
@@ -5595,10 +5590,15 @@ displayRetry:
 	    goto displayRetry;
     }
 
+    tdrawable.width = Tk_Width(tkwin);
+    tdrawable.height = Tk_Height(tkwin);
     if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
-	drawable = DisplayGetPixmap(tree, &dInfo->pixmapW,
-		Tk_Width(tkwin), Tk_Height(tkwin));
+	tdrawable.drawable = DisplayGetPixmap(tree, &dInfo->pixmapW,
+		tdrawable.width, tdrawable.height);
+    } else {
+	tdrawable.drawable = Tk_WindowId(tkwin);
     }
+    drawable = tdrawable.drawable;
 
     /* XOR off */
     TreeColumnProxy_Undisplay(tree);
@@ -5613,7 +5613,7 @@ displayRetry:
 			tree->debug.gcDraw, minX, minY, maxX - minX, maxY - minY);
 		DisplayDelay(tree);
 	    }
-	    Tree_DrawHeader(tree, drawable, 0 - tree->xOrigin, Tree_HeaderTop(tree));
+	    Tree_DrawHeader(tree, tdrawable, 0 - tree->xOrigin, Tree_HeaderTop(tree));
 	    if (tree->doubleBuffer == DOUBLEBUFFER_WINDOW) {
 		DblBufWinDirty(tree, minX, minY, maxX, maxY);
 	    }
@@ -5761,13 +5761,14 @@ displayRetry:
 
     /* Display dirty items */
     if (count > 0) {
-	Drawable pixmap = drawable;
+	TreeDrawable tpixmap = tdrawable;
 
 	if (tree->doubleBuffer != DOUBLEBUFFER_NONE) {
 	    /* Allocate pixmap for largest item */
-	    width = MIN(Tk_Width(tkwin), dInfo->itemWidth);
-	    height = MIN(Tk_Height(tkwin), dInfo->itemHeight);
-	    pixmap = DisplayGetPixmap(tree, &dInfo->pixmapI, width, height);
+	    tpixmap.width = MIN(Tk_Width(tkwin), dInfo->itemWidth);
+	    tpixmap.height = MIN(Tk_Height(tkwin), dInfo->itemHeight);
+	    tpixmap.drawable = DisplayGetPixmap(tree, &dInfo->pixmapI,
+		tpixmap.width, tpixmap.height);
 	}
 
 	for (dItem = dInfo->dItem;
@@ -5787,7 +5788,7 @@ displayRetry:
 		}
 		if (dItem->area.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->area,
-			    COLUMN_LOCK_NONE, dInfo->bounds, pixmap, drawable);
+			    COLUMN_LOCK_NONE, dInfo->bounds, tpixmap, tdrawable);
 		}
 	    }
 	    if (!dInfo->emptyL) {
@@ -5803,7 +5804,7 @@ displayRetry:
 		}
 		if (dItem->left.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->left, COLUMN_LOCK_LEFT,
-			    dInfo->boundsL, pixmap, drawable);
+			    dInfo->boundsL, tpixmap, tdrawable);
 		}
 	    }
 	    if (!dInfo->emptyR) {
@@ -5819,7 +5820,7 @@ displayRetry:
 		}
 		if (dItem->right.flags & DITEM_DIRTY) {
 		    drawn += DisplayDItem(tree, dItem, &dItem->right, COLUMN_LOCK_RIGHT,
-			    dInfo->boundsR, pixmap, drawable);
+			    dInfo->boundsR, tpixmap, tdrawable);
 		}
 	    }
 	    numDraw += drawn ? 1 : 0;
@@ -5841,7 +5842,7 @@ displayRetry:
 	TkClipBox(dInfo->dirtyRgn, &box);
 	if (box.width > 0 && box.height > 0) {
 	    TkSetRegion(tree->display, tree->copyGC, dInfo->dirtyRgn);
-	    XCopyArea(tree->display, dInfo->pixmapW.pixmap, drawable,
+	    XCopyArea(tree->display, dInfo->pixmapW.drawable, drawable,
 		    tree->copyGC,
 		    box.x, box.y,
 		    box.width, box.height,
@@ -6518,15 +6519,15 @@ Tree_RelayoutWindow(
     dInfo->flags |= DINFO_DRAW_WHITESPACE;
 
     if (tree->doubleBuffer != DOUBLEBUFFER_WINDOW) {
-	if (dInfo->pixmapW.pixmap != None) {
-	    Tk_FreePixmap(tree->display, dInfo->pixmapW.pixmap);
-	    dInfo->pixmapW.pixmap = None;
+	if (dInfo->pixmapW.drawable != None) {
+	    Tk_FreePixmap(tree->display, dInfo->pixmapW.drawable);
+	    dInfo->pixmapW.drawable = None;
 	}
     }
     if (tree->doubleBuffer == DOUBLEBUFFER_NONE) {
-	if (dInfo->pixmapI.pixmap != None) {
-	    Tk_FreePixmap(tree->display, dInfo->pixmapI.pixmap);
-	    dInfo->pixmapI.pixmap = None;
+	if (dInfo->pixmapI.drawable != None) {
+	    Tk_FreePixmap(tree->display, dInfo->pixmapI.drawable);
+	    dInfo->pixmapI.drawable = None;
 	}
     }
 
@@ -7361,10 +7362,10 @@ TreeDInfo_Free(
     Tk_FreeGC(tree->display, dInfo->scrollGC);
     if (dInfo->flags & DINFO_REDRAW_PENDING)
 	Tcl_CancelIdleCall(Tree_Display, (ClientData) tree);
-    if (dInfo->pixmapW.pixmap != None)
-	Tk_FreePixmap(tree->display, dInfo->pixmapW.pixmap);
-    if (dInfo->pixmapI.pixmap != None)
-	Tk_FreePixmap(tree->display, dInfo->pixmapI.pixmap);
+    if (dInfo->pixmapW.drawable != None)
+	Tk_FreePixmap(tree->display, dInfo->pixmapW.drawable);
+    if (dInfo->pixmapI.drawable != None)
+	Tk_FreePixmap(tree->display, dInfo->pixmapI.drawable);
     if (dInfo->xScrollIncrements != NULL)
 	ckfree((char *) dInfo->xScrollIncrements);
     if (dInfo->yScrollIncrements != NULL)

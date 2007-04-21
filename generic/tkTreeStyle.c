@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.74 2007/01/31 00:52:17 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.75 2007/04/21 21:34:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2347,7 +2347,8 @@ void TreeStyle_Draw(
 
     args.tree = tree;
     args.state = drawArgs->state;
-    args.display.drawable = drawArgs->drawable;
+    args.display.td = drawArgs->td;
+    args.display.drawable = drawArgs->td.drawable;
 
     for (i = 0; i < masterStyle->numElements; i++) {
 	struct Layout *layout = &layouts[i];
@@ -2541,7 +2542,8 @@ TreeStyle_UpdateWindowPositions(
 
     args.tree = tree;
     args.state = drawArgs->state;
-    args.display.drawable = drawArgs->drawable;
+    args.display.td = drawArgs->td;
+    args.display.drawable = drawArgs->td.drawable;
 
     for (i = 0; i < numElements; i++) {
 	struct Layout *layout = &layouts[i];

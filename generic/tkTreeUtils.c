@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.66 2007/03/03 22:16:44 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.67 2007/04/21 21:34:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1141,6 +1141,64 @@ Tree_UnsetClipMask(
 	TkWinReleaseDrawableDC(drawable, dc, &dcState);
     }
 #endif
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * Tree_RedrawImage --
+ *
+ *	Wrapper around Tk_RedrawImage to clip the drawing to the actual
+ *	area of the drawable. If you try to draw a transparent photo
+ *	image outside the bounds of a drawable, X11 will silently fail
+ *	and nothing will be drawn. See tkImgPhoto.c:ImgPhotoDisplay.
+ *
+ * Results:
+ *	None.
+ *
+ * Side effects:
+ *	Stuff is drawn.
+ *
+ *----------------------------------------------------------------------
+ */
+void Tree_RedrawImage(
+    Tk_Image image,
+    int imageX,
+    int imageY,
+    int width,
+    int height,
+    TreeDrawable td,
+    int drawableX,
+    int drawableY
+    )
+{
+#if 0
+    int ix = imageX, iy = imageY, iw = width, ih = height;
+#endif
+    if (drawableX < 0) {
+	imageX = 0 - drawableX;
+	width -= imageX;
+	drawableX = 0;
+    }
+    if (drawableX + width > td.width) {
+	width -= (drawableX + width) - td.width;
+    }
+    if (drawableY < 0) {
+	imageY = 0 - drawableY;
+	height -= imageY;
+	drawableY = 0;
+    }
+    if (drawableY + height > td.height) {
+	height -= (drawableY + height) - td.height;
+    }
+#if 0
+    if (ix != imageX || iy != imageY || iw != width || ih != height)
+	dbwin("Tree_RedrawImage clipped %d,%d,%d,%d -> %d,%d,%d,%d\n", ix,iy,iw,ih, imageX, imageY, width, height);
+#endif
+    if (width > 0 && height > 0) {
+	Tk_RedrawImage(image, imageX, imageY, width, height, td.drawable,
+		drawableX, drawableY);
+    }
 }
 
 /*

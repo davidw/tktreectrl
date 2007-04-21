@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.100 2007/01/23 22:41:31 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.101 2007/04/21 21:34:01 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3590,7 +3590,7 @@ ItemDrawBackground(
     TreeColumn treeColumn,	/* Tree-column token. */
     TreeItem item,		/* Item record. */
     Column *column,		/* First column. */
-    Drawable drawable,		/* Where to draw. */
+    TreeDrawable drawable,	/* Where to draw. */
     int x, int y,		/* Area of the item to draw. */
     int width, int height,	/* ^ */
     int index			/* Used to select a color from the
@@ -3606,9 +3606,9 @@ ItemDrawBackground(
      * FIXME: If the background image is non-transparent, there is no
      * need to erase first.
      */
-    XFillRectangle(tree->display, drawable, gc, x, y, width, height);
+    XFillRectangle(tree->display, drawable.drawable, gc, x, y, width, height);
     if (tree->backgroundImage != NULL) {
-	Tree_DrawTiledImage(tree, drawable, tree->backgroundImage, x, y, 
+	Tree_DrawTiledImage(tree, drawable.drawable, tree->backgroundImage, x, y, 
 		x + width, y + height,
 		tree->drawableXOrigin, tree->drawableYOrigin);
     }
@@ -3949,7 +3949,7 @@ TreeItem_WalkSpans(
     spanCount = Item_GetSpans(tree, item, treeColumn, spans);
 
     drawArgs.tree = tree;
-    drawArgs.drawable = None;
+    drawArgs.td.drawable = None;
 
     totalWidth = 0;
     for (spanIndex = 0; spanIndex < spanCount; spanIndex++) {
@@ -4023,7 +4023,7 @@ SpanWalkProc_Draw(
     Column *itemColumn = (Column *) spanPtr->itemColumn;
     int i, x;
     struct {
-	Drawable drawable;
+	TreeDrawable td;
 	int minX;
 	int maxX;
 	int index;
@@ -4034,14 +4034,14 @@ SpanWalkProc_Draw(
 	    (drawArgs->x + drawArgs->width <= data->minX))
 	return 0;
 
-    drawArgs->drawable = data->drawable;
+    drawArgs->td = data->td;
 
     /* Draw background colors. */
     if (spanPtr->span == 1) {
 	/* Important point: use drawArgs->width since an item's width may
 	 * be totally different than tree->columnVis' width. */
 	ItemDrawBackground(tree, treeColumn, item, itemColumn,
-		drawArgs->drawable, drawArgs->x, drawArgs->y,
+		drawArgs->td, drawArgs->x, drawArgs->y,
 		drawArgs->width, drawArgs->height, data->index);
     } else {
 	x = drawArgs->x;
@@ -4050,7 +4050,7 @@ SpanWalkProc_Draw(
 	    if ((columnWidth > 0) && (x < data->maxX) &&
 		    (x + columnWidth > data->minX)) {
 		ItemDrawBackground(tree, treeColumn, item, itemColumn,
-			drawArgs->drawable, x, drawArgs->y,
+			drawArgs->td, x, drawArgs->y,
 			columnWidth, drawArgs->height, data->index);
 	    }
 	    x += columnWidth;
@@ -4066,10 +4066,10 @@ SpanWalkProc_Draw(
     if (spanPtr->treeColumn == tree->columnTree) {
 	if (tree->showLines)
 	    TreeItem_DrawLines(tree, item, drawArgs->x, drawArgs->y,
-		    drawArgs->width, drawArgs->height, data->drawable);
+		    drawArgs->width, drawArgs->height, data->td);
 	if (tree->showButtons)
 	    TreeItem_DrawButton(tree, item, drawArgs->x, drawArgs->y,
-		    drawArgs->width, drawArgs->height, data->drawable);
+		    drawArgs->width, drawArgs->height, data->td);
     }
 
     /* Stop walking if we went past the right edge of the dirty area. */
@@ -4099,20 +4099,20 @@ TreeItem_Draw(
     int lock,			/* Which columns. */
     int x, int y,		/* Drawable coordinates of the item. */
     int width, int height,	/* Total size of the item. */
-    Drawable drawable,		/* Where to draw. */
+    TreeDrawable td,		/* Where to draw. */
     int minX, int maxX,		/* Left/right edge that needs to be drawn. */
     int index			/* Used to select a color from a
 				 * tree-column's -itembackground option. */
     )
 {
     struct {
-	Drawable drawable;
+	TreeDrawable td;
 	int minX;
 	int maxX;
 	int index;
     } clientData;
 
-    clientData.drawable = drawable;
+    clientData.td = td;
     clientData.minX = minX;
     clientData.maxX = maxX;
     clientData.index = index;
@@ -4145,7 +4145,7 @@ TreeItem_DrawLines(
     TreeItem item,		/* Item token. */
     int x, int y,		/* Drawable coordinates of columnTree. */
     int width, int height,	/* Total size of columnTree. */
-    Drawable drawable		/* Where to draw. */
+    TreeDrawable td		/* Where to draw. */
     )
 {
     TreeItem parent, walk;
@@ -4198,12 +4198,12 @@ TreeItem_DrawLines(
 
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
-		Tree_VDotLine(tree, drawable, tree->lineGC,
+		Tree_VDotLine(tree, td.drawable, tree->lineGC,
 			lineLeft + i,
 			top,
 			bottom);
 	} else
-	    XFillRectangle(tree->display, drawable, tree->lineGC,
+	    XFillRectangle(tree->display, td.drawable, tree->lineGC,
 		    lineLeft,
 		    top,
 		    tree->lineThickness,
@@ -4217,12 +4217,12 @@ TreeItem_DrawLines(
     if (hasPrev || hasNext) {
 	if (tree->lineStyle == LINE_STYLE_DOT) {
 	    for (i = 0; i < tree->lineThickness; i++)
-		Tree_HDotLine(tree, drawable, tree->lineGC,
+		Tree_HDotLine(tree, td.drawable, tree->lineGC,
 			lineLeft + vert,
 			lineTop + i,
 			x /* + tree->columnTreeLeft */ + indent);
 	} else
-	    XFillRectangle(tree->display, drawable, tree->lineGC,
+	    XFillRectangle(tree->display, td.drawable, tree->lineGC,
 		    lineLeft + vert,
 		    lineTop,
 		    left + tree->useIndent - (lineLeft + vert),
@@ -4247,12 +4247,12 @@ TreeItem_DrawLines(
 	if (item != NULL) {
 	    if (tree->lineStyle == LINE_STYLE_DOT) {
 		for (i = 0; i < tree->lineThickness; i++)
-		    Tree_VDotLine(tree, drawable, tree->lineGC,
+		    Tree_VDotLine(tree, td.drawable, tree->lineGC,
 			    lineLeft + i,
 			    y,
 			    y + height);
 	    } else
-		XFillRectangle(tree->display, drawable, tree->lineGC,
+		XFillRectangle(tree->display, td.drawable, tree->lineGC,
 			lineLeft,
 			y,
 			tree->lineThickness,
@@ -4283,7 +4283,7 @@ TreeItem_DrawButton(
     TreeItem item,		/* Item token. */
     int x, int y,		/* Drawable coordinates of columnTree. */
     int width, int height,	/* Total size of columnTree. */
-    Drawable drawable		/* Where to draw. */
+    TreeDrawable td		/* Where to draw. */
     )
 {
     int indent, left, lineLeft, lineTop;
@@ -4309,7 +4309,7 @@ TreeItem_DrawButton(
     if (image != NULL) {
 	int imgW, imgH;
 	Tk_SizeOfImage(image, &imgW, &imgH);
-	Tk_RedrawImage(image, 0, 0, imgW, imgH, drawable,
+	Tree_RedrawImage(image, 0, 0, imgW, imgH, td,
 	    left + (tree->useIndent - imgW) / 2,
 	    y + (height - imgH) / 2);
 	return;
@@ -4322,7 +4322,7 @@ TreeItem_DrawButton(
 	Tk_SizeOfBitmap(tree->display, bitmap, &bmpW, &bmpH);
 	bx = left + (tree->useIndent - bmpW) / 2;
 	by = y + (height - bmpH) / 2;
-	Tree_DrawBitmap(tree, bitmap, drawable, NULL, NULL,
+	Tree_DrawBitmap(tree, bitmap, td.drawable, NULL, NULL,
 		0, 0, (unsigned int) bmpW, (unsigned int) bmpH,
 		bx, by);
 	return;
@@ -4330,9 +4330,9 @@ TreeItem_DrawButton(
 
     if (tree->useTheme) {
 	int bw, bh;
-	if (TreeTheme_GetButtonSize(tree, drawable, item->state & STATE_OPEN,
+	if (TreeTheme_GetButtonSize(tree, td.drawable, item->state & STATE_OPEN,
 	    &bw, &bh) == TCL_OK) {
-	    if (TreeTheme_DrawButton(tree, drawable, item->state & STATE_OPEN,
+	    if (TreeTheme_DrawButton(tree, td.drawable, item->state & STATE_OPEN,
 		left + (tree->useIndent - bw) / 2, y + (height - bh) / 2,
 		bw, bh) == TCL_OK) {
 		return;
@@ -4354,7 +4354,7 @@ TreeItem_DrawButton(
     buttonTop = y + (height - tree->buttonSize) / 2;
 
     /* Erase button background */
-    XFillRectangle(tree->display, drawable,
+    XFillRectangle(tree->display, td.drawable,
 	    Tk_3DBorderGC(tree->tkwin, tree->border, TK_3D_FLAT_GC),
 	    buttonLeft + tree->buttonThickness,
 	    buttonTop + tree->buttonThickness,
@@ -4362,14 +4362,14 @@ TreeItem_DrawButton(
 	    tree->buttonSize - tree->buttonThickness);
 
     /* Draw button outline */
-    XDrawRectangle(tree->display, drawable, tree->buttonGC,
+    XDrawRectangle(tree->display, td.drawable, tree->buttonGC,
 	    buttonLeft + w1,
 	    buttonTop + w1,
 	    tree->buttonSize - tree->buttonThickness + macoffset,
 	    tree->buttonSize - tree->buttonThickness + macoffset);
 
     /* Horizontal '-' */
-    XFillRectangle(tree->display, drawable, tree->buttonGC,
+    XFillRectangle(tree->display, td.drawable, tree->buttonGC,
 	    buttonLeft + tree->buttonThickness * 2,
 	    lineTop,
 	    tree->buttonSize - tree->buttonThickness * 4,
@@ -4377,7 +4377,7 @@ TreeItem_DrawButton(
 
     if (!(item->state & STATE_OPEN)) {
 	/* Finish '+' */
-	XFillRectangle(tree->display, drawable, tree->buttonGC,
+	XFillRectangle(tree->display, td.drawable, tree->buttonGC,
 		lineLeft,
 		buttonTop + tree->buttonThickness * 2,
 		tree->buttonThickness,
