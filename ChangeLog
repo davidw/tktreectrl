@@ -1,3 +1,9 @@
+2007-05-10  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeUtils.c (Tree_FillRegion): disable OS X specific
+	code as Tk improvements have made it unnecessary, and it actually
+	made it act funny in 8.5.
+
 2007-01-26  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeCtrl.h (vsnprintf): _vsnprintf on Windows.
