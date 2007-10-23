@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.67 2007/02/06 22:27:35 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.68 2007/10/23 23:04:33 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2.3 treectrl "Tk Commands"
 .BS
@@ -3185,6 +3185,21 @@ In the example above, the \fBrect\fR element is filled with blue when the treect
 has the focus and the item is selected. If the treectrl does not have the focus, the
 example specifies that gray should be used for selected items. Also note that if the
 item is not selected, no color is specified for the -fill option.
+.PP
+Each value-stateList pair is checked in order from left to right. The value
+associated with the first stateList that matches the current item state is
+used. So stateLists should be listed from most-specific to least-specific.
+.nf
+
+$T element configure MyRectElement -fill {gray {selected} blue {selected focus}}
+
+.fi
+Written this way, gray will always be used for selected items since
+it appears first, and blue will never be used for selected items regardless
+of the focus.
+.PP
+A value followed by an empty stateList should always be last since it will be
+chosen regardless of the item's state.
 .SH ELEMENTS
 Elements are the smallest building blocks
 which are handled by a treectrl widget.
