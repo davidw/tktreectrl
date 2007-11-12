@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.78 2007/04/21 21:34:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.79 2007/11/12 04:05:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -815,6 +815,44 @@ TreeColumn_FirstAndLast(
     return indexLast - indexFirst + 1;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * ColumnHasTag --
+ *
+ *	Checks whether a column has a certain tag.
+ *
+ * Results:
+ *	Returns TRUE if the column has the given tag.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ColumnHasTag(
+    TreeColumn column,		/* The column to test. */
+    Tk_Uid tag			/* Tag to look for. */
+    )
+{
+    TagInfo *tagInfo = column->tagInfo;
+    Tk_Uid *tagPtr;
+    int count;
+
+    if (tagInfo == NULL)
+	return 0;
+
+    for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
+	count > 0; tagPtr++, count--) {
+	if (*tagPtr == tag) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
 typedef struct Qualifiers {
     TreeCtrl *tree;
     int visible;		/* 1 for -visible TRUE,
@@ -826,6 +864,7 @@ typedef struct Qualifiers {
     int lock;			/* COLUMN_LOCK_xxx or -1 */
     int ntail;			/* 1 for !tail,
 				 * 0 for unspecified. */
+    Tk_Uid tag;			/* Tag (without operators) or NULL. */
 } Qualifiers;
 
 /*
@@ -856,6 +895,7 @@ Qualifiers_Init(
     q->exprOK = FALSE;
     q->lock = -1;
     q->ntail = 0;
+    q->tag = NULL;
 }
 
 /*
@@ -935,11 +975,15 @@ Qualifiers_Scan(
 		break;
 	    }
 	    case QUAL_TAG: {
-		if (q->exprOK)
-		    TagExpr_Free(&q->expr);
-		if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
-		    return TCL_ERROR;
-		q->exprOK = TRUE;
+		if (tree->columnTagExpr) {
+		    if (q->exprOK)
+			TagExpr_Free(&q->expr);
+		    if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
+			return TCL_ERROR;
+		    q->exprOK = TRUE;
+		} else {
+		    q->tag = Tk_GetUid(Tcl_GetString(objv[j + 1]));
+		}
 		break;
 	    }
 	    case QUAL_VISIBLE: {
@@ -1004,6 +1048,8 @@ Qualifies(
     if (q->exprOK && !TagExpr_Eval(&q->expr, column->tagInfo))
 	return 0;
     if ((q->lock != -1) && (column->lock != q->lock))
+	return 0;
+    if ((q->tag != NULL) && !ColumnHasTag(column, q->tag))
 	return 0;
     return 1;
 }
@@ -1331,28 +1377,44 @@ TreeColumnList_FromObj(
 	    goto gotFirstPart;
 	}
 
-	/* Try a tag expression. */
+	/* Try a tag or tag expression followed by qualifiers. */
 	if (objc > 1) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
 		    &qualArgsTotal) != TCL_OK) {
 		goto errorExit;
 	    }
 	}
-	if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
-	    goto errorExit;
-	column = tree->columns;
-	while (column != NULL) {
-	    if (TagExpr_Eval(&expr, column->tagInfo) && Qualifies(&q, column)) {
-		TreeColumnList_Append(columns, column);
+	if (tree->columnTagExpr) {
+	    if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
+		goto errorExit;
+	    column = tree->columns;
+	    while (column != NULL) {
+		if (TagExpr_Eval(&expr, column->tagInfo) && Qualifies(&q, column)) {
+		    TreeColumnList_Append(columns, column);
+		}
+		column = column->next;
 	    }
-	    column = column->next;
-	}
-	if (!(flags & CFO_NOT_TAIL) &&
-		TagExpr_Eval(&expr, tree->columnTail->tagInfo) &&
+	    if (!(flags & CFO_NOT_TAIL) &&
+		    TagExpr_Eval(&expr, tree->columnTail->tagInfo) &&
+		    Qualifies(&q, tree->columnTail)) {
+		TreeColumnList_Append(columns, tree->columnTail);
+	    }
+	    TagExpr_Free(&expr);
+	} else {
+	    Tk_Uid tag = Tk_GetUid(Tcl_GetString(elemPtr));
+	    column = tree->columns;
+	    while (column != NULL) {
+		if (ColumnHasTag(column, tag) && Qualifies(&q, column)) {
+		    TreeColumnList_Append(columns, column);
+		}
+		column = column->next;
+	    }
+	    if (!(flags & CFO_NOT_TAIL) &&
+		ColumnHasTag(tree->columnTail, tag) &&
 		Qualifies(&q, tree->columnTail)) {
-	    TreeColumnList_Append(columns, tree->columnTail);
+		TreeColumnList_Append(columns, tree->columnTail);
+	    }
 	}
-	TagExpr_Free(&expr);
 	column = NULL;
 	listIndex += 1 + qualArgsTotal;
     }
