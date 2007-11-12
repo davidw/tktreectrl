@@ -10,7 +10,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: itemdesc.test,v 1.2 2006/11/18 04:43:23 treectrl Exp $
+# RCS: @(#) $Id: itemdesc.test,v 1.3 2007/11/12 04:07:16 treectrl Exp $
 
 if {[lsearch [namespace children] ::tcltest] == -1} {
     package require tcltest 2
@@ -487,6 +487,25 @@ test itemdesc-6.2 {-itemprefix same as a tag} -setup {
     .t configure -itemprefix ""
     .t item tag remove all item1
 } -result {item2 item3 item4}
+
+test itemdesc-7.1 {-itemtagexpr, error} -setup {
+    .t item tag add "depth 1" a&&b||
+} -body {
+    lsort -dictionary [.t item id "tag a&&b||"]
+} -returnCodes error -result {Missing tag in tag search expression}
+
+test itemdesc-7.2 {-itemtagexpr, tag as first word} -setup {
+    .t configure -itemtagexpr false
+} -body {
+    lsort -dictionary [.t item id "a&&b||"]
+} -result {1 5 8}
+
+test itemdesc-7.3 {-itemtagexpr, tag as qualifier} -body {
+    lsort -dictionary [.t item id "tag a&&b||"]
+} -cleanup {
+    .t configure -itemtagexpr true
+    .t item tag remove all a&&b||
+} -result {1 5 8}
 
 test itemdesc-99.1 {some needed cleanup} -body {
     destroy .t
