@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.104 2007/01/31 23:21:25 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.105 2007/11/12 03:56:38 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -115,6 +115,9 @@ static Tk_OptionSpec optionSpecs[] = {
      (char *) NULL, Tk_Offset(TreeCtrl, columnProxy.xObj),
      Tk_Offset(TreeCtrl, columnProxy.x),
      TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_PROXY},
+    {TK_OPTION_BOOLEAN, "-columntagexpr", "columnTagExpr", "ColumnTagExpr",
+     "1", -1, Tk_Offset(TreeCtrl, columnTagExpr),
+     0, (ClientData) NULL, 0},
     {TK_OPTION_CURSOR, "-cursor", "cursor", "Cursor",
      (char *) NULL, -1, Tk_Offset(TreeCtrl, cursor),
      TK_OPTION_NULL_OK, (ClientData) NULL, 0},
@@ -173,6 +176,9 @@ static Tk_OptionSpec optionSpecs[] = {
 #endif
     {TK_OPTION_STRING, "-itemprefix", "itemPrefix", "ItemPrefix",
      "", -1, Tk_Offset(TreeCtrl, itemPrefix), 0, (ClientData) NULL, 0},
+    {TK_OPTION_BOOLEAN, "-itemtagexpr", "itemTagExpr", "ItemTagExpr",
+     "1", -1, Tk_Offset(TreeCtrl, itemTagExpr),
+     0, (ClientData) NULL, 0},
     {TK_OPTION_PIXELS, "-itemwidth", "itemWidth", "ItemWidth",
      "", Tk_Offset(TreeCtrl, itemWidthObj), Tk_Offset(TreeCtrl, itemWidth),
      TK_OPTION_NULL_OK, (ClientData) NULL, TREE_CONF_ITEMSIZE | TREE_CONF_RELAYOUT},

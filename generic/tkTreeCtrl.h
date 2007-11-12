@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.90 2007/04/21 21:34:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.91 2007/11/12 03:56:38 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -391,6 +391,9 @@ struct TreeCtrl
 
     TkRegion regionStack[8];	/* Temp region stack. */
     int regionStackLen;		/* Number of unused regions in regionStack. */
+
+    int itemTagExpr;		/* Enable/disable operators in item tags */
+    int columnTagExpr;		/* Enable/disable operators in column tags */
 };
 
 #define TREE_CONF_FONT 0x0001
