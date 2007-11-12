@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.101 2007/04/21 21:34:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.102 2007/11/12 04:02:59 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -1469,6 +1469,44 @@ TreeItem_ToIndex(
     if (indexVis != NULL) (*indexVis) = item->indexVis;
 }
 
+/*
+ *----------------------------------------------------------------------
+ *
+ * ItemHasTag --
+ *
+ *	Checks whether an item has a certain tag.
+ *
+ * Results:
+ *	Returns TRUE if the item has the given tag.
+ *
+ * Side effects:
+ *	None.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static int
+ItemHasTag(
+    TreeItem item,		/* The item to test. */
+    Tk_Uid tag			/* Tag to look for. */
+    )
+{
+    TagInfo *tagInfo = item->tagInfo;
+    Tk_Uid *tagPtr;
+    int count;
+
+    if (tagInfo == NULL)
+	return 0;
+
+    for (tagPtr = tagInfo->tagPtr, count = tagInfo->numTags;
+	count > 0; tagPtr++, count--) {
+	if (*tagPtr == tag) {
+	    return 1;
+	}
+    }
+    return 0;
+}
+
 typedef struct Qualifiers {
     TreeCtrl *tree;
     int visible;		/* 1 if the item must be ReallyVisible(),
@@ -1478,6 +1516,7 @@ typedef struct Qualifiers {
     TagExpr expr;		/* Tag expression. */
     int exprOK;			/* TRUE if expr is valid. */
     int depth;			/* >= 0 for depth, -1 for unspecified */
+    Tk_Uid tag;			/* Tag (without operators) or NULL. */
 } Qualifiers;
 
 /*
@@ -1507,6 +1546,7 @@ Qualifiers_Init(
     q->states[0] = q->states[1] = q->states[2] = 0;
     q->exprOK = FALSE;
     q->depth = -1;
+    q->tag = NULL;
 }
 
 /*
@@ -1574,11 +1614,15 @@ Qualifiers_Scan(
 		break;
 	    }
 	    case QUAL_TAG: {
-		if (q->exprOK)
-		    TagExpr_Free(&q->expr);
-		if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
-		    return TCL_ERROR;
-		q->exprOK = TRUE;
+		if (tree->itemTagExpr) {
+		    if (q->exprOK)
+			TagExpr_Free(&q->expr);
+		    if (TagExpr_Init(tree, objv[j + 1], &q->expr) != TCL_OK)
+			return TCL_ERROR;
+		    q->exprOK = TRUE;
+		} else {
+		    q->tag = Tk_GetUid(Tcl_GetString(objv[j + 1]));
+		}
 		break;
 	    }
 	    case QUAL_VISIBLE: {
@@ -1639,6 +1683,8 @@ Qualifies(
     if (q->exprOK && !TagExpr_Eval(&q->expr, item->tagInfo))
 	return 0;
     if ((q->depth >= 0) && (item->depth + 1 != q->depth))
+	return 0;
+    if ((q->tag != NULL) && !ItemHasTag(item, q->tag))
 	return 0;
     return 1;
 }
@@ -2010,24 +2056,36 @@ TreeItemList_FromObj(
 	    goto gotFirstPart;
 	}
 
-	/* Try a tag expression. */
+	/* Try a tag or tag expression followed by qualifiers. */
 	if (objc > 1) {
 	    if (Qualifiers_Scan(&q, objc, objv, listIndex + 1,
 		    &qualArgsTotal) != TCL_OK) {
 		goto errorExit;
 	    }
 	}
-	if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
-	    goto errorExit;
-	hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
-	while (hPtr != NULL) {
-	    item = (TreeItem) Tcl_GetHashValue(hPtr);
-	    if (TagExpr_Eval(&expr, item->tagInfo) && Qualifies(&q, item)) {
-		TreeItemList_Append(items, item);
+	if (tree->itemTagExpr) {
+	    if (TagExpr_Init(tree, elemPtr, &expr) != TCL_OK)
+		goto errorExit;
+	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	    while (hPtr != NULL) {
+		item = (TreeItem) Tcl_GetHashValue(hPtr);
+		if (TagExpr_Eval(&expr, item->tagInfo) && Qualifies(&q, item)) {
+		    TreeItemList_Append(items, item);
+		}
+		hPtr = Tcl_NextHashEntry(&search);
 	    }
-	    hPtr = Tcl_NextHashEntry(&search);
+	    TagExpr_Free(&expr);
+	} else {
+	    Tk_Uid tag = Tk_GetUid(Tcl_GetString(elemPtr));
+	    hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
+	    while (hPtr != NULL) {
+		item = (TreeItem) Tcl_GetHashValue(hPtr);
+		if (ItemHasTag(item, tag) && Qualifies(&q, item)) {
+		    TreeItemList_Append(items, item);
+		}
+		hPtr = Tcl_NextHashEntry(&search);
+	    }
 	}
-	TagExpr_Free(&expr);
 	item = NULL;
 	listIndex += 1 + qualArgsTotal;
     }
@@ -5607,6 +5665,11 @@ doneSET:
     return result;
 }
 
+/* Quicksort is not a "stable" sorting algorithm, but it can become a
+ * stable sort by using the pre-sort order of two items as a tie-breaker
+ * for items that would otherwise be considered equal. */
+#define STABLE_SORT
+
 /* one per column per SortItem */
 struct SortItem1
 {
@@ -5621,6 +5684,9 @@ struct SortItem
     TreeItem item;
     struct SortItem1 *item1;
     Tcl_Obj *obj; /* TreeItem_ToObj() */
+#ifdef STABLE_SORT
+    int index; /* The pre-sort order of the item */
+#endif
 };
 
 typedef struct SortData SortData;
@@ -5897,7 +5963,11 @@ CompareProc(
 	    return v;
 	}
     }
+#ifdef STABLE_SORT
+    return (a->index < b->index) ? -1 : 1;
+#else
     return 0;
+#endif
 }
 
 /* BEGIN custom quicksort() */
@@ -6353,6 +6423,9 @@ ItemSortCmd(
 	struct SortItem *sortItem = &sortData.items[index];
 
 	sortItem->item = walk;
+#ifdef STABLE_SORT
+	sortItem->index = index;
+#endif
 	if (sawCmd) {
 	    Tcl_Obj *obj = TreeItem_ToObj(tree, walk);
 	    Tcl_IncrRefCount(obj);
@@ -6460,7 +6533,6 @@ ItemSortCmd(
 	Tcl_SetObjResult(interp, listObj);
 	goto done;
     }
-
     first = first->prevSibling;
     last = last->nextSibling;
 
