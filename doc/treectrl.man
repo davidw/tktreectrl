@@ -3,7 +3,7 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.51 2007/10/23 23:04:33 treectrl Exp $}
+  $Id: treectrl.man,v 1.52 2007/11/12 04:15:52 treectrl Exp $}
 ][manpage_begin treectrl n 2.2.3]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
@@ -144,6 +144,10 @@ vertical line is drawn representing where the right edge of the column will
 be after resizing. For [const realtime], the column's size is changed while
 the user is dragging the right edge of the column.
 
+[tkoption_def -columntagexpr columnTagExpr ColumnTagExpr]
+Specifies a boolean that enables or disables tag expressions in column
+descriptions. See [sectref {ITEM AND COLUMN TAGS}].
+
 [tkoption_def -defaultstyle defaultStyle DefaultStyle]
 This option is deprecated; use the column option [option -itemstyle] instead.
 Specifies a list of styles, one per column, to apply to each item created by
@@ -189,6 +193,10 @@ processed. If this option is a non-empty string, the usual integer value
 of an item id is prefixed with the given string. This can aid debugging
 but it is important your code doesn't assume item ids are integers if you
 use it.
+
+[tkoption_def -itemtagexpr itemTagExpr ItemTagExpr]
+Specifies a boolean that enables or disables tag expressions in item
+descriptions. See [sectref {ITEM AND COLUMN TAGS}].
 
 [tkoption_def -itemwidth itemWidth ItemWidth]
 Specifies a fixed width for every item in any of the forms acceptable to [fun Tk_GetPixels].
@@ -393,6 +401,23 @@ or equivalently:
 .t item id "tag {a ^ b}"
 [example_end]
 will return the unique ids of any items with either "a" or "b" tags, but not both.
+[para]
+Within a tag expression a tag name may be enclosed in double quotes to avoid special
+processing of the operator characters. For example:
+[example_begin]
+.t item id {tag {"a&&b"||c}}
+[example_end]
+will return the unique ids of any items with either "a&&b" or "c" tags; in this
+example the && is not treated as an operator. A double-quote may be escaped within
+a quoted tag name using a backslash '\'.
+[para]
+Tag operators may be bypassed completely by setting the [option -columntagexpr] and
+[option -itemtagexpr] options. This can be useful if your application has column
+or item tags containing arbitrary text.
+[example_begin]
+.t configure -itemtagexpr false
+.t item delete "tag a&&b"
+[example_end]
 
 [section {WIDGET COMMAND}]
 The [cmd treectrl] command creates a new Tcl command whose
