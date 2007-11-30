@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.64 2007/02/06 22:26:35 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.65 2007/11/30 19:36:39 treectrl Exp $
 
 set VERSION 2.2.3
 
@@ -219,7 +219,9 @@ if {$tile} {
 	}
     }
 }
-option add *TreeCtrl.font $font
+array set fontInfo [font actual $font]
+eval font create DemoFont [array get fontInfo]
+option add *TreeCtrl.font DemoFont
 
 array set fontInfo [font actual $font]
 set fontInfo(-weight) bold
@@ -228,6 +230,23 @@ eval font create DemoFontBold [array get fontInfo]
 array set fontInfo [font actual $font]
 set fontInfo(-underline) 1
 eval font create DemoFontUnderline [array get fontInfo]
+
+proc SetDemoFontSize {size} {
+    font configure DemoFont -size $size
+    font configure DemoFontBold -size $size
+    font configure DemoFontUnderline -size $size
+    return
+}
+proc IncreaseFontSize {} {
+    set size [font configure DemoFont -size]
+    SetDemoFontSize [incr size]
+    return
+}
+proc DecreaseFontSize {} {
+    set size [font configure DemoFont -size]
+    SetDemoFontSize [incr size -1]
+    return
+}
 
 # Demo sources
 foreach file {
@@ -271,7 +290,10 @@ proc MakeMenuBar {} {
     if {$::thisPlatform ne "unix" && [info commands console] ne ""} {
 	console eval {
 	    wm title . "TkTreeCtrl Console"
-	    .console configure -font {Courier 9} -height 8
+	    if {[info tclversion] == 8.4} {
+		.console configure -font {Courier 9}
+	    }
+	    .console configure -height 8
 #	    ::tk::ConsolePrompt
 	    wm geometry . +0-100
 	}
@@ -288,6 +310,10 @@ proc MakeMenuBar {} {
     $m2 add command -label "Style Editor" -command ToggleStyleEditorWindow
     $m2 add command -label "View Source" -command ToggleSourceWindow
     $m2 add command -label "Magnifier" -command ToggleLoupeWindow
+    $m2 add separator
+    $m2 add command -label "Increase Font Size" -command IncreaseFontSize
+    $m2 add command -label "Decrease Font Size" -command DecreaseFontSize
+    $m2 add separator
     $m2 add command -label "Quit" -command exit
     $m add cascade -label "File" -menu $m2
 
