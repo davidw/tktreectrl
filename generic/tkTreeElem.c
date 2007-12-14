@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.65 2007/04/21 21:34:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.66 2007/12/14 20:32:45 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3632,9 +3632,9 @@ static Tk_OptionSpec windowOptionSpecs[] = {
 };
 
 static void
-WinItemStructureProc(clientData, eventPtr)
-    ClientData clientData;	/* Pointer to record describing window elem. */
-    XEvent *eventPtr;		/* Describes what just happened. */
+WinItemStructureProc(
+    ClientData clientData,	/* Pointer to record describing window elem. */
+    XEvent *eventPtr)		/* Describes what just happened. */
 {
     ElementWindow *elemX = clientData;
 
@@ -3646,9 +3646,9 @@ WinItemStructureProc(clientData, eventPtr)
 }
 
 static void
-WinItemRequestProc(clientData, tkwin)
-    ClientData clientData;		/* Pointer to record for window item. */
-    Tk_Window tkwin;			/* Window that changed its desired
+WinItemRequestProc(
+    ClientData clientData,		/* Pointer to record for window item. */
+    Tk_Window tkwin)			/* Window that changed its desired
 					 * size. */
 {
     ElementWindow *elemX = clientData;
@@ -3663,10 +3663,10 @@ WinItemRequestProc(clientData, tkwin)
 }
 
 static void
-WinItemLostSlaveProc(clientData, tkwin)
-    ClientData clientData;	/* WindowItem structure for slave window that
+WinItemLostSlaveProc(
+    ClientData clientData,	/* WindowItem structure for slave window that
 				 * was stolen away. */
-    Tk_Window tkwin;		/* Tk's handle for the slave window. */
+    Tk_Window tkwin)		/* Tk's handle for the slave window. */
 {
     ElementWindow *elemX = clientData;
     TreeCtrl *tree = elemX->tree;
