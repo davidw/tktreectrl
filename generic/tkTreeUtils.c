@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.68 2007/05/11 03:47:59 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.69 2007/12/14 20:26:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -185,7 +185,7 @@ DStringAppendf(
 /*
  *----------------------------------------------------------------------
  *
- * Ellipsis --
+ * Tree_Ellipsis --
  *
  *	Determine the number of bytes from the string that will fit
  *	in the given horizontal span. If the entire string does not
@@ -4133,7 +4133,7 @@ TagInfo_Copy(
 #else
 	copy = (TagInfo *) ckalloc(TAG_INFO_SIZE(tagSpace));
 #endif
-	memcpy(copy->tagPtr, tagInfo->tagPtr, tagInfo->numTags * sizeof(Tk_Uid));
+	memcpy((void *) copy->tagPtr, tagInfo->tagPtr, tagInfo->numTags * sizeof(Tk_Uid));
 	copy->numTags = tagInfo->numTags;
 	copy->tagSpace = tagSpace;
     }
@@ -4521,7 +4521,7 @@ TagExpr_Scan(
 	    } else {
 		expr->uids =
 		    (Tk_Uid *) ckalloc((expr->allocated)*sizeof(Tk_Uid));
-		memcpy(expr->uids, expr->staticUids, sizeof(expr->staticUids));
+		memcpy((void *) expr->uids, expr->staticUids, sizeof(expr->staticUids));
 	    }
 	}
 
