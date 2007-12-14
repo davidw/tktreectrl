@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003-2005 ActiveState, a division of Sophos
  *
- * RCS: @(#) $Id: tkTreeCtrl.c,v 1.105 2007/11/12 03:56:38 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.c,v 1.106 2007/12/14 20:24:55 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -4220,7 +4220,11 @@ Treectrl_Init(
     }
 #endif
 #ifdef USE_TK_STUBS
+#if (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION < 5)
+    if (Tk_InitStubs(interp, (char*)tcl_version, 0) == NULL) {
+#else
     if (Tk_InitStubs(interp, tcl_version, 0) == NULL) {
+#endif
 	return TCL_ERROR;
     }
 #endif
