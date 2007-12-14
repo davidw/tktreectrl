@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.102 2007/11/12 04:02:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.103 2007/12/14 20:30:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -821,8 +821,10 @@ TreeItem_ChangeState(
 
 	Tk_Image image1, image2;
 	Pixmap bitmap1, bitmap2;
-	int butOpen, butClosed;
-	int themeOpen, themeClosed;
+	/* NOTE: These next 2 lines must have 'static' to work around a
+	 * Microsoft compiler optimization bug. */
+	static int butOpen, butClosed;
+	static int themeOpen, themeClosed;
 	int w1, h1, w2, h2;
 	void *ptr1 = NULL, *ptr2 = NULL;
 
