@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.71 2008/01/21 21:23:41 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.72 2008/01/21 21:57:37 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -623,6 +623,8 @@ TreeDotRect_Setup(
 	Tree_ContentBottom(tree));
     SelectClipRgn(dotState->dc, dotState->rgn);
 #elif defined(MAC_OSX_TK)
+    /* NOTE: OSX doesn't support XOR drawing except in Quickdraw.  That is
+     * why the X11 wrapper isn't used here. */
     tree->display->request++;
     destPort = TkMacOSXGetDrawablePort(drawable);
     GetGWorld(&dotState->saveWorld, &dotState->saveDevice);
@@ -630,11 +632,20 @@ TreeDotRect_Setup(
     TkMacOSXSetUpClippingRgn(drawable);
 
     /* Save the old clip region. */
+#ifdef MAC_OSX_HISHAPE
+    /* NOTE: Tree_GetRegion returns a HIShapeRef which isn't wanted. */
+    dotState->rgn = NewRgn(); // FIXME: want to cache these regions.
+#else
     dotState->rgn = (RgnHandle) Tree_GetRegion(tree);
+#endif
     GetClip(dotState->rgn);
 
     /* Keep drawing inside the contentbox. */
+#ifdef MAC_OSX_HISHAPE
+    clipRgn = NewRgn(); // FIXME: want to cache these regions.
+#else
     clipRgn = (RgnHandle) Tree_GetRegion(tree);
+#endif
     bounds.left = macWin->xOff + Tree_ContentLeft(tree);
     bounds.top = macWin->yOff + Tree_ContentTop(tree);
     bounds.right = bounds.left + Tree_ContentWidth(tree);
@@ -644,7 +655,11 @@ TreeDotRect_Setup(
     /* Set the clipping region to the intersection of the two regions. */
     SectRgn(dotState->rgn, clipRgn, clipRgn);
     SetClip(clipRgn);
+#ifdef MAC_OSX_HISHAPE
+    DisposeRgn(clipRgn);
+#else
     Tree_FreeRegion(tree, (TkRegion) clipRgn);
+#endif
 
     PenNormal();
     PenMode(patXor);
@@ -804,7 +819,11 @@ TreeDotRect_Restore(
 #elif defined(MAC_OSX_TK)
     HidePen();
     SetClip(dotState->rgn);
+#ifdef MAC_OSX_HISHAPE
+    DisposeRgn(dotState->rgn);
+#else
     Tree_FreeRegion(dotState->tree, (TkRegion) dotState->rgn);
+#endif
     SetGWorld(dotState->saveWorld, dotState->saveDevice);
 #else
     XSetClipMask(dotState->tree->display, dotState->gc, None);
