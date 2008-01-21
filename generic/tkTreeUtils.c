@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.70 2008/01/21 20:54:48 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.71 2008/01/21 21:23:41 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -23,7 +23,7 @@ static PixPatHandle gPenPat = NULL;
 /* TkRegion changed from RgnHandle to HIShapeRef in 8.4.17/8.5.0 */
 #if (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION >= 5)
 #define MAC_OSX_HISHAPE 1
-#elif (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION < 5) && (TK_RELEASE_SERIAL < 17)
+#elif (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION == 4) && (TK_RELEASE_SERIAL >= 17)
 #define MAC_OSX_HISHAPE 1
 #endif
 
