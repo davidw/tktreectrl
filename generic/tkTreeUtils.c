@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.69 2007/12/14 20:26:33 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.70 2008/01/21 20:54:48 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -19,6 +19,14 @@
 #include <Carbon/Carbon.h>
 #include "tkMacOSXInt.h"
 static PixPatHandle gPenPat = NULL;
+
+/* TkRegion changed from RgnHandle to HIShapeRef in 8.4.17/8.5.0 */
+#if (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION >= 5)
+#define MAC_OSX_HISHAPE 1
+#elif (TK_MAJOR_VERSION == 8) && (TK_MINOR_VERSION < 5) && (TK_RELEASE_SERIAL < 17)
+#define MAC_OSX_HISHAPE 1
+#endif
+
 #endif
 
 struct dbwinterps {
@@ -1007,6 +1015,8 @@ Tree_OffsetRegion(
 {
 #ifdef WIN32
     OffsetRgn((HRGN) region, xOffset, yOffset);
+#elif defined(MAC_OSX_HISHAPE)
+    HIShapeOffset((HIMutableShapeRef) region, xOffset, yOffset);
 #elif defined(MAC_TCL) || defined(MAC_OSX_TK)
     OffsetRgn((RgnHandle) region, (short) xOffset, (short) yOffset);
 #else
@@ -1097,9 +1107,9 @@ Tree_ScrollWindow(
 #endif /* WIN32 */
 #if defined(MAC_TCL) || defined(MAC_OSX_TK)
     {
-        MacDrawable *macWin = (MacDrawable *) Tk_WindowId(tree->tkwin);
+	MacDrawable *macWin = (MacDrawable *) Tk_WindowId(tree->tkwin);
 	/* BUG IN TK? */
-	OffsetRgn((RgnHandle) damageRgn, -macWin->xOff, -macWin->yOff);
+	Tree_OffsetRegion(damageRgn, -macWin->xOff, -macWin->yOff);
     }
 #endif
     return result;
