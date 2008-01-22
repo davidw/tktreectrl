@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.75 2007/04/21 21:34:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.76 2008/01/22 00:02:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2733,11 +2733,13 @@ MElementLink_FreeResources(
     if (eLink->onion != NULL)
 	WCFREE(eLink->onion, int, eLink->onionCount);
     PerStateInfo_Free(tree, &pstBoolean, &eLink->draw);
-    if (eLink->draw.obj != NULL)
+    if (eLink->draw.obj != NULL) {
 	Tcl_DecrRefCount(eLink->draw.obj);
+    }
     PerStateInfo_Free(tree, &pstBoolean, &eLink->visible);
-    if (eLink->visible.obj != NULL)
+    if (eLink->visible.obj != NULL) {
 	Tcl_DecrRefCount(eLink->visible.obj);
+    }
 }
 
 /*

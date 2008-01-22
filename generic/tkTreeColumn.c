@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.79 2007/11/12 04:05:59 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.80 2008/01/22 00:02:34 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -5732,7 +5732,7 @@ TreeColumn_InitInterp(
 	Tcl_DStringAppendElement(&dString, DEF_BUTTON_ACTIVE_BG_COLOR);
 	Tcl_DStringAppendElement(&dString, "");
 	specPtr->defValue = ckalloc(Tcl_DStringLength(&dString) + 1);
-	strcpy(specPtr->defValue, Tcl_DStringValue(&dString));
+	strcpy((char *)specPtr->defValue, Tcl_DStringValue(&dString));
 	Tcl_DStringFree(&dString);
     }
     
