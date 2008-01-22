@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.12 2008/01/22 00:07:08 treectrl Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.13 2008/01/22 20:43:28 hobbs2 Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -280,7 +280,7 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 
 pkgIndex.tcl:
 	(\
-	echo 'if {[catch {package require Tk @TK_VERSION@}]} return';\
+	echo 'if {[catch {package require Tcl @TK_VERSION@}]} return';\
 	echo 'set script ""';\
 	echo 'if {![info exists ::env(TREECTRL_LIBRARY)]';\
 	echo '    && [file exists [file join $$dir treectrl.tcl]]} {';\
