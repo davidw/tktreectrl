@@ -3,9 +3,9 @@
  *
  *	This module implements outline dragging for treectrl widgets.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.26 2007/01/23 22:41:30 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.27 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

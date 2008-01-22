@@ -3,9 +3,9 @@
  *
  *	This module implements platform-specific visual themes.
  *
- * Copyright (c) 2006 Tim Baker
+ * Copyright (c) 2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.21 2007/10/03 23:01:46 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.22 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #ifdef WIN32

@@ -3,9 +3,9 @@
  *
  *	This module is the header for elements in treectrl widgets.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.h,v 1.27 2007/04/21 21:34:01 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.h,v 1.28 2008/01/22 01:03:02 treectrl Exp $
  */
 
 typedef struct TreeElementType TreeElementType;

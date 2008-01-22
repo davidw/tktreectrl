@@ -3,9 +3,9 @@
  *
  *	This module implements elements for treectrl widgets.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeElem.c,v 1.66 2007/12/14 20:32:45 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeElem.c,v 1.67 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"

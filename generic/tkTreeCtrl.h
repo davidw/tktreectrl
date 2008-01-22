@@ -3,11 +3,11 @@
  *
  *	This module is the header for treectrl widgets for the Tk toolkit.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.91 2007/11/12 03:56:38 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.92 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #include "tkPort.h"

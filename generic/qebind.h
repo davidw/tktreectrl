@@ -3,9 +3,9 @@
  *
  *	This module is the header for quasi-events.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: qebind.h,v 1.6 2006/09/05 21:56:15 treectrl Exp $
+ * RCS: @(#) $Id: qebind.h,v 1.7 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #ifndef INCLUDED_QEBIND_H

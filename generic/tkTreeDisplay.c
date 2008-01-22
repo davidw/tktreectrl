@@ -3,9 +3,9 @@
  *
  *	This module implements treectrl widget's main display code.
  *
- * Copyright (c) 2002-2006 Tim Baker
+ * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.84 2007/04/21 21:34:00 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.85 2008/01/22 01:03:02 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
