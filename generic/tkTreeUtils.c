@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2006 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.72 2008/01/21 21:57:37 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.73 2008/01/22 00:55:29 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -977,7 +977,8 @@ Tree_FillRegion(
     FillRgn(dc, (HRGN) rgn, brush);
     DeleteObject(brush);
     TkWinReleaseDrawableDC(drawable, dc, &dcState);
-#elif defined(MAC_OSX_TK_XXX) /* Not needed as of 8.4.15 / 8.5a7 */
+#elif defined(MAC_OSX_TK) && (TK_MINOR_VERSION == 4) && (TK_RELEASE_SERIAL < 15)
+    /* Not needed as of 8.4.15 / 8.5a7 */
     MacDrawable *macWin = (MacDrawable *) drawable;
     CGrafPtr saveWorld;
     GDHandle saveDevice;
