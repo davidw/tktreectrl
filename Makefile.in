@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.11 2007/02/02 20:33:17 treectrl Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.12 2008/01/22 00:07:08 treectrl Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -72,6 +72,7 @@ exec_prefix	= @exec_prefix@
 bindir		= @bindir@
 libdir		= @libdir@
 datadir		= @datadir@
+datarootdir     = @datarootdir@
 mandir		= @mandir@
 includedir	= @includedir@
 
@@ -279,7 +280,7 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 
 pkgIndex.tcl:
 	(\
-	echo 'if {[catch {package require Tcl 8.4}]} return';\
+	echo 'if {[catch {package require Tk @TK_VERSION@}]} return';\
 	echo 'set script ""';\
 	echo 'if {![info exists ::env(TREECTRL_LIBRARY)]';\
 	echo '    && [file exists [file join $$dir treectrl.tcl]]} {';\
@@ -380,7 +381,7 @@ dist: dist-clean
 
 DIST_WIN_NAME	= treectrl$(PACKAGE_PATCHLEVEL)
 DIST_WIN_DIR	= $(DIST_ROOT)/$(DIST_WIN_NAME)
-DIST_WIN_ARC	= tktreectrl-$(PACKAGE_PATCHLEVEL)-win32.zip
+DIST_WIN_ARC	= tktreectrl-$(PACKAGE_PATCHLEVEL)-Tk@TK_VERSION@-win32.zip
 COMPRESS_WIN	= zip -r -v -9 $(DIST_WIN_ARC) $(DIST_WIN_NAME)
 UPX		= upx -9 $(DIST_WIN_DIR)/$(PKG_LIB_FILE)
 
@@ -394,10 +395,16 @@ dist-win: dist-win-clean
 	mkdir -p $(DIST_WIN_DIR)/doc
 	mkdir -p $(DIST_WIN_DIR)/shellicon
 
-	list='license.terms pkgIndex.tcl README.txt $(PKG_LIB_FILE)'; \
+	list='pkgIndex.tcl $(PKG_LIB_FILE)'; \
+	for p in $$list; do \
+	    cp -p $(top_builddir)/$$p $(DIST_WIN_DIR)/$$p; \
+	done
+
+	list='license.terms README.txt'; \
 	for p in $$list; do \
 	    cp -p $(srcdir)/$$p $(DIST_WIN_DIR)/$$p; \
 	done
+
 	strip -s $(DIST_WIN_DIR)/$(PKG_LIB_FILE)
 	$(UPX)
 
@@ -418,9 +425,9 @@ dist-win: dist-win-clean
 
 	TCL_TRIM_DOTS=`echo $(PACKAGE_VERSION) | tr -d .`; \
 	SHELLICON_DLL="shellicon$$TCL_TRIM_DOTS.dll"; \
-	cp -p $(srcdir)/shellicon/$$SHELLICON_DLL $(DIST_WIN_DIR)/shellicon/$$SHELLICON_DLL; \
+	cp -p $(top_builddir)/shellicon/$$SHELLICON_DLL $(DIST_WIN_DIR)/shellicon/$$SHELLICON_DLL; \
 	strip -s $(DIST_WIN_DIR)/shellicon/$$SHELLICON_DLL;
-	cp -p $(srcdir)/shellicon/pkgIndex.tcl $(DIST_WIN_DIR)/shellicon/pkgIndex.tcl
+	cp -p $(top_builddir)/shellicon/pkgIndex.tcl $(DIST_WIN_DIR)/shellicon/pkgIndex.tcl
 
 	(cd $(DIST_ROOT); $(COMPRESS_WIN);)
 
