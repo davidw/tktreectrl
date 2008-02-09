@@ -3,13 +3,14 @@
  *
  *	This module implements platform-specific visual themes.
  *
- * Copyright (c) 2008 Tim Baker
+ * Copyright (c) 2006-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.22 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.23 2008/02/09 03:46:02 treectrl Exp $
  */
 
-#ifdef WIN32
+#if defined(WIN32) || defined(_WIN32)
 #define WINVER 0x0501 /* Cygwin */
+#define _WIN32_WINNT 0x0501 /* ACTCTX stuff */
 #endif
 
 #include "tkTreeCtrl.h"
@@ -113,6 +114,126 @@ static XPThemeProcs *procs = NULL;
 static XPThemeData *appThemeData = NULL; 
 TCL_DECLARE_MUTEX(themeMutex)
 
+/* Functions imported from kernel32.dll requiring windows XP or greater. */
+/* But I already link to GetVersionEx so is this importing needed? */
+typedef HANDLE (STDAPICALLTYPE CreateActCtxAProc)(PCACTCTXA pActCtx);
+typedef BOOL (STDAPICALLTYPE ActivateActCtxProc)(HANDLE hActCtx, ULONG_PTR *lpCookie);
+typedef BOOL (STDAPICALLTYPE DeactivateActCtxProc)(DWORD dwFlags, ULONG_PTR ulCookie);
+typedef VOID (STDAPICALLTYPE ReleaseActCtxProc)(HANDLE hActCtx);
+
+typedef struct
+{
+    CreateActCtxAProc *CreateActCtxA;
+    ActivateActCtxProc *ActivateActCtx;
+    DeactivateActCtxProc *DeactivateActCtx;
+    ReleaseActCtxProc *ReleaseActCtx;
+} ActCtxProcs;
+
+static ActCtxProcs *
+GetActCtxProcs(void)
+{
+    HINSTANCE hInst;
+    ActCtxProcs *procs = (ActCtxProcs *) ckalloc(sizeof(ActCtxProcs));
+
+    hInst = LoadLibrary("kernel32.dll"); // FIXME: leak?
+    if (hInst != 0)
+    {
+ #define LOADPROC(name) \
+	(0 != (procs->name = (name ## Proc *)GetProcAddress(hInst, #name) ))
+
+	if (LOADPROC(CreateActCtxA) &&
+	    LOADPROC(ActivateActCtx) &&
+	    LOADPROC(DeactivateActCtx) &&
+	    LOADPROC(ReleaseActCtx))
+	{
+	    return procs;
+	}
+
+#undef LOADPROC    
+    }
+
+    ckfree((char*)procs);
+    return NULL;
+}
+
+/* Return the HMODULE for this treectrl.dll. */
+static HMODULE
+GetMyHandle(void)
+{
+    HMODULE hModule = NULL;
+
+    /* FIXME: Only >=NT so I shouldn't link to it? But I already linked to
+     * GetVersionEx so will it run on 95/98? */
+    GetModuleHandleEx(
+	GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS,
+	(LPCTSTR)&appThemeData,
+	&hModule);
+    return hModule;
+}
+
+static HANDLE
+ActivateManifestContext(ActCtxProcs *procs, ULONG_PTR *ulpCookie)
+{
+    ACTCTXA actctx;
+    HANDLE hCtx;
+#if 1
+    char myPath[1024];
+    DWORD len;
+
+    if (procs == NULL)
+	return INVALID_HANDLE_VALUE;
+
+    len = GetModuleFileName(GetMyHandle(),myPath,1024);
+    myPath[len] = 0;
+
+    ZeroMemory(&actctx, sizeof(actctx));
+    actctx.cbSize = sizeof(actctx);
+    actctx.lpSource = myPath;
+    actctx.dwFlags = ACTCTX_FLAG_RESOURCE_NAME_VALID;
+#else
+
+    if (procs == NULL)
+	return INVALID_HANDLE_VALUE;
+
+    ZeroMemory(&actctx, sizeof(actctx));
+    actctx.cbSize = sizeof(actctx);
+    actctx.dwFlags = ACTCTX_FLAG_HMODULE_VALID | ACTCTX_FLAG_RESOURCE_NAME_VALID;
+    actctx.hModule = GetMyHandle();
+#endif
+    actctx.lpResourceName = MAKEINTRESOURCE(2);
+
+    hCtx = procs->CreateActCtxA(&actctx);
+    if (hCtx == INVALID_HANDLE_VALUE)
+    {
+	char msg[1024];
+	DWORD err = GetLastError();
+	FormatMessage(FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS|
+		FORMAT_MESSAGE_MAX_WIDTH_MASK, 0L, err, 0, (LPVOID)msg,
+		sizeof(msg), 0);
+	return INVALID_HANDLE_VALUE;
+    }
+
+    if (procs->ActivateActCtx(hCtx, ulpCookie))
+	return hCtx;
+
+    return INVALID_HANDLE_VALUE;
+}
+
+static void
+DeactivateManifestContext(ActCtxProcs *procs, HANDLE hCtx, ULONG_PTR ulpCookie)
+{
+    if (procs == NULL)
+	return;
+
+    if (hCtx != INVALID_HANDLE_VALUE)
+    {
+	procs->DeactivateActCtx(0, ulpCookie);
+	procs->ReleaseActCtx(hCtx);
+    }
+
+    ckfree((char*)procs);
+}
+
 /* http://www.manbu.net/Lib/En/Class5/Sub16/1/29.asp */
 static int
 ComCtlVersionOK(void)
@@ -121,8 +242,14 @@ ComCtlVersionOK(void)
     typedef HRESULT (STDAPICALLTYPE DllGetVersionProc)(DLLVERSIONINFO *);
     DllGetVersionProc *pDllGetVersion;
     int result = FALSE;
+    ActCtxProcs *procs;
+    HANDLE hCtx;
+    ULONG_PTR ulpCookie;
 
+    procs = GetActCtxProcs();
+    hCtx = ActivateManifestContext(procs, &ulpCookie);
     handle = LoadLibrary("comctl32.dll");
+    DeactivateManifestContext(procs, hCtx, ulpCookie);
     if (handle == NULL)
 	return FALSE;
     pDllGetVersion = (DllGetVersionProc *) GetProcAddress(handle,

@@ -12,7 +12,7 @@
 # See the file "license.terms" for information on usage and redistribution
 # of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 #
-# RCS: @(#) $Id: Makefile.in,v 1.13 2008/01/22 20:43:28 hobbs2 Exp $
+# RCS: @(#) $Id: Makefile.in,v 1.14 2008/02/09 03:46:02 treectrl Exp $
 
 #========================================================================
 # Edit the following few lines when writing a new extension
@@ -248,12 +248,24 @@ depend:
 # The $(PKG_OBJECTS) objects are created and linked into the final
 # library.  In most cases these object files will correspond to the
 # source files above.
+#
+# NOTE regarding the manifest(s):  When building on a non-Windows box the
+# treectrlNN.dll.manifest file should not exist.  When building with
+# MingW GCC the manifest will also not exist.  Only when building with
+# a Microsoft compiler that auto-generates a manifest (to pick the correct
+# MSVCRT runtime) will $@.manifest exist; in this case mt.exe should
+# also exist.  If mt.exe is used there is actually no need for treectrl.rc
+# to include treectrl.dll.manifest since mt.exe will clobber that resource
+# with the merged manifests.
 #========================================================================
 
 $(PKG_LIB_FILE): $(PKG_OBJECTS)
 	-rm -f $(PKG_LIB_FILE)
 	${MAKE_LIB}
 	$(RANLIB) $(PKG_LIB_FILE)
+	if test -f $@.manifest; then \
+	    mt -nologo -manifest $@.manifest treectrl.dll.manifest "-outputresource:$@;#2"; \
+	fi;
 
 #========================================================================
 # In the following lines, $(srcdir) refers to the toplevel directory
@@ -273,6 +285,9 @@ VPATH = $(srcdir):$(srcdir)/generic:$(srcdir)/unix:$(srcdir)/win
 
 .c.@OBJEXT@:
 	$(COMPILE) -c `@CYGPATH@ $<` -o $@
+
+.rc.@RES@:
+	@RC@ @RC_OUT@ $@ @RC_INCLUDE@ "$(srcdir)" @RC_DEPARG@
 
 #========================================================================
 # Create the pkgIndex.tcl file.
@@ -506,6 +521,8 @@ install-bin-binaries:
 	done
 
 .SUFFIXES: .c .$(OBJEXT)
+.SUFFIXES: .@RES@
+.SUFFIXES: .rc
 
 Makefile: $(srcdir)/Makefile.in  $(top_builddir)/config.status
 	cd $(top_builddir) \

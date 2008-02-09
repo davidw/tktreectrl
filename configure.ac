@@ -3,7 +3,7 @@ dnl	This file is an input file used by the GNU "autoconf" program to
 dnl	generate the file "configure", which is run during Tcl installation
 dnl	to configure the system for the local environment.
 #
-# RCS: @(#) $Id: configure.ac,v 1.22 2008/01/22 00:03:58 treectrl Exp $
+# RCS: @(#) $Id: configure.ac,v 1.23 2008/02/09 03:46:02 treectrl Exp $
 
 #-----------------------------------------------------------------------
 # Sample configure.in for Tcl Extensions.
@@ -117,9 +117,11 @@ AC_C_BIGENDIAN
 # your system.
 #--------------------------------------------------------------------
 
+OUTPUTFILES=Makefile
+
 if test "${TEA_PLATFORM}" = "windows" ; then
     AC_DEFINE(BUILD_treectrl)
-    CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
+    CLEANFILES="pkgIndex.tcl *.manifest *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
     TEA_ADD_LIBS([gdi32.lib user32.lib])
 
     AC_ARG_ENABLE(shellicon,
@@ -129,6 +131,23 @@ if test "${TEA_PLATFORM}" = "windows" ; then
     if test "$tcl_ok" = "yes" ; then
 	AC_CONFIG_SUBDIRS(shellicon)
     fi
+
+    # Find rc.exe or windres.exe.
+    # Defined in winrc.m4.
+    TREECTRL_PROG_RC
+
+    # X86|AMD64|IA64 for manifest
+    AC_SUBST(MACHINE)
+
+    # Create treectrl.dll.manifest from treectrl.dll.manifest.in.
+    # treectrl.dll.manifest is included by treectrl.rc.
+    # If building with a Microsoft compiler that generates
+    # treectrlNN.dll.manifest (to pick the correct MSVCRT runtime) then
+    # that manifest is merged with mine using mt.exe (see the Makefile
+    # rule for PKG_LIB_FILE).
+    OUTPUTFILES="Makefile treectrl.dll.manifest"
+
+    TREECTRL_ADD_RC([treectrl.rc])
 else
     CLEANFILES="pkgIndex.tcl"
 fi
@@ -204,4 +223,4 @@ TEA_PROG_WISH
 # which require substituting th AC variables in.  Include these here.
 #--------------------------------------------------------------------
 
-AC_OUTPUT([Makefile])
+AC_OUTPUT([$OUTPUTFILES])
