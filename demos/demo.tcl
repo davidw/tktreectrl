@@ -1,8 +1,8 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.66 2008/01/22 00:07:33 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.67 2008/02/22 20:17:33 hobbs2 Exp $
 
-set VERSION 2.2.4
+set VERSION 2.2.5
 
 package require Tk 8.4
 

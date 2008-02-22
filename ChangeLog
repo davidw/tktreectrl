@@ -1,5 +1,10 @@
 2008-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* demos/demo.tcl, doc/What's New in TkTreeCtrl.html:
+	* doc/treectrl.html, doc/treectrl.man, doc/treectrl.n
+	* shellicon/configure, shellicon/configure.ac:
+	* configure, configure.ac: bump version to 2.2.5
+
 	* winrc.m4: correct RC_DEPARG definition for !gcc case.
 
 	* generic/tkTreeNotify.c (Percents_ItemDelete, ExpandItemList)
