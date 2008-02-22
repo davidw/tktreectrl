@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: qebind.c,v 1.19 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: qebind.c,v 1.20 2008/02/22 20:02:25 hobbs2 Exp $
  */
 
 /*
@@ -1453,7 +1453,6 @@ void QE_ExpandNumber(long number, Tcl_DString *result)
 {
 	char numStorage[TCL_INTEGER_SPACE];
 
-	/* TclFormatInt() */
 	(void) sprintf(numStorage, "%ld", number);
 	Tcl_DStringAppend(result, numStorage, -1);
 /*	QE_ExpandString(numStorage, result); */

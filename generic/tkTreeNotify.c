@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeNotify.c,v 1.23 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeNotify.c,v 1.24 2008/02/22 20:02:26 hobbs2 Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -47,12 +47,51 @@ ExpandItem(
     Tcl_DString *result		/* Gets appended. Caller must initialize. */
     )
 {
-    if (tree->itemPrefixLen) {
+    char buf[10 + TCL_INTEGER_SPACE];
+    (void) sprintf(buf, "%s%d",
+	    (tree->itemPrefixLen ? tree->itemPrefix : ""), id);
+    Tcl_DStringAppend(result, buf, -1);
+}
+
+/*
+ *----------------------------------------------------------------------
+ *
+ * ExpandItemList --
+ *
+ *	Append a list of item IDs to a dynamic string.
+ *
+ * Results:
+ *	DString gets longer.
+ *
+ * Side effects:
+ *	Memory may be allocated.
+ *
+ *----------------------------------------------------------------------
+ */
+
+static void
+ExpandItemList(
+    TreeCtrl *tree,		/* Widget info. */
+    TreeItemList *itemList,	/* list of item IDs */
+    Tcl_DString *result		/* Gets appended. Caller must initialize. */
+    )
+{
+    if (itemList == NULL) {
+	Tcl_DStringAppend(result, "{}", 2);
+    } else {
+	int i, count;
 	char buf[10 + TCL_INTEGER_SPACE];
-	(void) sprintf(buf, "%s%d", tree->itemPrefix, id);
-	Tcl_DStringAppend(result, buf, -1);
-    } else
-	QE_ExpandNumber(id, result);
+
+	Tcl_DStringStartSublist(result);
+	count = TreeItemList_Count(itemList);
+	for (i = 0; i < count; i++) {
+	    (void) sprintf(buf, "%s%d",
+		    (tree->itemPrefixLen ? tree->itemPrefix : ""),
+		    TreeItem_GetID(tree, TreeItemList_Nth(itemList, i)));
+	    Tcl_DStringAppendElement(result, buf);
+	}
+	Tcl_DStringEndSublist(result);
+    }
 }
 
 /*
@@ -226,30 +265,13 @@ Percents_ItemVisibility(
 	TreeItemList *v;
 	TreeItemList *h;
     } *data = args->clientData;
-    TreeCtrl *tree = data->tree;
     TreeItemList *table;
-    int i, count;
 
     switch (args->which) {
 	case 'v':
 	case 'h':
 	    table = (args->which == 'v') ? data->v : data->h;
-	    Tcl_DStringStartSublist(args->result);
-	    count = TreeItemList_Count(table);
-	    for (i = 0; i < count; i++) {
-		TreeItem item = TreeItemList_Nth(table, i);
-		if (tree->itemPrefixLen) {
-		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
-			    TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, buf);
-		} else {
-		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, string);
-		}
-	    }
-	    Tcl_DStringEndSublist(args->result);
+	    ExpandItemList(data->tree, table, args->result);
 	    break;
 
 	default:
@@ -285,37 +307,17 @@ Percents_Selection(
 	TreeItemList *deselect;
 	int count;
     } *data = args->clientData;
-    TreeCtrl *tree = data->tree;
     TreeItemList *itemList;
-    int i, count;
 
     switch (args->which) {
 	case 'c':
 	    QE_ExpandNumber(data->count, args->result);
 	    break;
+
 	case 'D':
 	case 'S':
 	    itemList = (args->which == 'D') ? data->deselect : data->select;
-	    if (itemList == NULL) {
-		Tcl_DStringAppend(args->result, "{}", 2);
-		break;
-	    }
-	    Tcl_DStringStartSublist(args->result);
-	    count = TreeItemList_Count(itemList);
-	    for (i = 0; i < count; i++) {
-		TreeItem item = TreeItemList_Nth(itemList, i);
-		if (tree->itemPrefixLen) {
-		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
-			    TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, buf);
-		} else {
-		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, string);
-		}
-	    }
-	    Tcl_DStringEndSublist(args->result);
+	    ExpandItemList(data->tree, itemList, args->result);
 	    break;
 
 	default:
@@ -706,27 +708,10 @@ Percents_ItemDelete(
 	TreeCtrl *tree; /* Must be first. See Percents_Any(). */
 	TreeItemList *items;
     } *data = args->clientData;
-    TreeCtrl *tree = data->tree;
-    int i, count;
 
     switch (args->which) {
 	case 'i':
-	    Tcl_DStringStartSublist(args->result);
-	    count = TreeItemList_Count(data->items);
-	    for (i = 0; i < count; i++) {
-		TreeItem item = TreeItemList_Nth(data->items, i);
-		if (tree->itemPrefixLen) {
-		    char buf[10 + TCL_INTEGER_SPACE];
-		    (void) sprintf(buf, "%s%d", tree->itemPrefix,
-			    TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, buf);
-		} else {
-		    char string[TCL_INTEGER_SPACE];
-		    TclFormatInt(string, TreeItem_GetID(tree, item));
-		    Tcl_DStringAppendElement(args->result, string);
-		}
-	    }
-	    Tcl_DStringEndSublist(args->result);
+	    ExpandItemList(data->tree, data->items, args->result);
 	    break;
 
 	default:

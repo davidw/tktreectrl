@@ -1,3 +1,11 @@
+2008-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeNotify.c (Percents_ItemDelete, ExpandItemList)
+	(Percents_ItemVisibility, Percents_Selection): remove TclFormatInt
+	* generic/qebind.c (QE_ExpandNumber):          references and add
+	ExpandItemList to simplify item list expansion.  Corrects crash
+	with 8.4-built treectrl used in 8.5.
+
 2007-05-10  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeUtils.c (Tree_FillRegion): disable OS X specific
