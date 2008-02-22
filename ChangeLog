@@ -1,5 +1,7 @@
 2008-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
+	* winrc.m4: correct RC_DEPARG definition for !gcc case.
+
 	* generic/tkTreeNotify.c (Percents_ItemDelete, ExpandItemList)
 	(Percents_ItemVisibility, Percents_Selection): remove TclFormatInt
 	* generic/qebind.c (QE_ExpandNumber):          references and add

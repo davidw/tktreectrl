@@ -2,6 +2,7 @@
 AC_DEFUN([TREECTRL_PROG_RC], [
 
 #    AC_MSG_CHECKING([for windows resource compiler])
+    RC_DEPARG='"$<"'
     if test "${GCC}" = "yes" ; then
 	AC_CHECK_PROG(RC, windres, windres)
 	if test "${RC}" = "" ; then
@@ -11,7 +12,6 @@ AC_DEFUN([TREECTRL_PROG_RC], [
 	RC_TYPE=
 	RC_INCLUDE=--include
 	RC_DEFINE=--define
-	RC_DEPARG='"$<"'
 	RES=res.o
 
 	# Check for a bug in gcc's windres that causes the
@@ -21,9 +21,7 @@ AC_DEFUN([TREECTRL_PROG_RC], [
 	# with both. Avoid the bug by passing a POSIX
 	# path when using the Cygwin toolchain.
 
-	if test "$ac_cv_cygwin" = "yes"; then
-	    RC_DEPARG='"$<"'
-	elif test "$CYGPATH" != "echo" ; then
+	if test "$ac_cv_cygwin" != "yes" -a "$CYGPATH" != "echo" ; then
 	    conftest=/tmp/conftest.rc
 	    echo "STRINGTABLE BEGIN" > $conftest
 	    echo "101 \"name\"" >> $conftest
@@ -53,7 +51,6 @@ AC_DEFUN([TREECTRL_PROG_RC], [
 	RC_TYPE=-r
 	RC_INCLUDE=-i
 	RC_DEFINE=-d
-	RC_DEPARG=='"$<"'
 	RES=res
     fi
 
