@@ -1,3 +1,8 @@
+2008-02-23  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeTheme.c (DllMain): get module at dll load time to
+	avoid GetModuleHandleEx call.
+
 2008-02-22  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* demos/demo.tcl, doc/What's New in TkTreeCtrl.html:
