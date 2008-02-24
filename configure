@@ -7255,7 +7255,7 @@ if test "${TEA_PLATFORM}" = "windows" ; then
 #define BUILD_treectrl 1
 _ACEOF
 
-    CLEANFILES="pkgIndex.tcl *.manifest *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
+    CLEANFILES="pkgIndex.tcl *.lib *.dll *.exp *.ilk *.pdb vc*.pch"
 
     vars="gdi32.lib user32.lib"
     for i in $vars; do
