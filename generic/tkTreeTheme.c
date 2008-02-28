@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2006-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeTheme.c,v 1.24 2008/02/23 22:16:53 hobbs2 Exp $
+ * RCS: @(#) $Id: tkTreeTheme.c,v 1.25 2008/02/28 00:25:07 hobbs2 Exp $
  */
 
 #if defined(WIN32) || defined(_WIN32)
@@ -755,7 +755,7 @@ TreeTheme_Relayout(
 static LRESULT WINAPI
 WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp)
 {
-    Tcl_Interp *interp = (Tcl_Interp *)GetWindowLong(hwnd, GWL_USERDATA);
+    Tcl_Interp *interp = (Tcl_Interp *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 
     switch (msg) {
 	case WM_THEMECHANGED:
@@ -805,7 +805,7 @@ CreateThemeMonitorWindow(HINSTANCE hinst, Tcl_Interp *interp)
     if (!hwnd)
 	return NULL;
 
-    SetWindowLong(hwnd, GWL_USERDATA, (LONG)interp);
+    SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG)interp);
     ShowWindow(hwnd, SW_HIDE);
     UpdateWindow(hwnd);
 

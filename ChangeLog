@@ -1,3 +1,8 @@
+2008-02-27  Jeff Hobbs  <jeffh@ActiveState.com>
+
+	* generic/tkTreeTheme.c: use Get|SetWindowLongPtr to work with
+	Win64. Requires latest Windows headers.
+
 2008-02-23  Jeff Hobbs  <jeffh@ActiveState.com>
 
 	* generic/tkTreeTheme.c (DllMain): get module at dll load time to
