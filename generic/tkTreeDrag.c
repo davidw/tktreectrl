@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDrag.c,v 1.27 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDrag.c,v 1.28 2008/02/29 20:49:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -395,7 +395,7 @@ TreeDragImageCmd(
 	    TreeItem item;
 	    TreeItemColumn itemColumn;
 	    TreeColumn treeColumn;
-	    XRectangle rects[128];
+	    TreeRectangle rects[128];
 	    DragElem *elem;
 	    int i, count, result = TCL_OK;
 

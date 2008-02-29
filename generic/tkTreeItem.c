@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.104 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.105 2008/02/29 20:49:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -7347,7 +7347,7 @@ TreeItemCmd(
 	    int x, y, w, h;
 	    int count;
 	    TreeColumn treeColumn;
-	    XRectangle rect;
+	    TreeRectangle rect;
 
 	    if (objc == 4) {
 		if (Tree_ItemBbox(tree, item, COLUMN_LOCK_NONE, &x, &y, &w, &h) < 0)
@@ -8563,7 +8563,7 @@ SpanWalkProc_GetRects(
 	TreeColumn treeColumn;
 	int count;
 	Tcl_Obj *CONST *objv;
-	XRectangle *rects;
+	TreeRectangle *rects;
 	int result;
    } *data = clientData;
 
@@ -8644,7 +8644,7 @@ TreeItem_GetRects(
 				 * 1+ means objv[] contains names of elements
 				 *  to get rects for. */
     Tcl_Obj *CONST objv[],	/* Array of element names or NULL. */
-    XRectangle rects[]		/* Out: returned bounding boxes. */
+    TreeRectangle rects[]	/* Out: returned bounding boxes. */
     )
 {
     int left, top, width, height;
@@ -8653,7 +8653,7 @@ TreeItem_GetRects(
 	TreeColumn treeColumn;
 	int count;
 	Tcl_Obj *CONST *objv;
-	XRectangle *rects;
+	TreeRectangle *rects;
 	int result;
     } clientData;
 

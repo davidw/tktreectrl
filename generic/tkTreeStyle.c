@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeStyle.c,v 1.77 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeStyle.c,v 1.78 2008/02/29 20:49:22 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6499,7 +6499,7 @@ TreeStyle_GetElemRects(
     StyleDrawArgs *drawArgs,	/* Various args. */
     int objc,			/* Number of element names. */
     Tcl_Obj *CONST objv[],	/* Array of element names. */
-    XRectangle rects[]		/* Returned rectangles. */
+    TreeRectangle rects[]	/* Returned rectangles. */
     )
     
 {
