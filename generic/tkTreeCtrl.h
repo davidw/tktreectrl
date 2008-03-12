@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.93 2008/02/29 20:49:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.94 2008/03/12 19:12:47 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -880,7 +880,7 @@ extern void Tree_VDotLine(TreeCtrl *tree, Drawable drawable, GC gc, int x1, int 
 extern void Tree_DrawActiveOutline(TreeCtrl *tree, Drawable drawable, int x, int y, int width, int height, int open);
 typedef struct DotState
 {
-    int stuff[10];
+    void *stuff[10];
 } DotState;
 extern void TreeDotRect_Setup(TreeCtrl *tree, Drawable drawable, DotState *dotState);
 extern void TreeDotRect_Draw(DotState *dotState, int x, int y, int width, int height);
