@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeDisplay.c,v 1.85 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeDisplay.c,v 1.86 2008/07/21 18:42:54 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -6420,11 +6420,11 @@ Tree_SetOriginY(
     yOrigin += Tree_ContentTop(tree); /* origin -> canvas */
     index = Increment_FindY(tree, yOrigin);
 
-    /* Don't scroll too far left */
+    /* Don't scroll too far up */
     if (index < 0)
 	index = 0;
 
-    /* Don't scroll too far right */
+    /* Don't scroll too far down */
     if (index > indexMax)
 	index = indexMax;
 
