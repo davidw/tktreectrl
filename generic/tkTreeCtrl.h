@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeCtrl.h,v 1.94 2008/03/12 19:12:47 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeCtrl.h,v 1.95 2008/07/21 18:49:32 treectrl Exp $
  */
 
 #include "tkPort.h"
@@ -124,6 +124,9 @@ typedef struct TreePtrList TreePtrList;
 typedef TreePtrList TreeItemList;
 typedef TreePtrList TreeColumnList;
 struct TreePtrList {
+#ifdef TREECTRL_DEBUG
+    char magic[4];
+#endif
     TreeCtrl *tree;
     ClientData *pointers;	/* NULL-terminated list of pointers. */
     int count;			/* Number of items. */
@@ -202,6 +205,8 @@ struct TreeCtrl
     int showRoot;		/* boolean: Draw the unique root item */
     int showRootButton;		/* boolean: Draw expand/collapse button for
 				 * root item */
+    int showRootChildButtons;	/* boolean: Draw expand/collapse buttons for
+				 * children of the root item */
     int showHeader;		/* boolean: show column titles */
     Tcl_Obj *indentObj;		/* pixels: offset of child relative to
 				 * parent */

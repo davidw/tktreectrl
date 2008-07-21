@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeItem.c,v 1.105 2008/02/29 20:49:22 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeItem.c,v 1.106 2008/07/21 18:49:33 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -946,7 +946,8 @@ TreeItem_UndefineState(
  *
  *	Determine whether an item should have a button displayed next to
  *	it. This considers the value of the item option -button as well
- *	as the treectrl options -showbuttons and -showrootbutton.
+ *	as the treectrl options -showbuttons, -showrootchildbuttons and
+ *	-showrootbutton.
  *
  * Results:
  *	None.
@@ -964,6 +965,8 @@ TreeItem_HasButton(
     )
 {
     if (!tree->showButtons || (IS_ROOT(item) && !tree->showRootButton))
+	return 0;
+    if (item->parent == tree->root && !tree->showRootChildButtons)
 	return 0;
     if (item->flags & ITEM_FLAG_BUTTON)
 	return 1;
@@ -3610,19 +3613,27 @@ int TreeItem_Indent(
     TreeItem item		/* Item token. */
     )
 {
-    int indent;
+    int depth;
 
     if (IS_ROOT(item))
-	return (tree->showRoot && tree->showButtons && tree->showRootButton) ? tree->useIndent : 0;
+	return (tree->showRoot && tree->showButtons && tree->showRootButton)
+	    ? tree->useIndent : 0;
 
     Tree_UpdateItemIndex(tree);
 
-    indent = tree->useIndent * item->depth;
-    if (tree->showRoot || tree->showButtons || tree->showLines)
-	indent += tree->useIndent;
-    if (tree->showRoot && tree->showButtons && tree->showRootButton)
-	indent += tree->useIndent;
-    return indent;
+    depth = item->depth;
+    if (tree->showRoot)
+    {
+	depth += 1;
+	if (tree->showButtons && tree->showRootButton)
+	    depth += 1;
+    }
+    else if (tree->showButtons && tree->showRootChildButtons)
+	depth += 1;
+    else if (tree->showLines && tree->showRootLines)
+	depth += 1;
+
+    return tree->useIndent * depth;
 }
 
 /*

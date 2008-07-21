@@ -3,11 +3,12 @@
   See the file "license.terms" for information on usage and redistribution
   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 
-  $Id: treectrl.man,v 1.55 2008/02/29 21:14:33 treectrl Exp $}
-][manpage_begin treectrl n 2.2.6]
+  $Id: treectrl.man,v 1.56 2008/07/21 18:49:34 treectrl Exp $}
+]
+[manpage_begin treectrl n 2.2.7]
 [moddesc {Tk Commands}]
 [titledesc {Create and manipulate hierarchical multicolumn widgets}]
-[require treectrl 2.2.6]
+[require treectrl 2.2.7]
 
 [description]
 [list_begin definitions] 
@@ -293,6 +294,11 @@ Specifies a boolean value that determines whether this widget
 leaves indentation space to display the expand/collapse button next to the
 root item. The default value is false.
 The item option [option -button] determines whether the root item has a button.
+
+[tkoption_def -showrootchildbuttons showRootChildButtons ShowRootChildButtons]
+Specifies a boolean value that determines whether this widget
+should draw the expand/collapse buttons next to children of the root item.
+The default value is true.
 
 [tkoption_def -showrootlines showRootLines ShowRootLines]
 Specifies a boolean value that determines whether this widget

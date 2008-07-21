@@ -6,7 +6,7 @@
 '\"   See the file "license.terms" for information on usage and redistribution
 '\"   of this file, and for a DISCLAIMER OF ALL WARRANTIES.
 '\"
-'\"   $Id: treectrl.n,v 1.72 2008/02/29 21:14:33 treectrl Exp $
+'\"   $Id: treectrl.n,v 1.73 2008/07/21 18:49:34 treectrl Exp $
 .so man.macros
 .TH "treectrl" n 2.2.6 treectrl "Tk Commands"
 .BS
@@ -873,6 +873,18 @@ Specifies a boolean value that determines whether this widget
 leaves indentation space to display the expand/collapse button next to the
 root item. The default value is false.
 The item option \fB-button\fR determines whether the root item has a button.
+.LP
+.nf
+.ta 6c
+Command-Line Switch:	\fB-showrootchildbuttons\fR
+Database Name:	\fBshowRootChildButtons\fR
+Database Class:	\fBShowRootChildButtons\fR
+
+.fi
+.IP
+Specifies a boolean value that determines whether this widget
+should draw the expand/collapse buttons next to children of the root item.
+The default value is true.
 .LP
 .nf
 .ta 6c

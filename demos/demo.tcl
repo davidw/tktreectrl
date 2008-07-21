@@ -1,8 +1,8 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.68 2008/02/29 21:14:32 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.69 2008/07/21 18:49:32 treectrl Exp $
 
-set VERSION 2.2.6
+set VERSION 2.2.7
 
 package require Tk 8.4
 
@@ -999,12 +999,14 @@ proc MakeListPopup {T} {
 	-command {$Popup(T) configure -showheader $Popup(showheader)}
     $m2 add checkbutton -label "Lines" -variable Popup(showlines) \
 	-command {$Popup(T) configure -showlines $Popup(showlines)}
-    $m2 add checkbutton -label "Root Lines" -variable Popup(showrootlines) \
-	-command {$Popup(T) configure -showrootlines $Popup(showrootlines)}
     $m2 add checkbutton -label "Root" -variable Popup(showroot) \
 	-command {$Popup(T) configure -showroot $Popup(showroot)}
     $m2 add checkbutton -label "Root Button" -variable Popup(showrootbutton) \
 	-command {$Popup(T) configure -showrootbutton $Popup(showrootbutton)}
+    $m2 add checkbutton -label "Root Child Buttons" -variable Popup(showrootchildbuttons) \
+	-command {$Popup(T) configure -showrootchildbuttons $Popup(showrootchildbuttons)}
+    $m2 add checkbutton -label "Root Child Lines" -variable Popup(showrootlines) \
+	-command {$Popup(T) configure -showrootlines $Popup(showrootlines)}
     $m add cascade -label Show -menu $m2
 
     set m2 [menu $m.mSpan -tearoff no]
@@ -1154,9 +1156,10 @@ proc ShowPopup {T x y X Y} {
     set Popup(showbuttons) [$T cget -showbuttons]
     set Popup(showheader) [$T cget -showheader]
     set Popup(showlines) [$T cget -showlines]
-    set Popup(showrootlines) [$T cget -showrootlines]
     set Popup(showroot) [$T cget -showroot]
     set Popup(showrootbutton) [$T cget -showrootbutton]
+    set Popup(showrootchildbuttons) [$T cget -showrootchildbuttons]
+    set Popup(showrootlines) [$T cget -showrootlines]
     set m $menu.mVisible
     $m delete 0 end
     foreach C [$T column list] {
@@ -1512,7 +1515,7 @@ proc DemoClear {} {
 	-yscrollincrement 0 -itemheight 0 -showheader yes \
 	-background white -scrollmargin 0 -xscrolldelay 50 -yscrolldelay 50 \
 	-buttonbitmap "" -buttonimage "" -backgroundmode row \
-	-indent 19 -backgroundimage "" \
+	-indent 19 -backgroundimage "" -showrootchildbuttons yes \
 	-showrootlines yes -minitemheight 0 -borderwidth [expr {$::tileFull ? 0 : 6}] \
 	-highlightthickness [expr {$::tileFull ? 0 : 3}] -usetheme yes -cursor {} \
 	-itemwidth 0 -itemwidthequal no -itemwidthmultiple 0 \
