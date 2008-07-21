@@ -1,4 +1,4 @@
-# RCS: @(#) $Id: treectrl.tcl,v 1.39 2006/12/07 03:47:01 treectrl Exp $
+# RCS: @(#) $Id: treectrl.tcl,v 1.40 2008/07/21 18:36:41 treectrl Exp $
 
 bind TreeCtrl <Motion> {
     TreeCtrl::CursorCheck %W %x %y
@@ -53,7 +53,11 @@ bind TreeCtrl <Shift-KeyPress-Down> {
     TreeCtrl::Extend %W below
 }
 bind TreeCtrl <KeyPress-Left> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active -1]
+    if {[%W cget -orient] eq "vertical" && [%W cget -wrap] eq ""} {
+	%W item collapse [%W item id active]
+    } else {
+	TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active -1]
+    }
 }
 bind TreeCtrl <Shift-KeyPress-Left> {
     TreeCtrl::Extend %W left
@@ -62,7 +66,11 @@ bind TreeCtrl <Control-KeyPress-Left> {
     %W xview scroll -1 pages
 }
 bind TreeCtrl <KeyPress-Right> {
-    TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active 1]
+    if {[%W cget -orient] eq "vertical" && [%W cget -wrap] eq ""} {
+	%W item expand [%W item id active]
+    } else {
+	TreeCtrl::SetActiveItem %W [TreeCtrl::LeftRight %W active 1]
+    }
 }
 bind TreeCtrl <Shift-KeyPress-Right> {
     TreeCtrl::Extend %W right
