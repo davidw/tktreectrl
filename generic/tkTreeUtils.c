@@ -5,7 +5,7 @@
  *
  * Copyright (c) 2002-2008 Tim Baker
  *
- * RCS: @(#) $Id: tkTreeUtils.c,v 1.74 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeUtils.c,v 1.75 2008/07/21 18:35:38 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3812,6 +3812,9 @@ TreePtrList_Init(
 				 * 0 for default. */
     )
 {
+#ifdef TREECTRL_DEBUG
+    strncpy(tplPtr->magic, "MAGC", 4);
+#endif
     tplPtr->tree = tree;
     tplPtr->pointers = tplPtr->pointerSpace;
     tplPtr->count = 0;
@@ -3847,6 +3850,10 @@ TreePtrList_Grow(
     int count			/* Number of pointers the list should hold. */
     )
 {
+#ifdef TREECTRL_DEBUG
+    if (strncmp(tplPtr->magic, "MAGC", 4) != 0)
+	panic("TreePtrList_Grow: using uninitialized list");
+#endif
     if (tplPtr->space >= count + 1)
 	return;
     while (tplPtr->space < count + 1)
@@ -3884,6 +3891,10 @@ TreePtrList_Append(
     ClientData pointer		/* Item to append. */
     )
 {
+#ifdef TREECTRL_DEBUG
+    if (strncmp(tplPtr->magic, "MAGC", 4) != 0)
+	panic("TreePtrList_Append: using uninitialized list");
+#endif
     TreePtrList_Grow(tplPtr, tplPtr->count + 1);
     tplPtr->pointers[tplPtr->count] = pointer;
     tplPtr->count++;
@@ -3913,6 +3924,10 @@ TreePtrList_Concat(
     TreePtrList *tpl2Ptr	/* Item list to append. */
     )
 {
+#ifdef TREECTRL_DEBUG
+    if (strncmp(tplPtr->magic, "MAGC", 4) != 0)
+	panic("TreePtrList_Concat: using uninitialized list");
+#endif
     TreePtrList_Grow(tplPtr, tplPtr->count + tpl2Ptr->count);
     memcpy(tplPtr->pointers + tplPtr->count, tpl2Ptr->pointers,
 	tpl2Ptr->count * sizeof(ClientData));
@@ -3942,6 +3957,10 @@ TreePtrList_Free(
     TreePtrList *tplPtr		/* Structure describing pointer list. */
     )
 {
+#ifdef TREECTRL_DEBUG
+    if (strncmp(tplPtr->magic, "MAGC", 4) != 0)
+	panic("TreePtrList_Free: using uninitialized list");
+#endif
     if (tplPtr->pointers != tplPtr->pointerSpace) {
 	ckfree((char *) tplPtr->pointers);
     }
