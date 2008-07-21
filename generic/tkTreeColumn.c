@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.81 2008/01/22 01:03:02 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.82 2008/07/21 18:41:53 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -3820,6 +3820,8 @@ TreeColumnCmd(
 	return TCL_ERROR;
     }
 
+    TreeColumnList_Init(tree, &columns, 0);
+
     switch (index) {
 	case COMMAND_BBOX: {
 	    int left, top, width, height;
@@ -3919,7 +3921,6 @@ TreeColumnCmd(
 		if (Column_Config(column, objc - 4, objv + 4, FALSE) != TCL_OK)
 		    goto errorExit;
 	    }
-	    TreeColumnList_Free(&columns);
 	    break;
 	}
 
@@ -3974,7 +3975,7 @@ TreeColumnCmd(
 
 	/* T column delete first ?last? */
 	case COMMAND_DELETE: {
-	    TreeColumnList columns, column2s;
+	    TreeColumnList column2s;
 	    TreeColumn prev, next;
 	    int flags = CFO_NOT_NULL | CFO_NOT_TAIL;
 	    TreeItem item;
@@ -3990,11 +3991,11 @@ TreeColumnCmd(
 		flags |= CFO_NOT_MANY;
 	    if (TreeColumnList_FromObj(tree, objv[3], &columns,
 		    flags) != TCL_OK)
-		return TCL_ERROR;
+		goto errorExit;
 	    if (objc == 5) {
 		if (TreeColumnList_FromObj(tree, objv[4], &column2s,
 			CFO_NOT_NULL | CFO_NOT_TAIL) != TCL_OK)
-		    return TCL_ERROR;
+		    goto errorExit;
 	    }
 	    COLUMN_FOR_EACH(column, &columns, (objc == 5) ? &column2s : NULL,
 		    &citer) {
@@ -4094,9 +4095,8 @@ doneDELETE:
 	    /* Indicate that all items must recalculate their list of spans. */
 	    TreeItem_SpansInvalidate(tree, NULL);
 
-	    TreeItemList_Free(&columns);
 	    if (objc == 5)
-		TreeItemList_Free(&column2s);
+		TreeColumnList_Free(&column2s);
 	    break;
 	}
 
@@ -4207,7 +4207,6 @@ doneDELETE:
 		Tcl_ListObjAppendElement(interp, listObj,
 			TreeColumn_ToObj(tree, column));
 	    }
-	    TreeColumnList_Free(&columns);
 	    Tcl_SetObjResult(interp, listObj);
 	    break;
 	}
@@ -4360,6 +4359,7 @@ doneDELETE:
 	}
     }
 
+    TreeColumnList_Free(&columns);
     return TCL_OK;
 
 errorExit:
