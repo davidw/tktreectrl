@@ -1,6 +1,6 @@
 #!/bin/wish84.exe
 
-# RCS: @(#) $Id: demo.tcl,v 1.69 2008/07/21 18:49:32 treectrl Exp $
+# RCS: @(#) $Id: demo.tcl,v 1.70 2008/07/30 19:31:00 treectrl Exp $
 
 set VERSION 2.2.7
 
@@ -558,7 +558,7 @@ proc MakeSourceWindow {} {
 	    set font {Courier 9}
 	}
     }
-    text $f.t -font $font -tabs [font measure $font 1234] -wrap none \
+    text $f.t -font $font -tabs [font measure $font 12345678] -wrap none \
 	-yscrollcommand "$f.sv set" -xscrollcommand "$f.sh set"
     $::scrollbarCmd $f.sv -orient vertical -command "$f.t yview"
     $::scrollbarCmd $f.sh -orient horizontal -command "$f.t xview"
