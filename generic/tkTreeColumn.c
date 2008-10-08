@@ -7,7 +7,7 @@
  * Copyright (c) 2002-2003 Christian Krone
  * Copyright (c) 2003 ActiveState Corporation
  *
- * RCS: @(#) $Id: tkTreeColumn.c,v 1.82 2008/07/21 18:41:53 treectrl Exp $
+ * RCS: @(#) $Id: tkTreeColumn.c,v 1.83 2008/10/08 19:25:16 treectrl Exp $
  */
 
 #include "tkTreeCtrl.h"
@@ -2770,6 +2770,8 @@ Column_DoLayout(
 	column->arrowGravity = SIDE_RIGHT;
     }
 #endif
+
+    padList[0] = 0;
 
     if (column->arrow != ARROW_NONE) {
 	Column_GetArrowSize(column, &partArrow.width, &partArrow.height);
