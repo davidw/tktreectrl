@@ -130,6 +130,12 @@ static Tk_OptionSpec optionSpecs[] = {
      "doubleBuffer", "DoubleBuffer",
      "item", -1, Tk_Offset(TreeCtrl, doubleBuffer),
      0, (ClientData) doubleBufferST, TREE_CONF_REDISPLAY},
+
+    {TK_OPTION_PIXELS, "-fillstripes", "fillStripes", "FillStripes",
+     "1", Tk_Offset(TreeCtrl, fillStripesObj),
+     Tk_Offset(TreeCtrl, fillStripes),
+     0, (ClientData) NULL, TREE_CONF_RELAYOUT},
+
     {TK_OPTION_SYNONYM, "-fg", (char *) NULL, (char *) NULL,
      (char *) NULL, 0, -1, 0, (ClientData) "-foreground"},
     {TK_OPTION_FONT, "-font", "font", "Font",

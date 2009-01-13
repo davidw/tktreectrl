@@ -405,6 +405,8 @@ struct TreeCtrl
 
     int itemTagExpr;		/* Enable/disable operators in item tags */
     int columnTagExpr;		/* Enable/disable operators in column tags */
+    Tcl_Obj* fillStripesObj;		/* Enable filling empty space with more stripes. */
+    int fillStripes;		/* Enable filling empty space with more stripes. */
 };
 
 #define TREE_CONF_FONT 0x0001

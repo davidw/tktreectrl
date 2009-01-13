@@ -4706,6 +4706,7 @@ DrawColumnBackground(
 	rowBox.y = top;
 	rowBox.width = bounds->width;
 	rowBox.height = rItem ? rItem->size : height;
+
 	if (Tree_IntersectRect(&drawBox, &rowBox, &dirtyBox)) {
 	    if (rItem != NULL) {
 		index = GetItemBgIndex(tree, rItem);
@@ -4825,17 +4826,37 @@ ComplexWhitespace(
     TreeCtrl *tree
     )
 {
+    if (tree->fillStripes) {
+	return 1;
+    }
+
     if (tree->columnBgCnt == 0 &&
-	    TreeColumn_BackgroundCount(tree->columnTail) == 0)
+	TreeColumn_BackgroundCount(tree->columnTail) == 0) {
 	return 0;
+    }
 
-    if (!tree->vertical || tree->wrapMode != TREE_WRAP_NONE)
+    if (!tree->vertical || tree->wrapMode != TREE_WRAP_NONE) {
 	return 0;
-
-    if (tree->itemHeight <= 0 && tree->minItemHeight <= 0)
+    }
+    if (tree->itemHeight <= 0 && tree->minItemHeight <= 0) {
 	return 0;
+    }
 
     return 1;
+}
+
+float Tree_AverageItemHeight(TreeDInfo dInfo) {
+    DItem *dItem;
+    int cnt = 0;
+    float averageRowHeight = 0;
+
+    for (dItem = dInfo->dItem;
+	 dItem != NULL;
+	 dItem = dItem->next) {
+	averageRowHeight += dItem->height;
+	cnt ++;
+    }
+    return averageRowHeight / cnt;
 }
 
 /*
@@ -4890,12 +4911,15 @@ DrawWhitespace(
     bottom = Tree_ContentBottom(tree);
 
     /* Figure out the height of each row of color below the items. */
-    if (tree->backgroundMode == BG_MODE_COLUMN)
+    if (tree->backgroundMode == BG_MODE_COLUMN) {
 	height = bottom - top; /* solid block of color */
-    else if (tree->itemHeight > 0)
+    } else if (tree->itemHeight > 0) {
 	height = tree->itemHeight;
-    else
+    } else if (tree->minItemHeight) {
 	height = tree->minItemHeight;
+    } else {
+	height = Tree_AverageItemHeight(dInfo);
+    }
 
     columnRgn = Tree_GetRegion(tree);
 
@@ -4938,6 +4962,7 @@ DrawWhitespace(
 		    columnRgn, &columnBox, rItem, height, index);
 	}
     }
+
 
     if (top < bottom) {
 
@@ -5281,6 +5306,7 @@ DisplayGetPixmap(
     }
     return dPixmap->drawable;
 }
+
 
 /*
  *--------------------------------------------------------------
