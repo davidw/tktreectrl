@@ -40,6 +40,8 @@ extern void dbwin_add_interp(Tcl_Interp *interp);
 #define SELECTION_VISIBLE
 #define ALLOC_HAX
 #define DEPRECATED
+#define PACKAGE_PATCHLEVEL "/""/"
+#define PACKAGE_NAME "treectrl"
 
 typedef struct TreeCtrl TreeCtrl;
 typedef struct TreeColumn_ *TreeColumn;
@@ -407,6 +409,7 @@ struct TreeCtrl
     int columnTagExpr;		/* Enable/disable operators in column tags */
     Tcl_Obj* fillStripesObj;		/* Enable filling empty space with more stripes. */
     int fillStripes;		/* Enable filling empty space with more stripes. */
+    int iAverageHeight;
 };
 
 #define TREE_CONF_FONT 0x0001

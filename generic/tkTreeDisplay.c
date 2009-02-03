@@ -910,6 +910,9 @@ Range_ItemUnderPoint(
 				 * May be NULL if x_ is not NULL. */
     )
 {
+
+    /* Issue occurs with: x:0 y:-1445 W:933 H:7854  */
+
     RItem *rItem;
     int x = -666, y = -666;
     int i, l, u;
@@ -1728,6 +1731,7 @@ B_YviewCmd(
 	    index = indexMax;
 
 	offset = Increment_ToOffsetY(tree, index);
+
 	if ((index != dInfo->incrementTop) || (tree->yOrigin != offset - Tree_ContentTop(tree))) {
 	    dInfo->incrementTop = index;
 	    tree->yOrigin = offset - Tree_ContentTop(tree);
@@ -4826,9 +4830,6 @@ ComplexWhitespace(
     TreeCtrl *tree
     )
 {
-    if (tree->fillStripes) {
-	return 1;
-    }
 
     if (tree->columnBgCnt == 0 &&
 	TreeColumn_BackgroundCount(tree->columnTail) == 0) {
@@ -4838,7 +4839,7 @@ ComplexWhitespace(
     if (!tree->vertical || tree->wrapMode != TREE_WRAP_NONE) {
 	return 0;
     }
-    if (tree->itemHeight <= 0 && tree->minItemHeight <= 0) {
+    if (tree->itemHeight <= 0 && tree->minItemHeight <= 0 && !tree->fillStripes) {
 	return 0;
     }
 
@@ -4855,6 +4856,9 @@ float Tree_AverageItemHeight(TreeDInfo dInfo) {
 	 dItem = dItem->next) {
 	averageRowHeight += dItem->height;
 	cnt ++;
+    }
+    if (cnt == 0) {
+	return 0;
     }
     return averageRowHeight / cnt;
 }
@@ -4910,15 +4914,18 @@ DrawWhitespace(
     top = MAX(y + Tree_TotalHeight(tree), Tree_ContentTop(tree));
     bottom = Tree_ContentBottom(tree);
 
+    tree->iAverageHeight = Tree_AverageItemHeight(dInfo);
+
     /* Figure out the height of each row of color below the items. */
+
     if (tree->backgroundMode == BG_MODE_COLUMN) {
 	height = bottom - top; /* solid block of color */
     } else if (tree->itemHeight > 0) {
 	height = tree->itemHeight;
-    } else if (tree->minItemHeight) {
-	height = tree->minItemHeight;
+    } else if (tree->iAverageHeight) {
+	height = tree->iAverageHeight;
     } else {
-	height = Tree_AverageItemHeight(dInfo);
+	height = tree->minItemHeight;
     }
 
     columnRgn = Tree_GetRegion(tree);
