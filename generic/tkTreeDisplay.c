@@ -910,9 +910,6 @@ Range_ItemUnderPoint(
 				 * May be NULL if x_ is not NULL. */
     )
 {
-
-    /* Issue occurs with: x:0 y:-1445 W:933 H:7854  */
-
     RItem *rItem;
     int x = -666, y = -666;
     int i, l, u;
@@ -4860,6 +4857,7 @@ float Tree_AverageItemHeight(TreeDInfo dInfo) {
     if (cnt == 0) {
 	return 0;
     }
+
     return averageRowHeight / cnt;
 }
 
@@ -4922,10 +4920,15 @@ DrawWhitespace(
 	height = bottom - top; /* solid block of color */
     } else if (tree->itemHeight > 0) {
 	height = tree->itemHeight;
-    } else if (tree->iAverageHeight) {
+    } else if (tree->iAverageHeight && tree->fillStripes) {
 	height = tree->iAverageHeight;
-    } else {
+    } else if (tree->minItemHeight > 0) {
 	height = tree->minItemHeight;
+    } else {
+	/* Ok, there is no minimum height, no specified height, no
+	 * average height (perhaps no items are on the screen), so
+	 * let's just pick a nice default:  */
+	height = 15;
     }
 
     columnRgn = Tree_GetRegion(tree);
