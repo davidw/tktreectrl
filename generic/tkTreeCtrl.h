@@ -37,7 +37,6 @@ extern void dbwin_add_interp(Tcl_Interp *interp);
 #define MAX(a,b) ((a) > (b) ? (a) : (b))
 #endif
 
-#define SELECTION_VISIBLE
 #define ALLOC_HAX
 #define DEPRECATED
 #define PACKAGE_PATCHLEVEL "/""/"
@@ -407,8 +406,8 @@ struct TreeCtrl
 
     int itemTagExpr;		/* Enable/disable operators in item tags */
     int columnTagExpr;		/* Enable/disable operators in column tags */
-    Tcl_Obj* fillStripesObj;		/* Enable filling empty space with more stripes. */
     int fillStripes;		/* Enable filling empty space with more stripes. */
+    int selectionVisible;       /* Allow non-visible items to be selected. */
     int iAverageHeight;
 };
 

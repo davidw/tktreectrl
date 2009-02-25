@@ -132,8 +132,7 @@ static Tk_OptionSpec optionSpecs[] = {
      0, (ClientData) doubleBufferST, TREE_CONF_REDISPLAY},
 
     {TK_OPTION_PIXELS, "-fillstripes", "fillStripes", "FillStripes",
-     "1", Tk_Offset(TreeCtrl, fillStripesObj),
-     Tk_Offset(TreeCtrl, fillStripes),
+     "1", -1, Tk_Offset(TreeCtrl, fillStripes),
      0, (ClientData) NULL, TREE_CONF_RELAYOUT},
 
     {TK_OPTION_SYNONYM, "-fg", (char *) NULL, (char *) NULL,
@@ -221,6 +220,11 @@ static Tk_OptionSpec optionSpecs[] = {
     {TK_OPTION_STRING, "-scrollmargin", "scrollMargin", "ScrollMargin",
      "0", Tk_Offset(TreeCtrl, scrollMargin), -1,
      0, (ClientData) NULL, 0},
+
+    {TK_OPTION_BOOLEAN, "-selectionvisible", "selectionVisible", "SelectionVisible",
+     "1", -1, Tk_Offset(TreeCtrl, selectionVisible),
+     TK_OPTION_NULL_OK, (ClientData) NULL, 0},
+
     {TK_OPTION_STRING, "-selectmode", "selectMode", "SelectMode",
      DEF_LISTBOX_SELECT_MODE, -1, Tk_Offset(TreeCtrl, selectMode),
      TK_OPTION_NULL_OK, (ClientData) NULL, 0},
@@ -767,9 +771,9 @@ static int TreeWidgetCmd(
 		TreeItemList_Free(&items);
 		TreeItemList_Free(&item2s);
 	    }
-#ifdef SELECTION_VISIBLE
+	    if (tree->selectionVisible) {
 	    Tree_DeselectHidden(tree);
-#endif
+	    }
 	    break;
 	}
 #endif /* DEPRECATED */
@@ -1365,7 +1369,7 @@ TreeConfigure(
 
 		    if ((Tcl_ListObjGetElements(interp, tree->wrapObj, &listObjc,
 			    &listObjv) != TCL_OK) || (listObjc > 2)) {
-badWrap:
+		    badWrap:
 			FormatResult(interp, "bad wrap \"%s\"",
 				Tcl_GetString(tree->wrapObj));
 			continue;
@@ -2472,11 +2476,11 @@ Tree_AddToSelection(
     Tcl_HashEntry *hPtr;
     int isNew;
 
-#ifdef SELECTION_VISIBLE
+    if (tree->selectionVisible) {
     if (!TreeItem_ReallyVisible(tree, item))
 	panic("Tree_AddToSelection: item %d not ReallyVisible",
 		TreeItem_GetID(tree, item));
-#endif
+    }
     if (TreeItem_GetSelected(tree, item))
 	panic("Tree_AddToSelection: item %d already selected",
 		TreeItem_GetID(tree, item));
@@ -2606,14 +2610,10 @@ TreeSelectionCmd(
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
 		    item = (TreeItem) Tcl_GetHashValue(hPtr);
-#ifdef SELECTION_VISIBLE
 		    if (!TreeItem_GetSelected(tree, item) &&
 			    TreeItem_GetEnabled(tree, item) &&
-			    TreeItem_ReallyVisible(tree, item)) {
-#else
-		    if (!TreeItem_GetSelected(tree, item) &&
-			    TreeItem_GetEnabled(tree, item)) {
-#endif
+			(!tree->selectionVisible ||
+			 (tree->selectionVisible && TreeItem_ReallyVisible(tree, item)))) {
 			Tree_AddToSelection(tree, item);
 			TreeItemList_Append(&items, item);
 		    }
@@ -2629,14 +2629,10 @@ TreeSelectionCmd(
 		    return TCL_ERROR;
 		TreeItemList_Init(tree, &items, count);
 		while (1) {
-#ifdef SELECTION_VISIBLE
-		    if (!TreeItem_GetSelected(tree, itemFirst) &&
-			    TreeItem_GetEnabled(tree, itemFirst) &&
-			    TreeItem_ReallyVisible(tree, itemFirst)) {
-#else
-		    if (!TreeItem_GetSelected(tree, itemFirst) &&
-			    TreeItem_GetEnabled(tree, itemFirst)) {
-#endif
+		    if (!TreeItem_GetSelected(tree, item) &&
+			TreeItem_GetEnabled(tree, item) &&
+			(!tree->selectionVisible ||
+			 (tree->selectionVisible && TreeItem_ReallyVisible(tree, item)))) {
 			Tree_AddToSelection(tree, itemFirst);
 			TreeItemList_Append(&items, itemFirst);
 		    }
@@ -2650,19 +2646,15 @@ TreeSelectionCmd(
 	    TreeItemList_Init(tree, &items, count);
 	    for (i = 0; i < count; i++) {
 		item = TreeItemList_Nth(&itemsFirst, i);
-#ifdef SELECTION_VISIBLE
 		if (!TreeItem_GetSelected(tree, item) &&
 			TreeItem_GetEnabled(tree, item) &&
-			TreeItem_ReallyVisible(tree, item)) {
-#else
-		if (!TreeItem_GetSelected(tree, item) &&
-			TreeItem_GetEnabled(tree, item)) {
-#endif
+		    (!tree->selectionVisible ||
+		     (tree->selectionVisible && TreeItem_ReallyVisible(tree, item)))) {
 		    Tree_AddToSelection(tree, item);
 		    TreeItemList_Append(&items, item);
 		}
 	    }
-doneADD:
+	doneADD:
 	    if (TreeItemList_Count(&items)) {
 		TreeNotify_Selection(tree, &items, NULL);
 	    }
@@ -2757,7 +2749,7 @@ doneADD:
 		}
 	    }
 	    TreeItemList_Free(&itemsFirst);
-doneCLEAR:
+	doneCLEAR:
 	    if (TreeItemList_Count(&items)) {
 		TreeNotify_Selection(tree, NULL, &items);
 	    }
@@ -2780,7 +2772,7 @@ doneCLEAR:
 	    Tcl_HashEntry *hPtr;
 	    Tcl_HashSearch search;
 
-#ifdef SELECTION_VISIBLE
+	    if (tree->selectionVisible) {
 	    if (objc < 3 || objc > 5) {
 		Tcl_WrongNumArgs(interp, 3, objv, "?first? ?last?");
 		return TCL_ERROR;
@@ -2835,14 +2827,14 @@ doneCLEAR:
 		TreeItemList_Free(&items);
 		break;
 	    }
-#else /* SELECTION_VISIBLE */
+	    } else { /* SELECTION_VISIBLE */
 	    /* If any item may be selected, including orphans, then getting
 	     * a sorted list of selected items is impossible. */
 	    if (objc != 3) {
 		Tcl_WrongNumArgs(interp, 3, objv, (char *) NULL);
 		return TCL_ERROR;
 	    }
-#endif /* SELECTION_VISIBLE */
+	    } /* SELECTION_VISIBLE */
 
 	    if (tree->selectCount < 1)
 		break;
@@ -2955,7 +2947,7 @@ doneCLEAR:
 	    /* Select all */
 	    if (allS) {
 		TreeItemList_Init(tree, &newS, tree->itemCount - tree->selectCount);
-#ifdef SELECTION_VISIBLE
+		if (tree->selectionVisible) {
 		item = tree->root;
 		if (!TreeItem_ReallyVisible(tree, item))
 		    item = TreeItem_NextVisible(tree, item);
@@ -2966,7 +2958,7 @@ doneCLEAR:
 		    }
 		    item = TreeItem_NextVisible(tree, item);
 		}
-#else
+		} else {
 		/* Include detached items */
 		hPtr = Tcl_FirstHashEntry(&tree->itemHash, &search);
 		while (hPtr != NULL) {
@@ -2977,7 +2969,7 @@ doneCLEAR:
 		    }
 		    hPtr = Tcl_NextHashEntry(&search);
 		}
-#endif
+		}
 		/* Ignore the deselect list. */
 		goto modifyDONE;
 	    }
@@ -2991,10 +2983,10 @@ doneCLEAR:
 			continue;
 		    if (!TreeItem_GetEnabled(tree, item))
 			continue;
-#ifdef SELECTION_VISIBLE
+		    if (tree->selectionVisible) {
 		    if (!TreeItem_ReallyVisible(tree, item))
 			continue;
-#endif
+		    }
 		    TreeItemList_Append(&newS, item);
 		}
 	    }
@@ -3034,7 +3026,7 @@ doneCLEAR:
 		    }
 		}
 	    }
-modifyDONE:
+	modifyDONE:
 	    for (i = 0; i < TreeItemList_Count(&newS); i++)
 		Tree_AddToSelection(tree, TreeItemList_Nth(&newS, i));
 	    for (i = 0; i < TreeItemList_Count(&newD); i++)
@@ -3578,7 +3570,7 @@ Tree_ReleaseItems(
  */
 
 /*
-textlayout $font $text
+  textlayout $font $text
 	-width pixels
 	-wrap word|char
 	-justify left|center|right
@@ -4274,7 +4266,7 @@ Treectrl_Init(
 	return TCL_ERROR;
     }
     return Tcl_EvalEx(interp, initScript, -1, TCL_EVAL_GLOBAL);
-}
+    }
 
 /*
  *--------------------------------------------------------------
@@ -4293,11 +4285,11 @@ Treectrl_Init(
  *--------------------------------------------------------------
  */
 
-DLLEXPORT int
-Treectrl_SafeInit(
+    DLLEXPORT int
+	Treectrl_SafeInit(
     Tcl_Interp *interp		/* Interpreter the package is loading into. */
     )
-{
+    {
     return Treectrl_Init(interp);
-}
+    }
 

@@ -5373,12 +5373,12 @@ displayRetry:
 
     /* Some change requires selection changes */
     if (dInfo->flags & DINFO_REDO_SELECTION) {
-#ifdef SELECTION_VISIBLE
+	if (tree->selectionVisible) {
 	/* Possible <Selection> event. */
 	Tree_DeselectHidden(tree);
 	if (tree->deleted)
 	    goto displayExit;
-#endif
+	}
 	dInfo->flags &= ~(DINFO_REDO_SELECTION);
     }
 

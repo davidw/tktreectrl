@@ -7029,7 +7029,6 @@ ItemTagCmd(
     return result;
 }
 
-#ifdef SELECTION_VISIBLE
 
 /*
  *----------------------------------------------------------------------
@@ -7063,6 +7062,8 @@ Tree_DeselectHidden(
     TreeItem item;
     int i;
 
+    fprintf(stderr, "bingbong %d\n", tree->selectionVisible);
+
     if (tree->selectCount < 1)
 	return;
 
@@ -7086,7 +7087,6 @@ Tree_DeselectHidden(
     TreeItemList_Free(&items);
 }
 
-#endif /* SELECTION_VISIBLE */
 
 /*
  *----------------------------------------------------------------------
@@ -7464,9 +7464,9 @@ TreeItemCmd(
 		TreeItem_OpenClose(tree, item, mode);
 	    }
 	    TreeItemList_Free(&items);
-#ifdef SELECTION_VISIBLE
+	    if (tree->selectionVisible) {
 	    Tree_DeselectHidden(tree);
-#endif
+	    }
 	    break;
 	}
 	/* T item compare I op I */
@@ -7780,9 +7780,9 @@ TreeItemCmd(
 		item2->parent = item;
 		item->numChildren++;
 		TreeItem_AddToParent(tree, item2);
-#ifdef SELECTION_VISIBLE
+		if (tree->selectionVisible) {
 		Tree_DeselectHidden(tree);
-#endif
+		}
 	    }
 	    if (item->firstChild != NULL)
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->firstChild));
@@ -7823,9 +7823,9 @@ TreeItemCmd(
 		item2->parent = item;
 		item->numChildren++;
 		TreeItem_AddToParent(tree, item2);
-#ifdef SELECTION_VISIBLE
+		if (tree->selectionVisible) {
 		Tree_DeselectHidden(tree);
-#endif
+		}
 	    }
 	    if (item->lastChild != NULL)
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->lastChild));
@@ -7844,9 +7844,9 @@ TreeItemCmd(
 		item2->parent = item->parent;
 		item->parent->numChildren++;
 		TreeItem_AddToParent(tree, item2);
-#ifdef SELECTION_VISIBLE
+		if (tree->selectionVisible) {
 		Tree_DeselectHidden(tree);
-#endif
+		}
 	    }
 	    if (item->nextSibling != NULL)
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->nextSibling));
@@ -7915,9 +7915,9 @@ TreeItemCmd(
 		item2->parent = item->parent;
 		item->parent->numChildren++;
 		TreeItem_AddToParent(tree, item2);
-#ifdef SELECTION_VISIBLE
+		if (tree->selectionVisible) {
 		Tree_DeselectHidden(tree);
-#endif
+		}
 	    }
 	    if (item->prevSibling != NULL)
 		Tcl_SetObjResult(interp, TreeItem_ToObj(tree, item->prevSibling));
@@ -7938,9 +7938,9 @@ TreeItemCmd(
 	    if (tree->debug.enable && tree->debug.data)
 		Tree_Debug(tree);
 	    Tree_InvalidateColumnWidth(tree, NULL);
-#ifdef SELECTION_VISIBLE
+	    if (tree->selectionVisible) {
 	    Tree_DeselectHidden(tree);
-#endif
+	    }
 	    break;
 	}
 	case COMMAND_RNC: {
