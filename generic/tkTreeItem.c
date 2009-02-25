@@ -7465,7 +7465,7 @@ TreeItemCmd(
 	    }
 	    TreeItemList_Free(&items);
 	    if (tree->selectionVisible) {
-	    Tree_DeselectHidden(tree);
+		Tree_DeselectHidden(tree);
 	    }
 	    break;
 	}
@@ -7781,7 +7781,7 @@ TreeItemCmd(
 		item->numChildren++;
 		TreeItem_AddToParent(tree, item2);
 		if (tree->selectionVisible) {
-		Tree_DeselectHidden(tree);
+		    Tree_DeselectHidden(tree);
 		}
 	    }
 	    if (item->firstChild != NULL)
@@ -7824,7 +7824,7 @@ TreeItemCmd(
 		item->numChildren++;
 		TreeItem_AddToParent(tree, item2);
 		if (tree->selectionVisible) {
-		Tree_DeselectHidden(tree);
+		    Tree_DeselectHidden(tree);
 		}
 	    }
 	    if (item->lastChild != NULL)
@@ -7845,7 +7845,7 @@ TreeItemCmd(
 		item->parent->numChildren++;
 		TreeItem_AddToParent(tree, item2);
 		if (tree->selectionVisible) {
-		Tree_DeselectHidden(tree);
+		    Tree_DeselectHidden(tree);
 		}
 	    }
 	    if (item->nextSibling != NULL)
@@ -7916,7 +7916,7 @@ TreeItemCmd(
 		item->parent->numChildren++;
 		TreeItem_AddToParent(tree, item2);
 		if (tree->selectionVisible) {
-		Tree_DeselectHidden(tree);
+		    Tree_DeselectHidden(tree);
 		}
 	    }
 	    if (item->prevSibling != NULL)
@@ -7939,7 +7939,7 @@ TreeItemCmd(
 		Tree_Debug(tree);
 	    Tree_InvalidateColumnWidth(tree, NULL);
 	    if (tree->selectionVisible) {
-	    Tree_DeselectHidden(tree);
+		Tree_DeselectHidden(tree);
 	    }
 	    break;
 	}
